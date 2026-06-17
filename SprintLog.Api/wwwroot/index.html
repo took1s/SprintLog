@@ -47,8 +47,18 @@
         </div>
     </div>
 
+    <!-- Кнопка сброса текущей тренировки (если нужно начать заново) -->
+    <div v-if="completedSets.length > 0" class="flex justify-end mb-4 px-1">
+        <button @click="clearWorkout" class="text-xs text-red-400 hover:text-red-300 font-medium transition-colors">
+            ✕ Clear Current Session
+        </button>
+    </div>
+
     <main class="space-y-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div v-if="loading" class="flex justify-center py-20">
+            <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div v-for="ex in filteredExercises" :key="ex.id" @click="openModal(ex)"
                  class="premium-card p-5 rounded-2xl transition-all duration-300 cursor-pointer flex justify-between items-center group hover:border-blue-500/30">
                 <div>
@@ -62,6 +72,7 @@
         </div>
     </main>
 
+    <!-- Плавающая панель -->
     <transition name="slide-up">
         <div v-if="completedSets.length > 0" class="fixed bottom-0 left-0 right-0 p-4 sm:p-6 z-30 flex justify-center pointer-events-none">
             <div class="w-full max-w-3xl pointer-events-auto">
@@ -76,6 +87,7 @@
         </div>
     </transition>
 
+    <!-- Модальное окно -->
     <transition name="fade">
         <div v-if="showModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center" @click.self="closeModal">
             <transition name="slide-up" appear>
@@ -140,6 +152,12 @@
         },
         async mounted() {
             await this.fetchExercises();
+            
+            // Восстанавливаем сохраненные подходы из памяти телефона при загрузке страницы
+            const savedSets = localStorage.getItem('sprintlog_sets');
+            if (savedSets) {
+                this.completedSets = JSON.parse(savedSets);
+            }
         },
         methods: {
             async fetchExercises() {
@@ -170,12 +188,19 @@
                     weight: this.weight,
                     reps: this.reps
                 });
+                
+                // Сохраняем в localStorage устройства
+                localStorage.setItem('sprintlog_sets', JSON.stringify(this.completedSets));
                 this.closeModal();
             },
-            // НОВЫЙ МЕТОД: Отправка на бэкенд и копирование
+            clearWorkout() {
+                if (confirm('Are you sure you want to clear this session?')) {
+                    this.completedSets = [];
+                    localStorage.removeItem('sprintlog_sets');
+                }
+            },
             async finishWorkout() {
                 try {
-                    // 1. Формируем JSON-пакет по структуре нашего C# рекорда WorkoutRequest
                     const payload = {
                         WorkoutType: this.activeCategory,
                         Sets: this.completedSets.map(s => ({
@@ -185,24 +210,20 @@
                         }))
                     };
 
-                    // 2. Отправляем POST запрос на наш C# сервер
                     const response = await fetch('/api/workouts/generate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
 
-                    // 3. Получаем ответ
                     const data = await response.json();
-                    
-                    // 4. Копируем сгенерированный Markdown в буфер обмена телефона/ПК
                     await navigator.clipboard.writeText(data.markdown);
                     
-                    // 5. Показываем сообщение об успехе
                     alert('Workout copied to clipboard! Paste it into Obsidian.');
                     
-                    // 6. Очищаем тренировку для следующего раза
+                    // После успешной генерации очищаем память
                     this.completedSets = [];
+                    localStorage.removeItem('sprintlog_sets');
                     
                 } catch (error) {
                     console.error('Error generating workout:', error);
