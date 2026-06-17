@@ -34,20 +34,36 @@
 
 <div id="app" class="w-full max-w-3xl relative">
     
-    <header class="mb-10 text-center mt-4">
+    <header class="mb-8 text-center mt-4">
         <h1 class="text-4xl font-black tracking-tighter text-white mb-1">
             Sprint<span class="bg-gradient-to-r from-blue-500 to-cyan-400 bg-clip-text text-transparent">Log</span>
         </h1>
     </header>
 
-    <div class="flex justify-center mb-8">
+    <div class="flex justify-center mb-6">
         <div class="premium-card flex p-1 rounded-2xl">
             <button @click="activeCategory = 'Gym'" :class="activeCategory === 'Gym' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500'" class="px-8 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300">Gym</button>
             <button @click="activeCategory = 'Football'" :class="activeCategory === 'Football' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500'" class="px-8 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300">Football</button>
         </div>
     </div>
 
-    <!-- Кнопка сброса текущей тренировки (если нужно начать заново) -->
+    <div class="mb-8 px-1">
+        <div class="premium-card flex items-center p-3 rounded-2xl border border-zinc-800 focus-within:border-blue-500/30 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input 
+                type="text" 
+                v-model="searchQuery" 
+                placeholder="Search exercise or muscle group..." 
+                class="w-full bg-transparent ml-3 text-sm text-white outline-none placeholder-zinc-500"
+            >
+            <button v-if="searchQuery" @click="searchQuery = ''" class="text-xs text-zinc-500 hover:text-zinc-300 px-2">
+                Clear
+            </button>
+        </div>
+    </div>
+
     <div v-if="completedSets.length > 0" class="flex justify-end mb-4 px-1">
         <button @click="clearWorkout" class="text-xs text-red-400 hover:text-red-300 font-medium transition-colors">
             ✕ Clear Current Session
@@ -58,6 +74,12 @@
         <div v-if="loading" class="flex justify-center py-20">
             <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
+        
+        <div v-else-if="filteredExercises.length === 0" class="text-center py-16 premium-card rounded-3xl border-dashed border-zinc-800">
+            <p class="text-zinc-500 font-medium">No exercises found.</p>
+            <p class="text-zinc-600 text-sm mt-1">Try adjusting your search query.</p>
+        </div>
+
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div v-for="ex in filteredExercises" :key="ex.id" @click="openModal(ex)"
                  class="premium-card p-5 rounded-2xl transition-all duration-300 cursor-pointer flex justify-between items-center group hover:border-blue-500/30">
@@ -72,7 +94,6 @@
         </div>
     </main>
 
-    <!-- Плавающая панель -->
     <transition name="slide-up">
         <div v-if="completedSets.length > 0" class="fixed bottom-0 left-0 right-0 p-4 sm:p-6 z-30 flex justify-center pointer-events-none">
             <div class="w-full max-w-3xl pointer-events-auto">
@@ -87,7 +108,6 @@
         </div>
     </transition>
 
-    <!-- Модальное окно -->
     <transition name="fade">
         <div v-if="showModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center" @click.self="closeModal">
             <transition name="slide-up" appear>
@@ -136,6 +156,7 @@
         data() {
             return {
                 activeCategory: 'Gym',
+                searchQuery: '', // Новое поле для строки поиска
                 exercises: [],
                 loading: true,
                 showModal: false,
@@ -146,14 +167,26 @@
             }
         },
         computed: {
+            // Модернизированный пайплайн фильтрации и сортировки
             filteredExercises() {
-                return this.exercises.filter(e => e.category === this.activeCategory);
+                // 1. Фильтр по категории (Gym/Football)
+                let result = this.exercises.filter(e => e.category === this.activeCategory);
+                
+                // 2. Фильтр по поисковому запросу
+                if (this.searchQuery) {
+                    const query = this.searchQuery.toLowerCase().trim();
+                    result = result.filter(e => 
+                        e.name.toLowerCase().includes(query) || 
+                        e.muscleGroup.toLowerCase().includes(query)
+                    );
+                }
+                
+                // 3. Автоматическая сортировка по алфавиту от A до Z
+                return result.sort((a, b) => a.name.localeCompare(b.name));
             }
         },
         async mounted() {
             await this.fetchExercises();
-            
-            // Восстанавливаем сохраненные подходы из памяти телефона при загрузке страницы
             const savedSets = localStorage.getItem('sprintlog_sets');
             if (savedSets) {
                 this.completedSets = JSON.parse(savedSets);
@@ -188,8 +221,6 @@
                     weight: this.weight,
                     reps: this.reps
                 });
-                
-                // Сохраняем в localStorage устройства
                 localStorage.setItem('sprintlog_sets', JSON.stringify(this.completedSets));
                 this.closeModal();
             },
@@ -221,7 +252,6 @@
                     
                     alert('Workout copied to clipboard! Paste it into Obsidian.');
                     
-                    // После успешной генерации очищаем память
                     this.completedSets = [];
                     localStorage.removeItem('sprintlog_sets');
                     
