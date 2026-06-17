@@ -6,24 +6,14 @@
     <title>SprintLog | Pro</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #09090b; 
-            color: #e4e4e7; 
-            -webkit-tap-highlight-color: transparent;
-        }
-        .premium-card {
-            background: rgba(24, 24, 27, 0.6);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #e4e4e7; -webkit-tap-highlight-color: transparent; }
+        .premium-card { background: rgba(24, 24, 27, 0.6); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); }
         ::-webkit-scrollbar { width: 0px; background: transparent; }
-        input[type="number"]::-webkit-inner-spin-button, 
-        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
-
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
         .slide-up-enter-active, .slide-up-leave-active { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s; }
@@ -41,68 +31,104 @@
     </header>
 
     <div class="flex justify-center mb-6">
-        <div class="premium-card flex p-1 rounded-2xl">
-            <button @click="activeCategory = 'Gym'" :class="activeCategory === 'Gym' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500'" class="px-8 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300">Gym</button>
-            <button @click="activeCategory = 'Football'" :class="activeCategory === 'Football' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500'" class="px-8 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300">Football</button>
+        <div class="premium-card flex p-1 rounded-2xl overflow-x-auto whitespace-nowrap scrollbar-hide">
+            <button @click="switchTab('Gym')" :class="activeCategory === 'Gym' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500'" class="px-6 py-2.5 rounded-xl text-sm font-semibold transition-all">Gym</button>
+            <button @click="switchTab('Football')" :class="activeCategory === 'Football' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500'" class="px-6 py-2.5 rounded-xl text-sm font-semibold transition-all">Football</button>
+            <button @click="switchTab('Analytics')" :class="activeCategory === 'Analytics' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-zinc-500'" class="px-6 py-2.5 rounded-xl text-sm font-semibold transition-all">Analytics 📊</button>
         </div>
     </div>
 
-    <div class="mb-8 px-1">
-        <div class="premium-card flex items-center p-3 rounded-2xl border border-zinc-800 focus-within:border-blue-500/30 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input 
-                type="text" 
-                v-model="searchQuery" 
-                placeholder="Search exercise or muscle group..." 
-                class="w-full bg-transparent ml-3 text-sm text-white outline-none placeholder-zinc-500"
-            >
-            <button v-if="searchQuery" @click="searchQuery = ''" class="text-xs text-zinc-500 hover:text-zinc-300 px-2">
-                Clear
-            </button>
-        </div>
-    </div>
-
-    <div v-if="completedSets.length > 0" class="flex justify-end mb-4 px-1">
-        <button @click="clearWorkout" class="text-xs text-red-400 hover:text-red-300 font-medium transition-colors">
-            ✕ Clear Current Session
-        </button>
-    </div>
-
-    <main class="space-y-4">
-        <div v-if="loading" class="flex justify-center py-20">
-            <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-        
-        <div v-else-if="filteredExercises.length === 0" class="text-center py-16 premium-card rounded-3xl border-dashed border-zinc-800">
-            <p class="text-zinc-500 font-medium">No exercises found.</p>
-            <p class="text-zinc-600 text-sm mt-1">Try adjusting your search query.</p>
-        </div>
-
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div v-for="ex in filteredExercises" :key="ex.id" @click="openModal(ex)"
-                 class="premium-card p-5 rounded-2xl transition-all duration-300 cursor-pointer flex justify-between items-center group hover:border-blue-500/30">
-                <div>
-                    <h3 class="font-bold text-zinc-100 text-lg">{{ ex.name }}</h3>
-                    <p class="text-xs text-zinc-500 font-semibold uppercase tracking-widest mt-1">{{ ex.muscleGroup }}</p>
-                </div>
-                <div class="h-10 w-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                    +
-                </div>
+    <div v-show="activeCategory !== 'Analytics'">
+        <div class="mb-8 px-1">
+            <div class="premium-card flex items-center p-3 rounded-2xl border border-zinc-800 focus-within:border-blue-500/30 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <input type="text" v-model="searchQuery" placeholder="Search exercise..." class="w-full bg-transparent ml-3 text-sm text-white outline-none placeholder-zinc-500">
+                <button v-if="searchQuery" @click="searchQuery = ''" class="text-xs text-zinc-500 hover:text-zinc-300 px-2">Clear</button>
             </div>
         </div>
-    </main>
+
+        <div v-if="completedSets.length > 0" class="flex justify-end mb-4 px-1">
+            <button @click="clearWorkout" class="text-xs text-red-400 font-medium">✕ Clear Current Session</button>
+        </div>
+
+        <main class="space-y-4">
+            <div v-if="loading" class="flex justify-center py-20"><div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
+            <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div v-for="ex in filteredExercises" :key="ex.id" @click="openModal(ex)" class="premium-card p-5 rounded-2xl cursor-pointer flex justify-between items-center group hover:border-blue-500/30">
+                    <div>
+                        <h3 class="font-bold text-zinc-100 text-lg">{{ ex.name }}</h3>
+                        <p class="text-xs text-zinc-500 font-semibold uppercase tracking-widest mt-1">{{ ex.muscleGroup }}</p>
+                    </div>
+                    <div class="h-10 w-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">+</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div v-if="activeCategory === 'Analytics'" class="animate-fade-in">
+        
+        <div class="flex justify-center gap-2 mb-8">
+            <button @click="analyticsTab = 'history'" :class="analyticsTab === 'history' ? 'border-blue-500 text-blue-400' : 'border-zinc-800 text-zinc-500'" class="border-b-2 px-4 py-2 text-sm font-bold transition-colors">History</button>
+            <button @click="analyticsTab = 'charts'" :class="analyticsTab === 'charts' ? 'border-blue-500 text-blue-400' : 'border-zinc-800 text-zinc-500'" class="border-b-2 px-4 py-2 text-sm font-bold transition-colors">Charts</button>
+            <button @click="analyticsTab = 'calendar'" :class="analyticsTab === 'calendar' ? 'border-blue-500 text-blue-400' : 'border-zinc-800 text-zinc-500'" class="border-b-2 px-4 py-2 text-sm font-bold transition-colors">Calendar</button>
+        </div>
+
+        <div v-if="loadingHistory" class="flex justify-center py-20"><div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
+        
+        <div v-else>
+            <div v-if="analyticsTab === 'history'" class="space-y-6">
+                <div v-if="historyData.length === 0" class="text-center text-zinc-500 py-10">No workouts yet.</div>
+                <div v-for="workout in historyData" :key="workout.id" class="premium-card p-5 rounded-2xl">
+                    <div class="flex justify-between items-center mb-4 border-b border-zinc-800 pb-3">
+                        <span class="font-bold text-lg text-white">{{ formatDate(workout.date) }}</span>
+                        <span class="text-xs font-bold px-3 py-1 rounded-full" :class="workout.workoutType === 'Gym' ? 'bg-zinc-800 text-zinc-300' : 'bg-emerald-900/50 text-emerald-400'">{{ workout.workoutType }}</span>
+                    </div>
+                    <ul class="space-y-2">
+                        <li v-for="set in workout.sets" class="flex justify-between text-sm text-zinc-400">
+                            <span><span class="text-zinc-600 mr-2">{{ set.setNumber }}.</span>{{ set.exerciseName }}</span>
+                            <span class="font-mono text-zinc-200">
+                                <template v-if="workout.workoutType === 'Gym'">{{ set.weight }}kg × {{ set.reps }}</template>
+                                <template v-else>{{ set.distance }}m in {{ set.time }}s</template>
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div v-if="analyticsTab === 'charts'" class="premium-card p-5 rounded-2xl">
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">Select Exercise to Track</label>
+                    <select v-model="selectedChartExercise" @change="drawChart" class="w-full bg-zinc-900 border border-zinc-800 text-white text-sm rounded-xl p-3 outline-none focus:border-blue-500">
+                        <option disabled value="">Choose exercise...</option>
+                        <option v-for="ex in uniqueHistoryExercises" :key="ex" :value="ex">{{ ex }}</option>
+                    </select>
+                </div>
+                <div class="relative h-64 w-full">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+
+            <div v-if="analyticsTab === 'calendar'" class="premium-card p-5 rounded-2xl">
+                <h3 class="font-bold text-white mb-4">Active Days</h3>
+                <div class="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                    <div v-for="date in activeDays" :key="date" class="bg-blue-600/20 border border-blue-500/30 rounded-lg p-2 text-center">
+                        <div class="text-[10px] text-blue-400 uppercase font-bold">{{ getMonthShort(date) }}</div>
+                        <div class="text-lg font-black text-white">{{ getDay(date) }}</div>
+                    </div>
+                </div>
+                <p v-if="activeDays.length === 0" class="text-zinc-500 text-center text-sm">You haven't trained yet.</p>
+            </div>
+        </div>
+    </div>
+
 
     <transition name="slide-up">
-        <div v-if="completedSets.length > 0" class="fixed bottom-0 left-0 right-0 p-4 sm:p-6 z-30 flex justify-center pointer-events-none">
+        <div v-if="completedSets.length > 0 && activeCategory !== 'Analytics'" class="fixed bottom-0 left-0 right-0 p-4 sm:p-6 z-30 flex justify-center pointer-events-none">
             <div class="w-full max-w-3xl pointer-events-auto">
-                <button @click="finishWorkout" 
-                        class="w-full bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 font-bold py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                    </svg>
-                    Copy to Obsidian ({{ completedSets.length }} sets)
+                <button @click="finishWorkout" :disabled="isSaving"
+                        class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 text-white shadow-lg shadow-blue-500/20 font-bold py-4 rounded-2xl transition-all active:scale-95 flex justify-center gap-2">
+                    <span v-if="isSaving">Saving...</span>
+                    <span v-else>Save Workout ({{ completedSets.length }} sets)</span>
                 </button>
             </div>
         </div>
@@ -111,8 +137,7 @@
     <transition name="fade">
         <div v-if="showModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center" @click.self="closeModal">
             <transition name="slide-up" appear>
-                <div class="bg-zinc-900 w-full max-w-md p-6 rounded-t-3xl sm:rounded-3xl border border-zinc-800 shadow-2xl relative z-50">
-                    
+                <div class="bg-zinc-900 w-full max-w-md p-6 rounded-t-3xl sm:rounded-3xl border border-zinc-800 relative z-50">
                     <div class="flex justify-between items-center mb-6">
                         <div>
                             <h3 class="text-2xl font-bold text-white">{{ currentEx?.name }}</h3>
@@ -121,27 +146,45 @@
                         <button @click="closeModal" class="h-8 w-8 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400 hover:text-white">✕</button>
                     </div>
 
-                    <div class="mb-6">
-                        <label class="block text-zinc-400 text-xs font-bold uppercase tracking-wider mb-3">Weight (kg)</label>
-                        <div class="flex items-center justify-between bg-zinc-950 p-2 rounded-2xl border border-zinc-800 focus-within:border-blue-500/50 transition-colors">
-                            <button @click="weight = Math.max(0, weight - 2.5)" class="h-14 w-14 rounded-xl bg-zinc-800 flex items-center justify-center text-2xl font-medium active:scale-95 transition-transform text-white">-</button>
-                            <input type="number" v-model.number="weight" class="w-24 text-center bg-transparent text-3xl font-black tabular-nums outline-none text-white focus:ring-0">
-                            <button @click="weight += 2.5" class="h-14 w-14 rounded-xl bg-zinc-800 flex items-center justify-center text-2xl font-medium active:scale-95 transition-transform text-white">+</button>
+                    <div v-if="activeCategory === 'Gym'">
+                        <div class="mb-6">
+                            <label class="block text-zinc-400 text-xs font-bold uppercase mb-3">Weight (kg)</label>
+                            <div class="flex items-center justify-between bg-zinc-950 p-2 rounded-2xl border border-zinc-800">
+                                <button @click="weight = Math.max(0, weight - 2.5)" class="h-14 w-14 rounded-xl bg-zinc-800 text-white text-2xl">-</button>
+                                <input type="number" v-model.number="weight" class="w-24 text-center bg-transparent text-3xl font-black text-white outline-none">
+                                <button @click="weight += 2.5" class="h-14 w-14 rounded-xl bg-zinc-800 text-white text-2xl">+</button>
+                            </div>
+                        </div>
+                        <div class="mb-8">
+                            <label class="block text-zinc-400 text-xs font-bold uppercase mb-3">Reps</label>
+                            <div class="flex items-center justify-between bg-zinc-950 p-2 rounded-2xl border border-zinc-800">
+                                <button @click="reps = Math.max(0, reps - 1)" class="h-14 w-14 rounded-xl bg-zinc-800 text-white text-2xl">-</button>
+                                <input type="number" v-model.number="reps" class="w-24 text-center bg-transparent text-3xl font-black text-white outline-none">
+                                <button @click="reps += 1" class="h-14 w-14 rounded-xl bg-zinc-800 text-white text-2xl">+</button>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="mb-8">
-                        <label class="block text-zinc-400 text-xs font-bold uppercase tracking-wider mb-3">Reps</label>
-                        <div class="flex items-center justify-between bg-zinc-950 p-2 rounded-2xl border border-zinc-800 focus-within:border-blue-500/50 transition-colors">
-                            <button @click="reps = Math.max(0, reps - 1)" class="h-14 w-14 rounded-xl bg-zinc-800 flex items-center justify-center text-2xl font-medium active:scale-95 transition-transform text-white">-</button>
-                            <input type="number" v-model.number="reps" class="w-24 text-center bg-transparent text-3xl font-black tabular-nums outline-none text-white focus:ring-0">
-                            <button @click="reps += 1" class="h-14 w-14 rounded-xl bg-zinc-800 flex items-center justify-center text-2xl font-medium active:scale-95 transition-transform text-white">+</button>
+                    <div v-if="activeCategory === 'Football'">
+                        <div class="mb-6">
+                            <label class="block text-zinc-400 text-xs font-bold uppercase mb-3">Distance (meters)</label>
+                            <div class="flex items-center justify-between bg-zinc-950 p-2 rounded-2xl border border-zinc-800">
+                                <button @click="distance = Math.max(0, distance - 5)" class="h-14 w-14 rounded-xl bg-zinc-800 text-white text-2xl">-</button>
+                                <input type="number" v-model.number="distance" class="w-24 text-center bg-transparent text-3xl font-black text-white outline-none">
+                                <button @click="distance += 5" class="h-14 w-14 rounded-xl bg-zinc-800 text-white text-2xl">+</button>
+                            </div>
+                        </div>
+                        <div class="mb-8">
+                            <label class="block text-zinc-400 text-xs font-bold uppercase mb-3">Time (seconds)</label>
+                            <div class="flex items-center justify-between bg-zinc-950 p-2 rounded-2xl border border-zinc-800">
+                                <button @click="time = Math.max(0, +(time - 0.1).toFixed(2))" class="h-14 w-14 rounded-xl bg-zinc-800 text-white text-2xl">-</button>
+                                <input type="number" step="0.1" v-model.number="time" class="w-24 text-center bg-transparent text-3xl font-black text-white outline-none">
+                                <button @click="time = +(time + 0.1).toFixed(2)" class="h-14 w-14 rounded-xl bg-zinc-800 text-white text-2xl">+</button>
+                            </div>
                         </div>
                     </div>
 
-                    <button @click="saveSet" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-colors active:scale-95">
-                        Add Set
-                    </button>
+                    <button @click="saveSet" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl active:scale-95">Add Set</button>
                 </div>
             </transition>
         </div>
@@ -150,115 +193,233 @@
 </div>
 
 <script>
+    // Настройка глобальной темы для Chart.js (Темная тема)
+    Chart.defaults.color = '#a1a1aa';
+    Chart.defaults.borderColor = '#27272a';
+    Chart.defaults.font.family = 'Inter';
+
     const { createApp } = Vue;
 
     createApp({
         data() {
             return {
-                activeCategory: 'Gym',
-                searchQuery: '', // Новое поле для строки поиска
+                activeCategory: 'Gym', // Текущая главная вкладка
+                analyticsTab: 'history', // Текущая под-вкладка в аналитике
+                searchQuery: '',
+                
                 exercises: [],
                 loading: true,
+                isSaving: false,
+                
+                // Данные аналитики
+                historyData: [],
+                loadingHistory: false,
+                selectedChartExercise: '',
+                chartInstance: null,
+
+                // Данные модального окна
                 showModal: false,
                 currentEx: null,
-                weight: 20,
-                reps: 10,
+                weight: 20, reps: 10,
+                distance: 30, time: 4.5,
                 completedSets: []
             }
         },
         computed: {
-            // Модернизированный пайплайн фильтрации и сортировки
             filteredExercises() {
-                // 1. Фильтр по категории (Gym/Football)
                 let result = this.exercises.filter(e => e.category === this.activeCategory);
-                
-                // 2. Фильтр по поисковому запросу
                 if (this.searchQuery) {
                     const query = this.searchQuery.toLowerCase().trim();
-                    result = result.filter(e => 
-                        e.name.toLowerCase().includes(query) || 
-                        e.muscleGroup.toLowerCase().includes(query)
-                    );
+                    result = result.filter(e => e.name.toLowerCase().includes(query) || e.muscleGroup.toLowerCase().includes(query));
                 }
-                
-                // 3. Автоматическая сортировка по алфавиту от A до Z
                 return result.sort((a, b) => a.name.localeCompare(b.name));
+            },
+            // Собирает все уникальные названия упражнений, которые ты когда-либо делал
+            uniqueHistoryExercises() {
+                const names = new Set();
+                this.historyData.forEach(workout => {
+                    workout.sets.forEach(set => names.add(set.exerciseName));
+                });
+                return Array.from(names).sort();
+            },
+            // Собирает уникальные даты тренировок для календаря
+            activeDays() {
+                const dates = new Set();
+                this.historyData.forEach(w => {
+                    // Берем только часть с датой (YYYY-MM-DD)
+                    dates.add(w.date.split('T')[0]);
+                });
+                // Сортируем от новых к старым
+                return Array.from(dates).sort((a, b) => new Date(b) - new Date(a));
             }
         },
         async mounted() {
             await this.fetchExercises();
             const savedSets = localStorage.getItem('sprintlog_sets');
-            if (savedSets) {
-                this.completedSets = JSON.parse(savedSets);
-            }
+            if (savedSets) this.completedSets = JSON.parse(savedSets);
         },
         methods: {
-            async fetchExercises() {
-                this.loading = true;
-                try {
-                    const response = await fetch('/api/exercises');
-                    this.exercises = await response.json();
-                } catch (error) {
-                    console.error('Fetch error:', error);
-                } finally {
-                    this.loading = false;
+            // Форматирование дат
+            formatDate(isoString) {
+                const d = new Date(isoString);
+                return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' });
+            },
+            getMonthShort(dateString) { return new Date(dateString).toLocaleDateString('en-US', { month: 'short' }); },
+            getDay(dateString) { return new Date(dateString).getDate(); },
+
+            // Переключение вкладок
+            switchTab(tab) {
+                this.activeCategory = tab;
+                if (tab === 'Analytics') {
+                    this.loadHistory();
                 }
             },
-            openModal(exercise) {
-                this.currentEx = exercise;
+
+            // Загрузка справочника упражнений
+            async fetchExercises() {
+                try {
+                    const res = await fetch('/api/exercises');
+                    this.exercises = await res.json();
+                } catch (e) { console.error(e); } 
+                finally { this.loading = false; }
+            },
+
+            // Получение истории из базы данных
+            async loadHistory() {
+                this.loadingHistory = true;
+                try {
+                    const res = await fetch('/api/workouts/history');
+                    this.historyData = await res.json();
+                } catch (e) { console.error('History fetch error:', e); } 
+                finally { this.loadingHistory = false; }
+            },
+
+            // Логика модального окна
+            openModal(ex) {
+                this.currentEx = ex;
                 this.showModal = true;
-                this.weight = 20;
-                this.reps = 10;
+                this.weight = 20; this.reps = 10; this.distance = 30; this.time = 4.5;
             },
-            closeModal() {
-                this.showModal = false;
-                setTimeout(() => this.currentEx = null, 300);
-            },
+            closeModal() { this.showModal = false; setTimeout(() => this.currentEx = null, 300); },
+            
             saveSet() {
                 this.completedSets.push({
                     exerciseId: this.currentEx.id,
                     name: this.currentEx.name,
-                    weight: this.weight,
-                    reps: this.reps
+                    weight: this.activeCategory === 'Gym' ? this.weight : null,
+                    reps: this.activeCategory === 'Gym' ? this.reps : null,
+                    distance: this.activeCategory === 'Football' ? this.distance : null,
+                    time: this.activeCategory === 'Football' ? this.time : null
                 });
                 localStorage.setItem('sprintlog_sets', JSON.stringify(this.completedSets));
                 this.closeModal();
             },
+            
             clearWorkout() {
-                if (confirm('Are you sure you want to clear this session?')) {
-                    this.completedSets = [];
-                    localStorage.removeItem('sprintlog_sets');
-                }
+                if (confirm('Clear session?')) { this.completedSets = []; localStorage.removeItem('sprintlog_sets'); }
             },
+
             async finishWorkout() {
+                this.isSaving = true;
                 try {
                     const payload = {
                         WorkoutType: this.activeCategory,
                         Sets: this.completedSets.map(s => ({
-                            ExerciseId: s.exerciseId,
-                            Weight: s.weight,
-                            Reps: s.reps
+                            ExerciseId: s.exerciseId, Weight: s.weight, Reps: s.reps, Distance: s.distance, Time: s.time
                         }))
                     };
-
-                    const response = await fetch('/api/workouts/generate', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                    const res = await fetch('/api/workouts/save', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
                     });
+                    if (res.ok) {
+                        this.completedSets = [];
+                        localStorage.removeItem('sprintlog_sets');
+                        // Сразу перекидываем в аналитику посмотреть результат
+                        this.switchTab('Analytics');
+                    } else { alert('Server error'); }
+                } catch (e) { console.error(e); } 
+                finally { this.isSaving = false; }
+            },
 
-                    const data = await response.json();
-                    await navigator.clipboard.writeText(data.markdown);
+            // --- ЛОГИКА ОТРИСОВКИ ГРАФИКОВ ---
+            drawChart() {
+                if (!this.selectedChartExercise) return;
+
+                // 1. Собираем данные (Ищем максимальный вес/повторения за каждую тренировку)
+                const chartLabels = [];
+                const chartData = [];
+                let isTimeBased = false;
+
+                // Идем с конца в начало, чтобы слева на графике были старые даты, а справа - новые
+                const reversedHistory = [...this.historyData].reverse();
+
+                reversedHistory.forEach(workout => {
+                    // Ищем все подходы выбранного упражнения в этой тренировке
+                    const setsForExercise = workout.sets.filter(s => s.exerciseName === this.selectedChartExercise);
                     
-                    alert('Workout copied to clipboard! Paste it into Obsidian.');
-                    
-                    this.completedSets = [];
-                    localStorage.removeItem('sprintlog_sets');
-                    
-                } catch (error) {
-                    console.error('Error generating workout:', error);
-                    alert('Failed to copy. Please try again.');
+                    if (setsForExercise.length > 0) {
+                        // Добавляем дату на ось X
+                        chartLabels.push(this.formatDate(workout.date));
+
+                        // Определяем, что рисовать. Если есть Вес - рисуем макс. вес. Если нет веса, но есть время - рисуем мин. время
+                        if (setsForExercise[0].weight !== null) {
+                            const maxWeight = Math.max(...setsForExercise.map(s => s.weight));
+                            chartData.push(maxWeight);
+                        } 
+                        else if (setsForExercise[0].time !== null) {
+                            isTimeBased = true;
+                            // В спринтах лучший результат - это минимальное время
+                            const minTime = Math.min(...setsForExercise.map(s => s.time));
+                            chartData.push(minTime);
+                        }
+                    }
+                });
+
+                // 2. Очищаем старый график, если он был
+                if (this.chartInstance) {
+                    this.chartInstance.destroy();
                 }
+
+                // 3. Рисуем новый график
+                const ctx = document.getElementById('progressChart');
+                
+                // Настраиваем цвета линии (Синий для зала, Зеленый для футбола)
+                const lineColor = isTimeBased ? '#10b981' : '#3b82f6';
+                const labelText = isTimeBased ? 'Best Time (seconds)' : 'Max Weight (kg)';
+
+                this.chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            label: labelText,
+                            data: chartData,
+                            borderColor: lineColor,
+                            backgroundColor: lineColor + '33', // Добавляет прозрачность
+                            borderWidth: 3,
+                            pointBackgroundColor: '#fff',
+                            pointRadius: 4,
+                            fill: true,
+                            tension: 0.3 // Плавный изгиб линии
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: false,
+                                grid: { color: '#27272a' } // Темная сетка
+                            },
+                            x: {
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
             }
         }
     }).mount('#app');

@@ -57,7 +57,7 @@ namespace SprintLog.Api.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Type")
+                    b.Property<string>("WorkoutType")
                         .IsRequired()
                         .HasColumnType("text");
 
