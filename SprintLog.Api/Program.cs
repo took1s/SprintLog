@@ -1,41 +1,68 @@
+using Microsoft.EntityFrameworkCore;
+using SprintLog.Api.Data;
+using SprintLog.Api.Models;
+using System.Text;
+
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+
+// Добавляем подключение к PostgreSQL
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+// --- НАЧАЛО НАШЕГО API ---
 
-app.UseHttpsRedirection();
+// 1. GET: Получить список упражнений
 
-var summaries = new[]
+app.MapGet("/api/exercises", async (AppDbContext db, string? category) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    var query = db.Exercises.AsQueryable();
+    
+    // Если телефон попросил конкретную категорию (например, "Gym" или "Football"), фильтруем
+    if (!string.IsNullOrWhiteSpace(category))
+    {
+        query = query.Where(e => e.Category == category);
+    }
+    
+    var exercises = await query.ToListAsync();
+    return Results.Ok(exercises);
+});
 
-app.MapGet("/weatherforecast", () =>
+// 2. POST: Добавить новое упражнение
+app.MapPost("/api/exercises", async (AppDbContext db, Exercise newExercise) =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    db.Exercises.Add(newExercise);
+    await db.SaveChangesAsync(); // Сохраняем изменения в Supabase
+    
+    // Возвращаем успешный статус 201 (Created) и само созданное упражнение
+    return Results.Created($"/api/exercises/{newExercise.Id}", newExercise);
+});
+
+// Эндпоинт для генерации отчета
+app.MapPost("/api/workouts/generate", (WorkoutRequest request) =>
+{
+    var sb = new StringBuilder();
+    sb.AppendLine($"# Тренировка: {request.WorkoutType}");
+    sb.AppendLine($"Дата: {DateTime.Now:yyyy-MM-dd}");
+    sb.AppendLine("");
+    sb.AppendLine("| Упражнение | Вес/Дист | Повт/Время |");
+    sb.AppendLine("| --- | --- | --- |");
+
+    foreach (var s in request.Sets)
+    {
+        sb.AppendLine($"| ID: {s.ExerciseId} | {s.Weight ?? s.Distance} | {s.Reps ?? (int?)s.Time} |");
+    }
+
+    return Results.Ok(new { Markdown = sb.ToString() });
+});
+
+
+// --- КОНЕЦ НАШЕГО API --
+
+app.UseDefaultFiles(); // Чтобы он искал index.html
+app.UseStaticFiles();  // Чтобы он раздавал файлы из wwwroot
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

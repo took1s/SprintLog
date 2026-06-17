@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SprintLog | Pro</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #09090b; 
+            color: #e4e4e7; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        .premium-card {
+            background: rgba(24, 24, 27, 0.6);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        .slide-up-enter-active, .slide-up-leave-active { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s; }
+        .slide-up-enter-from, .slide-up-leave-to { transform: translateY(20px); opacity: 0; }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex justify-center p-4 sm:p-10 pb-32">
+
+<div id="app" class="w-full max-w-3xl relative">
+    
+    <header class="mb-10 text-center mt-4">
+        <h1 class="text-4xl font-black tracking-tighter text-white mb-1">
+            Sprint<span class="bg-gradient-to-r from-blue-500 to-cyan-400 bg-clip-text text-transparent">Log</span>
+        </h1>
+    </header>
+
+    <div class="flex justify-center mb-8">
+        <div class="premium-card flex p-1 rounded-2xl">
+            <button @click="activeCategory = 'Gym'" :class="activeCategory === 'Gym' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500'" class="px-8 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300">Gym</button>
+            <button @click="activeCategory = 'Football'" :class="activeCategory === 'Football' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500'" class="px-8 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300">Football</button>
+        </div>
+    </div>
+
+    <main class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div v-for="ex in filteredExercises" :key="ex.id" @click="openModal(ex)"
+                 class="premium-card p-5 rounded-2xl transition-all duration-300 cursor-pointer flex justify-between items-center group hover:border-blue-500/30">
+                <div>
+                    <h3 class="font-bold text-zinc-100 text-lg">{{ ex.name }}</h3>
+                    <p class="text-xs text-zinc-500 font-semibold uppercase tracking-widest mt-1">{{ ex.muscleGroup }}</p>
+                </div>
+                <div class="h-10 w-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                    +
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <transition name="slide-up">
+        <div v-if="completedSets.length > 0" class="fixed bottom-0 left-0 right-0 p-4 sm:p-6 z-30 flex justify-center pointer-events-none">
+            <div class="w-full max-w-3xl pointer-events-auto">
+                <button @click="finishWorkout" 
+                        class="w-full bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 font-bold py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                    </svg>
+                    Copy to Obsidian ({{ completedSets.length }} sets)
+                </button>
+            </div>
+        </div>
+    </transition>
+
+    <transition name="fade">
+        <div v-if="showModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center" @click.self="closeModal">
+            <transition name="slide-up" appear>
+                <div class="bg-zinc-900 w-full max-w-md p-6 rounded-t-3xl sm:rounded-3xl border border-zinc-800 shadow-2xl relative z-50">
+                    
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="text-2xl font-bold text-white">{{ currentEx?.name }}</h3>
+                            <p class="text-zinc-500 text-sm mt-1">{{ currentEx?.muscleGroup }}</p>
+                        </div>
+                        <button @click="closeModal" class="h-8 w-8 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400 hover:text-white">✕</button>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-zinc-400 text-xs font-bold uppercase tracking-wider mb-3">Weight (kg)</label>
+                        <div class="flex items-center justify-between bg-zinc-950 p-2 rounded-2xl border border-zinc-800 focus-within:border-blue-500/50 transition-colors">
+                            <button @click="weight = Math.max(0, weight - 2.5)" class="h-14 w-14 rounded-xl bg-zinc-800 flex items-center justify-center text-2xl font-medium active:scale-95 transition-transform text-white">-</button>
+                            <input type="number" v-model.number="weight" class="w-24 text-center bg-transparent text-3xl font-black tabular-nums outline-none text-white focus:ring-0">
+                            <button @click="weight += 2.5" class="h-14 w-14 rounded-xl bg-zinc-800 flex items-center justify-center text-2xl font-medium active:scale-95 transition-transform text-white">+</button>
+                        </div>
+                    </div>
+
+                    <div class="mb-8">
+                        <label class="block text-zinc-400 text-xs font-bold uppercase tracking-wider mb-3">Reps</label>
+                        <div class="flex items-center justify-between bg-zinc-950 p-2 rounded-2xl border border-zinc-800 focus-within:border-blue-500/50 transition-colors">
+                            <button @click="reps = Math.max(0, reps - 1)" class="h-14 w-14 rounded-xl bg-zinc-800 flex items-center justify-center text-2xl font-medium active:scale-95 transition-transform text-white">-</button>
+                            <input type="number" v-model.number="reps" class="w-24 text-center bg-transparent text-3xl font-black tabular-nums outline-none text-white focus:ring-0">
+                            <button @click="reps += 1" class="h-14 w-14 rounded-xl bg-zinc-800 flex items-center justify-center text-2xl font-medium active:scale-95 transition-transform text-white">+</button>
+                        </div>
+                    </div>
+
+                    <button @click="saveSet" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-colors active:scale-95">
+                        Add Set
+                    </button>
+                </div>
+            </transition>
+        </div>
+    </transition>
+
+</div>
+
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        data() {
+            return {
+                activeCategory: 'Gym',
+                exercises: [],
+                loading: true,
+                showModal: false,
+                currentEx: null,
+                weight: 20,
+                reps: 10,
+                completedSets: []
+            }
+        },
+        computed: {
+            filteredExercises() {
+                return this.exercises.filter(e => e.category === this.activeCategory);
+            }
+        },
+        async mounted() {
+            await this.fetchExercises();
+        },
+        methods: {
+            async fetchExercises() {
+                this.loading = true;
+                try {
+                    const response = await fetch('/api/exercises');
+                    this.exercises = await response.json();
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                } finally {
+                    this.loading = false;
+                }
+            },
+            openModal(exercise) {
+                this.currentEx = exercise;
+                this.showModal = true;
+                this.weight = 20;
+                this.reps = 10;
+            },
+            closeModal() {
+                this.showModal = false;
+                setTimeout(() => this.currentEx = null, 300);
+            },
+            saveSet() {
+                this.completedSets.push({
+                    exerciseId: this.currentEx.id,
+                    name: this.currentEx.name,
+                    weight: this.weight,
+                    reps: this.reps
+                });
+                this.closeModal();
+            },
+            // НОВЫЙ МЕТОД: Отправка на бэкенд и копирование
+            async finishWorkout() {
+                try {
+                    // 1. Формируем JSON-пакет по структуре нашего C# рекорда WorkoutRequest
+                    const payload = {
+                        WorkoutType: this.activeCategory,
+                        Sets: this.completedSets.map(s => ({
+                            ExerciseId: s.exerciseId,
+                            Weight: s.weight,
+                            Reps: s.reps
+                        }))
+                    };
+
+                    // 2. Отправляем POST запрос на наш C# сервер
+                    const response = await fetch('/api/workouts/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    // 3. Получаем ответ
+                    const data = await response.json();
+                    
+                    // 4. Копируем сгенерированный Markdown в буфер обмена телефона/ПК
+                    await navigator.clipboard.writeText(data.markdown);
+                    
+                    // 5. Показываем сообщение об успехе
+                    alert('Workout copied to clipboard! Paste it into Obsidian.');
+                    
+                    // 6. Очищаем тренировку для следующего раза
+                    this.completedSets = [];
+                    
+                } catch (error) {
+                    console.error('Error generating workout:', error);
+                    alert('Failed to copy. Please try again.');
+                }
+            }
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
