@@ -1,8 +1,15 @@
 version: '3.8'
+
 services:
-  api:
-    build: .
+  sprintlog-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "5111:80" # Внутри контейнера .NET обычно слушает 80 порт, наружу пробрасываем 5111
+    env_file:
+      - .env
     environment:
+      - SprintLogApiKey=${SPRINTLOG_API_KEY}
       - ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
+    restart: always
