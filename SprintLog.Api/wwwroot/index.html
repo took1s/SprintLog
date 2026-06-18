@@ -192,8 +192,11 @@
                             :class="type === 'Gym' ? 'border-l-purple-500' : 'border-l-[#00c3ff]'">
                             
                             <div class="flex justify-between items-center mb-6">
-                                <h3 class="font-black text-lg text-white flex items-center gap-2">
+                                <h3 class="font-black text-lg text-white flex items-center gap-3">
                                     {{ type }} Session
+                                    <span v-if="type === 'Gym'" class="text-[9px] font-mono bg-purple-500/20 text-purple-300 px-2 py-1 rounded border border-purple-500/30 uppercase tracking-widest shadow-[0_0_10px_rgba(168,85,247,0.2)]">
+                                        Vol: {{ getTotalTypeVolume(exercises) }} kg
+                                    </span>
                                 </h3>
                             </div>
 
@@ -201,11 +204,26 @@
                                 <div v-for="(sets, exName) in exercises" :key="exName" class="flex justify-between items-center bg-black/20 p-3 rounded-xl border border-white/5">
                                     <span class="text-slate-300 font-bold text-sm">{{ exName }}</span>
                                     
-                                    <div class="flex flex-wrap gap-2 justify-end">
-                                        <div v-for="set in sets" class="bg-[#02040a] px-3 py-1 rounded-lg text-[11px] font-mono border border-white/10 text-white">
-                                            <span v-if="type === 'Gym' && set.weight">{{ set.weight }}kg × {{ set.reps }}</span>
-                                            <span v-else-if="type === 'Football' && (set.distance || set.time)">{{ set.distance }}m / {{ set.time }}s</span>
-                                            <span v-else class="text-slate-600 italic">No data</span>
+                                    <div class="flex flex-col items-end gap-1.5">
+                                        <div v-for="set in sets" class="flex items-center gap-2">
+                                            
+                                            <span v-if="type === 'Gym'" class="flex items-center justify-center w-4 h-4">
+                                                <svg v-if="getTrend(exName, date, set.weight) === 'up'" class="w-3 h-3 text-green-400 drop-shadow-[0_0_5px_rgba(74,222,128,0.8)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                                                <svg v-if="getTrend(exName, date, set.weight) === 'down'" class="w-3 h-3 text-red-500 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                                                <span v-if="getTrend(exName, date, set.weight) === 'same'" class="text-slate-600 font-black text-[10px]">-</span>
+                                            </span>
+
+                                            <div class="bg-[#02040a] px-3 py-1 rounded-lg text-[11px] font-mono border border-white/10 text-white relative">
+                                                <span v-if="type === 'Gym' && set.weight">{{ set.weight }}kg × {{ set.reps }}</span>
+                                                <span v-else-if="type === 'Gym' && !set.weight">BW × {{ set.reps }}</span>
+                                                <span v-else-if="set.time"><template v-if="set.distance">{{ set.distance }}m / </template>{{ set.time }}s</span>
+                                                <span v-else class="text-slate-600 italic">No data</span>
+                                                
+                                                <div v-if="type === 'Gym' && isPR(exName, set.weight)" class="absolute -top-2 -right-2 bg-yellow-500 text-black text-[8px] px-1.5 py-0.5 rounded-sm font-black tracking-tighter border border-yellow-300 shadow-[0_0_10px_rgba(234,179,8,0.6)] z-10">
+                                                    PR
+                                                </div>
+                                            </div>
+
                                         </div>
                                     </div>
                                 </div>
@@ -228,14 +246,39 @@
                 </div>
 
                 <div v-if="analyticsTab === 'calendar'" class="glass-panel p-6 rounded-3xl">
-                    <h3 class="font-black text-white tracking-wide mb-6">Activity Matrix</h3>
-                    <div class="grid grid-cols-4 sm:grid-cols-7 gap-3">
-                        <div v-for="date in activeDays" :key="date" class="bg-[#00c3ff]/10 border border-[#00c3ff]/30 rounded-xl p-3 text-center transition-all hover:bg-[#00c3ff]/20 hover:shadow-[0_0_15px_rgba(0,195,255,0.2)]">
-                            <div class="text-[10px] text-[#00c3ff] uppercase tracking-widest font-bold">{{ getMonthShort(date) }}</div>
-                            <div class="text-2xl font-black text-white mt-1">{{ getDay(date) }}</div>
+                    <div class="flex justify-between items-end mb-8">
+                        <div>
+                            <h3 class="font-black text-white text-xl tracking-wide">Activity Heatmap</h3>
+                            <p class="text-[10px] text-slate-500 uppercase tracking-widest font-mono mt-1">Volume Intensity - Last 30 Days</p>
                         </div>
                     </div>
-                    <p v-if="activeDays.length === 0" class="text-slate-500 text-center text-sm font-mono mt-4">System idle. No entries.</p>
+
+                    <div class="flex flex-wrap gap-2 justify-center sm:justify-start">
+                        <div v-for="day in heatmapData" :key="day.date"
+                             class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg transition-all duration-300 border flex items-center justify-center group relative cursor-pointer"
+                             :class="{
+                                'bg-[#02040a] border-white/5': day.intensity === 0,
+                                'bg-[#00c3ff]/20 border-[#00c3ff]/30': day.intensity === 1,
+                                'bg-[#00c3ff]/50 border-[#00c3ff]/50': day.intensity === 2,
+                                'bg-[#00c3ff]/80 border-[#00c3ff]/80': day.intensity === 3,
+                                'bg-[#00c3ff] border-[#00c3ff] shadow-[0_0_15px_rgba(0,195,255,0.6)]': day.intensity === 4
+                             }">
+                             <div class="absolute bottom-full mb-2 hidden group-hover:block z-20 w-max bg-black/90 text-white text-[10px] font-mono px-3 py-1.5 rounded-md border border-white/10 shadow-xl pointer-events-none">
+                                 <span class="text-[#00c3ff] font-bold">{{ day.date }}</span>
+                                 <br>
+                                 <span class="text-slate-400">Volume: {{ day.volume }} kg</span>
+                             </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-end gap-2 mt-6 text-[10px] font-mono text-slate-500 uppercase">
+                        <span>Less</span>
+                        <div class="w-3 h-3 rounded bg-[#02040a] border border-white/5"></div>
+                        <div class="w-3 h-3 rounded bg-[#00c3ff]/20"></div>
+                        <div class="w-3 h-3 rounded bg-[#00c3ff]/50"></div>
+                        <div class="w-3 h-3 rounded bg-[#00c3ff]"></div>
+                        <span>More</span>
+                    </div>
                 </div>
             </div>
         </div>

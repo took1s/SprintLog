@@ -52,6 +52,46 @@ createApp({
     },
     computed: {
 
+        // Генератор данных для Heatmap (Календарь)
+        heatmapData() {
+            const map = {};
+            let maxVol = 0;
+
+            // Считаем объем за каждый день в истории
+            this.historyData.forEach(w => {
+                const date = w.date.split('T')[0];
+                const vol = w.sets.reduce((sum, set) => sum + ((set.weight || 0) * (set.reps || 0)), 0);
+                map[date] = (map[date] || 0) + vol;
+                if (map[date] > maxVol) maxVol = map[date];
+            });
+
+            const days = [];
+            // Создаем массив за последние 30 дней
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
+                
+                const vol = map[dateStr] || 0;
+
+                // Определяем интенсивность цвета (0-4) как в GitHub
+                let intensity = 0;
+                if (vol > 0) {
+                    const ratio = vol / (maxVol || 1);
+                    if (ratio > 0.75) intensity = 4;
+                    else if (ratio > 0.5) intensity = 3;
+                    else if (ratio > 0.25) intensity = 2;
+                    else intensity = 1;
+                }
+
+                days.push({ date: dateStr, volume: vol, intensity });
+            }
+            return days;
+        },
+
         groupedHistory() {
             const groups = {};
             
@@ -187,6 +227,49 @@ createApp({
     },
     methods: {
 
+        // Подсчет тоннажа для группы упражнений
+        getTotalTypeVolume(exercisesObj) {
+            let sum = 0;
+            Object.values(exercisesObj).forEach(sets => {
+                sum += sets.reduce((s, set) => s + ((set.weight || 0) * (set.reps || 0)), 0);
+            });
+            return sum;
+        },
+
+        // Проверка на личный рекорд (PR)
+        isPR(exName, weight) {
+            if (!weight) return false;
+            let max = 0;
+            this.historyData.forEach(w => w.sets.forEach(s => {
+                if (s.exerciseName === exName && s.weight > max) max = s.weight;
+            }));
+            return weight === max && weight > 0;
+        },
+
+        // Сравнение с прошлым результатом (Тренд)
+        getTrend(exName, currentDate, currentWeight) {
+            if (!currentWeight) return null;
+            
+            // Ищем все тренировки ДО текущей даты
+            const pastWorkouts = this.historyData.filter(w => w.date.split('T')[0] < currentDate);
+            if (pastWorkouts.length === 0) return null;
+
+            let lastWeight = 0;
+            // Ищем самый свежий результат в прошлом
+            for (let w of pastWorkouts) {
+                const sets = w.sets.filter(s => s.exerciseName === exName);
+                if (sets.length > 0) {
+                    lastWeight = Math.max(...sets.map(s => s.weight || 0));
+                    break;
+                }
+            }
+
+            if (lastWeight === 0) return null;
+            if (currentWeight > lastWeight) return 'up';
+            if (currentWeight < lastWeight) return 'down';
+            return 'same';
+        },
+
         isTimeBased(ex) {
             if (!ex) return false;
             
@@ -202,35 +285,6 @@ createApp({
 
             // По умолчанию для зала возвращаем классику (вес/повторы)
             return false;
-        },
-
-        // Вычисление общего объема (тоннажа) для тренировки
-        getWorkoutVolume(sets) {
-            return sets.reduce((sum, set) => {
-                // Для зала: вес * повторы. Для поля можно игнорировать или считать иначе
-                if (set.weight && set.reps) return sum + (set.weight * set.reps);
-                return sum;
-            }, 0);
-        },
-
-        // Проверка на PR
-        isPersonalBest(exName, currentWeight, currentReps) {
-            // Получаем все прошлые записи этого упражнения до текущей даты
-            // (для простоты можно проверять по всей истории)
-            const history = this.historyData;
-            let max = 0;
-            
-            history.forEach(w => {
-                w.sets.forEach(s => {
-                    if (s.exerciseName === exName && s.weight) {
-                        // Считаем объем (вес * повторы) как метрику силы
-                        const volume = s.weight * s.reps;
-                        if (volume > max) max = volume;
-                    }
-                });
-            });
-            
-            return (currentWeight * currentReps) > max && max > 0;
         },
 
         showConfirm(title, message) {
@@ -548,27 +602,42 @@ createApp({
                         label: labelText,
                         data: chartData,
                         borderColor: lineColor,
-                        backgroundColor: lineColor + '33',
+                        backgroundColor: lineColor + '33', // Полупрозрачная заливка под линией
                         borderWidth: 3,
-                        pointBackgroundColor: '#fff',
-                        pointRadius: 4,
+                        pointBackgroundColor: '#02040a', // Темные точки внутри
+                        pointBorderColor: lineColor,
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
                         fill: true,
-                        tension: 0.3
+                        tension: 0.4 // <--- ГЛАВНЫЙ СЕКРЕТ: Делает линию плавной (без острых углов)
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleFont: { family: 'Inter', size: 11 },
+                            bodyFont: { family: 'Inter', size: 13, weight: 'bold' },
+                            padding: 10,
+                            displayColors: false,
+                            cornerRadius: 8,
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderWidth: 1
+                        }
                     },
                     scales: {
                         y: { 
                             beginAtZero: false,
-                            grid: { color: '#27272a' }
+                            grid: { color: 'rgba(255,255,255,0.05)', borderDash: [5, 5] }, // Пунктирная сетка
+                            ticks: { color: '#64748b', font: { family: 'Inter', size: 10 } }
                         },
                         x: {
-                            grid: { display: false }
+                            grid: { display: false },
+                            ticks: { color: '#64748b', font: { family: 'Inter', size: 10 } }
                         }
                     }
                 }
