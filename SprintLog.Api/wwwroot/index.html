@@ -244,6 +244,27 @@
             </div>
         </transition>
 
+        <!-- Custom System Dialog -->
+        <transition name="fade">
+            <div v-if="dialog.isOpen" class="fixed inset-0 bg-[#02040a]/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                <transition name="slide-up" appear>
+                    <div class="glass-panel w-full max-w-sm p-6 rounded-[2rem] border border-cyan-500/20 text-center">
+                        <h3 class="text-xl font-black text-white mb-2 uppercase tracking-widest">{{ dialog.title }}</h3>
+                        <p class="text-slate-400 text-sm mb-8 font-mono">{{ dialog.message }}</p>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <button @click="resolveDialog(false)" class="bg-white/5 hover:bg-white/10 text-slate-300 py-3 rounded-xl font-bold transition-all">
+                                CANCEL
+                            </button>
+                            <button @click="resolveDialog(true)" class="cyber-btn py-3 rounded-xl font-bold">
+                                CONFIRM
+                            </button>
+                        </div>
+                    </div>
+                </transition>
+            </div>
+        </transition>
+
         <!-- Модалка ввода (Glassmorphism) -->
         <transition name="fade">
             <div v-if="showModal" class="fixed inset-0 bg-[#02040a]/60 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center" @click.self="closeModal">

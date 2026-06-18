@@ -31,7 +31,13 @@ createApp({
             loading: true,
             isSaving: false,
 
-            
+            dialog: {
+                isOpen: false,
+                title: '',
+                message: '',
+                resolve: null
+            },
+
             historyData: [],
             loadingHistory: false,
             selectedChartExercise: '',
@@ -158,6 +164,20 @@ createApp({
         if (savedSets) this.completedSets = JSON.parse(savedSets);
     },
     methods: {
+
+        showConfirm(title, message) {
+            this.dialog.title = title;
+            this.dialog.message = message;
+            this.dialog.isOpen = true;
+            return new Promise((resolve) => {
+                this.dialog.resolve = resolve;
+            });
+        },
+
+        resolveDialog(result) {
+            this.dialog.isOpen = false;
+            this.dialog.resolve(result);
+        },
 
         toggleMuscleFilter(muscle) {
             if (this.activeMuscleFilters.includes(muscle)) {
@@ -338,8 +358,16 @@ createApp({
             this.closeModal();
         },
         
-        clearWorkout() {
-            if (confirm('Clear session?')) { this.completedSets = []; localStorage.removeItem('sprintlog_sets'); }
+        async clearWorkout() {
+            const confirmed = await this.showConfirm(
+                'System Alert', 
+                'Clear active session data?'
+            );
+            
+            if (confirmed) {
+                this.completedSets = []; 
+                localStorage.removeItem('sprintlog_sets');
+            }
         },
 
         async finishWorkout() {
