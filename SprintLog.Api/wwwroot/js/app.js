@@ -7,20 +7,30 @@ const { createApp } = Vue;
 createApp({
     data() {
         return {
+            isLoginMode: true,
             isAuthenticated: false,
             token: '',
             loginData: { username: '', password: '' },
             isLoggingIn: false,
             loginError: '',
             isOffline: !navigator.onLine,
+            
                     
             activeCategory: 'Gym', 
             analyticsTab: 'history', 
             searchQuery: '',
+
+            sortMode: 'fav', // По умолчанию показываем любимые сверху
+            isSortOpen: false,
+            favorites: [],   // Массив ID любимых упражнений
+            activeMuscleFilters: [],
+            
+            exercises: [],
             
             exercises: [],
             loading: true,
             isSaving: false,
+
             
             historyData: [],
             loadingHistory: false,
@@ -35,14 +45,74 @@ createApp({
         }
     },
     computed: {
+        availableMuscleGroups() {
+            const groups = new Set();
+            this.exercises
+                .filter(e => e.category === this.activeCategory)
+                .forEach(e => groups.add(e.muscleGroup));
+            return Array.from(groups).sort();
+        },
+
         filteredExercises() {
+            // 1. Фильтр по категории
             let result = this.exercises.filter(e => e.category === this.activeCategory);
+
+            // 2. Фильтр по поиску
             if (this.searchQuery) {
                 const query = this.searchQuery.toLowerCase().trim();
                 result = result.filter(e => e.name.toLowerCase().includes(query) || e.muscleGroup.toLowerCase().includes(query));
             }
-            return result.sort((a, b) => a.name.localeCompare(b.name));
+
+            // 3. Фильтр по мышцам
+            if (this.activeMuscleFilters.length > 0) {
+                result = result.filter(e => this.activeMuscleFilters.includes(e.muscleGroup));
+            }
+
+            // 4. Сортировка
+            result.sort((a, b) => {
+                const aFav = this.favorites.includes(a.id) ? 1 : 0;
+                const bFav = this.favorites.includes(b.id) ? 1 : 0;
+
+                if (this.sortMode === 'fav') {
+                    if (aFav !== bFav) return bFav - aFav; 
+                    return a.name.localeCompare(b.name);
+                }
+                if (this.sortMode === 'freq') {
+                    const aCount = this.exerciseUsage[a.name] || 0;
+                    const bCount = this.exerciseUsage[b.name] || 0;
+                    if (aCount !== bCount) return bCount - aCount;
+                    return a.name.localeCompare(b.name);
+                }
+                if (this.sortMode === 'za') {
+                    return b.name.localeCompare(a.name);
+                }
+                // По умолчанию А-Я
+                return a.name.localeCompare(b.name);
+            });
+
+            return result;
         },
+
+        currentSortLabel() {
+            const labels = {
+                'fav': 'Favorites',
+                'freq': 'Most Used',
+                'az': 'A - Z',
+                'za': 'Z - A'
+            };
+            return labels[this.sortMode];
+        },
+
+        exerciseUsage() {
+            const usage = {};
+            this.historyData.forEach(workout => {
+                workout.sets.forEach(set => {
+                    usage[set.exerciseName] = (usage[set.exerciseName] || 0) + 1;
+                });
+            });
+            return usage;
+        },
+
         uniqueHistoryExercises() {
             const names = new Set();
             this.historyData.forEach(workout => {
@@ -50,6 +120,7 @@ createApp({
             });
             return Array.from(names).sort();
         },
+
         activeDays() {
             const dates = new Set();
             this.historyData.forEach(w => {
@@ -76,6 +147,8 @@ createApp({
             if (this.isAuthenticated) {
                 await this.syncPendingWorkouts();
                 await this.fetchExercises();
+                await this.loadHistory();
+                this.loadFavorites();
             }
         } else {
             this.loading = false;
@@ -85,6 +158,61 @@ createApp({
         if (savedSets) this.completedSets = JSON.parse(savedSets);
     },
     methods: {
+
+        toggleMuscleFilter(muscle) {
+            if (this.activeMuscleFilters.includes(muscle)) {
+                this.activeMuscleFilters = this.activeMuscleFilters.filter(m => m !== muscle);
+            } else {
+                this.activeMuscleFilters.push(muscle);
+            }
+        },
+
+        selectSort(mode) {
+            this.sortMode = mode;
+            this.isSortOpen = false; // Закрываем меню после выбора
+        },
+
+
+        toggleFavorite(ex) {
+            const index = this.favorites.indexOf(ex.id);
+            if (index > -1) {
+                this.favorites.splice(index, 1); // Удаляем
+            } else {
+                this.favorites.push(ex.id); // Добавляем
+            }
+            // Сохраняем в кэш с привязкой к имени пользователя
+            localStorage.setItem(`sprintlog_favs_${this.loginData.username}`, JSON.stringify(this.favorites));
+        },
+        loadFavorites() {
+            const saved = localStorage.getItem(`sprintlog_favs_${this.loginData.username}`);
+            this.favorites = saved ? JSON.parse(saved) : [];
+        },
+
+        async register() {
+            this.isLoggingIn = true;
+            this.loginError = '';
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.loginData)
+                });
+                
+                if (res.ok) {
+                    // Если регистрация успешна, сразу переводим в режим логина и логиним
+                    this.isLoginMode = true;
+                    await this.login();
+                } else {
+                    const data = await res.json();
+                    this.loginError = data.Message || 'Registration failed';
+                }
+            } catch (e) {
+                this.loginError = 'Server connection error';
+            } finally {
+                this.isLoggingIn = false;
+            }
+        },
+
         async refreshToken() {
             if (!this.token) return;
             try {
@@ -121,6 +249,8 @@ createApp({
                     localStorage.setItem('sprintlog_jwt', this.token);
                     this.isAuthenticated = true;
                     await this.fetchExercises();
+                    await this.loadHistory(); 
+                    this.loadFavorites();
                 } else {
                     this.loginError = 'Invalid username or password';
                 }

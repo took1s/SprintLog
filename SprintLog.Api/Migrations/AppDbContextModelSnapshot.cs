@@ -44,6 +44,617 @@ namespace SprintLog.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Exercises");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Bench Press"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Leg Extensions"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Leg Curls"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Calf Raises"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Hip Abduction"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Hip Adduction"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Leg Press"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Cable Tricep Pushdown"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Barbell Bicep Curl"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Dumbbell Wrist Curl"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Reverse Wrist Curl"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Category = "Football",
+                            MuscleGroup = "Cardio",
+                            Name = "Running / Sprints"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Dumbbell Bicep Curl"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Seated Cable Row"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Standing Dumbbell Curl"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Dumbbell Skull Crusher"
+                        },
+                        new
+                        {
+                            Id = 17,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Pull-ups"
+                        },
+                        new
+                        {
+                            Id = 18,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Chest Press Machine"
+                        },
+                        new
+                        {
+                            Id = 19,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Machine Lateral Raise"
+                        },
+                        new
+                        {
+                            Id = 20,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Dips"
+                        },
+                        new
+                        {
+                            Id = 21,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Seated Calf Raises"
+                        },
+                        new
+                        {
+                            Id = 22,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "EZ-Bar Bicep Curl"
+                        },
+                        new
+                        {
+                            Id = 23,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Wide Grip Lat Pulldown"
+                        },
+                        new
+                        {
+                            Id = 24,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Tricep Press Machine"
+                        },
+                        new
+                        {
+                            Id = 25,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Overhead Tricep Extension"
+                        },
+                        new
+                        {
+                            Id = 26,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Barbell Row"
+                        },
+                        new
+                        {
+                            Id = 27,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Rear Delt Fly"
+                        },
+                        new
+                        {
+                            Id = 28,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Close Grip Lat Pulldown"
+                        },
+                        new
+                        {
+                            Id = 29,
+                            Category = "Football",
+                            MuscleGroup = "Legs/Back",
+                            Name = "Trap Bar Deadlift"
+                        },
+                        new
+                        {
+                            Id = 30,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Dumbbell Bench Press"
+                        },
+                        new
+                        {
+                            Id = 31,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Bent-Over Row"
+                        },
+                        new
+                        {
+                            Id = 32,
+                            Category = "Football",
+                            MuscleGroup = "Explosive",
+                            Name = "Med Ball Wall Throw"
+                        },
+                        new
+                        {
+                            Id = 33,
+                            Category = "Football",
+                            MuscleGroup = "Legs",
+                            Name = "Bulgarian Split Squats"
+                        },
+                        new
+                        {
+                            Id = 34,
+                            Category = "Football",
+                            MuscleGroup = "Explosive",
+                            Name = "Broad Jumps"
+                        },
+                        new
+                        {
+                            Id = 35,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Barbell Squat"
+                        },
+                        new
+                        {
+                            Id = 36,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Single-Arm Dumbbell Row"
+                        },
+                        new
+                        {
+                            Id = 37,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Dumbbell Squat"
+                        },
+                        new
+                        {
+                            Id = 38,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Dumbbell Bent-Over Row"
+                        },
+                        new
+                        {
+                            Id = 39,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Glute Bridge"
+                        },
+                        new
+                        {
+                            Id = 40,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Dumbbell Shoulder Press"
+                        },
+                        new
+                        {
+                            Id = 41,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Static Lunges"
+                        },
+                        new
+                        {
+                            Id = 42,
+                            Category = "Gym",
+                            MuscleGroup = "Legs/Back",
+                            Name = "Dumbbell Deadlift"
+                        },
+                        new
+                        {
+                            Id = 43,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Hammer Curl"
+                        },
+                        new
+                        {
+                            Id = 44,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Lat Pulldown"
+                        },
+                        new
+                        {
+                            Id = 45,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Chest-Supported Row"
+                        },
+                        new
+                        {
+                            Id = 46,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Push-ups"
+                        },
+                        new
+                        {
+                            Id = 47,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Plank"
+                        },
+                        new
+                        {
+                            Id = 48,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Side Plank"
+                        },
+                        new
+                        {
+                            Id = 49,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Romanian Deadlift (RDL)"
+                        },
+                        new
+                        {
+                            Id = 50,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Nordic Hamstring Curls"
+                        },
+                        new
+                        {
+                            Id = 51,
+                            Category = "Football",
+                            MuscleGroup = "Explosive",
+                            Name = "Box Jumps"
+                        },
+                        new
+                        {
+                            Id = 52,
+                            Category = "Football",
+                            MuscleGroup = "Explosive",
+                            Name = "Depth Jumps"
+                        },
+                        new
+                        {
+                            Id = 53,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Russian Twists"
+                        },
+                        new
+                        {
+                            Id = 54,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Cable Woodchoppers"
+                        },
+                        new
+                        {
+                            Id = 55,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Hanging Leg Raises"
+                        },
+                        new
+                        {
+                            Id = 56,
+                            Category = "Football",
+                            MuscleGroup = "Agility",
+                            Name = "Agility Ladder"
+                        },
+                        new
+                        {
+                            Id = 57,
+                            Category = "Football",
+                            MuscleGroup = "Agility",
+                            Name = "Cone Shuttle Drills"
+                        },
+                        new
+                        {
+                            Id = 58,
+                            Category = "Football",
+                            MuscleGroup = "Agility",
+                            Name = "Change of Direction (COD) Sprints"
+                        },
+                        new
+                        {
+                            Id = 59,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Incline Barbell Bench Press"
+                        },
+                        new
+                        {
+                            Id = 60,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Incline Dumbbell Bench Press"
+                        },
+                        new
+                        {
+                            Id = 61,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Cable Crossover"
+                        },
+                        new
+                        {
+                            Id = 62,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Pec Deck Fly"
+                        },
+                        new
+                        {
+                            Id = 63,
+                            Category = "Gym",
+                            MuscleGroup = "Back/Legs",
+                            Name = "Deadlift (Conventional)"
+                        },
+                        new
+                        {
+                            Id = 64,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "T-Bar Row"
+                        },
+                        new
+                        {
+                            Id = 65,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Chin-ups"
+                        },
+                        new
+                        {
+                            Id = 66,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Straight-Arm Pulldown"
+                        },
+                        new
+                        {
+                            Id = 67,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Back Extension"
+                        },
+                        new
+                        {
+                            Id = 68,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Military Press"
+                        },
+                        new
+                        {
+                            Id = 69,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Dumbbell Lateral Raise"
+                        },
+                        new
+                        {
+                            Id = 70,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Dumbbell Front Raise"
+                        },
+                        new
+                        {
+                            Id = 71,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Face Pulls"
+                        },
+                        new
+                        {
+                            Id = 72,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Dumbbell Shrugs"
+                        },
+                        new
+                        {
+                            Id = 73,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Front Squat"
+                        },
+                        new
+                        {
+                            Id = 74,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Hack Squat"
+                        },
+                        new
+                        {
+                            Id = 75,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Barbell Hip Thrust"
+                        },
+                        new
+                        {
+                            Id = 76,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Walking Lunges"
+                        },
+                        new
+                        {
+                            Id = 77,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Preacher Curl"
+                        },
+                        new
+                        {
+                            Id = 78,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Close-Grip Bench Press"
+                        },
+                        new
+                        {
+                            Id = 79,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Cable Crunches"
+                        },
+                        new
+                        {
+                            Id = 80,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Ab Wheel Rollout"
+                        },
+                        new
+                        {
+                            Id = 81,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Crunches"
+                        },
+                        new
+                        {
+                            Id = 82,
+                            Category = "Gym",
+                            MuscleGroup = "Cardio",
+                            Name = "Jump Rope"
+                        },
+                        new
+                        {
+                            Id = 83,
+                            Category = "Gym",
+                            MuscleGroup = "Cardio",
+                            Name = "Rowing Machine"
+                        },
+                        new
+                        {
+                            Id = 84,
+                            Category = "Gym",
+                            MuscleGroup = "Cardio",
+                            Name = "Cycling (Stationary)"
+                        });
+                });
+
+            modelBuilder.Entity("SprintLog.Api.Models.User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("SprintLog.Api.Models.Workout", b =>
