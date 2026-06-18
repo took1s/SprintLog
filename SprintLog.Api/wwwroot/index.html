@@ -290,7 +290,7 @@
                             <button @click="closeModal" class="h-10 w-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white transition-colors">✕</button>
                         </div>
 
-                        <div v-if="activeCategory === 'Gym'">
+                        <div v-if="!isTimeBased(currentEx)">
                             <div class="mb-6">
                                 <label class="block text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-3">Weight (kg)</label>
                                 <div class="flex items-center justify-between bg-black/40 p-2 rounded-2xl border border-white/5">
@@ -309,9 +309,9 @@
                             </div>
                         </div>
 
-                        <div v-if="activeCategory === 'Football'">
+                        <div v-if="isTimeBased(currentEx)">
                             <div class="mb-6">
-                                <label class="block text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-3">Distance (meters)</label>
+                                <label class="block text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-3">Distance (meters) - Optional</label>
                                 <div class="flex items-center justify-between bg-black/40 p-2 rounded-2xl border border-white/5">
                                     <button @click="distance = Math.max(0, distance - 5)" class="h-14 w-14 rounded-xl cyber-outline-btn text-2xl font-light">-</button>
                                     <input type="number" v-model.number="distance" class="w-24 text-center bg-transparent text-4xl font-black text-white outline-none">

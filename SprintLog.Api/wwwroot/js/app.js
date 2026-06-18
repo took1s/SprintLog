@@ -187,6 +187,23 @@ createApp({
     },
     methods: {
 
+        isTimeBased(ex) {
+            if (!ex) return false;
+            
+            // 1. Все упражнения на поле (Football) - это время/дистанция
+            if (ex.category === 'Football') return true;
+            
+            // 2. Всё кардио в зале - это время/дистанция
+            if (ex.muscleGroup === 'Cardio') return true;
+            
+            // 3. Исключения (изометрические упражнения вроде планки)
+            const name = ex.name.toLowerCase();
+            if (name.includes('plank') || name.includes('hold')) return true;
+
+            // По умолчанию для зала возвращаем классику (вес/повторы)
+            return false;
+        },
+
         // Вычисление общего объема (тоннажа) для тренировки
         getWorkoutVolume(sets) {
             return sets.reduce((sum, set) => {
@@ -397,14 +414,20 @@ createApp({
         closeModal() { this.showModal = false; setTimeout(() => this.currentEx = null, 300); },
         
         saveSet() {
+            // Проверяем, требует ли текущее упражнение время
+            const isTime = this.isTimeBased(this.currentEx);
+
             this.completedSets.push({
                 exerciseId: this.currentEx.id,
                 name: this.currentEx.name,
-                weight: this.activeCategory === 'Gym' ? this.weight : null,
-                reps: this.activeCategory === 'Gym' ? this.reps : null,
-                distance: this.activeCategory === 'Football' ? this.distance : null,
-                time: this.activeCategory === 'Football' ? this.time : null
+                // Если упражнение на время, вес и повторы ставим null
+                weight: !isTime ? this.weight : null,
+                reps: !isTime ? this.reps : null,
+                // Если упражнение на время, записываем дистанцию и секунды
+                distance: isTime ? this.distance : null,
+                time: isTime ? this.time : null
             });
+            
             localStorage.setItem('sprintlog_sets', JSON.stringify(this.completedSets));
             this.closeModal();
         },
