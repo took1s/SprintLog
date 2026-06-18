@@ -51,6 +51,28 @@ createApp({
         }
     },
     computed: {
+
+        groupedHistory() {
+            const groups = {};
+            
+            this.historyData.forEach(workout => {
+                const date = workout.date.split('T')[0];
+                const type = workout.workoutType;
+                
+                if (!groups[date]) groups[date] = {};
+                if (!groups[date][type]) groups[date][type] = {};
+                
+                workout.sets.forEach(set => {
+                    const name = set.exerciseName;
+                    if (!groups[date][type][name]) {
+                        groups[date][type][name] = [];
+                    }
+                    groups[date][type][name].push(set);
+                });
+            });
+            return groups;
+        },
+
         availableMuscleGroups() {
             const groups = new Set();
             this.exercises
@@ -164,6 +186,35 @@ createApp({
         if (savedSets) this.completedSets = JSON.parse(savedSets);
     },
     methods: {
+
+        // Вычисление общего объема (тоннажа) для тренировки
+        getWorkoutVolume(sets) {
+            return sets.reduce((sum, set) => {
+                // Для зала: вес * повторы. Для поля можно игнорировать или считать иначе
+                if (set.weight && set.reps) return sum + (set.weight * set.reps);
+                return sum;
+            }, 0);
+        },
+
+        // Проверка на PR
+        isPersonalBest(exName, currentWeight, currentReps) {
+            // Получаем все прошлые записи этого упражнения до текущей даты
+            // (для простоты можно проверять по всей истории)
+            const history = this.historyData;
+            let max = 0;
+            
+            history.forEach(w => {
+                w.sets.forEach(s => {
+                    if (s.exerciseName === exName && s.weight) {
+                        // Считаем объем (вес * повторы) как метрику силы
+                        const volume = s.weight * s.reps;
+                        if (volume > max) max = volume;
+                    }
+                });
+            });
+            
+            return (currentWeight * currentReps) > max && max > 0;
+        },
 
         showConfirm(title, message) {
             this.dialog.title = title;

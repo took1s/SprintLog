@@ -184,21 +184,33 @@
             
             <div v-else>
                 <div v-if="analyticsTab === 'history'" class="space-y-4">
-                    <div v-if="historyData.length === 0" class="glass-panel text-center text-slate-500 py-10 rounded-2xl font-mono text-sm uppercase tracking-widest">No data detected</div>
-                    <div v-for="workout in historyData" :key="workout.id" class="glass-panel p-5 rounded-2xl border-l-4" :class="workout.workoutType === 'Gym' ? 'border-l-purple-500' : 'border-l-[#00c3ff]'">
-                        <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-3">
-                            <span class="font-black text-lg text-white tracking-tight">{{ formatDate(workout.date) }}</span>
-                            <span class="text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest" :class="workout.workoutType === 'Gym' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-[#00c3ff]/10 text-[#00c3ff] border border-[#00c3ff]/30'">{{ workout.workoutType }}</span>
+                    <div v-for="(types, date) in groupedHistory" :key="date" class="mb-10">
+                        <h2 class="text-slate-400 font-black text-sm uppercase tracking-widest mb-6 border-b border-white/5 pb-2">{{ date }}</h2>
+                        
+                        <div v-for="(exercises, type) in types" :key="type" 
+                            class="glass-panel p-6 rounded-3xl border-l-4 mb-6 shadow-2xl"
+                            :class="type === 'Gym' ? 'border-l-purple-500' : 'border-l-[#00c3ff]'">
+                            
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="font-black text-lg text-white flex items-center gap-2">
+                                    {{ type }} Session
+                                </h3>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div v-for="(sets, exName) in exercises" :key="exName" class="flex justify-between items-center bg-black/20 p-3 rounded-xl border border-white/5">
+                                    <span class="text-slate-300 font-bold text-sm">{{ exName }}</span>
+                                    
+                                    <div class="flex flex-wrap gap-2 justify-end">
+                                        <div v-for="set in sets" class="bg-[#02040a] px-3 py-1 rounded-lg text-[11px] font-mono border border-white/10 text-white">
+                                            <span v-if="type === 'Gym' && set.weight">{{ set.weight }}kg × {{ set.reps }}</span>
+                                            <span v-else-if="type === 'Football' && (set.distance || set.time)">{{ set.distance }}m / {{ set.time }}s</span>
+                                            <span v-else class="text-slate-600 italic">No data</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <ul class="space-y-3">
-                            <li v-for="set in workout.sets" class="flex justify-between items-center text-sm">
-                                <span class="text-slate-300 font-medium"><span class="text-[#00c3ff] mr-2 text-xs font-mono">{{ set.setNumber }}.</span>{{ set.exerciseName }}</span>
-                                <span class="font-mono text-white bg-black/30 px-3 py-1.5 rounded-lg border border-white/5">
-                                    <template v-if="workout.workoutType === 'Gym'">{{ set.weight }}<span class="text-slate-500 text-xs">kg</span> × {{ set.reps }}</template>
-                                    <template v-else>{{ set.distance }}<span class="text-slate-500 text-xs">m</span> / {{ set.time }}<span class="text-slate-500 text-xs">s</span></template>
-                                </span>
-                            </li>
-                        </ul>
                     </div>
                 </div>
 
