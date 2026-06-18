@@ -668,11 +668,16 @@ namespace SprintLog.Api.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("WorkoutType")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Workouts");
                 });
@@ -715,6 +720,17 @@ namespace SprintLog.Api.Migrations
                     b.ToTable("WorkoutSets");
                 });
 
+            modelBuilder.Entity("SprintLog.Api.Models.Workout", b =>
+                {
+                    b.HasOne("SprintLog.Api.Models.User", "User")
+                        .WithMany("Workouts")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SprintLog.Api.Models.WorkoutSet", b =>
                 {
                     b.HasOne("SprintLog.Api.Models.Exercise", "Exercise")
@@ -737,6 +753,11 @@ namespace SprintLog.Api.Migrations
             modelBuilder.Entity("SprintLog.Api.Models.Exercise", b =>
                 {
                     b.Navigation("Sets");
+                });
+
+            modelBuilder.Entity("SprintLog.Api.Models.User", b =>
+                {
+                    b.Navigation("Workouts");
                 });
 
             modelBuilder.Entity("SprintLog.Api.Models.Workout", b =>

@@ -50,11 +50,18 @@ namespace SprintLog.Api.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    WorkoutType = table.Column<string>(type: "text", nullable: false)
+                    WorkoutType = table.Column<string>(type: "text", nullable: false),
+                    UserId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Workouts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Workouts_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -180,6 +187,11 @@ namespace SprintLog.Api.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Workouts_UserId",
+                table: "Workouts",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_WorkoutSets_ExerciseId",
                 table: "WorkoutSets",
                 column: "ExerciseId");
@@ -194,9 +206,6 @@ namespace SprintLog.Api.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Users");
-
-            migrationBuilder.DropTable(
                 name: "WorkoutSets");
 
             migrationBuilder.DropTable(
@@ -204,6 +213,9 @@ namespace SprintLog.Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "Workouts");
+
+            migrationBuilder.DropTable(
+                name: "Users");
         }
     }
 }

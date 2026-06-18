@@ -18,7 +18,6 @@ public static class AuthEndpoints
         // РЕГИСТРАЦИЯ
         group.MapPost("/register", async (AppDbContext db, LoginRequest req) =>
         {
-            // Проверяем, не занято ли имя
             if (await db.Users.AnyAsync(u => u.Username.ToLower() == req.Username.ToLower()))
             {
                 return Results.BadRequest(new { Message = "IDENTIFIER ALREADY IN USE" });
@@ -27,7 +26,6 @@ public static class AuthEndpoints
             var user = new User
             {
                 Username = req.Username,
-                // Никогда не храним пароль текстом, только хэш!
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password)
             };
 
@@ -40,16 +38,20 @@ public static class AuthEndpoints
         // ЛОГИН
         group.MapPost("/login", async (AppDbContext db, LoginRequest req, IConfiguration config) =>
         {
-            // Ищем пользователя в БД
             var user = await db.Users.FirstOrDefaultAsync(u => u.Username.ToLower() == req.Username.ToLower());
 
-            // Если не найден или пароль не совпадает с хэшем
             if (user == null || !BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
             {
                 return Results.Unauthorized();
             }
 
-            var claims = new[] { new Claim(ClaimTypes.Name, user.Username) };
+            // ИСПРАВЛЕНИЕ 1: Зашиваем ID пользователя в токен
+            var claims = new[] 
+            { 
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.Username) 
+            };
+            
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["JWT_SECRET"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
@@ -62,13 +64,23 @@ public static class AuthEndpoints
             return Results.Ok(new { Token = new JwtSecurityTokenHandler().WriteToken(token) });
         });
 
-        // РЕФРЕШ (остается без изменений)
-        group.MapPost("/refresh", (ClaimsPrincipal user, IConfiguration config) =>
+        // РЕФРЕШ
+        group.MapPost("/refresh", (ClaimsPrincipal userPrincipal, IConfiguration config) =>
         {
-            var username = user.Identity?.Name;
-            if (string.IsNullOrEmpty(username)) return Results.Unauthorized();
+            // ИСПРАВЛЕНИЕ 2: Читаем ID и Имя из старого токена
+            var userId = userPrincipal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var username = userPrincipal.Identity?.Name;
+            
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(userId)) 
+                return Results.Unauthorized();
 
-            var claims = new[] { new Claim(ClaimTypes.Name, username) };
+            // Переносим ID и Имя в новый токен
+            var claims = new[] 
+            { 
+                new Claim(ClaimTypes.NameIdentifier, userId),
+                new Claim(ClaimTypes.Name, username) 
+            };
+            
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["JWT_SECRET"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
