@@ -12,8 +12,8 @@ using SprintLog.Api.Data;
 namespace SprintLog.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260617145653_AddWorkoutHistory")]
-    partial class AddWorkoutHistory
+    [Migration("20260618083129_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

@@ -34,7 +34,7 @@ namespace SprintLog.Api.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Type = table.Column<string>(type: "text", nullable: false)
+                    WorkoutType = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
