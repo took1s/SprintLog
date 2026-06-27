@@ -636,6 +636,26 @@ namespace SprintLog.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SprintLog.Api.Models.Favorite", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ExerciseId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Favorites");
+                });
+
             modelBuilder.Entity("SprintLog.Api.Models.User", b =>
                 {
                     b.Property<int>("Id")

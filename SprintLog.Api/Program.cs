@@ -38,6 +38,7 @@ app.UseAuthorization();
 
 // 4. Подключение маршрутов (твои новые классы)
 app.MapAuthEndpoints();
+app.MapFavoriteEndpoints();
 app.MapExerciseEndpoints();
 app.MapWorkoutEndpoints(); // Код для этого файла я давал в предыдущем ответе
 

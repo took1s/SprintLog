@@ -15,17 +15,14 @@ createApp({
             loginError: '',
             isOffline: !navigator.onLine,
             
-                    
             activeCategory: 'Gym', 
             analyticsTab: 'history', 
             searchQuery: '',
 
-            sortMode: 'fav', // По умолчанию показываем любимые сверху
+            sortMode: 'fav',
             isSortOpen: false,
-            favorites: [],   // Массив ID любимых упражнений
+            favorites: [],
             activeMuscleFilters: [],
-            
-            exercises: [],
             
             exercises: [],
             loading: true,
@@ -47,17 +44,85 @@ createApp({
             currentEx: null,
             weight: 20, reps: 10,
             distance: 30, time: 4.5,
-            completedSets: []
+            completedSets: [],
+            showSessionReview: false,
+            
+            editingSetIndex: null,
+
+            // НОВЫЙ БЛОК: Состояние таймера отдыха
+            restTimer: {
+                active: false,
+                timeLeft: 0,
+                duration: 90, // по умолчанию 90 секунд
+                interval: null
+            }
         }
     },
-    computed: {
 
-        // Генератор данных для Heatmap (Календарь)
+    computed: {
+        allTimeRecords() {
+            const records = {};
+            this.historyData.forEach(workout => {
+                workout.sets.forEach(set => {
+                    if (!records[set.exerciseName]) {
+                        records[set.exerciseName] = { maxWeight: 0, maxVolume: 0, maxDistance: 0, maxSpeed: 0 };
+                    }
+                    const r = records[set.exerciseName];
+                    
+                    if (set.weight > r.maxWeight) r.maxWeight = set.weight;
+                    const vol = (set.weight || 0) * (set.reps || 0);
+                    if (vol > r.maxVolume) r.maxVolume = vol;
+                    
+                    if (set.distance > r.maxDistance) r.maxDistance = set.distance;
+                    const speed = (set.distance > 0 && set.time > 0) ? (set.distance / set.time) : 0;
+                    if (speed > r.maxSpeed) r.maxSpeed = speed;
+                });
+            });
+            return records;
+        },
+
+        // --- ПРОФЕССИОНАЛЬНАЯ ТЕЛЕМЕТРИЯ ---
+        
+        // 1. Расчет 1RM по формуле Эпли на лету
+        currentEstimated1RM() {
+            if (this.activeCategory !== 'Gym' || !this.weight || !this.reps || this.weight <= 0 || this.reps <= 0) return 0;
+            if (this.reps === 1) return this.weight;
+            return Math.round(this.weight * (1 + this.reps / 30));
+        },
+
+        // 2. Интенсивность (Процент от твоего All-Time PR для этого упражнения)
+        currentIntensity() {
+            if (this.activeCategory !== 'Gym' || !this.currentEx || !this.weight) return 0;
+            const pr = this.allTimeRecords[this.currentEx.name]?.maxWeight || 0;
+            if (pr === 0) return 0; // Если рекорда еще нет
+            return Math.round((this.weight / pr) * 100);
+        },
+
+        // 3. Анализ целевой зоны тренировки
+        trainingZone() {
+            if (!this.reps || this.reps <= 0) return { name: 'Awaiting Metrics', color: 'text-slate-500' };
+            if (this.reps <= 5) return { name: 'Strength / Power', color: 'text-red-400' };
+            if (this.reps <= 12) return { name: 'Hypertrophy', color: 'text-[#00c3ff]' };
+            return { name: 'Endurance', color: 'text-emerald-400' };
+        },
+
+        previousSetData() {
+            if (!this.currentEx || !this.historyData || this.historyData.length === 0) return null;
+            const sortedWorkouts = [...this.historyData].sort((a, b) => new Date(b.date) - new Date(a.date));
+            for (const workout of sortedWorkouts) {
+                const sets = workout.sets;
+                for (let i = sets.length - 1; i >= 0; i--) {
+                    if (sets[i].exerciseName === this.currentEx.name) {
+                        return sets[i];
+                    }
+                }
+            }
+            return null;
+        },
+
         heatmapData() {
             const map = {};
             let maxVol = 0;
-
-            // Считаем объем за каждый день в истории
             this.historyData.forEach(w => {
                 const date = w.date.split('T')[0];
                 const vol = w.sets.reduce((sum, set) => sum + ((set.weight || 0) * (set.reps || 0)), 0);
@@ -66,7 +131,6 @@ createApp({
             });
 
             const days = [];
-            // Создаем массив за последние 30 дней
             for (let i = 29; i >= 0; i--) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
@@ -76,8 +140,6 @@ createApp({
                 const dateStr = `${year}-${month}-${day}`;
                 
                 const vol = map[dateStr] || 0;
-
-                // Определяем интенсивность цвета (0-4) как в GitHub
                 let intensity = 0;
                 if (vol > 0) {
                     const ratio = vol / (maxVol || 1);
@@ -86,31 +148,9 @@ createApp({
                     else if (ratio > 0.25) intensity = 2;
                     else intensity = 1;
                 }
-
                 days.push({ date: dateStr, volume: vol, intensity });
             }
             return days;
-        },
-
-        groupedHistory() {
-            const groups = {};
-            
-            this.historyData.forEach(workout => {
-                const date = workout.date.split('T')[0];
-                const type = workout.workoutType;
-                
-                if (!groups[date]) groups[date] = {};
-                if (!groups[date][type]) groups[date][type] = {};
-                
-                workout.sets.forEach(set => {
-                    const name = set.exerciseName;
-                    if (!groups[date][type][name]) {
-                        groups[date][type][name] = [];
-                    }
-                    groups[date][type][name].push(set);
-                });
-            });
-            return groups;
         },
 
         availableMuscleGroups() {
@@ -122,21 +162,17 @@ createApp({
         },
 
         filteredExercises() {
-            // 1. Фильтр по категории
             let result = this.exercises.filter(e => e.category === this.activeCategory);
 
-            // 2. Фильтр по поиску
             if (this.searchQuery) {
                 const query = this.searchQuery.toLowerCase().trim();
                 result = result.filter(e => e.name.toLowerCase().includes(query) || e.muscleGroup.toLowerCase().includes(query));
             }
 
-            // 3. Фильтр по мышцам
             if (this.activeMuscleFilters.length > 0) {
                 result = result.filter(e => this.activeMuscleFilters.includes(e.muscleGroup));
             }
 
-            // 4. Сортировка
             result.sort((a, b) => {
                 const aFav = this.favorites.includes(a.id) ? 1 : 0;
                 const bFav = this.favorites.includes(b.id) ? 1 : 0;
@@ -154,7 +190,6 @@ createApp({
                 if (this.sortMode === 'za') {
                     return b.name.localeCompare(a.name);
                 }
-                // По умолчанию А-Я
                 return a.name.localeCompare(b.name);
             });
 
@@ -162,12 +197,7 @@ createApp({
         },
 
         currentSortLabel() {
-            const labels = {
-                'fav': 'Favorites',
-                'freq': 'Most Used',
-                'az': 'A - Z',
-                'za': 'Z - A'
-            };
+            const labels = { 'fav': 'Favorites', 'freq': 'Most Used', 'az': 'A - Z', 'za': 'Z - A' };
             return labels[this.sortMode];
         },
 
@@ -209,7 +239,6 @@ createApp({
         if (savedToken) {
             this.token = savedToken;
             this.isAuthenticated = true;
-
             await this.refreshToken(); 
 
             if (this.isAuthenticated) {
@@ -227,7 +256,112 @@ createApp({
     },
     methods: {
 
-        // Подсчет тоннажа для группы упражнений
+        // Быстрая установка веса по проценту от абсолютного рекорда (1RM)
+        setWeightByPercentage(percent) {
+            if (!this.currentEx) return;
+            const pr = this.allTimeRecords[this.currentEx.name]?.maxWeight || 0;
+            
+            if (pr > 0) {
+                // Считаем вес и округляем до ближайших 2.5 кг (стандартный шаг блинов в зале)
+                const rawWeight = pr * (percent / 100);
+                this.weight = Math.round(rawWeight / 2.5) * 2.5;
+            }
+        },
+
+        groupSets(sets) {
+            const groups = [];
+            const map = new Map();
+            const prs = this.allTimeRecords; 
+
+            sets.forEach(set => {
+                if (!map.has(set.exerciseName)) {
+                    map.set(set.exerciseName, { name: set.exerciseName, sets: [] });
+                    groups.push(map.get(set.exerciseName));
+                }
+
+                let badges = [];
+                const r = prs[set.exerciseName];
+                
+                if (r) {
+                    if (set.weight > 0 && set.weight === r.maxWeight) {
+                        badges.push({ label: '👑 MAX WT', color: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30 shadow-[0_0_10px_rgba(250,204,21,0.2)]' });
+                    }
+                    const vol = (set.weight || 0) * (set.reps || 0);
+                    if (vol > 0 && vol === r.maxVolume) {
+                        badges.push({ label: '🔥 MAX VOL', color: 'text-orange-400 bg-orange-400/10 border-orange-400/30 shadow-[0_0_10px_rgba(249,115,22,0.2)]' });
+                    }
+                    
+                    if (set.distance > 0 && set.distance === r.maxDistance) {
+                        badges.push({ label: '👑 MAX DIST', color: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30 shadow-[0_0_10px_rgba(250,204,21,0.2)]' });
+                    }
+                    const speed = (set.distance > 0 && set.time > 0) ? +(set.distance / set.time).toFixed(2) : 0;
+                    if (speed > 0 && speed === +(r.maxSpeed).toFixed(2)) {
+                        badges.push({ label: '⚡ TOP SPD', color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30 shadow-[0_0_10px_rgba(52,211,153,0.2)]' });
+                    }
+                }
+
+                map.get(set.exerciseName).sets.push({
+                    ...set,
+                    badges: badges.slice(0, 2) 
+                });
+            });
+            
+            return groups;
+        },
+
+        
+
+        getWorkoutStats(workout) {
+            let totalVolume = 0;
+            let totalDistance = 0;
+            
+            workout.sets.forEach(s => {
+                if (s.weight > 0 && s.reps > 0) totalVolume += (s.weight * s.reps);
+                if (s.distance > 0) totalDistance += s.distance;
+            });
+            
+            let stats = [];
+            if (totalVolume > 0) stats.push(`${totalVolume} KG VOL`);
+            if (totalDistance > 0) stats.push(`${totalDistance} M DIST`);
+            
+            return stats.length > 0 ? stats.join(' • ') : 'NO METRICS';
+        },
+
+        repeatWorkout(workout) {
+            if (this.completedSets.length > 0) {
+                if (!confirm("Warning: This will overwrite your currently active session. Proceed?")) return;
+            }
+            
+            this.completedSets = workout.sets.map(s => {
+                const ex = this.exercises.find(e => e.name === s.exerciseName);
+                return {
+                    exerciseId: ex ? ex.id : 0,
+                    name: s.exerciseName,
+                    weight: s.weight || 0,
+                    reps: s.reps || 0,
+                    distance: s.distance || 0,
+                    time: s.time || 0
+                };
+            });
+            
+            localStorage.setItem('sprintlog_sets', JSON.stringify(this.completedSets));
+            this.activeCategory = workout.workoutType === 'Gym' ? 'Gym' : 'Football';
+            this.showSessionReview = true;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+
+        copyPrevious() {
+            if (!this.previousSetData) return;
+            
+            if (!this.isTimeBased(this.currentEx)) {
+                this.weight = this.previousSetData.weight > 0 ? this.previousSetData.weight : this.weight;
+                this.reps = this.previousSetData.reps > 0 ? this.previousSetData.reps : this.reps;
+            } else {
+                this.distance = this.previousSetData.distance > 0 ? this.previousSetData.distance : this.distance;
+                this.time = this.previousSetData.time > 0 ? this.previousSetData.time : this.time;
+            }
+        },
+
         getTotalTypeVolume(exercisesObj) {
             let sum = 0;
             Object.values(exercisesObj).forEach(sets => {
@@ -236,7 +370,6 @@ createApp({
             return sum;
         },
 
-        // Проверка на личный рекорд (PR)
         isPR(exName, weight) {
             if (!weight) return false;
             let max = 0;
@@ -246,16 +379,12 @@ createApp({
             return weight === max && weight > 0;
         },
 
-        // Сравнение с прошлым результатом (Тренд)
         getTrend(exName, currentDate, currentWeight) {
             if (!currentWeight) return null;
-            
-            // Ищем все тренировки ДО текущей даты
             const pastWorkouts = this.historyData.filter(w => w.date.split('T')[0] < currentDate);
             if (pastWorkouts.length === 0) return null;
 
             let lastWeight = 0;
-            // Ищем самый свежий результат в прошлом
             for (let w of pastWorkouts) {
                 const sets = w.sets.filter(s => s.exerciseName === exName);
                 if (sets.length > 0) {
@@ -272,18 +401,10 @@ createApp({
 
         isTimeBased(ex) {
             if (!ex) return false;
-            
-            // 1. Все упражнения на поле (Football) - это время/дистанция
             if (ex.category === 'Football') return true;
-            
-            // 2. Всё кардио в зале - это время/дистанция
             if (ex.muscleGroup === 'Cardio') return true;
-            
-            // 3. Исключения (изометрические упражнения вроде планки)
             const name = ex.name.toLowerCase();
             if (name.includes('plank') || name.includes('hold')) return true;
-
-            // По умолчанию для зала возвращаем классику (вес/повторы)
             return false;
         },
 
@@ -311,23 +432,34 @@ createApp({
 
         selectSort(mode) {
             this.sortMode = mode;
-            this.isSortOpen = false; // Закрываем меню после выбора
+            this.isSortOpen = false; 
         },
 
+        async toggleFavorite(ex) {
+            const isFav = this.favorites.includes(ex.id);
+            const method = isFav ? 'DELETE' : 'POST';
+            
+            if (isFav) this.favorites = this.favorites.filter(id => id !== ex.id);
+            else this.favorites.push(ex.id);
 
-        toggleFavorite(ex) {
-            const index = this.favorites.indexOf(ex.id);
-            if (index > -1) {
-                this.favorites.splice(index, 1); // Удаляем
-            } else {
-                this.favorites.push(ex.id); // Добавляем
+            try {
+                await fetch(`/api/favorites/${ex.id}`, {
+                    method: method,
+                    headers: { 'Authorization': `Bearer ${this.token}` }
+                });
+            } catch (e) {
+                await this.loadFavorites();
+                console.error('Sync failed', e);
             }
-            // Сохраняем в кэш с привязкой к имени пользователя
-            localStorage.setItem(`sprintlog_favs_${this.loginData.username}`, JSON.stringify(this.favorites));
         },
-        loadFavorites() {
-            const saved = localStorage.getItem(`sprintlog_favs_${this.loginData.username}`);
-            this.favorites = saved ? JSON.parse(saved) : [];
+
+        async loadFavorites() {
+            try {
+                const res = await fetch('/api/favorites', {
+                    headers: { 'Authorization': `Bearer ${this.token}` }
+                });
+                if (res.ok) this.favorites = await res.json();
+            } catch (e) { console.error('Error loading favs', e); }
         },
 
         async register() {
@@ -341,7 +473,6 @@ createApp({
                 });
                 
                 if (res.ok) {
-                    // Если регистрация успешна, сразу переводим в режим логина и логиним
                     this.isLoginMode = true;
                     await this.login();
                 } else {
@@ -460,65 +591,89 @@ createApp({
             finally { this.loadingHistory = false; }
         },
 
-        openModal(ex) {
-            this.currentEx = ex;
-            this.showModal = true;
-            this.weight = 20; this.reps = 10; this.distance = 30; this.time = 4.5;
+        openModal(ex) { 
+            this.editingSetIndex = null;
+            this.currentEx = ex; 
+            this.showModal = true; 
         },
+
         closeModal() { this.showModal = false; setTimeout(() => this.currentEx = null, 300); },
         
         saveSet() {
-            // Проверяем, требует ли текущее упражнение время
-            const isTime = this.isTimeBased(this.currentEx);
+            const isGym = this.activeCategory === 'Gym';
+            const setPayload = { 
+                exerciseId: this.currentEx.id, 
+                name: this.currentEx.name, 
+                weight: isGym ? this.weight : 0, 
+                reps: isGym ? this.reps : 0, 
+                distance: !isGym ? this.distance : 0, 
+                time: !isGym ? this.time : 0 
+            };
 
-            this.completedSets.push({
-                exerciseId: this.currentEx.id,
-                name: this.currentEx.name,
-                // Если упражнение на время, вес и повторы ставим null
-                weight: !isTime ? this.weight : null,
-                reps: !isTime ? this.reps : null,
-                // Если упражнение на время, записываем дистанцию и секунды
-                distance: isTime ? this.distance : null,
-                time: isTime ? this.time : null
-            });
+            if (this.editingSetIndex !== null) {
+                this.completedSets[this.editingSetIndex] = setPayload;
+                this.editingSetIndex = null; 
+            } else {
+                this.completedSets.push(setPayload);
+                // ЗАПУСК ТАЙМЕРА (90 сек для зала, 120 сек для поля)
+                this.startRestTimer(isGym ? 90 : 120);
+            }
             
-            localStorage.setItem('sprintlog_sets', JSON.stringify(this.completedSets));
+            localStorage.setItem('sprintlog_sets', JSON.stringify(this.completedSets)); 
             this.closeModal();
         },
-        
-        async clearWorkout() {
-            const confirmed = await this.showConfirm(
-                'System Alert', 
-                'Clear active session data?'
-            );
+
+        editSet(idx) {
+            const set = this.completedSets[idx];
+            const ex = this.exercises.find(e => e.id === set.exerciseId) || { id: set.exerciseId, name: set.name, category: set.weight > 0 ? 'Gym' : 'Football', muscleGroup: 'Unknown' };
             
-            if (confirmed) {
+            this.currentEx = ex;
+            this.activeCategory = ex.category;
+            
+            this.weight = set.weight || 0;
+            this.reps = set.reps || 0;
+            this.distance = set.distance || 0;
+            this.time = set.time || 0;
+            
+            this.editingSetIndex = idx;
+            this.showSessionReview = false; 
+            this.showModal = true;          
+        },
+
+        removeSet(idx) {
+            this.completedSets.splice(idx, 1);
+            localStorage.setItem('sprintlog_sets', JSON.stringify(this.completedSets));
+            if (this.completedSets.length === 0) this.showSessionReview = false;
+        },
+        
+        clearWorkout() { 
+            if (confirm('Critical: Abort entire active session?')) { 
                 this.completedSets = []; 
-                localStorage.removeItem('sprintlog_sets');
-            }
+                localStorage.removeItem('sprintlog_sets'); 
+                this.showSessionReview = false;
+            } 
         },
 
         async finishWorkout() {
             this.isSaving = true;
             
-            const workout = {
-                id: Date.now(), 
-                workoutType: this.activeCategory,
-                sets: this.completedSets.map(s => ({
-                    exerciseId: s.exerciseId, Weight: s.weight, Reps: s.reps, Distance: s.distance, Time: s.time
-                })),
-                status: 'pending' 
-            };
+            const hasGym = this.completedSets.some(s => s.weight > 0 || s.reps > 0);
+            const hasField = this.completedSets.some(s => s.distance > 0 || s.time > 0);
+            
+            let sessionType = 'Hybrid';
+            if (hasGym && !hasField) sessionType = 'Gym';
+            if (!hasGym && hasField) sessionType = 'Football';
+            if (!hasGym && !hasField) sessionType = 'Gym'; 
 
             let queue = JSON.parse(localStorage.getItem('sync_queue') || '[]');
-            queue.push(workout);
-            localStorage.setItem('sync_queue', JSON.stringify(queue));
+            queue.push({ id: Date.now(), workoutType: sessionType, sets: this.completedSets, status: 'pending' });
             
-            this.completedSets = [];
+            localStorage.setItem('sync_queue', JSON.stringify(queue));
+            this.completedSets = []; 
             localStorage.removeItem('sprintlog_sets');
-
-            await this.syncPendingWorkouts();
-            this.isSaving = false;
+            
+            await this.syncPendingWorkouts(); 
+            this.isSaving = false; 
             this.switchTab('Analytics');
         },
 
@@ -574,11 +729,11 @@ createApp({
                 if (setsForExercise.length > 0) {
                     chartLabels.push(this.formatDate(workout.date));
 
-                    if (setsForExercise[0].weight !== null) {
+                    if (setsForExercise[0].weight !== null && setsForExercise[0].weight > 0) {
                         const maxWeight = Math.max(...setsForExercise.map(s => s.weight));
                         chartData.push(maxWeight);
                     } 
-                    else if (setsForExercise[0].time !== null) {
+                    else if (setsForExercise[0].time !== null && setsForExercise[0].time > 0) {
                         isTimeBased = true;
                         const minTime = Math.min(...setsForExercise.map(s => s.time));
                         chartData.push(minTime);
@@ -602,15 +757,15 @@ createApp({
                         label: labelText,
                         data: chartData,
                         borderColor: lineColor,
-                        backgroundColor: lineColor + '33', // Полупрозрачная заливка под линией
+                        backgroundColor: lineColor + '33', 
                         borderWidth: 3,
-                        pointBackgroundColor: '#02040a', // Темные точки внутри
+                        pointBackgroundColor: '#02040a', 
                         pointBorderColor: lineColor,
                         pointBorderWidth: 2,
                         pointRadius: 5,
                         pointHoverRadius: 7,
                         fill: true,
-                        tension: 0.4 // <--- ГЛАВНЫЙ СЕКРЕТ: Делает линию плавной (без острых углов)
+                        tension: 0.4 
                     }]
                 },
                 options: {
@@ -632,7 +787,7 @@ createApp({
                     scales: {
                         y: { 
                             beginAtZero: false,
-                            grid: { color: 'rgba(255,255,255,0.05)', borderDash: [5, 5] }, // Пунктирная сетка
+                            grid: { color: 'rgba(255,255,255,0.05)', borderDash: [5, 5] }, 
                             ticks: { color: '#64748b', font: { family: 'Inter', size: 10 } }
                         },
                         x: {
@@ -642,6 +797,83 @@ createApp({
                     }
                 }
             });
-        }
+        },
+        // ... другие методы ...
+
+        // --- ЛОГИКА ТАЙМЕРА ОТДЫХА ---
+        startRestTimer(seconds) {
+            this.stopRestTimer();
+            this.restTimer.duration = seconds;
+            this.restTimer.timeLeft = seconds;
+            this.restTimer.active = true;
+
+            this.restTimer.interval = setInterval(() => {
+                this.restTimer.timeLeft -= 1;
+                if (this.restTimer.timeLeft <= 0) {
+                    this.finishRestTimer();
+                }
+            }, 1000);
+        },
+
+        stopRestTimer() {
+            if (this.restTimer.interval) clearInterval(this.restTimer.interval);
+            this.restTimer.active = false;
+        },
+
+        adjustRestTimer(amount) {
+            this.restTimer.timeLeft += amount;
+            if (this.restTimer.timeLeft <= 0) this.finishRestTimer();
+        },
+
+        finishRestTimer() {
+            this.stopRestTimer();
+            this.playRestAlarm();
+        },
+
+        formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        },
+
+        playRestAlarm() {
+            // 1. Вибрация (Haptic Feedback) - работает на Android
+            if (navigator.vibrate) {
+                navigator.vibrate([200, 100, 200, 100, 400]);
+            }
+            
+            // 2. Генерация звука (Web Audio API) - работает везде, не требует mp3
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                osc.type = 'sine'; // Мягкий сигнал
+                osc.frequency.setValueAtTime(880, ctx.currentTime); // Нота Ля (A5)
+                gain.gain.setValueAtTime(0.1, ctx.currentTime); // Громкость 10%
+                
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.6); // Длительность 0.6 сек
+            } catch (e) {
+                console.log('Audio API not supported or blocked', e);
+            }
+        },
     }
+
+
 }).mount('#app');
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('ServiceWorker registered with scope:', registration.scope);
+            })
+            .catch(error => {
+                console.error('ServiceWorker registration failed:', error);
+            });
+    });
+}

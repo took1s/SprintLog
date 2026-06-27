@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SprintLog | Pro</title>
-    <!-- Принудительный сброс кэша -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#02040a">
     <link rel="stylesheet" href="css/styles.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -13,15 +14,37 @@
 
 <div id="app" class="w-full max-w-3xl relative">
     
-    <!-- Световые фоновые элементы -->
     <div class="bg-orb-1"></div>
     <div class="bg-orb-2"></div>
+
+    <transition name="slide-up">
+        <div v-if="restTimer.active" class="fixed top-4 left-1/2 -translate-x-1/2 z-[60] flex items-center justify-between glass-panel px-4 py-2 rounded-full border border-[#00c3ff]/40 shadow-[0_15px_35px_rgba(0,195,255,0.25)]">
+            
+            <div class="flex items-center gap-3 mr-4">
+                <div class="relative w-5 h-5 flex items-center justify-center">
+                    <span class="absolute inline-flex h-full w-full rounded-full bg-[#00c3ff] opacity-20 animate-ping"></span>
+                    <svg class="w-4 h-4 text-[#00c3ff] relative" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <div class="font-mono text-lg font-black text-white w-12 text-center tracking-wider">
+                    {{ formatTime(restTimer.timeLeft) }}
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-1 border-l border-white/10 pl-3">
+                <button @click="adjustRestTimer(-30)" class="h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-[10px] font-bold">-30</button>
+                <button @click="adjustRestTimer(30)" class="h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-[10px] font-bold">+30</button>
+                <button @click="stopRestTimer" class="h-8 w-8 ml-1 flex items-center justify-center rounded-full bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-colors border border-red-500/20">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+        </div>
+    </transition>
 
     <div v-if="isOffline" class="fixed top-4 left-4 z-50 bg-red-500 text-white text-[10px] uppercase tracking-widest font-bold px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(239,68,68,0.5)]">
         System Offline
     </div>
 
-    <!-- Экран логина -->
     <div v-if="!isAuthenticated" class="fixed inset-0 bg-[#02040a]/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
         <div class="glass-panel p-8 rounded-[2rem] w-full max-w-sm border border-cyan-500/20">
             <h2 class="text-3xl font-black text-white mb-2 text-center uppercase tracking-wider">
@@ -53,7 +76,6 @@
 
     <div v-show="isAuthenticated">
         
-        <!-- Шапка -->
         <header class="mb-8 mt-4 relative">
             <button @click="logout" class="absolute right-0 top-2 text-[10px] uppercase tracking-widest text-slate-500 hover:text-white transition-colors">Disconnect</button>
             <h1 class="text-4xl font-black tracking-tighter text-white mb-1 text-center">
@@ -61,7 +83,6 @@
             </h1>
         </header>
 
-        <!-- Новая навигация (Tabs) -->
         <div class="flex justify-center mb-8">
             <div class="tab-container w-full max-w-sm shadow-xl">
                 <button @click="switchTab('Gym')" :class="activeCategory === 'Gym' ? 'tab-active' : 'tab-btn'" class="tab-btn">GYM</button>
@@ -73,7 +94,6 @@
         <div v-show="activeCategory !== 'Analytics'">
             
             <div class="mb-8 flex flex-col sm:flex-row gap-4">
-                
                 <div class="glass-panel flex-1 flex items-center p-2.5 rounded-2xl transition-all focus-within:border-[#00c3ff]/50 focus-within:shadow-[0_0_20px_rgba(0,195,255,0.15)]">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     <input type="text" v-model="searchQuery" placeholder="Query database..." class="w-full bg-transparent ml-3 text-sm text-white outline-none placeholder-slate-600 font-mono">
@@ -81,7 +101,6 @@
                 </div>
 
                 <div class="relative sm:w-56">
-                    
                     <div v-if="isSortOpen" @click="isSortOpen = false" class="fixed inset-0 z-20"></div>
 
                     <div @click="isSortOpen = !isSortOpen" class="glass-panel relative z-30 cursor-pointer flex items-center justify-between p-3 rounded-2xl transition-all hover:border-[#00c3ff]/50 hover:shadow-[0_0_15px_rgba(0,195,255,0.1)]">
@@ -94,36 +113,29 @@
 
                     <transition name="slide-up">
                         <div v-if="isSortOpen" class="absolute top-full mt-2 left-0 right-0 z-30 glass-panel rounded-2xl overflow-hidden border border-[#00c3ff]/30 shadow-[0_15px_35px_rgba(0,0,0,0.8)]">
-                            
                             <div @click="selectSort('fav')" class="cursor-pointer p-4 text-[10px] uppercase tracking-widest font-bold transition-colors hover:bg-[#00c3ff]/20 flex items-center gap-2" :class="sortMode === 'fav' ? 'text-[#00c3ff] bg-[#00c3ff]/10' : 'text-slate-300'">
                                 <span v-if="sortMode === 'fav'" class="text-[#00c3ff]">➤</span> Favorites
                             </div>
-                            
                             <div @click="selectSort('freq')" class="cursor-pointer p-4 text-[10px] uppercase tracking-widest font-bold transition-colors hover:bg-[#00c3ff]/20 flex items-center gap-2 border-t border-white/5" :class="sortMode === 'freq' ? 'text-[#00c3ff] bg-[#00c3ff]/10' : 'text-slate-300'">
                                 <span v-if="sortMode === 'freq'" class="text-[#00c3ff]">➤</span> Most Used
                             </div>
-                            
                             <div @click="selectSort('az')" class="cursor-pointer p-4 text-[10px] uppercase tracking-widest font-bold transition-colors hover:bg-[#00c3ff]/20 flex items-center gap-2 border-t border-white/5" :class="sortMode === 'az' ? 'text-[#00c3ff] bg-[#00c3ff]/10' : 'text-slate-300'">
                                 <span v-if="sortMode === 'az'" class="text-[#00c3ff]">➤</span> A - Z
                             </div>
-                            
                             <div @click="selectSort('za')" class="cursor-pointer p-4 text-[10px] uppercase tracking-widest font-bold transition-colors hover:bg-[#00c3ff]/20 flex items-center gap-2 border-t border-white/5" :class="sortMode === 'za' ? 'text-[#00c3ff] bg-[#00c3ff]/10' : 'text-slate-300'">
                                 <span v-if="sortMode === 'za'" class="text-[#00c3ff]">➤</span> Z - A
                             </div>
-                            
                         </div>
                     </transition>
-
                 </div>
-                
             </div>
 
             <div class="mb-6 flex flex-wrap gap-2">
                 <button @click="activeMuscleFilters = []" 
                         :class="activeMuscleFilters.length === 0 ? 'bg-[#00c3ff] text-black' : 'glass-panel text-slate-400 border-white/5'"
                         class="text-[10px] uppercase tracking-widest font-bold px-4 py-2 rounded-full transition-all border">
+                    ALL
                 </button>
-                
                 <button v-for="muscle in availableMuscleGroups" :key="muscle"
                         @click="toggleMuscleFilter(muscle)"
                         :class="activeMuscleFilters.includes(muscle) ? 'bg-[#00c3ff] text-black shadow-[0_0_15px_rgba(0,195,255,0.4)]' : 'glass-panel text-slate-400 border-white/5'"
@@ -131,7 +143,6 @@
                     {{ muscle }}
                 </button>
             </div>
-            
 
             <main class="space-y-4">
                 <div v-if="loading" class="flex justify-center py-20"><div class="w-8 h-8 border-2 border-[#00c3ff] border-t-transparent rounded-full animate-spin"></div></div>
@@ -169,7 +180,6 @@
             </main>
         </div>
 
-        <!-- Аналитика осталась как была, но с классами glass-panel -->
         <div v-if="activeCategory === 'Analytics'" class="animate-fade-in">
             
             <div class="flex justify-center gap-6 mb-8 border-b border-white/10 pb-4">
@@ -183,48 +193,72 @@
             </div>
             
             <div v-else>
-                <div v-if="analyticsTab === 'history'" class="space-y-4">
-                    <div v-for="(types, date) in groupedHistory" :key="date" class="mb-10">
-                        <h2 class="text-slate-400 font-black text-sm uppercase tracking-widest mb-6 border-b border-white/5 pb-2">{{ date }}</h2>
+                <div v-if="analyticsTab === 'history'" class="space-y-6">
+                    <div v-if="historyData.length === 0" class="glass-panel text-center text-slate-500 py-10 rounded-2xl font-mono text-sm uppercase tracking-widest">No data detected</div>
+                    
+                    <div v-for="workout in historyData" :key="workout.id" class="glass-panel p-5 rounded-2xl border-l-4 relative group" 
+                         :class="{
+                             'border-l-purple-500': workout.workoutType === 'Gym',
+                             'border-l-[#00c3ff]': workout.workoutType === 'Football',
+                             'border-l-emerald-500': workout.workoutType === 'Hybrid'
+                         }">
                         
-                        <div v-for="(exercises, type) in types" :key="type" 
-                            class="glass-panel p-6 rounded-3xl border-l-4 mb-6 shadow-2xl"
-                            :class="type === 'Gym' ? 'border-l-purple-500' : 'border-l-[#00c3ff]'">
-                            
-                            <div class="flex justify-between items-center mb-6">
-                                <h3 class="font-black text-lg text-white flex items-center gap-3">
-                                    {{ type }} Session
-                                    <span v-if="type === 'Gym'" class="text-[9px] font-mono bg-purple-500/20 text-purple-300 px-2 py-1 rounded border border-purple-500/30 uppercase tracking-widest shadow-[0_0_10px_rgba(168,85,247,0.2)]">
-                                        Vol: {{ getTotalTypeVolume(exercises) }} kg
-                                    </span>
-                                </h3>
+                        <div class="flex justify-between items-start mb-4 border-b border-white/5 pb-4">
+                            <div>
+                                <span class="font-black text-xl text-white tracking-tight block">{{ formatDate(workout.date) }}</span>
+                                <span class="text-[10px] text-slate-400 font-mono font-bold uppercase tracking-widest mt-1 block">
+                                    {{ getWorkoutStats(workout) }}
+                                </span>
                             </div>
-
-                            <div class="space-y-3">
-                                <div v-for="(sets, exName) in exercises" :key="exName" class="flex justify-between items-center bg-black/20 p-3 rounded-xl border border-white/5">
-                                    <span class="text-slate-300 font-bold text-sm">{{ exName }}</span>
-                                    
-                                    <div class="flex flex-col items-end gap-1.5">
-                                        <div v-for="set in sets" class="flex items-center gap-2">
+                            
+                            <div class="flex flex-col items-end gap-2">
+                                <span class="text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-inner" 
+                                      :class="{
+                                          'bg-purple-500/20 text-purple-400 border border-purple-500/30': workout.workoutType === 'Gym',
+                                          'bg-[#00c3ff]/10 text-[#00c3ff] border border-[#00c3ff]/30': workout.workoutType === 'Football',
+                                          'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30': workout.workoutType === 'Hybrid'
+                                      }">
+                                    {{ workout.workoutType }}
+                                </span>
+                                
+                                <button @click="repeatWorkout(workout)" class="opacity-0 group-hover:opacity-100 transition-opacity text-[9px] uppercase tracking-widest font-bold text-[#00c3ff] border border-[#00c3ff]/30 bg-[#00c3ff]/10 px-2 py-1 rounded hover:bg-[#00c3ff] hover:text-black mt-1">
+                                    Perform Again
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <div v-for="group in groupSets(workout.sets)" :key="group.name" class="bg-black/20 rounded-xl overflow-hidden border border-white/5">
+                                <div class="bg-white/5 px-3 py-2 text-[11px] font-bold text-[#00c3ff] uppercase tracking-widest border-b border-white/5">
+                                    {{ group.name }}
+                                </div>
+                                
+                                <div class="p-2 space-y-1">
+                                    <div v-for="(set, idx) in group.sets" :key="idx" class="flex justify-between items-center text-sm px-2 py-2 hover:bg-white/5 rounded-lg transition-colors">
+                                        
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-slate-500 font-mono text-[10px] font-bold w-10">SET {{ idx + 1 }}</span>
                                             
-                                            <span v-if="type === 'Gym'" class="flex items-center justify-center w-4 h-4">
-                                                <svg v-if="getTrend(exName, date, set.weight) === 'up'" class="w-3 h-3 text-green-400 drop-shadow-[0_0_5px_rgba(74,222,128,0.8)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
-                                                <svg v-if="getTrend(exName, date, set.weight) === 'down'" class="w-3 h-3 text-red-500 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                                                <span v-if="getTrend(exName, date, set.weight) === 'same'" class="text-slate-600 font-black text-[10px]">-</span>
-                                            </span>
-
-                                            <div class="bg-[#02040a] px-3 py-1 rounded-lg text-[11px] font-mono border border-white/10 text-white relative">
-                                                <span v-if="type === 'Gym' && set.weight">{{ set.weight }}kg × {{ set.reps }}</span>
-                                                <span v-else-if="type === 'Gym' && !set.weight">BW × {{ set.reps }}</span>
-                                                <span v-else-if="set.time"><template v-if="set.distance">{{ set.distance }}m / </template>{{ set.time }}s</span>
-                                                <span v-else class="text-slate-600 italic">No data</span>
-                                                
-                                                <div v-if="type === 'Gym' && isPR(exName, set.weight)" class="absolute -top-2 -right-2 bg-yellow-500 text-black text-[8px] px-1.5 py-0.5 rounded-sm font-black tracking-tighter border border-yellow-300 shadow-[0_0_10px_rgba(234,179,8,0.6)] z-10">
-                                                    PR
-                                                </div>
+                                            <div class="flex gap-1.5">
+                                                <span v-for="badge in set.badges" :key="badge.label" 
+                                                      class="text-[8px] font-black uppercase px-1.5 py-0.5 rounded border tracking-widest"
+                                                      :class="badge.color">
+                                                    {{ badge.label }}
+                                                </span>
                                             </div>
-
                                         </div>
+                                        
+                                        <span class="font-mono text-white font-bold text-xs">
+                                            <template v-if="set.weight > 0 || set.reps > 0">
+                                                {{ set.weight }}<span class="text-slate-500 text-[10px] mx-0.5">kg</span> × {{ set.reps }}
+                                            </template>
+                                            <template v-else-if="set.distance > 0 || set.time > 0">
+                                                {{ set.distance }}<span class="text-slate-500 text-[10px] mx-0.5">m</span> / {{ set.time }}<span class="text-slate-500 text-[10px] mx-0.5">s</span>
+                                            </template>
+                                            <template v-else>
+                                                <span class="text-slate-500 text-[9px] uppercase">No metrics</span>
+                                            </template>
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -246,60 +280,83 @@
                 </div>
 
                 <div v-if="analyticsTab === 'calendar'" class="glass-panel p-6 rounded-3xl">
-                    <div class="flex justify-between items-end mb-8">
-                        <div>
-                            <h3 class="font-black text-white text-xl tracking-wide">Activity Heatmap</h3>
-                            <p class="text-[10px] text-slate-500 uppercase tracking-widest font-mono mt-1">Volume Intensity - Last 30 Days</p>
+                    <h3 class="font-black text-white tracking-wide mb-6">Activity Matrix</h3>
+                    <div class="grid grid-cols-4 sm:grid-cols-7 gap-3">
+                        <div v-for="date in activeDays" :key="date" class="bg-[#00c3ff]/10 border border-[#00c3ff]/30 rounded-xl p-3 text-center transition-all hover:bg-[#00c3ff]/20 hover:shadow-[0_0_15px_rgba(0,195,255,0.2)]">
+                            <div class="text-[10px] text-[#00c3ff] uppercase tracking-widest font-bold">{{ getMonthShort(date) }}</div>
+                            <div class="text-2xl font-black text-white mt-1">{{ getDay(date) }}</div>
                         </div>
                     </div>
-
-                    <div class="flex flex-wrap gap-2 justify-center sm:justify-start">
-                        <div v-for="day in heatmapData" :key="day.date"
-                             class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg transition-all duration-300 border flex items-center justify-center group relative cursor-pointer"
-                             :class="{
-                                'bg-[#02040a] border-white/5': day.intensity === 0,
-                                'bg-[#00c3ff]/20 border-[#00c3ff]/30': day.intensity === 1,
-                                'bg-[#00c3ff]/50 border-[#00c3ff]/50': day.intensity === 2,
-                                'bg-[#00c3ff]/80 border-[#00c3ff]/80': day.intensity === 3,
-                                'bg-[#00c3ff] border-[#00c3ff] shadow-[0_0_15px_rgba(0,195,255,0.6)]': day.intensity === 4
-                             }">
-                             <div class="absolute bottom-full mb-2 hidden group-hover:block z-20 w-max bg-black/90 text-white text-[10px] font-mono px-3 py-1.5 rounded-md border border-white/10 shadow-xl pointer-events-none">
-                                 <span class="text-[#00c3ff] font-bold">{{ day.date }}</span>
-                                 <br>
-                                 <span class="text-slate-400">Volume: {{ day.volume }} kg</span>
-                             </div>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-center justify-end gap-2 mt-6 text-[10px] font-mono text-slate-500 uppercase">
-                        <span>Less</span>
-                        <div class="w-3 h-3 rounded bg-[#02040a] border border-white/5"></div>
-                        <div class="w-3 h-3 rounded bg-[#00c3ff]/20"></div>
-                        <div class="w-3 h-3 rounded bg-[#00c3ff]/50"></div>
-                        <div class="w-3 h-3 rounded bg-[#00c3ff]"></div>
-                        <span>More</span>
-                    </div>
+                    <p v-if="activeDays.length === 0" class="text-slate-500 text-center text-sm font-mono mt-4">System idle. No entries.</p>
                 </div>
             </div>
         </div>
 
-        <!-- Плавающая панель сохранения -->
         <transition name="slide-up">
-            <div v-if="completedSets.length > 0 && activeCategory !== 'Analytics'" class="fixed bottom-0 left-0 right-0 p-4 sm:p-8 z-30 flex justify-center pointer-events-none">
-                <div class="w-full max-w-3xl pointer-events-auto flex flex-col gap-3">
-                    <div class="flex justify-between items-center px-2">
-                        <span class="text-xs font-mono text-[#00c3ff] uppercase tracking-widest">{{ completedSets.length }} Nodes Active</span>
-                        <button @click="clearWorkout" class="text-xs text-red-400 font-bold hover:text-red-300 uppercase tracking-widest">Abort</button>
+            <div v-if="completedSets.length > 0 && activeCategory !== 'Analytics'" class="fixed bottom-0 left-0 right-0 p-4 sm:p-6 z-30 flex justify-center pointer-events-none">
+                <div class="glass-panel w-full max-w-3xl p-4 rounded-3xl pointer-events-auto flex justify-between items-center shadow-[0_0_30px_rgba(0,195,255,0.15)] border border-[#00c3ff]/30">
+                    <div class="flex items-center gap-3">
+                        <div class="h-10 w-10 rounded-full bg-[#00c3ff]/20 border border-[#00c3ff]/50 flex items-center justify-center text-[#00c3ff] shadow-[0_0_15px_rgba(0,195,255,0.4)]">
+                            <span class="font-black">{{ completedSets.length }}</span>
+                        </div>
+                        <div>
+                            <div class="text-white font-bold text-sm">Session Active</div>
+                            <div class="text-[#00c3ff] text-[10px] uppercase tracking-widest">Awaiting commit</div>
+                        </div>
                     </div>
-                    <button @click="finishWorkout" :disabled="isSaving" class="w-full cyber-btn py-4 rounded-2xl flex justify-center items-center gap-2 text-lg">
-                        <span v-if="isSaving">Encrypting...</span>
-                        <span v-else>Commit Session</span>
-                    </button>
+                    <div class="flex gap-2">
+                        <button @click="showSessionReview = true" class="cyber-outline-btn px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest">Review</button>
+                        <button @click="finishWorkout" :disabled="isSaving" class="cyber-btn px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest">{{ isSaving ? '...' : 'Commit' }}</button>
+                    </div>
                 </div>
             </div>
         </transition>
 
-        <!-- Custom System Dialog -->
+        <transition name="fade">
+            <div v-if="showSessionReview" class="fixed inset-0 bg-[#02040a]/80 backdrop-blur-md z-40 flex items-end sm:items-center justify-center p-2 sm:p-4" @click.self="showSessionReview = false">
+                <transition name="slide-up" appear>
+                    <div class="glass-panel w-full max-w-md p-6 rounded-[2rem] relative z-50 max-h-[85vh] flex flex-col border border-[#00c3ff]/20 shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+                        
+                        <div class="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 class="text-2xl font-black text-white tracking-tight">Session <span class="text-[#00c3ff]">Nodes</span></h3>
+                                <p class="text-slate-400 text-[10px] uppercase tracking-widest mt-1">Review and modify</p>
+                            </div>
+                            <button @click="showSessionReview = false" class="h-10 w-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white transition-colors">✕</button>
+                        </div>
+
+                        <div class="overflow-y-auto pr-2 space-y-3 flex-1">
+                            <div v-for="(set, idx) in completedSets" :key="idx" class="bg-black/40 border border-white/5 p-4 rounded-2xl flex justify-between items-center group hover:border-[#00c3ff]/30 transition-all">
+                                <div>
+                                    <div class="text-sm font-bold text-white">{{ set.name }}</div>
+                                    <div class="text-[11px] text-[#00c3ff] font-mono mt-1 font-bold">
+                                        <span v-if="set.weight > 0 || set.reps > 0">{{ set.weight }}kg × {{ set.reps }}</span>
+                                        <span v-else-if="set.distance > 0 || set.time > 0">{{ set.distance }}m / {{ set.time }}s</span>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button @click="editSet(idx)" class="h-8 w-8 rounded-lg bg-[#00c3ff]/10 text-[#00c3ff] flex items-center justify-center hover:bg-[#00c3ff] hover:text-white transition-all border border-[#00c3ff]/20">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                    </button>
+                                    <button @click="removeSet(idx)" class="h-8 w-8 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-500/20">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-white/10">
+                            <button @click="clearWorkout" class="w-full text-red-400 text-[10px] font-bold uppercase tracking-widest border border-red-500/20 py-3 rounded-xl hover:bg-red-500/10 transition-colors flex justify-center items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                Abort Entire Session
+                            </button>
+                        </div>
+
+                    </div>
+                </transition>
+            </div>
+        </transition>
+
         <transition name="fade">
             <div v-if="dialog.isOpen" class="fixed inset-0 bg-[#02040a]/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
                 <transition name="slide-up" appear>
@@ -320,20 +377,71 @@
             </div>
         </transition>
 
-        <!-- Модалка ввода (Glassmorphism) -->
         <transition name="fade">
             <div v-if="showModal" class="fixed inset-0 bg-[#02040a]/60 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center" @click.self="closeModal">
                 <transition name="slide-up" appear>
-                    <div class="glass-panel w-full max-w-md p-6 sm:p-8 rounded-t-[2rem] sm:rounded-[2rem] relative z-50">
+                    <div class="glass-panel w-full max-w-md p-6 sm:p-8 rounded-t-[2rem] sm:rounded-[2rem] relative z-50 max-h-[90vh] overflow-y-auto">
                         <div class="flex justify-between items-start mb-8">
                             <div>
                                 <h3 class="text-2xl font-black text-white">{{ currentEx?.name }}</h3>
                                 <p class="text-[#00c3ff] text-xs uppercase tracking-widest font-bold mt-1">{{ currentEx?.muscleGroup }}</p>
                             </div>
-                            <button @click="closeModal" class="h-10 w-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white transition-colors">✕</button>
+                            <button @click="closeModal" class="h-10 w-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white transition-colors flex-shrink-0">✕</button>
+                        </div>
+
+                        <div v-if="previousSetData" @click="copyPrevious" class="mb-6 bg-[#00c3ff]/5 border border-[#00c3ff]/20 rounded-xl p-4 flex justify-between items-center cursor-pointer hover:bg-[#00c3ff]/15 hover:border-[#00c3ff]/50 hover:shadow-[0_0_15px_rgba(0,195,255,0.15)] transition-all group">
+                            <div>
+                                <div class="text-[9px] uppercase tracking-widest text-slate-400 font-bold mb-1 flex items-center gap-2">
+                                    <svg class="w-3 h-3 text-[#00c3ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    Previous Log
+                                </div>
+                                <div class="font-mono text-sm text-white font-bold group-hover:text-[#00c3ff] transition-colors">
+                                    <template v-if="!isTimeBased(currentEx)">
+                                        {{ previousSetData.weight }}<span class="text-slate-500 text-xs">kg</span> × {{ previousSetData.reps }}
+                                    </template>
+                                    <template v-else>
+                                        {{ previousSetData.distance }}<span class="text-slate-500 text-xs">m</span> / {{ previousSetData.time }}<span class="text-slate-500 text-xs">s</span>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="text-[10px] text-[#00c3ff] uppercase font-bold tracking-widest bg-[#00c3ff]/10 px-3 py-1.5 rounded-lg border border-[#00c3ff]/20 group-hover:bg-[#00c3ff] group-hover:text-black transition-all">
+                                Copy
+                            </div>
                         </div>
 
                         <div v-if="!isTimeBased(currentEx)">
+                            
+                            <div class="mb-6 bg-black/30 border border-white/5 rounded-2xl p-4 shadow-inner">
+                                <div class="flex justify-between items-center mb-3">
+                                    <span class="text-[9px] uppercase tracking-widest text-slate-400 font-bold">Live Telemetry</span>
+                                    <span class="text-[9px] uppercase tracking-widest font-black bg-black/40 px-2 py-1 rounded border border-white/5" :class="trainingZone.color">
+                                        {{ trainingZone.name }}
+                                    </span>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <div class="text-xs text-slate-500 font-mono mb-1">Est. 1RM</div>
+                                        <div class="text-xl font-black text-white font-mono">
+                                            {{ currentEstimated1RM > 0 ? currentEstimated1RM : '--' }}<span v-if="currentEstimated1RM > 0" class="text-xs text-slate-500 ml-1">kg</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-slate-500 font-mono mb-1">Intensity / PR</div>
+                                        <div class="text-xl font-black font-mono" :class="currentIntensity >= 100 ? 'text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]' : 'text-[#00c3ff]'">
+                                            {{ currentIntensity > 0 ? currentIntensity : '--' }}<span v-if="currentIntensity > 0" class="text-xs ml-1">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div v-if="allTimeRecords[currentEx?.name]?.maxWeight > 0" class="mt-4 pt-3 border-t border-white/5 flex gap-2 justify-between">
+                                    <button @click="setWeightByPercentage(70)" class="flex-1 py-1.5 rounded text-[10px] font-bold font-mono text-slate-400 bg-white/5 hover:bg-white/10 hover:text-white transition-all border border-transparent hover:border-white/10">70%</button>
+                                    <button @click="setWeightByPercentage(80)" class="flex-1 py-1.5 rounded text-[10px] font-bold font-mono text-slate-400 bg-white/5 hover:bg-white/10 hover:text-white transition-all border border-transparent hover:border-white/10">80%</button>
+                                    <button @click="setWeightByPercentage(90)" class="flex-1 py-1.5 rounded text-[10px] font-bold font-mono text-slate-400 bg-white/5 hover:bg-white/10 hover:text-white transition-all border border-transparent hover:border-white/10">90%</button>
+                                    <button @click="setWeightByPercentage(100)" class="flex-1 py-1.5 rounded text-[10px] font-bold font-mono text-yellow-400 bg-yellow-400/10 hover:bg-yellow-400/20 hover:text-yellow-300 transition-all border border-transparent hover:border-yellow-400/30">MAX</button>
+                                </div>
+                            </div>
+
                             <div class="mb-6">
                                 <label class="block text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-3">Weight (kg)</label>
                                 <div class="flex items-center justify-between bg-black/40 p-2 rounded-2xl border border-white/5">
@@ -352,35 +460,16 @@
                             </div>
                         </div>
 
-                        <div v-if="isTimeBased(currentEx)">
-                            <div class="mb-6">
-                                <label class="block text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-3">Distance (meters) - Optional</label>
-                                <div class="flex items-center justify-between bg-black/40 p-2 rounded-2xl border border-white/5">
-                                    <button @click="distance = Math.max(0, distance - 5)" class="h-14 w-14 rounded-xl cyber-outline-btn text-2xl font-light">-</button>
-                                    <input type="number" v-model.number="distance" class="w-24 text-center bg-transparent text-4xl font-black text-white outline-none">
-                                    <button @click="distance += 5" class="h-14 w-14 rounded-xl cyber-outline-btn text-2xl font-light">+</button>
-                                </div>
-                            </div>
-                            <div class="mb-8">
-                                <label class="block text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-3">Time (seconds)</label>
-                                <div class="flex items-center justify-between bg-black/40 p-2 rounded-2xl border border-white/5">
-                                    <button @click="time = Math.max(0, +(time - 0.1).toFixed(2))" class="h-14 w-14 rounded-xl cyber-outline-btn text-2xl font-light">-</button>
-                                    <input type="number" step="0.1" v-model.number="time" class="w-24 text-center bg-transparent text-4xl font-black text-white outline-none">
-                                    <button @click="time = +(time + 0.1).toFixed(2)" class="h-14 w-14 rounded-xl cyber-outline-btn text-2xl font-light">+</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button @click="saveSet" class="w-full cyber-btn py-4 rounded-xl text-lg font-bold">Inject Data</button>
+                        <button @click="saveSet" class="w-full cyber-btn py-4 rounded-xl text-lg font-bold">
+                            {{ editingSetIndex !== null ? 'Update Node' : 'Inject Data' }}
+                        </button>
                     </div>
                 </transition>
             </div>
         </transition>
     </div>
-
 </div>
 
-<!-- Скрипты -->
 <script src="js/vue.global.js"></script>
 <script src="js/app.js"></script>
 </body>

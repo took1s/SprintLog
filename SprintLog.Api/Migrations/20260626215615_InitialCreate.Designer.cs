@@ -12,7 +12,7 @@ using SprintLog.Api.Data;
 namespace SprintLog.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260618215249_InitialCreate")]
+    [Migration("20260626215615_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -637,6 +637,26 @@ namespace SprintLog.Api.Migrations
                             MuscleGroup = "Cardio",
                             Name = "Cycling (Stationary)"
                         });
+                });
+
+            modelBuilder.Entity("SprintLog.Api.Models.Favorite", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ExerciseId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Favorites");
                 });
 
             modelBuilder.Entity("SprintLog.Api.Models.User", b =>

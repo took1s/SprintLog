@@ -12,6 +12,8 @@ public class AppDbContext : DbContext
     public DbSet<Workout> Workouts => Set<Workout>();
     public DbSet<WorkoutSet> WorkoutSets => Set<WorkoutSet>();
 
+    public DbSet<Favorite> Favorites => Set<Favorite>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
