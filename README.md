@@ -77,21 +77,19 @@ Die API ist anschließend unter `http://localhost:8080` erreichbar (Port ggf. an
 
 ## Umgebungsvariablen
 
-Die folgenden Werte werden zur Laufzeit als Umgebungsvariablen erwartet — **nicht** in `appsettings.json` einchecken:
+Die App lädt Konfiguration über eine `.env`-Datei (via DotNetEnv). Die folgenden Werte werden erwartet und sollten **nicht** eingecheckt werden:
 
 ```env
 ConnectionStrings__DefaultConnection=Host=...;Database=...;Username=...;Password=...
-Jwt__Key=<dein-geheimer-signierschlüssel>
-Jwt__Issuer=SprintLog
-Jwt__Audience=SprintLog
+JWT_SECRET=<dein-geheimer-signierschlüssel>
 ```
 
-> In der Cloud (Render) werden diese Werte im Dashboard unter *Environment* hinterlegt.
+> In der Cloud (Render) werden dieselben Werte im Dashboard unter *Environment* hinterlegt.
 
 ## Herausforderungen & Lösungen
 
 - **Firewall blockierte die DB-Verbindung.** Die Firmen-Firewall verhinderte den direkten Datenbankzugriff aus der IDE. Schema und Migrationen wurden daraufhin manuell über den Supabase-SQL-Editor ausgeführt.
-- **JWT-Validierung schlug nach dem Deploy fehl (401).** Das Signing-Secret lag lokal in `appsettings`, war in der Cloud aber nicht vorhanden. Lösung: das Secret als Umgebungsvariable in Render auslagern.
+- **JWT enthielt keine eindeutige Nutzer-ID.** Anfangs steckte nur der Benutzername im Token, wodurch sich Trainingsdaten nicht sauber pro Konto trennen ließen. Lösung: User-ID und Name als Claims in den Token schreiben (auch beim Refresh) und in den Endpoints zur Daten-Isolation auslesen.
 
 ## Ausblick
 
