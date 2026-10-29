@@ -3,11 +3,13 @@ import { t, tn } from '@/i18n';
 import { exerciseName, goalName, levelName, programName, dayName, dayNotes, noteText, templateText, templateDay } from '@/i18n/content';
 import { storeToRefs } from 'pinia';
 import { useAppStore, zoneClass } from '@/stores/app';
+import WellnessCard from '@/components/WellnessCard.vue';
+import { formatNumber } from '@/lib/format';
 import { formatRelative } from '@/lib/format';
 import { cycleWeek, prescriptionText } from '@/lib/program';
 
 const app = useAppStore();
-const { activeProgram, clockDate, expandedDay, filteredTemplates, isDeloadNow, loadInfo, loadZone, loadingPrograms, otherPrograms, planWeek, programInfo, templateFilter, templates } = storeToRefs(app);
+const { activeProgram, clockDate, expandedDay, filteredTemplates, isDeloadNow, loadInfo, loadZone, loadingPrograms, otherPrograms, planWeek, programInfo, progressInPlan, templateFilter, templates } = storeToRefs(app);
 const FILTERS = ['all', 'Football', 'Gym'] as const;
 const { activateProgram, currentPrescription, dayLabel, openProgramEditor, startProgramDay, startTemplate, stopProgram } = app;
 </script>
@@ -19,6 +21,8 @@ const { activateProgram, currentPrescription, dayLabel, openProgramEditor, start
       </div>
 
       <template v-else>
+          <WellnessCard />
+
           <!-- Aktiver Plan -->
           <div v-if="activeProgram && programInfo" class="glass-panel rounded-3xl border border-accent/30 p-5">
               <div class="mb-4 flex items-start justify-between gap-3">
@@ -62,6 +66,23 @@ const { activateProgram, currentPrescription, dayLabel, openProgramEditor, start
                   </ul>
                   <p v-if="programInfo.next.notes" class="mb-3 font-mono text-[10px] text-slate-500">{{ dayNotes(activeProgram, programInfo.next) }}</p>
                   <button @click="startProgramDay(programInfo.next)" class="cyber-btn w-full rounded-xl py-3 text-sm font-bold">{{ t('plan.startDay', { name: dayName(activeProgram, programInfo.next) }) }}</button>
+              </div>
+
+              <!-- Fortschritt seit Start -->
+              <div v-if="progressInPlan.length" class="mb-4 rounded-2xl border border-white/5 bg-black/20 p-4" data-test="plan-progress">
+                  <div class="mb-2 flex items-baseline justify-between">
+                      <span class="text-[10px] font-bold uppercase tracking-widest text-accent">{{ t('plan.progressTitle') }}</span>
+                      <span class="font-mono text-[9px] text-slate-500">{{ t('plan.progressInfo') }}</span>
+                  </div>
+                  <ul class="space-y-1">
+                      <li v-for="p in progressInPlan" :key="p.exerciseId" class="flex justify-between gap-3 text-xs">
+                          <span class="truncate text-slate-200">{{ exerciseName(p.exerciseId, p.name) }}</span>
+                          <span class="flex-shrink-0 font-mono text-[10px]">
+                              <span class="text-slate-400">{{ formatNumber(p.start, 1) }} → {{ formatNumber(p.current, 1) }} {{ t('units.kg') }}</span>
+                              <span class="ml-2 font-bold" :class="p.change > 0 ? 'text-emerald-300' : p.change < 0 ? 'text-red-300' : 'text-slate-400'">{{ p.change > 0 ? '+' : '' }}{{ formatNumber(p.change, 1) }}%</span>
+                          </span>
+                      </li>
+                  </ul>
               </div>
 
               <!-- Alle Tage -->

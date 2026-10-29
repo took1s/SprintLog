@@ -8,8 +8,19 @@ Live-Demo: https://sprintlog-api.onrender.com/
 
 > Projekt im 1. Ausbildungsjahr - Fachinformatiker für Anwendungsentwicklung.
 
-| Übungen | Satz erfassen (Kraft) | Satz erfassen (Feld) | Überblick |
+| Übungen | Satz + Technik (Kraft) | Satz + Technik (Feld) | Einheit prüfen |
 | --- | --- | --- | --- |
+| ![Übungen](docs/screenshots/gym.webp) | ![Kraft](docs/screenshots/set-gym.webp) | ![Feld](docs/screenshots/set-field.webp) | ![Session](docs/screenshots/session.webp) |
+
+| Spiel eintragen | Täglicher Check-in | Trainingsplan | Vorlagen mit Quellen |
+| --- | --- | --- | --- |
+| ![Spiel](docs/screenshots/match.webp) | ![Check-in](docs/screenshots/checkin.webp) | ![Plan](docs/screenshots/plan.webp) | ![Vorlagen](docs/screenshots/templates.webp) |
+
+| Überblick | Historie | Fortschritt | Kalender |
+| --- | --- | --- | --- |
+| ![Überblick](docs/screenshots/overview.webp) | ![Historie](docs/screenshots/history.webp) | ![Fortschritt](docs/screenshots/progress.webp) | ![Kalender](docs/screenshots/calendar.webp) |
+
+--- | --- | --- | --- |
 | ![Übungen](docs/screenshots/gym.webp) | ![Kraft](docs/screenshots/set-gym.webp) | ![Feld](docs/screenshots/set-field.webp) | ![Überblick](docs/screenshots/overview.webp) |
 
 | Historie | Fortschritt | Kalender | Einheit prüfen |
@@ -45,6 +56,10 @@ Live-Demo: https://sprintlog-api.onrender.com/
 - Einheiten nachträglich bearbeiten (auch offline - die Änderung wird per `PUT` synchronisiert).
 - Technik-Ansicht pro Übung: animierte Figur (eigene SVG-Skelettanimation, offline, ~60 Bewegungsmuster für alle 106 Standardübungen, eigene Übungen werden über den Namen erkannt), Zielmuskulatur und 3-4 Technik-Hinweise.
 
+**Fußball**
+- Spiele eintragen (Minuten, Session-RPE, Tore, Vorlagen, Gegner) - ohne Sätze, aber mit Trainingslast (Minuten × RPE), sodass Spiele in die Belastungssteuerung eingehen.
+- Täglicher Check-in nach dem Wellness-Fragebogen von McLean et al. (2010): Schlaf, Energie, Muskeln, Stimmung (je 1-5) -> Bereitschaft in %, 14-Tage-Verlauf und eine Empfehlung zusammen mit der Belastung (z. B. niedrige Bereitschaft oder Lastspitze -> leichter Tag).
+
 **Trainingspläne**
 - 15 Vorlagen aus Studien und bewährten Programmen, jeweils mit Quelle in der App:
   - Fußball & Prävention: FIFA 11+ (Soligard 2008, BMJ), Nordic-Hamstring-Protokoll + Copenhagen-Adduktoren-Programm (van der Horst 2015, Harøy 2019), Ausdauer-Intervalle 4×4 (Helgerud 2001), Repeated Sprint Ability (Bishop 2011), Plyometrie, Fußball-Kraft 2x, Speed & Agility.
@@ -53,7 +68,8 @@ Live-Demo: https://sprintlog-api.onrender.com/
 - Periodisierung: Wochen-Stufen pro Übung (z. B. Nordic: Woche 1 2×5 -> ab Woche 5 3×12/10/8), Wochen-Zyklus (5/3/1: 4-Wochen-Wellen) und automatische Entlastungswochen (~60 % der Sätze, -10 % Gewicht).
 - Gewichtsvorschlag: Double Progression (erst das obere Ende des Wdh.-Bereichs in allen Sätzen, dann +Steigerung) oder prozentbasiert vom besten geschätzten 1RM der letzten 120 Tage.
 - "Next up": der nächste Tag rotiert automatisch; Start eines Tages lädt die Vorgaben der aktuellen Woche (Sätze, Wdh., Pause, Ziel-RPE, Hinweise) als Checkliste. Eigener Editor inkl. Wochen-Stufen.
-- Belastungssteuerung: Acute:Chronic Workload Ratio (7 Tage vs. 28-Tage-Schnitt) mit Zonen (Sweet Spot 0.8-1.3, Spike > 1.5).
+- Belastungssteuerung: Acute:Chronic Workload Ratio (7 Tage vs. 28-Tage-Schnitt) mit Zonen (Sweet Spot 0.8-1.3, Spike > 1.5), Spiele eingeschlossen.
+- Fortschritt im Plan: geschätztes 1RM der Kraftübungen zu Beginn vs. letzte 3 Wochen.
 - 106 Standard-Übungen, alle mit animierter Technik-Figur (SVG, eigene Skelett-Animation) und Technik-Hinweisen in drei Sprachen.
 
 **Auswertungen**
@@ -280,7 +296,7 @@ Alle Endpunkte außer Registrierung, Login und Health erfordern `Authorization: 
 | POST | `/api/exercises` | Eigene Übung anlegen |
 | DELETE | `/api/exercises/{id}` | Eigene Übung löschen (409, wenn in Verwendung) |
 | GET/POST/DELETE | `/api/favorites[/{exerciseId}]` | Favoriten |
-| POST | `/api/workouts` | Einheit speichern (idempotent über `clientId`) |
+| POST | `/api/workouts` | Einheit speichern (idempotent über `clientId`); `workoutType: "Match"` = Spiel ohne Sätze mit `durationSeconds`, `sessionRpe` und `match` (Tore, Vorlagen, Gegner) |
 | GET | `/api/workouts?limit=50&cursor=` | Historie seitenweise, neueste zuerst (Keyset-Pagination, `nextCursor`) |
 | GET | `/api/workouts/changes?since=&cursor=` | Delta-Sync: Änderungen + gelöschte IDs seit `since`, ohne `since` alles |
 | GET | `/api/workouts/history` | Alle Einheiten in einer Antwort (Kompatibilität mit älteren App-Versionen) |
@@ -290,6 +306,8 @@ Alle Endpunkte außer Registrierung, Login und Health erfordern `Authorization: 
 | POST | `/api/programs/templates/{key}` | Plan aus Vorlage starten (wird aktiv) |
 | POST / PUT / DELETE | `/api/programs[/{id}]` | Eigenen Plan anlegen / bearbeiten / löschen |
 | POST | `/api/programs/{id}/activate` \| `deactivate` | Plan aktivieren (Woche 1 beginnt) / pausieren |
+| GET | `/api/wellness?days=56` | Check-ins der letzten Tage (neueste zuerst) |
+| PUT / DELETE | `/api/wellness/{yyyy-MM-dd}` | Check-in eines Tages anlegen/überschreiben bzw. löschen |
 | GET | `/api/config` | Öffentliche Laufzeit-Konfiguration der Web-App (Sentry-DSN, Release) |
 | GET | `/health` | Health-Check inkl. Datenbank |
 

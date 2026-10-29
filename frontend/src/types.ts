@@ -2,7 +2,7 @@
 
 export type TrackingType = 'WeightReps' | 'DistanceTime' | 'Duration';
 export type Category = 'Gym' | 'Football';
-export type WorkoutType = 'Gym' | 'Football' | 'Hybrid';
+export type WorkoutType = 'Gym' | 'Football' | 'Hybrid' | 'Match';
 export type ProgramGoal = 'Strength' | 'Hypertrophy' | 'Speed' | 'General';
 
 export interface Exercise {
@@ -47,6 +47,8 @@ export interface Workout {
   programDayId?: number | null;
   updatedAt?: string;
   sets: WorkoutSet[];
+  /** Nur bei Spielen (workoutType "Match"). */
+  match?: MatchDetails | null;
   // Nur lokal (noch nicht synchronisiert)
   pending?: boolean;
   op?: 'create' | 'update';
@@ -55,6 +57,8 @@ export interface Workout {
 }
 
 /** Eintrag der Offline-Warteschlange. */
+export interface MatchDetails { goals?: number | null; assists?: number | null; opponent?: string | null }
+
 export interface QueueEntry {
   clientId: string;
   op?: 'create' | 'update';
@@ -66,6 +70,7 @@ export interface QueueEntry {
   notes?: string | null;
   programDayId?: number | null;
   sets: WorkoutSet[];
+  match?: MatchDetails | null;
   status: QueueStatusValue;
   attempts: number;
   error: string | null;

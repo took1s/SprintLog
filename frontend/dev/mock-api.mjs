@@ -32,7 +32,7 @@ const templates = JSON.parse(readFileSync(join(root, 'SprintLog.Api', 'Data', 'p
 // Gleiche Content-Security-Policy wie die echte API -> E2E-Tests finden CSP-Verstöße (Konsolenfehler).
 const CSP = JSON.parse(readFileSync(join(root, 'SprintLog.Api', 'appsettings.json'), 'utf8')).Security.ContentSecurityPolicy;
 
-const db = { users: [], exercises: [...seed], workouts: [], deleted: [], favorites: [], programs: [], refresh: [], codes: [], links: [], outbox: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
+const db = { users: [], wellness: [], exercises: [...seed], workouts: [], deleted: [], favorites: [], programs: [], refresh: [], codes: [], links: [], outbox: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
 
 function programResponse(p) {
   return {
@@ -128,7 +128,8 @@ function workoutResponse(w) {
   return {
     id: w.id, clientId: w.clientId, date: w.date, workoutType: w.workoutType, durationSeconds: w.durationSeconds,
     sessionRpe: w.sessionRpe ?? null, notes: w.notes ?? null, programDayId: w.programDayId ?? null, updatedAt: w.updatedAt,
-    sets: w.sets.map((s, i) => {
+    match: w.workoutType === 'Match' ? { goals: w.match?.goals ?? null, assists: w.match?.assists ?? null, opponent: w.match?.opponent?.trim() || null } : null,
+    sets: (w.sets ?? []).map((s, i) => {
       const ex = db.exercises.find((e) => e.id === s.exerciseId);
       return { exerciseId: s.exerciseId, exerciseName: ex?.name ?? '?', trackingType: ex?.trackingType ?? 'WeightReps', muscleGroup: ex?.muscleGroup ?? null, setNumber: i + 1, weight: s.weight ?? null, reps: s.reps ?? null, distance: s.distance ?? null, time: s.time ?? null, rpe: s.rpe ?? null, isWarmup: !!s.isWarmup, note: s.note?.trim() || null };
     }),
@@ -150,8 +151,11 @@ function addUser(username, password) {
 
 function validateWorkout(user, body) {
   const errors = {};
-  if (!['Gym', 'Football', 'Hybrid'].includes(body.workoutType)) errors.workoutType = ['Invalid workout type.'];
-  if (!Array.isArray(body.sets) || body.sets.length === 0) errors.sets = ['Cannot save an empty workout.'];
+  if (!['Gym', 'Football', 'Hybrid', 'Match'].includes(body.workoutType)) errors.workoutType = ['Invalid workout type.'];
+  const isMatch = body.workoutType === 'Match';
+  if (!isMatch && (!Array.isArray(body.sets) || body.sets.length === 0)) errors.sets = ['Cannot save an empty workout.'];
+  if (isMatch && !(body.durationSeconds > 0)) errors.durationSeconds = ['Enter the minutes played.'];
+  if (isMatch && !body.sessionRpe) errors.sessionRpe = ['Rate how hard the match was (1-10).'];
   (body.sets ?? []).forEach((s, i) => {
     if ([s.weight, s.reps, s.distance, s.time].some((v) => v != null && v < 0)) errors[`sets[${i}]`] = ['Metrics cannot be negative.'];
   });
@@ -174,7 +178,7 @@ function saveWorkout(user, body) {
     id: db.nextWorkoutId++, userId: user.id, clientId, workoutType: body.workoutType,
     date: body.date ? new Date(body.date).toISOString() : new Date().toISOString(),
     durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null,
-    notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets,
+    notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets ?? [], match: body.match ?? null,
     updatedAt: new Date().toISOString(),
   };
   db.workouts.push(w);
@@ -351,6 +355,26 @@ async function handleApi(req, res, url) {
     return noContent(res);
   }
 
+  // ---- Wellness (pro Tag)
+  if (method === 'GET' && path === '/api/wellness') {
+    return json(res, 200, db.wellness.filter((w) => w.userId === user.id).sort((a, b) => b.date.localeCompare(a.date)).map(({ userId, ...rest }) => rest));
+  }
+  m = path.match(/^\/api\/wellness\/(\d{4}-\d{2}-\d{2})$/);
+  if (m && method === 'PUT') {
+    const body = await readBody(req);
+    const bad = ['sleep', 'energy', 'soreness', 'mood'].filter((k) => !(body[k] >= 1 && body[k] <= 5));
+    if (bad.length) return problem(res, 400, 'One or more validation errors occurred.', Object.fromEntries(bad.map((k) => [k, ['Values must be between 1 and 5.']])));
+    const entry = { userId: user.id, date: m[1], sleep: body.sleep, energy: body.energy, soreness: body.soreness, mood: body.mood, sleepHours: body.sleepHours ?? null, note: body.note?.trim() || null, updatedAt: new Date().toISOString() };
+    db.wellness = [...db.wellness.filter((w) => !(w.userId === user.id && w.date === m[1])), entry];
+    const { userId, ...rest } = entry;
+    return json(res, 200, rest);
+  }
+  if (m && method === 'DELETE') {
+    const before = db.wellness.length;
+    db.wellness = db.wellness.filter((w) => !(w.userId === user.id && w.date === m[1]));
+    return before === db.wellness.length ? problem(res, 404, 'Not Found') : noContent(res);
+  }
+
   if (method === 'GET' && path === '/api/favorites') return json(res, 200, db.favorites.filter((f) => f.userId === user.id).map((f) => f.exerciseId));
   m = path.match(/^\/api\/favorites\/(\d+)$/);
   if (m && method === 'POST') {
@@ -391,7 +415,7 @@ async function handleApi(req, res, url) {
     Object.assign(w, {
       workoutType: body.workoutType, date: body.date ? new Date(body.date).toISOString() : w.date,
       durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null,
-      notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets,
+      notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets ?? [], match: body.match ?? null,
       updatedAt: new Date().toISOString(),
     });
     return json(res, 200, workoutResponse(w));
@@ -490,6 +514,20 @@ function seedDemo() {
       saveWorkout(user, { workoutType: session.type, clientId: randomUUID(), date: date.toISOString(), durationSeconds: 3600 + i * 300, sessionRpe: 5 + ((week + i) % 4), sets });
       day++;
     }
+  }
+  // Spiele am Wochenende und tägliche Check-ins (für Screenshots/Demo)
+  const opponents = ['FC Neu-Ulm', 'TSV Pfuhl', 'SC Vöhringen', 'FV Senden', 'TSG Söflingen', 'SV Thalfingen', 'VfL Ulm', 'TV Wiblingen', 'SpVgg Au', 'FC Burlafingen'];
+  for (let week = 0; week < 10; week++) {
+    const date = new Date(Date.now() - (week * 7 + 2) * 86400_000);
+    date.setHours(15, 0, 0, 0);
+    saveWorkout(user, { workoutType: 'Match', clientId: randomUUID(), date: date.toISOString(), durationSeconds: (70 + (week * 7) % 21) * 60, sessionRpe: 7 + (week % 3), sets: [], match: { goals: week % 4 === 0 ? 1 : 0, assists: week % 3 === 0 ? 1 : 0, opponent: opponents[week] } });
+  }
+  for (let d = 0; d < 13; d++) {
+    const day = new Date(Date.now() - (d + 1) * 86400_000);
+    const pad = (n) => String(n).padStart(2, '0');
+    const key = `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
+    const v = (o) => 2 + ((d * 7 + o) % 4);
+    db.wellness.push({ userId: user.id, date: key, sleep: v(1), energy: v(2), soreness: v(3), mood: v(0), sleepHours: 6 + (d % 3), note: null, updatedAt: day.toISOString() });
   }
   db.favorites.push({ userId: user.id, exerciseId: 1 }, { userId: user.id, exerciseId: 35 }, { userId: user.id, exerciseId: 12 });
   console.log(`demo: user "demo" / "demo-password" with ${db.workouts.length} workouts`);
