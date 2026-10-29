@@ -43,7 +43,7 @@ const templates = [...templateSource.matchAll(/new\("([\w-]+)", "([^"]+)",\s*"([
     })),
   }));
 
-const db = { users: [], exercises: [...seed], workouts: [], favorites: [], programs: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
+const db = { users: [], exercises: [...seed], workouts: [], deleted: [], favorites: [], programs: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
 
 function programResponse(p) {
   return {
@@ -92,7 +92,7 @@ const exerciseDto = (e) => ({ id: e.id, name: e.name, category: e.category, musc
 function workoutResponse(w) {
   return {
     id: w.id, clientId: w.clientId, date: w.date, workoutType: w.workoutType, durationSeconds: w.durationSeconds,
-    sessionRpe: w.sessionRpe ?? null, notes: w.notes ?? null, programDayId: w.programDayId ?? null,
+    sessionRpe: w.sessionRpe ?? null, notes: w.notes ?? null, programDayId: w.programDayId ?? null, updatedAt: w.updatedAt,
     sets: w.sets.map((s, i) => {
       const ex = db.exercises.find((e) => e.id === s.exerciseId);
       return { exerciseId: s.exerciseId, exerciseName: ex?.name ?? '?', trackingType: ex?.trackingType ?? 'WeightReps', muscleGroup: ex?.muscleGroup ?? null, setNumber: i + 1, weight: s.weight ?? null, reps: s.reps ?? null, distance: s.distance ?? null, time: s.time ?? null, rpe: s.rpe ?? null, isWarmup: !!s.isWarmup };
@@ -140,6 +140,7 @@ function saveWorkout(user, body) {
     date: body.date ? new Date(body.date).toISOString() : new Date().toISOString(),
     durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null,
     notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets,
+    updatedAt: new Date().toISOString(),
   };
   db.workouts.push(w);
   return { status: 201, body: { workoutId: w.id, duplicate: false, message: 'Workout saved.' } };
@@ -226,6 +227,16 @@ async function handleApi(req, res, url) {
   if (method === 'GET' && path === '/api/workouts/history') {
     return json(res, 200, db.workouts.filter((w) => w.userId === user.id).sort((a, b) => b.date.localeCompare(a.date)).map(workoutResponse));
   }
+  if (method === 'GET' && path === '/api/workouts/changes') {
+    // Vereinfachter Delta-Sync (ohne Seiten): wie die API mit 2 min Überlappung im Token.
+    const since = url.searchParams.get('since');
+    const own = db.workouts.filter((w) => w.userId === user.id && (!since || w.updatedAt > new Date(since).toISOString()));
+    const deletedIds = since ? db.deleted.filter((d) => d.userId === user.id && d.deletedAt > new Date(since).toISOString()).map((d) => d.id) : [];
+    return json(res, 200, {
+      workouts: own.sort((a, b) => a.updatedAt.localeCompare(b.updatedAt) || a.id - b.id).map(workoutResponse),
+      deletedIds, nextCursor: null, syncToken: new Date(Date.now() - 120_000).toISOString(),
+    });
+  }
   m = path.match(/^\/api\/workouts\/(\d+)$/);
   if (m && method === 'PUT') {
     const w = db.workouts.find((x) => x.id === Number(m[1]) && x.userId === user.id);
@@ -237,13 +248,16 @@ async function handleApi(req, res, url) {
       workoutType: body.workoutType, date: body.date ? new Date(body.date).toISOString() : w.date,
       durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null,
       notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets,
+      updatedAt: new Date().toISOString(),
     });
     return json(res, 200, workoutResponse(w));
   }
   if (m && method === 'DELETE') {
     const before = db.workouts.length;
     db.workouts = db.workouts.filter((w) => !(w.id === Number(m[1]) && w.userId === user.id));
-    return db.workouts.length === before ? problem(res, 404, 'Not Found') : noContent(res);
+    if (db.workouts.length === before) return problem(res, 404, 'Not Found');
+    db.deleted.push({ userId: user.id, id: Number(m[1]), deletedAt: new Date().toISOString() });
+    return noContent(res);
   }
 
   // ---- Trainingspläne ----
@@ -281,7 +295,7 @@ async function handleApi(req, res, url) {
     }
     if (method === 'DELETE' && !m[3]) {
       const dayIds = new Set(p.days.map((d) => d.id));
-      db.workouts.forEach((w) => { if (dayIds.has(w.programDayId)) w.programDayId = null; });
+      db.workouts.forEach((w) => { if (dayIds.has(w.programDayId)) Object.assign(w, { programDayId: null, updatedAt: new Date().toISOString() }); });
       db.programs = db.programs.filter((x) => x !== p);
       return noContent(res);
     }

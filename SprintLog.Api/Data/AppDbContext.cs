@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<TrainingProgram> Programs => Set<TrainingProgram>();
     public DbSet<ProgramDay> ProgramDays => Set<ProgramDay>();
     public DbSet<ProgramExercise> ProgramExercises => Set<ProgramExercise>();
+    public DbSet<DeletedWorkout> DeletedWorkouts => Set<DeletedWorkout>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -57,10 +58,19 @@ public class AppDbContext : DbContext
             e.Property(w => w.Notes).HasMaxLength(CreateWorkoutRequest.MaxNotesLength);
             e.HasOne(w => w.User).WithMany(u => u.Workouts).HasForeignKey(w => w.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(w => new { w.UserId, w.Date });
+            // Delta-Sync: "alles seit X" pro Nutzer, stabil sortiert nach (UpdatedAt, Id).
+            e.Property(w => w.UpdatedAt).HasDefaultValueSql("now()");
+            e.HasIndex(w => new { w.UserId, w.UpdatedAt, w.Id });
             // Wird ein Plan(-tag) gelöscht, bleibt die Einheit erhalten - nur die Verknüpfung entfällt.
             e.HasOne(w => w.ProgramDay).WithMany().HasForeignKey(w => w.ProgramDayId).OnDelete(DeleteBehavior.SetNull);
             // Idempotenz: dieselbe Client-ID kann pro Nutzer nur einmal gespeichert werden.
             e.HasIndex(w => new { w.UserId, w.ClientId }).IsUnique();
+        });
+
+        modelBuilder.Entity<DeletedWorkout>(e =>
+        {
+            e.HasIndex(d => new { d.UserId, d.DeletedAt });
+            e.HasOne<User>().WithMany().HasForeignKey(d => d.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<TrainingProgram>(e =>

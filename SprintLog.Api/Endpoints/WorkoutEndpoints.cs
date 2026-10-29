@@ -14,7 +14,9 @@ public static class WorkoutEndpoints
 
         group.MapPost("/", Save);
         group.MapPost("/save", Save).ExcludeFromDescription(); // Alias für ältere, gecachte App-Versionen
-        group.MapGet("/history", History);
+        group.MapGet("/", List);
+        group.MapGet("/changes", Changes);
+        group.MapGet("/history", History); // komplette Historie in einer Antwort - für ältere App-Versionen
         group.MapGet("/{id:int}", GetById);
         group.MapPut("/{id:int}", Update);
         group.MapDelete("/{id:int}", Delete);
@@ -52,6 +54,7 @@ public static class WorkoutEndpoints
             Notes = NormalizeNotes(req.Notes),
             ProgramDayId = req.ProgramDayId,
             ClientId = req.ClientId,
+            UpdatedAt = now.UtcDateTime,
             Sets = MapSets(req)
         };
 
@@ -103,7 +106,8 @@ public static class WorkoutEndpoints
         var userId = http.User.GetUserId();
         if (userId is null) return Results.Unauthorized();
 
-        var errors = req.Validate(time.GetUtcNow());
+        var now = time.GetUtcNow();
+        var errors = req.Validate(now);
         if (errors.HasErrors) return errors.ToResult();
 
         var workout = await db.Workouts.Include(w => w.Sets).FirstOrDefaultAsync(w => w.Id == id && w.UserId == userId, ct);
@@ -118,6 +122,7 @@ public static class WorkoutEndpoints
         workout.DurationSeconds = req.DurationSeconds;
         workout.SessionRpe = req.SessionRpe;
         workout.Notes = NormalizeNotes(req.Notes);
+        workout.UpdatedAt = now.UtcDateTime;
 
         // Sätze komplett ersetzen - einfacher und eindeutiger als ein Abgleich einzelner Sätze.
         db.WorkoutSets.RemoveRange(workout.Sets);
@@ -128,14 +133,112 @@ public static class WorkoutEndpoints
         return Results.Ok(updated);
     }
 
-    private static async Task<IResult> Delete(int id, HttpContext http, AppDbContext db, CancellationToken ct)
+    private static async Task<IResult> Delete(int id, HttpContext http, AppDbContext db, TimeProvider time, CancellationToken ct)
     {
         var userId = http.User.GetUserId();
         if (userId is null) return Results.Unauthorized();
 
         // Fremde Einheiten liefern 404 statt 403 - so lässt sich nicht herausfinden, welche IDs existieren.
-        var deleted = await db.Workouts.Where(w => w.Id == id && w.UserId == userId).ExecuteDeleteAsync(ct);
-        return deleted == 0 ? Results.NotFound() : Results.NoContent();
+        if (!await db.Workouts.AnyAsync(w => w.Id == id && w.UserId == userId, ct)) return Results.NotFound();
+
+        // Löschen + Grabstein in EINEM SaveChanges -> atomar. Sätze löscht die Datenbank per Cascade.
+        db.Workouts.Remove(new Workout { Id = id, UserId = userId.Value });
+        db.DeletedWorkouts.Add(new DeletedWorkout { UserId = userId.Value, WorkoutId = id, DeletedAt = time.GetUtcNow().UtcDateTime });
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Results.NotFound(); // parallel schon gelöscht
+        }
+        return Results.NoContent();
+    }
+
+    // ---------- Seitenweise Historie + Delta-Sync ----------
+
+    private const int DefaultPageSize = 50;
+    private const int MaxPageSize = 200;
+
+    /// <summary>
+    /// Überlappung des Sync-Tokens: Eine Änderung, deren Transaktion beim Lesen noch nicht abgeschlossen war,
+    /// hat ein UpdatedAt kurz vor dem Lesezeitpunkt. Der nächste Sync holt deshalb die letzten 2 Minuten erneut
+    /// (Clients mergen per ID, doppelte Einträge sind harmlos).
+    /// </summary>
+    internal static readonly TimeSpan SyncOverlap = TimeSpan.FromMinutes(2);
+
+    /// <summary>Historie seitenweise, neueste zuerst (Keyset-Pagination: stabil, auch wenn neue Einheiten dazukommen).</summary>
+    private static async Task<IResult> List(HttpContext http, AppDbContext db, int? limit, string? cursor, CancellationToken ct)
+    {
+        var userId = http.User.GetUserId();
+        if (userId is null) return Results.Unauthorized();
+
+        var take = Math.Clamp(limit ?? DefaultPageSize, 1, MaxPageSize);
+        var query = db.Workouts.AsNoTracking().Where(w => w.UserId == userId);
+        if (cursor is not null)
+        {
+            if (!Cursor.TryParse(cursor, out var date, out var lastId))
+                return new ValidationErrors().Add("cursor", "Invalid cursor.").ToResult();
+            query = query.Where(w => w.Date < date || (w.Date == date && w.Id < lastId));
+        }
+
+        var page = await Project(query.OrderByDescending(w => w.Date).ThenByDescending(w => w.Id)).Take(take + 1).ToListAsync(ct);
+        var hasMore = page.Count > take;
+        if (hasMore) page.RemoveAt(take);
+        return Results.Ok(new WorkoutPageResponse(page, hasMore ? Cursor.Create(page[^1].Date, page[^1].Id) : null));
+    }
+
+    /// <summary>
+    /// Delta-Sync: ohne <c>since</c> alle Einheiten (seitenweise), mit <c>since</c> nur Änderungen danach
+    /// plus die IDs gelöschter Einheiten. So lädt die App die Historie einmal und danach nur noch Unterschiede.
+    /// </summary>
+    private static async Task<IResult> Changes(HttpContext http, AppDbContext db, TimeProvider time,
+        DateTimeOffset? since, string? cursor, int? limit, CancellationToken ct)
+    {
+        var userId = http.User.GetUserId();
+        if (userId is null) return Results.Unauthorized();
+
+        var token = time.GetUtcNow().UtcDateTime - SyncOverlap;
+        var take = Math.Clamp(limit ?? MaxPageSize, 1, MaxPageSize);
+        var sinceUtc = since?.UtcDateTime;
+
+        var query = db.Workouts.AsNoTracking().Where(w => w.UserId == userId);
+        if (sinceUtc is { } s) query = query.Where(w => w.UpdatedAt > s);
+        if (cursor is not null)
+        {
+            if (!Cursor.TryParse(cursor, out var at, out var lastId))
+                return new ValidationErrors().Add("cursor", "Invalid cursor.").ToResult();
+            query = query.Where(w => w.UpdatedAt > at || (w.UpdatedAt == at && w.Id > lastId));
+        }
+
+        var page = await Project(query.OrderBy(w => w.UpdatedAt).ThenBy(w => w.Id)).Take(take + 1).ToListAsync(ct);
+        var hasMore = page.Count > take;
+        if (hasMore) page.RemoveAt(take);
+
+        // Gelöschte IDs nur bei inkrementellem Sync und nur auf der ersten Seite.
+        var deleted = sinceUtc is { } d && cursor is null
+            ? await db.DeletedWorkouts.Where(x => x.UserId == userId && x.DeletedAt > d).Select(x => x.WorkoutId).Distinct().ToListAsync(ct)
+            : new List<int>();
+
+        return Results.Ok(new WorkoutChangesResponse(page, deleted,
+            hasMore ? Cursor.Create(page[^1].UpdatedAt, page[^1].Id) : null, token));
+    }
+
+    /// <summary>Undurchsichtiger Cursor "ticks_id" - Zeitpunkt + ID des letzten Eintrags einer Seite.</summary>
+    private static class Cursor
+    {
+        public static string Create(DateTime at, int id) => $"{at.ToUniversalTime().Ticks}_{id}";
+
+        public static bool TryParse(string value, out DateTime at, out int id)
+        {
+            at = default;
+            id = 0;
+            var parts = value.Split('_');
+            if (parts.Length != 2 || !long.TryParse(parts[0], out var ticks) || !int.TryParse(parts[1], out id)) return false;
+            if (ticks < DateTime.MinValue.Ticks || ticks > DateTime.MaxValue.Ticks) return false;
+            at = new DateTime(ticks, DateTimeKind.Utc);
+            return true;
+        }
     }
 
     private static List<WorkoutSet> MapSets(CreateWorkoutRequest req) =>
@@ -204,5 +307,6 @@ public static class WorkoutEndpoints
                     s.Time,
                     s.Rpe,
                     s.IsWarmup))
-                .ToList()));
+                .ToList(),
+            w.UpdatedAt));
 }

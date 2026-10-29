@@ -6,6 +6,7 @@ import { createApp, nextTick } from '../vendor/vue.esm-browser.prod.js';
 import { createApi } from './api.js';
 import { Keys, userKeys, readJson, writeJson, remove, decodeToken, newClientId } from './storage.js';
 import { syncQueue, queueAsWorkouts, migrateLegacyQueue, QueueStatus, isUpdate } from './sync.js';
+import { fetchChanges, mergeChanges, sortHistory } from './history.js';
 import {
   TrackingType, trackingOf, epley1RM, setSpeed, msToKmh, trainingZone, roundTo, exerciseKey,
   computeRecords, detectPRs, workoutKey, summarizeWorkout, groupSetsByExercise, metricsFor,
@@ -498,6 +499,7 @@ const app = createApp({
       // Cache der Historie entfernen (geteilte Geräte); Queue + laufende Einheit bleiben für dieses Konto erhalten.
       if (this.keys) {
         remove(this.keys.history);
+        remove(this.keys.historyToken);
         remove(this.keys.exercises);
         remove(this.keys.favorites);
         remove(this.keys.programs);
@@ -580,16 +582,26 @@ const app = createApp({
       }
     },
 
-    async loadHistory() {
+    /**
+     * Delta-Sync: beim ersten Mal die komplette Historie (seitenweise), danach nur Änderungen seit dem letzten Abgleich.
+     * Bei ungültigem Token (z. B. nach einem Server-Reset) einmal komplett neu laden.
+     */
+    async loadHistory({ full = false } = {}) {
       if (!this.isAuthenticated) return false;
+      const k = this.keys;
       this.loadingHistory = !this.history.length;
+      const since = full || !this.history.length ? null : readJson(k.historyToken, null);
       try {
-        this.history = await this.api().get('/api/workouts/history');
-        writeJson(this.keys.history, this.history);
+        const changes = await fetchChanges(this.api(), since);
+        if (!this.isAuthenticated || this.keys?.history !== k.history) return false; // inzwischen abgemeldet / Konto gewechselt
+        this.history = since ? mergeChanges(this.history, changes) : sortHistory(changes.workouts);
+        writeJson(k.history, this.history);
+        writeJson(k.historyToken, changes.token);
         this.online = true;
         return true;
       } catch (e) {
         if (e.isNetwork) this.online = false;
+        if (since && e.status === 400) return this.loadHistory({ full: true });
         return false;
       } finally {
         this.loadingHistory = false;

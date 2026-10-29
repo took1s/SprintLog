@@ -95,6 +95,8 @@ Ablauf beim Speichern einer Einheit:
 3. Existiert die `clientId` für diesen Nutzer schon (z. B. weil die Antwort verloren ging), liefert der Server die vorhandene Einheit zurück statt sie doppelt anzulegen. Ein Unique-Index `(UserId, ClientId)` sichert das auch bei parallelen Requests ab.
 4. Validierungsfehler markieren den Eintrag als fehlgeschlagen (sichtbar in der Historie mit "Retry"), Netzwerk- und Serverfehler werden später automatisch wiederholt.
 
+Laden der Historie (Delta-Sync): Beim ersten Start holt die App alle Einheiten seitenweise über `GET /api/workouts/changes` und speichert sie lokal. Danach fragt sie nur noch `?since=<syncToken>` ab und bekommt neue/bearbeitete Einheiten plus die IDs gelöschter Einheiten (Grabsteine in `DeletedWorkouts`). Auch bei hunderten Einheiten wird so pro Start nur übertragen, was sich geändert hat. Der Token überlappt um 2 Minuten, damit keine Änderung aus einer gerade laufenden Transaktion verloren geht; das Zusammenführen per ID ist idempotent.
+
 Datenisolation: Jeder Endpunkt liest die Nutzer-ID aus dem JWT. Fremde Einheiten und Übungen liefern `404` (nicht `403`), damit keine IDs erraten werden können.
 
 ## Lokal starten
@@ -199,6 +201,8 @@ Einmalige Einrichtung für das Backup (GitHub -> Settings -> Secrets and variabl
 - `DB_CONNECTION_STRING`: derselbe Wert wie `ConnectionStrings__DefaultConnection` in Render
 - `BACKUP_PASSPHRASE`: langes Passwort, z. B. aus dem Passwortmanager (ohne Passphrase ist das Backup nicht lesbar)
 
+Jedes Backup wird direkt nach dem Erstellen entschlüsselt, in eine leere PostgreSQL 17 zurückgespielt und die Zeilenzahl jeder Tabelle mit der Quelle verglichen (Schritt *Restore test*).
+
 Backup wiederherstellen:
 
 ```bash
@@ -224,7 +228,9 @@ Alle Endpunkte außer Registrierung, Login und Health erfordern `Authorization: 
 | DELETE | `/api/exercises/{id}` | Eigene Übung löschen (409, wenn in Verwendung) |
 | GET/POST/DELETE | `/api/favorites[/{exerciseId}]` | Favoriten |
 | POST | `/api/workouts` | Einheit speichern (idempotent über `clientId`) |
-| GET | `/api/workouts/history` | Alle Einheiten des Nutzers |
+| GET | `/api/workouts?limit=50&cursor=` | Historie seitenweise, neueste zuerst (Keyset-Pagination, `nextCursor`) |
+| GET | `/api/workouts/changes?since=&cursor=` | Delta-Sync: Änderungen + gelöschte IDs seit `since`, ohne `since` alles |
+| GET | `/api/workouts/history` | Alle Einheiten in einer Antwort (Kompatibilität mit älteren App-Versionen) |
 | GET / PUT / DELETE | `/api/workouts/{id}` | Einzelne Einheit lesen / ersetzen / löschen |
 | GET | `/api/programs` | Eigene Trainingspläne inkl. Tage und Vorgaben |
 | GET | `/api/programs/templates` | Eingebaute Vorlagen |
