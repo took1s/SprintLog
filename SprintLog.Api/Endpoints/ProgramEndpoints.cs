@@ -43,7 +43,7 @@ public static class ProgramEndpoints
         var template = ProgramTemplates.Find(key);
         if (template is null) return Results.NotFound();
 
-        var input = new ProgramInput(template.Name, template.Goal, template.Weeks, template.Days);
+        var input = new ProgramInput(template.Name, template.Goal, template.Weeks, template.Days, template.CycleWeeks, template.DeloadEvery);
         return await Save(db, userId.Value, input, template.Key, activate: true, time, ct);
     }
 
@@ -74,6 +74,8 @@ public static class ProgramEndpoints
             Goal = input.Goal!,
             Weeks = input.Weeks,
             TemplateKey = templateKey,
+            CycleWeeks = input.CycleWeeks,
+            DeloadEvery = input.DeloadEvery,
             IsActive = activate,
             StartedAt = activate ? now : null,
             CreatedAt = now,
@@ -108,6 +110,8 @@ public static class ProgramEndpoints
         program.Name = input.Name!.Trim();
         program.Goal = input.Goal!;
         program.Weeks = input.Weeks;
+        program.CycleWeeks = input.CycleWeeks;
+        program.DeloadEvery = input.DeloadEvery;
 
         var keptIds = input.Days!.Where(d => d.Id is not null).Select(d => d.Id!.Value).ToHashSet();
         var removedDays = program.Days.Where(d => !keptIds.Contains(d.Id)).ToList();
@@ -207,7 +211,10 @@ public static class ProgramEndpoints
         Time = x.Time,
         TargetRpe = x.TargetRpe,
         RestSeconds = x.RestSeconds,
-        ProgressionStep = x.ProgressionStep
+        ProgressionStep = x.ProgressionStep,
+        PercentOf1Rm = x.PercentOf1Rm,
+        Note = string.IsNullOrWhiteSpace(x.Note) ? null : x.Note.Trim(),
+        WeekSteps = x.WeekSteps?.Select(s => s.ToModel()).ToList() ?? new()
     };
 
     private static async Task<IResult?> CheckExercisesAsync(AppDbContext db, int userId, ProgramInput input, CancellationToken ct)
@@ -232,6 +239,7 @@ public static class ProgramEndpoints
             d.Id, d.Position, d.Name, d.Notes,
             d.Exercises.OrderBy(x => x.Position).Select(x => new ProgramExerciseResponse(
                 x.Id, x.Position, x.ExerciseId, x.Exercise.Name, x.Exercise.TrackingType, x.Exercise.MuscleGroup,
-                x.Sets, x.RepsMin, x.RepsMax, x.Distance, x.Time, x.TargetRpe, x.RestSeconds, x.ProgressionStep)).ToList()
-        )).ToList());
+                x.Sets, x.RepsMin, x.RepsMax, x.Distance, x.Time, x.TargetRpe, x.RestSeconds, x.ProgressionStep,
+                x.PercentOf1Rm, x.Note, x.WeekSteps.OrderBy(s => s.FromWeek).Select(WeekStepDto.From).ToList())).ToList()
+        )).ToList(), p.CycleWeeks, p.DeloadEvery);
 }
