@@ -11,116 +11,148 @@ public class AppDbContext : DbContext
     public DbSet<Exercise> Exercises => Set<Exercise>();
     public DbSet<Workout> Workouts => Set<Workout>();
     public DbSet<WorkoutSet> WorkoutSets => Set<WorkoutSet>();
-
     public DbSet<Favorite> Favorites => Set<Favorite>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Встроенный механизм EF Core для стартовых данных
-        modelBuilder.Entity<Exercise>().HasData(
-            // Базовые упражнения
-            new Exercise { Id = 1, Name = "Bench Press", Category = "Gym", MuscleGroup = "Chest" },
-            new Exercise { Id = 2, Name = "Leg Extensions", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 3, Name = "Leg Curls", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 4, Name = "Calf Raises", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 5, Name = "Hip Abduction", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 6, Name = "Hip Adduction", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 7, Name = "Leg Press", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 8, Name = "Cable Tricep Pushdown", Category = "Gym", MuscleGroup = "Arms" },
-            new Exercise { Id = 9, Name = "Barbell Bicep Curl", Category = "Gym", MuscleGroup = "Arms" },
-            new Exercise { Id = 10, Name = "Dumbbell Wrist Curl", Category = "Gym", MuscleGroup = "Arms" },
-            new Exercise { Id = 11, Name = "Reverse Wrist Curl", Category = "Gym", MuscleGroup = "Arms" },
-            new Exercise { Id = 12, Name = "Running / Sprints", Category = "Football", MuscleGroup = "Cardio" },
-            new Exercise { Id = 13, Name = "Dumbbell Bicep Curl", Category = "Gym", MuscleGroup = "Arms" },
-            new Exercise { Id = 14, Name = "Seated Cable Row", Category = "Gym", MuscleGroup = "Back" },
-            new Exercise { Id = 15, Name = "Standing Dumbbell Curl", Category = "Gym", MuscleGroup = "Arms" },
-            new Exercise { Id = 16, Name = "Dumbbell Skull Crusher", Category = "Gym", MuscleGroup = "Arms" },
-            new Exercise { Id = 17, Name = "Pull-ups", Category = "Gym", MuscleGroup = "Back" },
-            new Exercise { Id = 18, Name = "Chest Press Machine", Category = "Gym", MuscleGroup = "Chest" },
-            new Exercise { Id = 19, Name = "Machine Lateral Raise", Category = "Gym", MuscleGroup = "Shoulders" },
-            new Exercise { Id = 20, Name = "Dips", Category = "Gym", MuscleGroup = "Chest" },
-            new Exercise { Id = 21, Name = "Seated Calf Raises", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 22, Name = "EZ-Bar Bicep Curl", Category = "Gym", MuscleGroup = "Arms" },
-            new Exercise { Id = 23, Name = "Wide Grip Lat Pulldown", Category = "Gym", MuscleGroup = "Back" },
-            new Exercise { Id = 24, Name = "Tricep Press Machine", Category = "Gym", MuscleGroup = "Arms" },
-            new Exercise { Id = 25, Name = "Overhead Tricep Extension", Category = "Gym", MuscleGroup = "Arms" },
-            new Exercise { Id = 26, Name = "Barbell Row", Category = "Gym", MuscleGroup = "Back" },
-            new Exercise { Id = 27, Name = "Rear Delt Fly", Category = "Gym", MuscleGroup = "Shoulders" },
-            new Exercise { Id = 28, Name = "Close Grip Lat Pulldown", Category = "Gym", MuscleGroup = "Back" },
-            new Exercise { Id = 29, Name = "Trap Bar Deadlift", Category = "Football", MuscleGroup = "Legs/Back" },
-            new Exercise { Id = 30, Name = "Dumbbell Bench Press", Category = "Gym", MuscleGroup = "Chest" },
-            new Exercise { Id = 31, Name = "Bent-Over Row", Category = "Gym", MuscleGroup = "Back" },
-            new Exercise { Id = 32, Name = "Med Ball Wall Throw", Category = "Football", MuscleGroup = "Explosive" },
-            new Exercise { Id = 33, Name = "Bulgarian Split Squats", Category = "Football", MuscleGroup = "Legs" },
-            new Exercise { Id = 34, Name = "Broad Jumps", Category = "Football", MuscleGroup = "Explosive" },
-            new Exercise { Id = 35, Name = "Barbell Squat", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 36, Name = "Single-Arm Dumbbell Row", Category = "Gym", MuscleGroup = "Back" },
-            new Exercise { Id = 37, Name = "Dumbbell Squat", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 38, Name = "Dumbbell Bent-Over Row", Category = "Gym", MuscleGroup = "Back" },
-            new Exercise { Id = 39, Name = "Glute Bridge", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 40, Name = "Dumbbell Shoulder Press", Category = "Gym", MuscleGroup = "Shoulders" },
-            new Exercise { Id = 41, Name = "Static Lunges", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 42, Name = "Dumbbell Deadlift", Category = "Gym", MuscleGroup = "Legs/Back" },
-            new Exercise { Id = 43, Name = "Hammer Curl", Category = "Gym", MuscleGroup = "Arms" },
-            new Exercise { Id = 44, Name = "Lat Pulldown", Category = "Gym", MuscleGroup = "Back" },
-            new Exercise { Id = 45, Name = "Chest-Supported Row", Category = "Gym", MuscleGroup = "Back" },
-            new Exercise { Id = 46, Name = "Push-ups", Category = "Gym", MuscleGroup = "Chest" },
-            new Exercise { Id = 47, Name = "Plank", Category = "Gym", MuscleGroup = "Core" },
-            new Exercise { Id = 48, Name = "Side Plank", Category = "Gym", MuscleGroup = "Core" },
-            
-            // Специфика для поля и взрывной силы
-            new Exercise { Id = 49, Name = "Romanian Deadlift (RDL)", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 50, Name = "Nordic Hamstring Curls", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 51, Name = "Box Jumps", Category = "Football", MuscleGroup = "Explosive" },
-            new Exercise { Id = 52, Name = "Depth Jumps", Category = "Football", MuscleGroup = "Explosive" },
-            new Exercise { Id = 53, Name = "Russian Twists", Category = "Gym", MuscleGroup = "Core" },
-            new Exercise { Id = 54, Name = "Cable Woodchoppers", Category = "Gym", MuscleGroup = "Core" },
-            new Exercise { Id = 55, Name = "Hanging Leg Raises", Category = "Gym", MuscleGroup = "Core" },
-            new Exercise { Id = 56, Name = "Agility Ladder", Category = "Football", MuscleGroup = "Agility" },
-            new Exercise { Id = 57, Name = "Cone Shuttle Drills", Category = "Football", MuscleGroup = "Agility" },
-            new Exercise { Id = 58, Name = "Change of Direction (COD) Sprints", Category = "Football", MuscleGroup = "Agility" },
+        modelBuilder.Entity<User>(e =>
+        {
+            e.Property(u => u.Username).HasMaxLength(32);
+            e.HasIndex(u => u.Username).IsUnique();
+        });
 
-            // Грудь (Верхняя и нижняя часть, изоляция)
-            new Exercise { Id = 59, Name = "Incline Barbell Bench Press", Category = "Gym", MuscleGroup = "Chest" },
-            new Exercise { Id = 60, Name = "Incline Dumbbell Bench Press", Category = "Gym", MuscleGroup = "Chest" },
-            new Exercise { Id = 61, Name = "Cable Crossover", Category = "Gym", MuscleGroup = "Chest" },
-            new Exercise { Id = 62, Name = "Pec Deck Fly", Category = "Gym", MuscleGroup = "Chest" },
+        modelBuilder.Entity<Exercise>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(60);
+            e.Property(x => x.Category).HasMaxLength(20);
+            e.Property(x => x.MuscleGroup).HasMaxLength(30);
+            e.Property(x => x.TrackingType).HasConversion<string>().HasMaxLength(20);
 
-            // Спина (Толщина и ширина)
-            new Exercise { Id = 63, Name = "Deadlift (Conventional)", Category = "Gym", MuscleGroup = "Back/Legs" },
-            new Exercise { Id = 64, Name = "T-Bar Row", Category = "Gym", MuscleGroup = "Back" },
-            new Exercise { Id = 65, Name = "Chin-ups", Category = "Gym", MuscleGroup = "Back" },
-            new Exercise { Id = 66, Name = "Straight-Arm Pulldown", Category = "Gym", MuscleGroup = "Back" },
-            new Exercise { Id = 67, Name = "Back Extension", Category = "Gym", MuscleGroup = "Back" },
+            // Eigene Übungen gehören einem Nutzer; Standard-Übungen haben UserId = NULL.
+            e.HasOne(x => x.User)
+                .WithMany(u => u.CustomExercises)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.UserId);
 
-            // Плечи (Дельты и трапеции)
-            new Exercise { Id = 68, Name = "Military Press", Category = "Gym", MuscleGroup = "Shoulders" },
-            new Exercise { Id = 69, Name = "Dumbbell Lateral Raise", Category = "Gym", MuscleGroup = "Shoulders" },
-            new Exercise { Id = 70, Name = "Dumbbell Front Raise", Category = "Gym", MuscleGroup = "Shoulders" },
-            new Exercise { Id = 71, Name = "Face Pulls", Category = "Gym", MuscleGroup = "Shoulders" },
-            new Exercise { Id = 72, Name = "Dumbbell Shrugs", Category = "Gym", MuscleGroup = "Shoulders" },
+            e.HasData(SeedExercises);
+        });
 
-            // Ноги (Квадрицепсы и ягодичные)
-            new Exercise { Id = 73, Name = "Front Squat", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 74, Name = "Hack Squat", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 75, Name = "Barbell Hip Thrust", Category = "Gym", MuscleGroup = "Legs" },
-            new Exercise { Id = 76, Name = "Walking Lunges", Category = "Gym", MuscleGroup = "Legs" },
+        modelBuilder.Entity<Favorite>(e =>
+        {
+            e.HasOne(f => f.User).WithMany(u => u.Favorites).HasForeignKey(f => f.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(f => f.Exercise).WithMany().HasForeignKey(f => f.ExerciseId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(f => new { f.UserId, f.ExerciseId }).IsUnique();
+        });
 
-            // Руки (Специфическая изоляция)
-            new Exercise { Id = 77, Name = "Preacher Curl", Category = "Gym", MuscleGroup = "Arms" },
-            new Exercise { Id = 78, Name = "Close-Grip Bench Press", Category = "Gym", MuscleGroup = "Arms" },
+        modelBuilder.Entity<Workout>(e =>
+        {
+            e.Property(w => w.WorkoutType).HasMaxLength(20);
+            e.HasOne(w => w.User).WithMany(u => u.Workouts).HasForeignKey(w => w.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(w => new { w.UserId, w.Date });
+            // Idempotenz: dieselbe Client-ID kann pro Nutzer nur einmal gespeichert werden.
+            e.HasIndex(w => new { w.UserId, w.ClientId }).IsUnique();
+        });
 
-            // Кор (Динамика)
-            new Exercise { Id = 79, Name = "Cable Crunches", Category = "Gym", MuscleGroup = "Core" },
-            new Exercise { Id = 80, Name = "Ab Wheel Rollout", Category = "Gym", MuscleGroup = "Core" },
-            new Exercise { Id = 81, Name = "Crunches", Category = "Gym", MuscleGroup = "Core" },
-
-            // Кардио и Функционал
-            new Exercise { Id = 82, Name = "Jump Rope", Category = "Gym", MuscleGroup = "Cardio" },
-            new Exercise { Id = 83, Name = "Rowing Machine", Category = "Gym", MuscleGroup = "Cardio" },
-            new Exercise { Id = 84, Name = "Cycling (Stationary)", Category = "Gym", MuscleGroup = "Cardio" }
-        );
+        modelBuilder.Entity<WorkoutSet>(e =>
+        {
+            e.HasOne(s => s.Workout).WithMany(w => w.Sets).HasForeignKey(s => s.WorkoutId).OnDelete(DeleteBehavior.Cascade);
+            // Eine Übung, die in der Historie verwendet wird, darf nicht gelöscht werden -
+            // sonst würden die Sätze still mitgelöscht (vorher: Cascade).
+            e.HasOne(s => s.Exercise).WithMany(x => x.Sets).HasForeignKey(s => s.ExerciseId).OnDelete(DeleteBehavior.NoAction);
+        });
     }
+
+    private static Exercise Ex(int id, string name, string category, string muscleGroup, TrackingType trackingType = TrackingType.WeightReps) =>
+        new() { Id = id, Name = name, Category = category, MuscleGroup = muscleGroup, TrackingType = trackingType };
+
+    /// <summary>Standard-Übungskatalog. IDs sind fix, damit bestehende Daten gültig bleiben.</summary>
+    internal static readonly Exercise[] SeedExercises =
+    {
+        Ex(1, "Bench Press", "Gym", "Chest"),
+        Ex(2, "Leg Extensions", "Gym", "Legs"),
+        Ex(3, "Leg Curls", "Gym", "Legs"),
+        Ex(4, "Calf Raises", "Gym", "Legs"),
+        Ex(5, "Hip Abduction", "Gym", "Legs"),
+        Ex(6, "Hip Adduction", "Gym", "Legs"),
+        Ex(7, "Leg Press", "Gym", "Legs"),
+        Ex(8, "Cable Tricep Pushdown", "Gym", "Arms"),
+        Ex(9, "Barbell Bicep Curl", "Gym", "Arms"),
+        Ex(10, "Dumbbell Wrist Curl", "Gym", "Arms"),
+        Ex(11, "Reverse Wrist Curl", "Gym", "Arms"),
+        Ex(12, "Running / Sprints", "Football", "Cardio", TrackingType.DistanceTime),
+        Ex(13, "Dumbbell Bicep Curl", "Gym", "Arms"),
+        Ex(14, "Seated Cable Row", "Gym", "Back"),
+        Ex(15, "Standing Dumbbell Curl", "Gym", "Arms"),
+        Ex(16, "Dumbbell Skull Crusher", "Gym", "Arms"),
+        Ex(17, "Pull-ups", "Gym", "Back"),
+        Ex(18, "Chest Press Machine", "Gym", "Chest"),
+        Ex(19, "Machine Lateral Raise", "Gym", "Shoulders"),
+        Ex(20, "Dips", "Gym", "Chest"),
+        Ex(21, "Seated Calf Raises", "Gym", "Legs"),
+        Ex(22, "EZ-Bar Bicep Curl", "Gym", "Arms"),
+        Ex(23, "Wide Grip Lat Pulldown", "Gym", "Back"),
+        Ex(24, "Tricep Press Machine", "Gym", "Arms"),
+        Ex(25, "Overhead Tricep Extension", "Gym", "Arms"),
+        Ex(26, "Barbell Row", "Gym", "Back"),
+        Ex(27, "Rear Delt Fly", "Gym", "Shoulders"),
+        Ex(28, "Close Grip Lat Pulldown", "Gym", "Back"),
+        Ex(29, "Trap Bar Deadlift", "Football", "Legs/Back"),
+        Ex(30, "Dumbbell Bench Press", "Gym", "Chest"),
+        Ex(31, "Bent-Over Row", "Gym", "Back"),
+        Ex(32, "Med Ball Wall Throw", "Football", "Explosive"),
+        Ex(33, "Bulgarian Split Squats", "Football", "Legs"),
+        Ex(34, "Broad Jumps", "Football", "Explosive", TrackingType.DistanceTime),
+        Ex(35, "Barbell Squat", "Gym", "Legs"),
+        Ex(36, "Single-Arm Dumbbell Row", "Gym", "Back"),
+        Ex(37, "Dumbbell Squat", "Gym", "Legs"),
+        Ex(38, "Dumbbell Bent-Over Row", "Gym", "Back"),
+        Ex(39, "Glute Bridge", "Gym", "Legs"),
+        Ex(40, "Dumbbell Shoulder Press", "Gym", "Shoulders"),
+        Ex(41, "Static Lunges", "Gym", "Legs"),
+        Ex(42, "Dumbbell Deadlift", "Gym", "Legs/Back"),
+        Ex(43, "Hammer Curl", "Gym", "Arms"),
+        Ex(44, "Lat Pulldown", "Gym", "Back"),
+        Ex(45, "Chest-Supported Row", "Gym", "Back"),
+        Ex(46, "Push-ups", "Gym", "Chest"),
+        Ex(47, "Plank", "Gym", "Core", TrackingType.Duration),
+        Ex(48, "Side Plank", "Gym", "Core", TrackingType.Duration),
+        Ex(49, "Romanian Deadlift (RDL)", "Gym", "Legs"),
+        Ex(50, "Nordic Hamstring Curls", "Gym", "Legs"),
+        Ex(51, "Box Jumps", "Football", "Explosive"),
+        Ex(52, "Depth Jumps", "Football", "Explosive"),
+        Ex(53, "Russian Twists", "Gym", "Core"),
+        Ex(54, "Cable Woodchoppers", "Gym", "Core"),
+        Ex(55, "Hanging Leg Raises", "Gym", "Core"),
+        Ex(56, "Agility Ladder", "Football", "Agility", TrackingType.Duration),
+        Ex(57, "Cone Shuttle Drills", "Football", "Agility", TrackingType.DistanceTime),
+        Ex(58, "Change of Direction (COD) Sprints", "Football", "Agility", TrackingType.DistanceTime),
+        Ex(59, "Incline Barbell Bench Press", "Gym", "Chest"),
+        Ex(60, "Incline Dumbbell Bench Press", "Gym", "Chest"),
+        Ex(61, "Cable Crossover", "Gym", "Chest"),
+        Ex(62, "Pec Deck Fly", "Gym", "Chest"),
+        Ex(63, "Deadlift (Conventional)", "Gym", "Back/Legs"),
+        Ex(64, "T-Bar Row", "Gym", "Back"),
+        Ex(65, "Chin-ups", "Gym", "Back"),
+        Ex(66, "Straight-Arm Pulldown", "Gym", "Back"),
+        Ex(67, "Back Extension", "Gym", "Back"),
+        Ex(68, "Military Press", "Gym", "Shoulders"),
+        Ex(69, "Dumbbell Lateral Raise", "Gym", "Shoulders"),
+        Ex(70, "Dumbbell Front Raise", "Gym", "Shoulders"),
+        Ex(71, "Face Pulls", "Gym", "Shoulders"),
+        Ex(72, "Dumbbell Shrugs", "Gym", "Shoulders"),
+        Ex(73, "Front Squat", "Gym", "Legs"),
+        Ex(74, "Hack Squat", "Gym", "Legs"),
+        Ex(75, "Barbell Hip Thrust", "Gym", "Legs"),
+        Ex(76, "Walking Lunges", "Gym", "Legs"),
+        Ex(77, "Preacher Curl", "Gym", "Arms"),
+        Ex(78, "Close-Grip Bench Press", "Gym", "Arms"),
+        Ex(79, "Cable Crunches", "Gym", "Core"),
+        Ex(80, "Ab Wheel Rollout", "Gym", "Core"),
+        Ex(81, "Crunches", "Gym", "Core"),
+        Ex(82, "Jump Rope", "Gym", "Cardio", TrackingType.Duration),
+        Ex(83, "Rowing Machine", "Gym", "Cardio", TrackingType.DistanceTime),
+        Ex(84, "Cycling (Stationary)", "Gym", "Cardio", TrackingType.DistanceTime),    };
 }

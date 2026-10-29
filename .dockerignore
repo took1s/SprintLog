@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/TestResults/
+.git/
+.github/
+.vs/
+.vscode/
+tests/
+frontend/
+database/
+*.md
+.env
+**/*.env

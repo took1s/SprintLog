@@ -17,7 +17,7 @@ namespace SprintLog.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.4")
+                .HasAnnotation("ProductVersion", "8.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -32,16 +32,29 @@ namespace SprintLog.Api.Migrations
 
                     b.Property<string>("Category")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("MuscleGroup")
-                        .HasColumnType("text");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("TrackingType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Exercises");
 
@@ -51,588 +64,672 @@ namespace SprintLog.Api.Migrations
                             Id = 1,
                             Category = "Gym",
                             MuscleGroup = "Chest",
-                            Name = "Bench Press"
+                            Name = "Bench Press",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 2,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Leg Extensions"
+                            Name = "Leg Extensions",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 3,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Leg Curls"
+                            Name = "Leg Curls",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 4,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Calf Raises"
+                            Name = "Calf Raises",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 5,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Hip Abduction"
+                            Name = "Hip Abduction",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 6,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Hip Adduction"
+                            Name = "Hip Adduction",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 7,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Leg Press"
+                            Name = "Leg Press",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 8,
                             Category = "Gym",
                             MuscleGroup = "Arms",
-                            Name = "Cable Tricep Pushdown"
+                            Name = "Cable Tricep Pushdown",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 9,
                             Category = "Gym",
                             MuscleGroup = "Arms",
-                            Name = "Barbell Bicep Curl"
+                            Name = "Barbell Bicep Curl",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 10,
                             Category = "Gym",
                             MuscleGroup = "Arms",
-                            Name = "Dumbbell Wrist Curl"
+                            Name = "Dumbbell Wrist Curl",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 11,
                             Category = "Gym",
                             MuscleGroup = "Arms",
-                            Name = "Reverse Wrist Curl"
+                            Name = "Reverse Wrist Curl",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 12,
                             Category = "Football",
                             MuscleGroup = "Cardio",
-                            Name = "Running / Sprints"
+                            Name = "Running / Sprints",
+                            TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 13,
                             Category = "Gym",
                             MuscleGroup = "Arms",
-                            Name = "Dumbbell Bicep Curl"
+                            Name = "Dumbbell Bicep Curl",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 14,
                             Category = "Gym",
                             MuscleGroup = "Back",
-                            Name = "Seated Cable Row"
+                            Name = "Seated Cable Row",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 15,
                             Category = "Gym",
                             MuscleGroup = "Arms",
-                            Name = "Standing Dumbbell Curl"
+                            Name = "Standing Dumbbell Curl",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 16,
                             Category = "Gym",
                             MuscleGroup = "Arms",
-                            Name = "Dumbbell Skull Crusher"
+                            Name = "Dumbbell Skull Crusher",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 17,
                             Category = "Gym",
                             MuscleGroup = "Back",
-                            Name = "Pull-ups"
+                            Name = "Pull-ups",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 18,
                             Category = "Gym",
                             MuscleGroup = "Chest",
-                            Name = "Chest Press Machine"
+                            Name = "Chest Press Machine",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 19,
                             Category = "Gym",
                             MuscleGroup = "Shoulders",
-                            Name = "Machine Lateral Raise"
+                            Name = "Machine Lateral Raise",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 20,
                             Category = "Gym",
                             MuscleGroup = "Chest",
-                            Name = "Dips"
+                            Name = "Dips",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 21,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Seated Calf Raises"
+                            Name = "Seated Calf Raises",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 22,
                             Category = "Gym",
                             MuscleGroup = "Arms",
-                            Name = "EZ-Bar Bicep Curl"
+                            Name = "EZ-Bar Bicep Curl",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 23,
                             Category = "Gym",
                             MuscleGroup = "Back",
-                            Name = "Wide Grip Lat Pulldown"
+                            Name = "Wide Grip Lat Pulldown",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 24,
                             Category = "Gym",
                             MuscleGroup = "Arms",
-                            Name = "Tricep Press Machine"
+                            Name = "Tricep Press Machine",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 25,
                             Category = "Gym",
                             MuscleGroup = "Arms",
-                            Name = "Overhead Tricep Extension"
+                            Name = "Overhead Tricep Extension",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 26,
                             Category = "Gym",
                             MuscleGroup = "Back",
-                            Name = "Barbell Row"
+                            Name = "Barbell Row",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 27,
                             Category = "Gym",
                             MuscleGroup = "Shoulders",
-                            Name = "Rear Delt Fly"
+                            Name = "Rear Delt Fly",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 28,
                             Category = "Gym",
                             MuscleGroup = "Back",
-                            Name = "Close Grip Lat Pulldown"
+                            Name = "Close Grip Lat Pulldown",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 29,
                             Category = "Football",
                             MuscleGroup = "Legs/Back",
-                            Name = "Trap Bar Deadlift"
+                            Name = "Trap Bar Deadlift",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 30,
                             Category = "Gym",
                             MuscleGroup = "Chest",
-                            Name = "Dumbbell Bench Press"
+                            Name = "Dumbbell Bench Press",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 31,
                             Category = "Gym",
                             MuscleGroup = "Back",
-                            Name = "Bent-Over Row"
+                            Name = "Bent-Over Row",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 32,
                             Category = "Football",
                             MuscleGroup = "Explosive",
-                            Name = "Med Ball Wall Throw"
+                            Name = "Med Ball Wall Throw",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 33,
                             Category = "Football",
                             MuscleGroup = "Legs",
-                            Name = "Bulgarian Split Squats"
+                            Name = "Bulgarian Split Squats",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 34,
                             Category = "Football",
                             MuscleGroup = "Explosive",
-                            Name = "Broad Jumps"
+                            Name = "Broad Jumps",
+                            TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 35,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Barbell Squat"
+                            Name = "Barbell Squat",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 36,
                             Category = "Gym",
                             MuscleGroup = "Back",
-                            Name = "Single-Arm Dumbbell Row"
+                            Name = "Single-Arm Dumbbell Row",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 37,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Dumbbell Squat"
+                            Name = "Dumbbell Squat",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 38,
                             Category = "Gym",
                             MuscleGroup = "Back",
-                            Name = "Dumbbell Bent-Over Row"
+                            Name = "Dumbbell Bent-Over Row",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 39,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Glute Bridge"
+                            Name = "Glute Bridge",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 40,
                             Category = "Gym",
                             MuscleGroup = "Shoulders",
-                            Name = "Dumbbell Shoulder Press"
+                            Name = "Dumbbell Shoulder Press",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 41,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Static Lunges"
+                            Name = "Static Lunges",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 42,
                             Category = "Gym",
                             MuscleGroup = "Legs/Back",
-                            Name = "Dumbbell Deadlift"
+                            Name = "Dumbbell Deadlift",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 43,
                             Category = "Gym",
                             MuscleGroup = "Arms",
-                            Name = "Hammer Curl"
+                            Name = "Hammer Curl",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 44,
                             Category = "Gym",
                             MuscleGroup = "Back",
-                            Name = "Lat Pulldown"
+                            Name = "Lat Pulldown",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 45,
                             Category = "Gym",
                             MuscleGroup = "Back",
-                            Name = "Chest-Supported Row"
+                            Name = "Chest-Supported Row",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 46,
                             Category = "Gym",
                             MuscleGroup = "Chest",
-                            Name = "Push-ups"
+                            Name = "Push-ups",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 47,
                             Category = "Gym",
                             MuscleGroup = "Core",
-                            Name = "Plank"
+                            Name = "Plank",
+                            TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 48,
                             Category = "Gym",
                             MuscleGroup = "Core",
-                            Name = "Side Plank"
+                            Name = "Side Plank",
+                            TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 49,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Romanian Deadlift (RDL)"
+                            Name = "Romanian Deadlift (RDL)",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 50,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Nordic Hamstring Curls"
+                            Name = "Nordic Hamstring Curls",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 51,
                             Category = "Football",
                             MuscleGroup = "Explosive",
-                            Name = "Box Jumps"
+                            Name = "Box Jumps",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 52,
                             Category = "Football",
                             MuscleGroup = "Explosive",
-                            Name = "Depth Jumps"
+                            Name = "Depth Jumps",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 53,
                             Category = "Gym",
                             MuscleGroup = "Core",
-                            Name = "Russian Twists"
+                            Name = "Russian Twists",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 54,
                             Category = "Gym",
                             MuscleGroup = "Core",
-                            Name = "Cable Woodchoppers"
+                            Name = "Cable Woodchoppers",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 55,
                             Category = "Gym",
                             MuscleGroup = "Core",
-                            Name = "Hanging Leg Raises"
+                            Name = "Hanging Leg Raises",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 56,
                             Category = "Football",
                             MuscleGroup = "Agility",
-                            Name = "Agility Ladder"
+                            Name = "Agility Ladder",
+                            TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 57,
                             Category = "Football",
                             MuscleGroup = "Agility",
-                            Name = "Cone Shuttle Drills"
+                            Name = "Cone Shuttle Drills",
+                            TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 58,
                             Category = "Football",
                             MuscleGroup = "Agility",
-                            Name = "Change of Direction (COD) Sprints"
+                            Name = "Change of Direction (COD) Sprints",
+                            TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 59,
                             Category = "Gym",
                             MuscleGroup = "Chest",
-                            Name = "Incline Barbell Bench Press"
+                            Name = "Incline Barbell Bench Press",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 60,
                             Category = "Gym",
                             MuscleGroup = "Chest",
-                            Name = "Incline Dumbbell Bench Press"
+                            Name = "Incline Dumbbell Bench Press",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 61,
                             Category = "Gym",
                             MuscleGroup = "Chest",
-                            Name = "Cable Crossover"
+                            Name = "Cable Crossover",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 62,
                             Category = "Gym",
                             MuscleGroup = "Chest",
-                            Name = "Pec Deck Fly"
+                            Name = "Pec Deck Fly",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 63,
                             Category = "Gym",
                             MuscleGroup = "Back/Legs",
-                            Name = "Deadlift (Conventional)"
+                            Name = "Deadlift (Conventional)",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 64,
                             Category = "Gym",
                             MuscleGroup = "Back",
-                            Name = "T-Bar Row"
+                            Name = "T-Bar Row",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 65,
                             Category = "Gym",
                             MuscleGroup = "Back",
-                            Name = "Chin-ups"
+                            Name = "Chin-ups",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 66,
                             Category = "Gym",
                             MuscleGroup = "Back",
-                            Name = "Straight-Arm Pulldown"
+                            Name = "Straight-Arm Pulldown",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 67,
                             Category = "Gym",
                             MuscleGroup = "Back",
-                            Name = "Back Extension"
+                            Name = "Back Extension",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 68,
                             Category = "Gym",
                             MuscleGroup = "Shoulders",
-                            Name = "Military Press"
+                            Name = "Military Press",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 69,
                             Category = "Gym",
                             MuscleGroup = "Shoulders",
-                            Name = "Dumbbell Lateral Raise"
+                            Name = "Dumbbell Lateral Raise",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 70,
                             Category = "Gym",
                             MuscleGroup = "Shoulders",
-                            Name = "Dumbbell Front Raise"
+                            Name = "Dumbbell Front Raise",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 71,
                             Category = "Gym",
                             MuscleGroup = "Shoulders",
-                            Name = "Face Pulls"
+                            Name = "Face Pulls",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 72,
                             Category = "Gym",
                             MuscleGroup = "Shoulders",
-                            Name = "Dumbbell Shrugs"
+                            Name = "Dumbbell Shrugs",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 73,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Front Squat"
+                            Name = "Front Squat",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 74,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Hack Squat"
+                            Name = "Hack Squat",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 75,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Barbell Hip Thrust"
+                            Name = "Barbell Hip Thrust",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 76,
                             Category = "Gym",
                             MuscleGroup = "Legs",
-                            Name = "Walking Lunges"
+                            Name = "Walking Lunges",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 77,
                             Category = "Gym",
                             MuscleGroup = "Arms",
-                            Name = "Preacher Curl"
+                            Name = "Preacher Curl",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 78,
                             Category = "Gym",
                             MuscleGroup = "Arms",
-                            Name = "Close-Grip Bench Press"
+                            Name = "Close-Grip Bench Press",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 79,
                             Category = "Gym",
                             MuscleGroup = "Core",
-                            Name = "Cable Crunches"
+                            Name = "Cable Crunches",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 80,
                             Category = "Gym",
                             MuscleGroup = "Core",
-                            Name = "Ab Wheel Rollout"
+                            Name = "Ab Wheel Rollout",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 81,
                             Category = "Gym",
                             MuscleGroup = "Core",
-                            Name = "Crunches"
+                            Name = "Crunches",
+                            TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 82,
                             Category = "Gym",
                             MuscleGroup = "Cardio",
-                            Name = "Jump Rope"
+                            Name = "Jump Rope",
+                            TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 83,
                             Category = "Gym",
                             MuscleGroup = "Cardio",
-                            Name = "Rowing Machine"
+                            Name = "Rowing Machine",
+                            TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 84,
                             Category = "Gym",
                             MuscleGroup = "Cardio",
-                            Name = "Cycling (Stationary)"
+                            Name = "Cycling (Stationary)",
+                            TrackingType = "DistanceTime"
                         });
                 });
 
@@ -647,11 +744,15 @@ namespace SprintLog.Api.Migrations
                     b.Property<int>("ExerciseId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Username")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ExerciseId");
+
+                    b.HasIndex("UserId", "ExerciseId")
+                        .IsUnique();
 
                     b.ToTable("Favorites");
                 });
@@ -664,15 +765,22 @@ namespace SprintLog.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Username")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Username")
+                        .IsUnique();
 
                     b.ToTable("Users");
                 });
@@ -685,19 +793,29 @@ namespace SprintLog.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<Guid?>("ClientId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DurationSeconds")
+                        .HasColumnType("integer");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
 
                     b.Property<string>("WorkoutType")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "Date");
 
                     b.ToTable("Workouts");
                 });
@@ -740,6 +858,35 @@ namespace SprintLog.Api.Migrations
                     b.ToTable("WorkoutSets");
                 });
 
+            modelBuilder.Entity("SprintLog.Api.Models.Exercise", b =>
+                {
+                    b.HasOne("SprintLog.Api.Models.User", "User")
+                        .WithMany("CustomExercises")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SprintLog.Api.Models.Favorite", b =>
+                {
+                    b.HasOne("SprintLog.Api.Models.Exercise", "Exercise")
+                        .WithMany()
+                        .HasForeignKey("ExerciseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SprintLog.Api.Models.User", "User")
+                        .WithMany("Favorites")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exercise");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SprintLog.Api.Models.Workout", b =>
                 {
                     b.HasOne("SprintLog.Api.Models.User", "User")
@@ -756,7 +903,7 @@ namespace SprintLog.Api.Migrations
                     b.HasOne("SprintLog.Api.Models.Exercise", "Exercise")
                         .WithMany("Sets")
                         .HasForeignKey("ExerciseId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SprintLog.Api.Models.Workout", "Workout")
@@ -777,6 +924,10 @@ namespace SprintLog.Api.Migrations
 
             modelBuilder.Entity("SprintLog.Api.Models.User", b =>
                 {
+                    b.Navigation("CustomExercises");
+
+                    b.Navigation("Favorites");
+
                     b.Navigation("Workouts");
                 });
 

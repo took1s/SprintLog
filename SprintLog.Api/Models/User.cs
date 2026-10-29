@@ -5,7 +5,9 @@ public class User
     public int Id { get; set; }
     public string Username { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
-    
-    // Опционально, но полезно: список тренировок этого пользователя
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     public List<Workout> Workouts { get; set; } = new();
+    public List<Favorite> Favorites { get; set; } = new();
+    public List<Exercise> CustomExercises { get; set; } = new();
 }

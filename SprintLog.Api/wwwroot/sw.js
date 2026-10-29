@@ -1,45 +1,95 @@
-const CACHE_NAME = 'sprintlog-cache-v1';
+// SprintLog Service Worker
+// - App-Shell wird beim Installieren vorgeladen -> App startet komplett offline.
+// - Navigation: Network-first (max. 3 s), danach Cache.
+// - Statische Dateien: Stale-while-revalidate (sofort aus dem Cache, im Hintergrund aktualisieren).
+// - /api/* wird nicht angefasst - Offline-Daten verwaltet die App selbst (localStorage + Sync-Queue).
+// Bei jeder Änderung an der App VERSION erhöhen, damit alte Caches entfernt werden.
 
-// Список файлов, которые нужны для работы без интернета
-const STATIC_ASSETS = [
-    '/',
-    '/index.html',
-    '/css/styles.css',
-    '/js/app.js',
-    '/js/vue.global.js'
+const VERSION = 'v3.0.0';
+const CACHE = `sprintlog-${VERSION}`;
+
+const APP_SHELL = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/css/app.css',
+  '/js/main.js',
+  '/js/api.js',
+  '/js/storage.js',
+  '/js/sync.js',
+  '/js/analytics.js',
+  '/js/format.js',
+  '/js/charts.js',
+  '/js/feedback.js',
+  '/js/export.js',
+  '/vendor/vue.esm-browser.prod.js',
+  '/vendor/chart.umd.js',
+  '/vendor/inter-latin-wght-normal.woff2',
+  '/vendor/inter-latin-ext-wght-normal.woff2',
+  '/icon-192.png',
+  '/icon-512.png',
 ];
 
-// Установка: кэшируем базовые файлы
-self.addEventListener('install', event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
-    );
-    self.skipWaiting();
+self.addEventListener('install', (event) => {
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(APP_SHELL)));
+  // Kein skipWaiting() hier: die App fragt den Nutzer, bevor die neue Version übernommen wird.
 });
 
-// Активация: удаляем старые версии кэша, если мы обновили приложение
-self.addEventListener('activate', event => {
-    event.waitUntil(
-        caches.keys().then(keys => Promise.all(
-            keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-        ))
-    );
-    self.clients.claim();
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-// Перехват запросов (Network-First стратегия для статики)
-self.addEventListener('fetch', event => {
-    const req = event.request;
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('sprintlog-') && k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
+  );
+});
 
-    // Мы не кэшируем запросы к базе данных (API). 
-    // За офлайн-сохранение тренировок у нас уже отвечает Vue и localStorage.
-    if (req.url.includes('/api/')) {
-        return;
-    }
+function timeout(ms) {
+  return new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms));
+}
 
-    // Для HTML/CSS/JS пытаемся получить свежую версию из интернета.
-    // Если интернета нет (catch) - отдаем из кэша.
-    event.respondWith(
-        fetch(req).catch(() => caches.match(req))
-    );
+async function networkFirst(request) {
+  const cache = await caches.open(CACHE);
+  try {
+    const response = await Promise.race([fetch(request), timeout(3000)]);
+    if (response.ok) cache.put('/index.html', response.clone());
+    return response;
+  } catch {
+    return (await cache.match('/index.html')) || (await cache.match('/')) || Response.error();
+  }
+}
+
+async function staleWhileRevalidate(request, event) {
+  const cache = await caches.open(CACHE);
+  const cached = await cache.match(request);
+  const update = fetch(request)
+    .then((response) => {
+      if (response.ok) cache.put(request, response.clone());
+      return response;
+    })
+    .catch(() => null);
+  if (cached) {
+    event.waitUntil(update);
+    return cached;
+  }
+  return (await update) || Response.error();
+}
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/swagger') || url.pathname === '/health') return;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  event.respondWith(staleWhileRevalidate(request, event));
 });
