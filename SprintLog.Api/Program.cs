@@ -116,8 +116,18 @@ if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    app.Logger.LogInformation("Applying database migrations...");
-    await db.Database.MigrateAsync();
+    var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
+    if (pending.Count == 0)
+    {
+        app.Logger.LogInformation("Database schema is up to date.");
+    }
+    else
+    {
+        // Schlägt eine Migration fehl, startet die App nicht -> Render behält die alte, laufende Version.
+        app.Logger.LogInformation("Applying {Count} migration(s): {Migrations}", pending.Count, string.Join(", ", pending));
+        await db.Database.MigrateAsync();
+        app.Logger.LogInformation("Migrations applied.");
+    }
 }
 
 // ---------- Middleware-Pipeline ----------

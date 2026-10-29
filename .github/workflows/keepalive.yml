@@ -1,0 +1,28 @@
+name: Keep-alive
+
+# Ruft täglich /health auf. Das weckt den Render-Service und erzeugt Datenbank-Aktivität,
+# damit das kostenlose Supabase-Projekt nicht nach 7 Tagen Inaktivität pausiert wird.
+on:
+  schedule:
+    - cron: "17 5 * * *"   # täglich 05:17 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      APP_URL: ${{ vars.APP_URL || 'https://sprintlog-api.onrender.com' }}
+    steps:
+      - name: Ping /health (Kaltstart kann ~1 Minute dauern)
+        run: |
+          for i in 1 2 3 4 5 6; do
+            status=$(curl -s -o body.txt -w "%{http_code}" --max-time 90 "$APP_URL/health" || echo 000)
+            echo "Versuch $i: HTTP $status $(cat body.txt 2>/dev/null)"
+            if [ "$status" = "200" ]; then exit 0; fi
+            sleep 30
+          done
+          echo "::error::$APP_URL/health antwortet nicht mit 200 - Render-Logs und Supabase-Status prüfen."
+          exit 1
