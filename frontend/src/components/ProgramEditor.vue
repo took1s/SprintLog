@@ -77,7 +77,7 @@ const DELOADS = [null, 3, 4, 5, 6, 8] as const;
                           <button type="button" @click="removeExerciseRow(day, i)" class="h-8 w-7 rounded text-red-400/70 hover:text-red-400" :aria-label="t('editor.removeExercise')">✕</button>
                       </div>
                       <div class="grid grid-cols-4 gap-2 font-mono text-[10px] text-slate-500">
-                          <label>{{ t('editor.sets') }}<input v-model.number="row.sets" type="number" min="1" max="20" class="cyber-input mt-1 w-full rounded p-1.5 text-xs"></label>
+                          <label>{{ t('editor.sets') }}<input v-model.number="row.sets" type="number" min="1" max="30" class="cyber-input mt-1 w-full rounded p-1.5 text-xs"></label>
                           <template v-if="rowType(row) === 'WeightReps'">
                               <label>{{ t('editor.repsMin') }}<input v-model.number="row.repsMin" type="number" min="1" max="100" class="cyber-input mt-1 w-full rounded p-1.5 text-xs"></label>
                               <label>{{ t('editor.repsMax') }}<input v-model.number="row.repsMax" type="number" min="1" max="100" class="cyber-input mt-1 w-full rounded p-1.5 text-xs"></label>
@@ -103,7 +103,7 @@ const DELOADS = [null, 3, 4, 5, 6, 8] as const;
                               <p class="font-mono text-[9px] text-slate-500">{{ t('editor.stepsHint') }}</p>
                               <div v-for="(st, n) in row.weekSteps" :key="n" class="grid grid-cols-6 items-end gap-2 rounded-lg border border-white/5 bg-black/30 p-2 font-mono text-[10px] text-slate-500">
                                   <label>{{ t('editor.fromWeek') }}<input v-model.number="st.fromWeek" type="number" min="1" :max="maxWeek()" class="cyber-input mt-1 w-full rounded p-1.5 text-xs"></label>
-                                  <label>{{ t('editor.sets') }}<input v-model.number="st.sets" type="number" min="1" max="20" class="cyber-input mt-1 w-full rounded p-1.5 text-xs"></label>
+                                  <label>{{ t('editor.sets') }}<input v-model.number="st.sets" type="number" min="1" max="30" class="cyber-input mt-1 w-full rounded p-1.5 text-xs"></label>
                                   <template v-if="rowType(row) === 'WeightReps'">
                                       <label>{{ t('editor.repsMin') }}<input v-model.number="st.repsMin" type="number" min="1" max="100" class="cyber-input mt-1 w-full rounded p-1.5 text-xs"></label>
                                       <label>{{ t('editor.repsMax') }}<input v-model.number="st.repsMax" type="number" min="1" max="100" class="cyber-input mt-1 w-full rounded p-1.5 text-xs"></label>
