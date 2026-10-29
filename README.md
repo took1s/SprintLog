@@ -40,6 +40,7 @@ Live-Demo: https://sprintlog-api.onrender.com/
 - Live-Telemetrie beim Sprint: km/h, m/s und Vergleich mit der eigenen Bestgeschwindigkeit.
 - Vorbelegung mit dem letzten Satz, Pausentimer mit Ton und Vibration (läuft auch nach Neuladen korrekt weiter), Bildschirm bleibt während der Einheit an.
 - Eigene Übungen (nur für den eigenen Account sichtbar), Favoriten, Suche, Filter und Sortierung.
+- Technik-Ansicht pro Übung: animierte Figur (eigene SVG-Skelettanimation, offline, ~45 Bewegungsmuster für alle 84 Standardübungen, eigene Übungen werden über den Namen erkannt), Zielmuskulatur und 3-4 Technik-Hinweise.
 
 **Auswertungen**
 - Überblick: Einheiten und Volumen dieser Woche (mit Vergleich zur Vorwoche), Wochen-Serie, 12-Wochen-Diagramm, Muskelgruppen-Verteilung, letzte Rekorde.

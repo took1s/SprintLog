@@ -517,6 +517,27 @@
                         <button @click="closeSetModal" class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" aria-label="Close">✕</button>
                     </div>
 
+                    <!-- Technik: animierte Figur + Hinweise -->
+                    <div v-if="modalTechnique.motion || modalTechnique.technique" class="mb-5 overflow-hidden rounded-2xl border border-white/5 bg-black/30">
+                        <button @click="settings.showTechnique = !settings.showTechnique" class="flex w-full items-center justify-between px-4 py-2.5 text-left" :aria-expanded="settings.showTechnique">
+                            <span class="label-xs">Technique</span>
+                            <span class="font-mono text-[10px] text-slate-500">{{ settings.showTechnique ? 'Hide' : 'Show' }}</span>
+                        </button>
+                        <div v-if="settings.showTechnique" class="flex gap-3 border-t border-white/5 p-3">
+                            <exercise-figure v-if="modalTechnique.motion" :motion="modalTechnique.motion" class="block h-44 w-[46%] max-w-[220px] flex-shrink-0 rounded-xl bg-[#060a12]"></exercise-figure>
+                            <div v-if="modalTechnique.technique" class="min-w-0 flex-1">
+                                <div class="mb-2 flex flex-wrap gap-1">
+                                    <span v-for="m in modalTechnique.technique.muscles" :key="m" class="rounded-md border border-accent/20 bg-accent/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-accent">{{ m }}</span>
+                                </div>
+                                <ol class="space-y-1.5">
+                                    <li v-for="(cue, i) in modalTechnique.technique.cues" :key="i" class="flex gap-2 text-xs leading-snug text-slate-300">
+                                        <span class="font-mono text-[10px] font-bold text-accent">{{ i + 1 }}</span><span>{{ cue }}</span>
+                                    </li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+
                     <div v-if="modalPrevious && setModal.editIndex === null" @click="copyPrevious" role="button" tabindex="0"
                          class="group mb-5 flex cursor-pointer items-center justify-between rounded-xl border border-accent/20 bg-accent/5 p-4 transition-all hover:border-accent/50 hover:bg-accent/15">
                         <div>
@@ -710,7 +731,7 @@
                         </label>
                     </div>
                     <div class="mb-6 space-y-2">
-                        <label v-for="o in [['autoTimer','Start timer after each set'],['sound','Sound alarm'],['vibration','Vibration'],['wakeLock','Keep screen on during session']]" :key="o[0]"
+                        <label v-for="o in [['autoTimer','Start timer after each set'],['sound','Sound alarm'],['vibration','Vibration'],['wakeLock','Keep screen on during session'],['showTechnique','Show technique animation']]" :key="o[0]"
                                class="flex cursor-pointer items-center justify-between rounded-xl border border-white/5 bg-black/20 p-3">
                             <span class="text-sm text-slate-200">{{ o[1] }}</span>
                             <input v-model="settings[o[0]]" type="checkbox" class="h-5 w-5 accent-[#00c3ff]">

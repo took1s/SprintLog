@@ -19,6 +19,7 @@ import {
 import { renderProgressChart, renderWeeklyChart } from './charts.js';
 import { unlockAudio, playRestAlarm, createWakeLock } from './feedback.js';
 import { exportCsv, exportJson } from './export.js';
+import { ExerciseFigure, techniqueFor } from './figure.js';
 
 const DEFAULT_SETTINGS = Object.freeze({
   restGym: 90,
@@ -27,6 +28,7 @@ const DEFAULT_SETTINGS = Object.freeze({
   sound: true,
   vibration: true,
   wakeLock: true,
+  showTechnique: true,
 });
 
 const DEFAULTS = Object.freeze({ weight: 20, reps: 10, distance: 30, time: 4.5, duration: 60 });
@@ -201,6 +203,7 @@ const app = createApp({
     modalRecord() { return this.modalEx ? this.records.get(this.modalKey) ?? null : null; },
     modalPrevious() { return this.modalEx ? lastSetFor(this.allWorkouts, this.modalKey) : null; },
     modalSessionSets() { return this.session.sets.filter((s) => s.exerciseId === this.modalEx?.id); },
+    modalTechnique() { return techniqueFor(this.modalEx); },
     modalE1RM() { return epley1RM(this.setModal.weight, this.setModal.reps); },
     modalIntensity() {
       const pr = this.modalRecord?.maxWeight?.value ?? 0;
@@ -1115,4 +1118,5 @@ const app = createApp({
   },
 });
 
+app.component('exercise-figure', ExerciseFigure);
 app.mount('#app');
