@@ -4,16 +4,23 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SprintLog.Api.Infrastructure;
+using SprintLog.Api.Models;
 
 namespace SprintLog.Api.Services;
 
 public interface ITokenService
 {
-    string CreateToken(int userId, string username);
+    /// <summary>Signierter JWT mit Nutzer-ID, Name und Token-Version (Claim "ver").</summary>
+    string CreateToken(User user, TimeSpan lifetime);
+
+    /// <summary>Bearer-Token für API-Clients (Gültigkeit aus Jwt:LifetimeDays).</summary>
+    string CreateBearerToken(User user);
 }
 
 public class TokenService : ITokenService
 {
+    public const string VersionClaim = "ver";
+
     private readonly JwtOptions _options;
     private readonly TimeProvider _time;
 
@@ -23,12 +30,15 @@ public class TokenService : ITokenService
         _time = time;
     }
 
-    public string CreateToken(int userId, string username)
+    public string CreateBearerToken(User user) => CreateToken(user, TimeSpan.FromDays(_options.LifetimeDays));
+
+    public string CreateToken(User user, TimeSpan lifetime)
     {
         var claims = new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-            new Claim(ClaimTypes.Name, username),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(VersionClaim, user.TokenVersion.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
@@ -41,7 +51,7 @@ public class TokenService : ITokenService
             audience: _options.Audience,
             claims: claims,
             notBefore: now,
-            expires: now.AddDays(_options.LifetimeDays),
+            expires: now.Add(lifetime),
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
