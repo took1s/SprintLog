@@ -26,6 +26,7 @@ Live-Demo: https://sprintlog-api.onrender.com/
 - [Lokal starten](#lokal-starten)
 - [Tests und CI](#tests-und-ci)
 - [Datenbank und Migrationen](#datenbank-und-migrationen)
+- [Betrieb und Automatisierung](#betrieb-und-automatisierung)
 - [API](#api)
 - [Projektstruktur](#projektstruktur)
 - [Herausforderungen und Lösungen](#herausforderungen-und-lösungen)
@@ -173,6 +174,29 @@ dotnet tool restore
 dotnet ef migrations add <Name>
 dotnet ef migrations script --idempotent -o ../database/migrate.sql
 ```
+
+## Betrieb und Automatisierung
+
+| Was | Wie | Wo |
+| --- | --- | --- |
+| Migrationen | Werden beim Start automatisch angewendet (`appsettings.Production.json`: `Database:MigrateOnStartup = true`). Schlägt eine Migration fehl, startet die neue Version nicht und Render behält die alte. | Render-Deploy |
+| Keep-alive | Täglicher Aufruf von `/health` - weckt Render und verhindert, dass Supabase das Free-Projekt nach 7 Tagen Inaktivität pausiert. | [`keepalive.yml`](.github/workflows/keepalive.yml) |
+| Backup | Nächtlicher `pg_dump` (PostgreSQL 17), mit AES-256 verschlüsselt, 30 Tage als Artefakt aufbewahrt. | [`backup.yml`](.github/workflows/backup.yml) |
+| Health-Check | `GET /health` prüft API und Datenbank. In Render als *Health Check Path* eintragen. | Render-Settings |
+
+Einmalige Einrichtung für das Backup (GitHub -> Settings -> Secrets and variables -> Actions):
+
+- `DB_CONNECTION_STRING`: derselbe Wert wie `ConnectionStrings__DefaultConnection` in Render
+- `BACKUP_PASSPHRASE`: langes Passwort, z. B. aus dem Passwortmanager (ohne Passphrase ist das Backup nicht lesbar)
+
+Backup wiederherstellen:
+
+```bash
+gpg --decrypt sprintlog-2026-10-29.dump.gpg > sprintlog.dump
+pg_restore --clean --if-exists --no-owner -d "postgresql://USER:PASSWORD@HOST:5432/postgres?sslmode=require" sprintlog.dump
+```
+
+> Hinweis: GitHub deaktiviert geplante Workflows in öffentlichen Repos nach 60 Tagen ohne Repository-Aktivität. Dann unter *Actions* wieder aktivieren.
 
 ## API
 

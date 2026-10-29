@@ -87,6 +87,14 @@ jobs:
       - name: E2E tests (mock API)
         run: npm run test:e2e
 
+  ops-scripts:
+    name: Ops scripts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Unit tests (connection string converter for backups)
+        run: python3 .github/scripts/test_npgsql_to_pgenv.py
+
   docker:
     name: Docker image
     runs-on: ubuntu-24.04

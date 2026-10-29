@@ -1,0 +1,65 @@
+name: Database backup
+
+# Nächtliches, verschlüsseltes Backup der Produktionsdatenbank (Supabase Free hat keine eigenen Backups).
+# Benötigte Repository-Secrets:
+#   DB_CONNECTION_STRING  - derselbe Wert wie ConnectionStrings__DefaultConnection in Render
+#   BACKUP_PASSPHRASE     - beliebiges langes Passwort zum Ver-/Entschlüsseln
+# Das Repo ist öffentlich -> das Artefakt ist ohne Passphrase nicht lesbar (AES-256 via GPG).
+on:
+  schedule:
+    - cron: "43 2 * * *"   # täglich 02:43 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check secrets
+        id: check
+        env:
+          DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DB_CONNECTION_STRING" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::warning::Secrets DB_CONNECTION_STRING / BACKUP_PASSPHRASE fehlen - Backup übersprungen."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: pg_dump (PostgreSQL 17 client)
+        if: steps.check.outputs.ready == 'true'
+        env:
+          DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
+        run: |
+          python3 .github/scripts/npgsql_to_pgenv.py "$RUNNER_TEMP/pg.env"
+          mkdir -p out
+          docker run --rm --env-file "$RUNNER_TEMP/pg.env" -v "$PWD/out:/out" postgres:17-alpine \
+            pg_dump --format=custom --no-owner --no-privileges --schema=public --file=/out/sprintlog.dump
+          rm -f "$RUNNER_TEMP/pg.env"
+          docker run --rm -v "$PWD/out:/out" postgres:17-alpine pg_restore --list /out/sprintlog.dump | grep -c "TABLE DATA" | xargs -I{} echo "Tabellen mit Daten im Dump: {}"
+
+      - name: Encrypt
+        if: steps.check.outputs.ready == 'true'
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          name="sprintlog-$(date -u +%Y-%m-%d).dump.gpg"
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" \
+              --symmetric --cipher-algo AES256 -o "out/$name" out/sprintlog.dump
+          rm out/sprintlog.dump
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          name: sprintlog-db-backup
+          path: out/*.gpg
+          retention-days: 30
+          if-no-files-found: error
