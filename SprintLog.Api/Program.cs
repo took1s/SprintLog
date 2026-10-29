@@ -18,6 +18,10 @@ Env.NoClobber().TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ---------- Logging + Fehler-Monitoring (Serilog, Sentry optional über SENTRY_DSN) ----------
+builder.AddSprintLogMonitoring();
+builder.Services.AddHttpClient(nameof(MonitoringEndpoints), c => c.Timeout = TimeSpan.FromSeconds(10));
+
 // ---------- Konfiguration ----------
 builder.Services.AddOptions<JwtOptions>()
     .Configure<IConfiguration>((options, config) =>
@@ -127,6 +131,10 @@ builder.Services.AddRateLimiter(options =>
             http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = limit, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 });
     });
+    // Browser-Fehler: höchstens 30 Meldungen pro Minute und IP (eine Fehlerschleife soll das Kontingent nicht leeren).
+    options.AddPolicy(MonitoringEndpoints.RateLimitPolicy, http => RateLimitPartition.GetFixedWindowLimiter(
+        http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
 
 // Hinter dem Render-Proxy: echte Client-IP aus X-Forwarded-For übernehmen (wichtig für das Rate Limiting).
@@ -223,9 +231,11 @@ app.UseStaticFiles(new StaticFileOptions
     }
 });
 
+app.UseSprintLogRequestLogging();
 app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthentication();
+app.UseSentryUser();
 app.UseAuthorization();
 
 app.MapHealthChecks("/health");
@@ -235,6 +245,11 @@ app.MapExerciseEndpoints();
 app.MapFavoriteEndpoints();
 app.MapWorkoutEndpoints();
 app.MapProgramEndpoints();
+app.MapMonitoringEndpoints();
+
+var monitoring = app.Services.GetRequiredService<MonitoringOptions>();
+app.Logger.LogInformation("SprintLog {Release} started ({Environment}). Sentry: {Sentry}, browser errors: {Browser}, e-mail: {Email}",
+    monitoring.Release, monitoring.Environment, monitoring.BackendEnabled ? "on" : "off", monitoring.BrowserDsnParts is null ? "off" : "on", emailEnabled ? "on" : "off");
 
 app.Run();
 

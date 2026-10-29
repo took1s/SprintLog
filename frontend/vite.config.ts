@@ -3,12 +3,15 @@ import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { serviceWorker } from './build/service-worker';
+import pkg from '../package.json' with { type: 'json' };
 
 const api = process.env.SPRINTLOG_API ?? 'http://localhost:5111'; // dotnet run bzw. npm run mock
 
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
   plugins: [vue(), serviceWorker()],
+  // Version der Web-App (package.json) - wird als X-Client-Version an die API geschickt und in den Logs angezeigt.
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   css: { postcss: fileURLToPath(new URL('./postcss.config.cjs', import.meta.url)) },
   build: {

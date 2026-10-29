@@ -170,8 +170,21 @@ Statt der Mock-API kann auch die echte API laufen (`dotnet run`, ebenfalls Port 
 | `Email__FromName` | nein | Absendername (Standard: SprintLog) |
 | `App__PublicUrl` | mit Brevo | Öffentliche URL für Links in E-Mails, z. B. `https://sprintlog-api.onrender.com` |
 | `Jwt__AccessTokenMinutes` / `Jwt__RefreshTokenDays` | nein | Lebensdauer der Cookie-Sitzung (Standard: 15 min / 30 Tage) |
+| `SENTRY_DSN` | nein | DSN eines [Sentry](https://sentry.io)-Projekts: Server- und Browser-Fehler mit Stacktrace. Ohne DSN: nur Logs |
+| `SENTRY_BROWSER_DSN` | nein | Eigenes Sentry-Projekt für Browser-Fehler (Standard: `SENTRY_DSN`) |
+| `Sentry__TracesSampleRate` | nein | Anteil der Requests mit Performance-Tracing, z. B. `0.1` (Standard: 0 = aus) |
+| `Logging__Format` | nein | `json` = Logs als kompaktes JSON (für Log-Dienste), sonst lesbarer Text |
 
 In der Cloud (Render) werden die Werte im Dashboard unter *Environment* hinterlegt.
+
+### Logs und Fehler-Monitoring
+
+- **Serilog** schreibt strukturierte Logs auf die Konsole (in Render unter *Logs*): eine Zeile pro API-Request mit Methode, Pfad, Status, Dauer, Nutzer-ID und App-Version (`X-Client-Version`). `/health` und statische Dateien werden nicht geloggt.
+- Sicherheitsereignisse haben das Präfix `Security:` - fehlgeschlagene Anmeldung, Passwortwechsel (mit Weg: Einstellungen, Code, E-Mail) und die Wiederverwendung eines bereits rotierten Refresh-Tokens (Hinweis auf einen gestohlenen Token, die Sitzung wird beendet). Benutzernamen, E-Mails und IPs stehen nicht in den Logs.
+- **Sentry** (optional): Mit `SENTRY_DSN` landen Server-Fehler (Level *Error*) samt Stacktrace, Release (Git-Commit von Render) und Nutzer-ID in Sentry; Info-Logs werden als Breadcrumbs mitgeschickt. Keine IPs, Cookies, Header mit Tokens oder Request-Bodys.
+- Browser-Fehler: Die Web-App lädt das Sentry-SDK (38 KB gzip) nur nach, wenn `/api/config` einen DSN liefert, und schickt Meldungen über den eigenen Endpunkt `/api/monitoring/tunnel`. So bleibt die CSP bei `connect-src 'self'`, Werbeblocker stören nicht, und der Server leitet nur an das eigene Projekt weiter (kein offener Proxy, max. 256 KB, 30 Meldungen pro Minute und IP). URLs gehen ohne Query an Sentry - dort stehen die Einmal-Tokens von Reset- und Bestätigungslinks.
+
+Sentry einrichten (kostenlos, 5.000 Fehler pro Monat): Konto auf sentry.io anlegen, Projekt mit Plattform *ASP.NET Core* erstellen, unter *Settings -> Client Keys (DSN)* den DSN kopieren und in Render als `SENTRY_DSN` eintragen. Die Source Maps liegen öffentlich neben den Skripten, Sentry lädt sie für lesbare Browser-Stacktraces selbst.
 
 ## Tests und CI
 
@@ -221,6 +234,7 @@ dotnet ef migrations script --idempotent -o ../database/migrate.sql
 | Keep-alive | Aufruf von `/health` alle 10 min zwischen 5 und 22 Uhr UTC: hält Render Free tagsüber wach (kein Kaltstart von ~1 min) und verhindert, dass Supabase das Free-Projekt pausiert. Nachts nicht, damit die 750 Free-Stunden des Render-Workspaces auch für andere Services reichen. | [`keepalive.yml`](.github/workflows/keepalive.yml) |
 | Backup | Nächtlicher `pg_dump` (PostgreSQL 17), mit AES-256 verschlüsselt, 30 Tage als Artefakt aufbewahrt. | [`backup.yml`](.github/workflows/backup.yml) |
 | Health-Check | `GET /health` prüft API und Datenbank. In Render als *Health Check Path* eintragen. | Render-Settings |
+| Fehler-Monitoring | Sentry für Server- und Browser-Fehler, sobald `SENTRY_DSN` gesetzt ist (siehe *Logs und Fehler-Monitoring*). | Render-Environment |
 
 Einmalige Einrichtung für das Backup (GitHub -> Settings -> Secrets and variables -> Actions):
 
@@ -271,6 +285,7 @@ Alle Endpunkte außer Registrierung, Login und Health erfordern `Authorization: 
 | POST | `/api/programs/templates/{key}` | Plan aus Vorlage starten (wird aktiv) |
 | POST / PUT / DELETE | `/api/programs[/{id}]` | Eigenen Plan anlegen / bearbeiten / löschen |
 | POST | `/api/programs/{id}/activate` \| `deactivate` | Plan aktivieren (Woche 1 beginnt) / pausieren |
+| GET | `/api/config` | Öffentliche Laufzeit-Konfiguration der Web-App (Sentry-DSN, Release) |
 | GET | `/health` | Health-Check inkl. Datenbank |
 
 ## Projektstruktur

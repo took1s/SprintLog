@@ -31,9 +31,11 @@ public sealed class AuthSessionService
     private readonly ITokenService _tokens;
     private readonly TimeProvider _time;
     private readonly JwtOptions _jwt;
+    private readonly ILogger<AuthSessionService> _log;
 
-    public AuthSessionService(AppDbContext db, ISecretHasher hasher, ITokenService tokens, TimeProvider time, IOptions<JwtOptions> jwt)
+    public AuthSessionService(AppDbContext db, ISecretHasher hasher, ITokenService tokens, TimeProvider time, IOptions<JwtOptions> jwt, ILogger<AuthSessionService> log)
     {
+        _log = log;
         _db = db;
         _hasher = hasher;
         _tokens = tokens;
@@ -78,6 +80,7 @@ public sealed class AuthSessionService
         {
             if (token.Rotated && now - revokedAt < RotationGrace) return (RotateStatus.Race, null);
             // Ein alter, bereits ersetzter Token wird erneut benutzt -> vermutlich kopiert: ganze Sitzung beenden.
+            _log.LogWarning("Security: reuse of a rotated refresh token for user {UserId} - session family revoked", token.UserId);
             await RevokeFamilyAsync(token.FamilyId, now, ct);
             return (RotateStatus.Invalid, null);
         }

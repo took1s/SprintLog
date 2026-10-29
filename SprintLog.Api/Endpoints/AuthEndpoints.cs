@@ -84,7 +84,7 @@ public static class AuthEndpoints
     }
 
     private static async Task<IResult> Login(LoginRequest req, HttpContext http, AppDbContext db, AuthSessionService sessions,
-        ITokenService tokens, CancellationToken ct)
+        ITokenService tokens, ILoggerFactory logs, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(req.Username) || string.IsNullOrEmpty(req.Password))
             return InvalidCredentials();
@@ -94,7 +94,11 @@ public static class AuthEndpoints
 
         var passwordOk = BCrypt.Net.BCrypt.Verify(req.Password, user?.PasswordHash ?? DummyHash);
         if (user is null || !passwordOk)
+        {
+            // Kein Benutzername im Log (personenbezogen) - bei bekanntem Konto nur die ID.
+            logs.CreateLogger("SprintLog.Security").LogInformation("Security: failed login ({Account})", user is null ? "unknown account" : $"user {user.Id}");
             return InvalidCredentials();
+        }
 
         return Results.Ok(await SignInAsync(http, user, sessions, tokens, ct));
     }
