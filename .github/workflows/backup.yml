@@ -48,6 +48,12 @@ jobs:
           docker run --rm --env-file "$RUNNER_TEMP/pg.env" -v "$PWD/out:/out" postgres:17-alpine \
             pg_dump --format=custom --no-owner --no-privileges --schema=public --file=/out/sprintlog.dump 2> "$RUNNER_TEMP/dump.err"
           code=$?
+          # Zeilenzahlen der Quelle für den Restore-Test (nach dem Dump, damit sie zum Stand passen)
+          if [ $code -eq 0 ]; then
+            docker run --rm --env-file "$RUNNER_TEMP/pg.env" -v "$PWD/.github/scripts:/s:ro" postgres:17-alpine \
+              sh -c 'psql -X -At -v ON_ERROR_STOP=1 -c "$(psql -X -At -f /s/count_rows.sql)"' > "$RUNNER_TEMP/source-counts.txt" 2> "$RUNNER_TEMP/count.err" \
+              || echo "::warning title=Row counts::$(tail -c 500 "$RUNNER_TEMP/count.err" | tr '\n' ' ')"
+          fi
           rm -f "$RUNNER_TEMP/pg.env"
           if [ $code -ne 0 ]; then
             # Fehlermeldung als Annotation (Passwort ist maskiert, Datei enthält keine Zugangsdaten)
@@ -58,6 +64,7 @@ jobs:
           echo "::notice title=Backup::$count Tabellen mit Daten, $(du -h out/sprintlog.dump | cut -f1)"
 
       - name: Encrypt
+        id: encrypt
         if: steps.check.outputs.ready == 'true'
         env:
           BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
@@ -66,9 +73,40 @@ jobs:
           gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" \
               --symmetric --cipher-algo AES256 -o "out/$name" out/sprintlog.dump
           rm out/sprintlog.dump
+          echo "file=$name" >> "$GITHUB_OUTPUT"
           ls -la out
 
-      - uses: actions/upload-artifact@v4
+      # Ein Backup, das nie zurückgespielt wurde, ist nur eine Hoffnung: verschlüsselte Datei entschlüsseln,
+      # in eine leere PostgreSQL 17 einspielen und die Zeilenzahlen mit der Quelle vergleichen.
+      - name: Restore test
+        if: steps.check.outputs.ready == 'true'
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          FILE: ${{ steps.encrypt.outputs.file }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/restore"
+          gpg --batch --quiet --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" \
+              -o "$RUNNER_TEMP/restore/sprintlog.dump" -d "out/$FILE"
+          docker run -d --name restore -e POSTGRES_PASSWORD=restore -v "$RUNNER_TEMP/restore:/in:ro" \
+              -v "$PWD/.github/scripts:/s:ro" postgres:17-alpine > /dev/null
+          for i in $(seq 1 30); do docker exec restore pg_isready -U postgres -q && break; sleep 1; done
+          docker exec restore pg_restore -U postgres -d postgres --clean --if-exists --no-owner --no-privileges --exit-on-error /in/sprintlog.dump
+          docker exec restore sh -c 'psql -U postgres -X -At -v ON_ERROR_STOP=1 -c "$(psql -U postgres -X -At -f /s/count_rows.sql)"' > "$RUNNER_TEMP/restored-counts.txt"
+          last=$(docker exec restore psql -U postgres -X -At -c 'SELECT "MigrationId" FROM "__EFMigrationsHistory" ORDER BY 1 DESC LIMIT 1')
+          docker rm -f restore > /dev/null
+          rm -rf "$RUNNER_TEMP/restore"
+
+          tables=$(wc -l < "$RUNNER_TEMP/restored-counts.txt")
+          rows=$(awk -F'|' '{s+=$2} END {print s+0}' "$RUNNER_TEMP/restored-counts.txt")
+          if [ "$tables" -eq 0 ]; then echo "::error title=Restore test::Keine Tabellen nach dem Restore"; exit 1; fi
+          if [ -s "$RUNNER_TEMP/source-counts.txt" ] && ! diff -q "$RUNNER_TEMP/source-counts.txt" "$RUNNER_TEMP/restored-counts.txt" > /dev/null; then
+            # Kann passieren, wenn genau während des Backups jemand trainiert hat - daher Warnung statt Fehler
+            echo "::warning title=Restore test::Zeilenzahlen weichen ab: $(diff "$RUNNER_TEMP/source-counts.txt" "$RUNNER_TEMP/restored-counts.txt" | grep '^[<>]' | tr '\n' ' ')"
+          fi
+          echo "::notice title=Restore test OK::$tables Tabellen, $rows Zeilen wiederhergestellt, Schema-Stand $last"
+
+      - uses: actions/upload-artifact@v7
         if: steps.check.outputs.ready == 'true'
         with:
           name: sprintlog-db-backup

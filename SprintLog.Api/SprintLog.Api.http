@@ -46,6 +46,14 @@ Content-Type: application/json
   ]
 }
 
-### Historie
+### Historie seitenweise (nextCursor aus der Antwort als &cursor= anhängen)
+GET {{host}}/api/workouts?limit=20
+Authorization: Bearer {{token}}
+
+### Delta-Sync: alles (ohne since) bzw. nur Änderungen seit dem syncToken der letzten Antwort
+GET {{host}}/api/workouts/changes?since=2026-10-29T12:00:00Z
+Authorization: Bearer {{token}}
+
+### Komplette Historie (Kompatibilität)
 GET {{host}}/api/workouts/history
 Authorization: Bearer {{token}}

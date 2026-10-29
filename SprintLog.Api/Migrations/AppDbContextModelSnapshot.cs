@@ -22,6 +22,30 @@ namespace SprintLog.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("SprintLog.Api.Models.DeletedWorkout", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("WorkoutId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "DeletedAt");
+
+                    b.ToTable("DeletedWorkouts");
+                });
+
             modelBuilder.Entity("SprintLog.Api.Models.Exercise", b =>
                 {
                     b.Property<int>("Id")
@@ -936,6 +960,11 @@ namespace SprintLog.Api.Migrations
                     b.Property<int?>("SessionRpe")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
 
@@ -952,6 +981,8 @@ namespace SprintLog.Api.Migrations
                         .IsUnique();
 
                     b.HasIndex("UserId", "Date");
+
+                    b.HasIndex("UserId", "UpdatedAt", "Id");
 
                     b.ToTable("Workouts");
                 });
@@ -998,6 +1029,15 @@ namespace SprintLog.Api.Migrations
                     b.HasIndex("WorkoutId");
 
                     b.ToTable("WorkoutSets");
+                });
+
+            modelBuilder.Entity("SprintLog.Api.Models.DeletedWorkout", b =>
+                {
+                    b.HasOne("SprintLog.Api.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SprintLog.Api.Models.Exercise", b =>

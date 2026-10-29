@@ -77,6 +77,17 @@ public record WorkoutResponse(
     int? SessionRpe,
     string? Notes,
     int? ProgramDayId,
-    List<WorkoutSetResponse> Sets);
+    List<WorkoutSetResponse> Sets,
+    DateTime UpdatedAt);
+
+/// <summary>Eine Seite der Historie (neueste zuerst). <c>NextCursor</c> = null -> keine weiteren Seiten.</summary>
+public record WorkoutPageResponse(List<WorkoutResponse> Items, string? NextCursor);
+
+/// <summary>
+/// Delta-Sync: geänderte/neue Einheiten seit <c>since</c> (aufsteigend nach Änderung) und IDs gelöschter Einheiten.
+/// Ist <c>NextCursor</c> gesetzt, mit gleichem <c>since</c> und diesem Cursor weiterladen.
+/// <c>SyncToken</c> der ersten Seite ist das <c>since</c> für den nächsten Sync.
+/// </summary>
+public record WorkoutChangesResponse(List<WorkoutResponse> Workouts, List<int> DeletedIds, string? NextCursor, DateTime SyncToken);
 
 public record SaveWorkoutResponse(int WorkoutId, bool Duplicate, string Message);

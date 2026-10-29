@@ -39,6 +39,7 @@ export const Keys = Object.freeze({
 export const userKeys = (userId) => ({
   exercises: `${PREFIX}:${userId}:exercises`,
   history: `${PREFIX}:${userId}:history`,
+  historyToken: `${PREFIX}:${userId}:historyToken`, // Delta-Sync: `since` für den nächsten Abgleich
   favorites: `${PREFIX}:${userId}:favorites`,
   queue: `${PREFIX}:${userId}:queue`,
   session: `${PREFIX}:${userId}:session`,

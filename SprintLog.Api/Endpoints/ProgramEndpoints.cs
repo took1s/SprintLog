@@ -90,7 +90,7 @@ public static class ProgramEndpoints
     /// Plan bearbeiten. Tage mit bekannter ID bleiben erhalten (Einheiten bleiben mit ihnen verknüpft),
     /// fehlende Tage werden gelöscht, neue angelegt. Die Übungen eines Tages werden komplett ersetzt.
     /// </summary>
-    private static async Task<IResult> Update(int id, ProgramInput input, HttpContext http, AppDbContext db, CancellationToken ct)
+    private static async Task<IResult> Update(int id, ProgramInput input, HttpContext http, AppDbContext db, TimeProvider time, CancellationToken ct)
     {
         var userId = http.User.GetUserId();
         if (userId is null) return Results.Unauthorized();
@@ -110,8 +110,16 @@ public static class ProgramEndpoints
         program.Weeks = input.Weeks;
 
         var keptIds = input.Days!.Where(d => d.Id is not null).Select(d => d.Id!.Value).ToHashSet();
-        foreach (var removed in program.Days.Where(d => !keptIds.Contains(d.Id)).ToList())
-            db.ProgramDays.Remove(removed);
+        var removedDays = program.Days.Where(d => !keptIds.Contains(d.Id)).ToList();
+        if (removedDays.Count > 0)
+        {
+            // Einheiten dieser Tage verlieren die Verknüpfung (SET NULL) -> für den Delta-Sync als geändert markieren.
+            var removedIds = removedDays.Select(d => d.Id).ToList();
+            var now = time.GetUtcNow().UtcDateTime;
+            await db.Workouts.Where(w => w.ProgramDayId != null && removedIds.Contains(w.ProgramDayId.Value))
+                .ExecuteUpdateAsync(x => x.SetProperty(w => w.UpdatedAt, now), ct);
+            foreach (var removed in removedDays) db.ProgramDays.Remove(removed);
+        }
 
         for (var i = 0; i < input.Days!.Count; i++)
         {
@@ -160,10 +168,14 @@ public static class ProgramEndpoints
         return changed == 0 ? Results.NotFound() : Results.NoContent();
     }
 
-    private static async Task<IResult> Delete(int id, HttpContext http, AppDbContext db, CancellationToken ct)
+    private static async Task<IResult> Delete(int id, HttpContext http, AppDbContext db, TimeProvider time, CancellationToken ct)
     {
         var userId = http.User.GetUserId();
         if (userId is null) return Results.Unauthorized();
+
+        var now = time.GetUtcNow().UtcDateTime;
+        await db.Workouts.Where(w => w.UserId == userId && w.ProgramDay != null && w.ProgramDay.ProgramId == id)
+            .ExecuteUpdateAsync(x => x.SetProperty(w => w.UpdatedAt, now), ct);
 
         // Tage + Vorgaben werden per Cascade gelöscht, Einheiten verlieren nur die Verknüpfung (SET NULL).
         var deleted = await db.Programs.Where(p => p.Id == id && p.UserId == userId).ExecuteDeleteAsync(ct);
