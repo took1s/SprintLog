@@ -40,6 +40,9 @@ Live-Demo: https://sprintlog-api.onrender.com/
 - Live-Telemetrie beim Sprint: km/h, m/s und Vergleich mit der eigenen Bestgeschwindigkeit.
 - Vorbelegung mit dem letzten Satz, Pausentimer mit Ton und Vibration (läuft auch nach Neuladen korrekt weiter), Bildschirm bleibt während der Einheit an.
 - Eigene Übungen (nur für den eigenen Account sichtbar), Favoriten, Suche, Filter und Sortierung.
+- RPE pro Satz (6-10 in halben Schritten) und Aufwärmsätze - Aufwärmsätze zählen nicht für Rekorde, Volumen und Verläufe.
+- Abschluss-Dialog mit Session-RPE (Borg CR-10), Notiz, Datum und Dauer -> Trainingslast nach Foster (sRPE × Minuten) im Wochendiagramm.
+- Einheiten nachträglich bearbeiten (auch offline - die Änderung wird per `PUT` synchronisiert).
 - Technik-Ansicht pro Übung: animierte Figur (eigene SVG-Skelettanimation, offline, ~45 Bewegungsmuster für alle 84 Standardübungen, eigene Übungen werden über den Namen erkannt), Zielmuskulatur und 3-4 Technik-Hinweise.
 
 **Auswertungen**
@@ -216,7 +219,7 @@ Alle Endpunkte außer Registrierung, Login und Health erfordern `Authorization: 
 | GET/POST/DELETE | `/api/favorites[/{exerciseId}]` | Favoriten |
 | POST | `/api/workouts` | Einheit speichern (idempotent über `clientId`) |
 | GET | `/api/workouts/history` | Alle Einheiten des Nutzers |
-| GET / DELETE | `/api/workouts/{id}` | Einzelne Einheit lesen / löschen |
+| GET / PUT / DELETE | `/api/workouts/{id}` | Einzelne Einheit lesen / ersetzen / löschen |
 | GET | `/health` | Health-Check inkl. Datenbank |
 
 ## Projektstruktur

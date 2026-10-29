@@ -103,6 +103,37 @@ jobs:
       - name: Build image
         run: docker build -t sprintlog-api:ci .
 
+  gen-migration:
+    # Erzeugt eine neue EF-Migration + idempotentes SQL und committet beides.
+    # Auslösen mit "[gen-migration:Name]" in der Commit-Nachricht.
+    name: Generate EF migration (on demand)
+    if: contains(github.event.head_commit.message, '[gen-migration:')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+      - name: Add migration
+        working-directory: SprintLog.Api
+        env:
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          name=$(echo "$MSG" | sed -n 's/.*\[gen-migration:\([A-Za-z0-9_]*\)\].*/\1/p')
+          test -n "$name"
+          dotnet tool restore
+          dotnet ef migrations add "$name"
+          dotnet ef migrations script --idempotent -o ../database/migrate.sql
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SprintLog.Api/Migrations database/migrate.sql
+          git commit -m "chore: generate EF migration"
+          git push
+
   ef-script:
     # Erzeugt database/migrate.sql (idempotentes SQL für den Supabase-SQL-Editor) und committet es.
     # Auslösen mit "[ef-script]" in der Commit-Nachricht.

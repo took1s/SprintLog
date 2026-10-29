@@ -250,7 +250,7 @@
                         <div class="mb-4 flex items-center justify-between">
                             <h3 class="font-black tracking-wide text-white">Last 12 weeks</h3>
                             <div class="flex gap-1">
-                                <button v-for="m in [['volume','Vol'],['sessions','Sessions'],['distance','Dist']]" :key="m[0]" @click="weeklyMetric = m[0]"
+                                <button v-for="m in [['volume','Vol'],['sessions','Sessions'],['distance','Dist'],['load','Load']]" :key="m[0]" @click="weeklyMetric = m[0]"
                                         class="rounded-lg px-2 py-1 text-[9px] font-bold uppercase tracking-widest" :class="weeklyMetric === m[0] ? 'bg-accent/20 text-accent' : 'text-slate-500 hover:text-white'">{{ m[1] }}</button>
                             </div>
                         </div>
@@ -303,6 +303,7 @@
                                     {{ formatWeekday(w.date) }} {{ formatTime(w.date) }}<template v-if="w.durationSeconds"> · {{ formatDuration(w.durationSeconds) }}</template>
                                 </div>
                                 <div class="mt-1 font-mono text-[10px] text-slate-500">{{ workoutStats(w) }}</div>
+                                <div v-if="w.sessionRpe" class="mt-1 font-mono text-[10px] text-orange-300">sRPE {{ w.sessionRpe }} · {{ sessionRpeLabel(w.sessionRpe) }}</div>
                             </div>
                             <div class="flex flex-col items-end gap-2">
                                 <span class="rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest"
@@ -312,7 +313,7 @@
                                         'border-emerald-500/30 bg-emerald-500/20 text-emerald-400': w.workoutType === 'Hybrid'
                                       }">{{ w.workoutType === 'Football' ? 'Field' : w.workoutType }}</span>
                                 <span v-if="w.pending && w.status === 'failed'" class="rounded border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-red-400" :title="w.error">Sync failed</span>
-                                <span v-else-if="w.pending" class="rounded border border-orange-400/40 bg-orange-400/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-orange-300">Pending sync</span>
+                                <span v-else-if="w.pending" class="rounded border border-orange-400/40 bg-orange-400/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-orange-300">{{ w.op === 'update' ? 'Edit pending' : 'Pending sync' }}</span>
                             </div>
                         </div>
 
@@ -322,19 +323,21 @@
                                 <div class="space-y-1 p-2">
                                     <div v-for="(set, n) in group.sets" :key="set.index" class="flex items-center justify-between rounded-lg px-2 py-2 text-sm transition-colors hover:bg-white/5">
                                         <div class="flex items-center gap-3">
-                                            <span class="w-10 font-mono text-[10px] font-bold text-slate-500">SET {{ n + 1 }}</span>
+                                            <span class="w-10 font-mono text-[10px] font-bold" :class="set.isWarmup ? 'text-slate-600' : 'text-slate-500'">{{ setLabel(group.sets, n) }}</span>
                                             <span v-for="b in setBadges(w, set.index).slice(0, 2)" :key="b.field" class="rounded border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest" :class="badgeClass(b.tone)">{{ b.icon }} {{ b.label }}</span>
                                         </div>
-                                        <span class="font-mono text-xs font-bold text-white">{{ describeSet(set, group.trackingType) }}</span>
+                                        <span class="font-mono text-xs font-bold" :class="set.isWarmup ? 'text-slate-500' : 'text-white'">{{ describeSet(set, group.trackingType) }}<span v-if="set.rpe" class="ml-1.5 text-[10px] text-orange-300">{{ rpeText(set.rpe) }}</span></span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        <p v-if="w.notes" class="mt-3 whitespace-pre-line rounded-xl border border-white/5 bg-black/20 px-3 py-2 text-xs italic text-slate-300">{{ w.notes }}</p>
                         <p v-if="w.pending && w.error" class="mt-3 font-mono text-[10px] text-red-400">{{ w.error }}</p>
 
                         <div class="mt-4 flex flex-wrap justify-end gap-2">
                             <button v-if="w.pending && w.status === 'failed'" @click="retryEntry(w)" class="cyber-outline-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest">Retry</button>
+                            <button @click="editWorkout(w)" class="cyber-outline-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest">Edit</button>
                             <button @click="repeatWorkout(w)" class="cyber-outline-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest">Perform again</button>
                             <button @click="deleteWorkout(w)" class="danger-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest" aria-label="Delete workout">Delete</button>
                         </div>
@@ -453,13 +456,14 @@
                     <div class="flex items-center gap-3">
                         <div class="flex h-10 w-10 items-center justify-center rounded-full border border-accent/50 bg-accent/20 font-black text-accent">{{ session.sets.length }}</div>
                         <div>
-                            <div class="text-sm font-bold text-white">Session · <span class="font-mono">{{ formatClock(sessionElapsed) }}</span></div>
+                            <div v-if="isEditing" class="text-sm font-bold text-orange-300">Editing · {{ formatDate(session.meta?.date ?? session.startedAt, { day: '2-digit', month: 'short' }) }}</div>
+                            <div v-else class="text-sm font-bold text-white">Session · <span class="font-mono">{{ formatClock(sessionElapsed) }}</span></div>
                             <div class="font-mono text-[10px] uppercase tracking-widest text-accent">{{ sessionSummary.exercises }} exercises<template v-if="sessionSummary.volume"> · {{ formatCompact(sessionSummary.volume) }} kg</template></div>
                         </div>
                     </div>
                     <div class="flex gap-2">
                         <button @click="showReview = true" class="cyber-outline-btn rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-widest">Review</button>
-                        <button @click="finishSession" class="cyber-btn rounded-xl px-4 py-2 text-xs font-bold">Finish</button>
+                        <button @click="finishSession" class="cyber-btn rounded-xl px-4 py-2 text-xs font-bold">{{ isEditing ? 'Save' : 'Finish' }}</button>
                     </div>
                 </div>
             </div>
@@ -471,8 +475,11 @@
                 <div class="glass-panel modal-panel relative flex max-h-[88vh] w-full max-w-md flex-col rounded-[2rem] border border-accent/20 p-6" role="dialog" aria-modal="true" aria-label="Session review">
                     <div class="mb-5 flex items-center justify-between">
                         <div>
-                            <h3 class="text-2xl font-black tracking-tight text-white">Session <span class="text-accent">Review</span></h3>
-                            <p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-slate-400">{{ session.sets.length }} sets · {{ formatClock(sessionElapsed) }}</p>
+                            <h3 class="text-2xl font-black tracking-tight text-white">{{ isEditing ? 'Edit' : 'Session' }} <span class="text-accent">{{ isEditing ? 'workout' : 'Review' }}</span></h3>
+                            <p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-slate-400">
+                                <template v-if="isEditing">{{ formatDate(session.meta?.date ?? session.startedAt) }} · {{ session.sets.length }} sets · add sets from GYM / FIELD</template>
+                                <template v-else>{{ session.sets.length }} sets · {{ formatClock(sessionElapsed) }}</template>
+                            </p>
                         </div>
                         <button @click="showReview = false" class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" aria-label="Close">✕</button>
                     </div>
@@ -482,8 +489,8 @@
                             <div class="border-b border-white/5 bg-white/5 px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-accent">{{ g.name }}</div>
                             <div v-for="(set, n) in g.sets" :key="set.index" class="flex items-center justify-between px-4 py-2.5">
                                 <div class="flex items-center gap-3">
-                                    <span class="w-10 font-mono text-[10px] font-bold text-slate-500">SET {{ n + 1 }}</span>
-                                    <span class="font-mono text-xs font-bold text-white">{{ describeSet(set, g.trackingType) }}</span>
+                                    <span class="w-10 font-mono text-[10px] font-bold text-slate-500">{{ setLabel(g.sets, n) }}</span>
+                                    <span class="font-mono text-xs font-bold" :class="set.isWarmup ? 'text-slate-500' : 'text-white'">{{ describeSet(set, g.trackingType) }}<span v-if="set.rpe" class="ml-1.5 text-[10px] text-orange-300">{{ rpeText(set.rpe) }}</span></span>
                                 </div>
                                 <div class="flex gap-2">
                                     <button @click="editSessionSet(set.index)" class="cyber-outline-btn flex h-8 w-8 items-center justify-center rounded-lg" aria-label="Edit set">
@@ -498,8 +505,8 @@
                     </div>
 
                     <div class="mt-5 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
-                        <button @click="abortSession" class="danger-btn rounded-xl py-3 text-[10px] font-bold uppercase tracking-widest">Discard</button>
-                        <button @click="finishSession" class="cyber-btn rounded-xl py-3 text-xs font-bold">Finish &amp; save</button>
+                        <button @click="abortSession" class="danger-btn rounded-xl py-3 text-[10px] font-bold uppercase tracking-widest">{{ isEditing ? 'Cancel edit' : 'Discard' }}</button>
+                        <button @click="finishSession" class="cyber-btn rounded-xl py-3 text-xs font-bold">{{ isEditing ? 'Save changes' : 'Finish &amp; save' }}</button>
                     </div>
                 </div>
             </div>
@@ -653,10 +660,24 @@
                         </div>
                     </template>
 
+                    <!-- RPE + Aufwärmsatz -->
+                    <div class="mb-6">
+                        <div class="mb-2 flex items-center justify-between">
+                            <span class="label-xs">RPE <span class="normal-case tracking-normal text-slate-500">· 10 = max, 8 = 2 reps left</span></span>
+                            <label class="flex cursor-pointer items-center gap-2 text-[10px] font-bold uppercase tracking-widest" :class="setModal.isWarmup ? 'text-orange-300' : 'text-slate-500'">
+                                <input v-model="setModal.isWarmup" type="checkbox" class="h-4 w-4 accent-[#fb923c]"> Warm-up
+                            </label>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <button @click="setModal.rpe = null" class="preset-btn" :class="{ '!border-accent/50 !text-accent': setModal.rpe === null }">-</button>
+                            <button v-for="r in SET_RPE" :key="r" @click="setModal.rpe = r" class="preset-btn" :class="{ '!border-orange-400/60 !text-orange-300': setModal.rpe === r }">{{ r }}</button>
+                        </div>
+                    </div>
+
                     <p v-if="modalIsNewPR" class="mb-3 text-center text-[10px] font-black uppercase tracking-widest text-yellow-400">👑 This would be a new record</p>
 
                     <button @click="saveSet" class="cyber-btn w-full rounded-xl py-4 text-lg font-bold">{{ setModal.editIndex !== null ? 'Update set' : 'Log set' }}</button>
-                    <p v-if="settings.autoTimer && setModal.editIndex === null" class="mt-3 text-center font-mono text-[10px] text-slate-500">Rest timer starts automatically ({{ modalEx.category === 'Football' ? settings.restField : settings.restGym }}s)</p>
+                    <p v-if="settings.autoTimer && setModal.editIndex === null && !isEditing" class="mt-3 text-center font-mono text-[10px] text-slate-500">Rest timer starts automatically ({{ modalEx.category === 'Football' ? settings.restField : settings.restGym }}s)</p>
 
                     <div v-if="modalEx.isCustom" class="mt-6 border-t border-white/5 pt-4 text-center">
                         <button @click="deleteCustomExercise(modalEx)" class="text-[10px] font-bold uppercase tracking-widest text-red-400/80 hover:text-red-400">Delete custom exercise</button>
@@ -765,6 +786,49 @@
 
                     <p class="mt-6 text-center font-mono text-[9px] uppercase tracking-widest text-slate-600">SprintLog v3 · offline-first PWA</p>
                 </div>
+            </div>
+        </transition>
+        <!-- ============ Einheit abschließen ============ -->
+        <transition name="fade">
+            <div v-if="finishModal.open" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/80 backdrop-blur-sm sm:items-center" @click.self="finishModal.open = false">
+                <form @submit.prevent="confirmFinish" class="glass-panel modal-panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-[2rem] p-6 sm:rounded-[2rem] sm:p-8" role="dialog" aria-modal="true" aria-label="Finish workout">
+                    <div class="mb-5 flex items-start justify-between">
+                        <div>
+                            <h3 class="text-2xl font-black text-white">{{ isEditing ? 'Save' : 'Finish' }} <span class="text-accent">workout</span></h3>
+                            <p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-slate-400">{{ session.sets.length }} sets · {{ sessionSummary.exercises }} exercises</p>
+                        </div>
+                        <button type="button" @click="finishModal.open = false" class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" aria-label="Close">✕</button>
+                    </div>
+
+                    <label class="label-xs mb-2">How hard was the session? <span class="normal-case tracking-normal text-slate-500">(session RPE)</span></label>
+                    <div class="mb-2 grid grid-cols-5 gap-1.5">
+                        <button type="button" v-for="r in SESSION_RPE" :key="r.value" @click="finishModal.sessionRpe = finishModal.sessionRpe === r.value ? null : r.value"
+                                class="rounded-lg border py-2 font-mono text-sm font-black transition-all"
+                                :class="finishModal.sessionRpe === r.value ? 'border-orange-400/70 bg-orange-400/15 text-orange-300' : 'border-white/5 bg-white/5 text-slate-400 hover:text-white'">{{ r.value }}</button>
+                    </div>
+                    <p class="mb-5 min-h-[1rem] font-mono text-[10px] text-slate-500">
+                        <template v-if="finishModal.sessionRpe">{{ sessionRpeLabel(finishModal.sessionRpe) }}<template v-if="finishLoad"> · training load {{ finishLoad }} AU</template></template>
+                        <template v-else>Optional - used for training load (RPE × minutes)</template>
+                    </p>
+
+                    <div class="mb-4 grid grid-cols-2 gap-3">
+                        <label class="block">
+                            <span class="label-xs mb-2">Date &amp; time</span>
+                            <input v-model="finishModal.date" type="datetime-local" class="cyber-input w-full rounded-xl p-3 text-sm">
+                        </label>
+                        <label class="block">
+                            <span class="label-xs mb-2">Duration (min)</span>
+                            <input v-model.number="finishModal.durationMin" type="number" min="1" max="1440" inputmode="numeric" class="cyber-input w-full rounded-xl p-3 text-sm" placeholder="e.g. 60">
+                        </label>
+                    </div>
+
+                    <label class="label-xs mb-2" for="finish-notes">Notes</label>
+                    <textarea id="finish-notes" v-model="finishModal.notes" rows="3" maxlength="500" class="cyber-input mb-1 w-full resize-none rounded-xl p-3 text-sm" placeholder="How did it feel? Pain, sleep, conditions..."></textarea>
+                    <p class="mb-5 text-right font-mono text-[9px] text-slate-600">{{ (finishModal.notes || '').length }}/500</p>
+
+                    <p v-if="finishModal.error" class="mb-3 font-mono text-xs text-red-400" role="alert">{{ finishModal.error }}</p>
+                    <button type="submit" class="cyber-btn w-full rounded-xl py-4 font-bold">{{ isEditing ? 'Save changes' : 'Save workout' }}</button>
+                </form>
             </div>
         </transition>
     </template>

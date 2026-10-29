@@ -5,7 +5,7 @@
 import { createApp, nextTick } from '../vendor/vue.esm-browser.prod.js';
 import { createApi } from './api.js';
 import { Keys, userKeys, readJson, writeJson, remove, decodeToken, newClientId } from './storage.js';
-import { syncQueue, queueAsWorkouts, migrateLegacyQueue, QueueStatus } from './sync.js';
+import { syncQueue, queueAsWorkouts, migrateLegacyQueue, QueueStatus, isUpdate } from './sync.js';
 import {
   TrackingType, trackingOf, epley1RM, setSpeed, msToKmh, trainingZone, roundTo, exerciseKey,
   computeRecords, detectPRs, workoutKey, summarizeWorkout, groupSetsByExercise, metricsFor,
@@ -32,6 +32,26 @@ const DEFAULT_SETTINGS = Object.freeze({
 });
 
 const DEFAULTS = Object.freeze({ weight: 20, reps: 10, distance: 30, time: 4.5, duration: 60 });
+
+/** RPE-Werte für Sätze (Reps in Reserve: 10 = Maximum, 8 = noch 2 Wiederholungen möglich). */
+const SET_RPE = Object.freeze([6, 7, 7.5, 8, 8.5, 9, 9.5, 10]);
+
+/** Session-RPE nach Borg CR-10 (Foster). */
+const SESSION_RPE = Object.freeze([
+  { value: 1, label: 'Very easy' }, { value: 2, label: 'Easy' }, { value: 3, label: 'Moderate' },
+  { value: 4, label: 'Somewhat hard' }, { value: 5, label: 'Hard' }, { value: 6, label: 'Hard+' },
+  { value: 7, label: 'Very hard' }, { value: 8, label: 'Very hard+' }, { value: 9, label: 'Extreme' },
+  { value: 10, label: 'Maximal' },
+]);
+
+/** ISO-Datum -> Wert für <input type="datetime-local"> (lokale Zeit). */
+function toLocalInput(iso) {
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+const EMPTY_SESSION = () => ({ startedAt: null, sets: [], editing: null, meta: null });
 
 // Chart-Instanzen bewusst NICHT reaktiv halten (Vue-Proxies um Chart.js kosten viel Performance).
 const charts = { progress: null, weekly: null };
@@ -84,11 +104,12 @@ const app = createApp({
       muscleFilters: [],
 
       // Laufende Einheit
-      session: { startedAt: null, sets: [] },
+      session: EMPTY_SESSION(),
       showReview: false,
+      finishModal: { open: false, sessionRpe: null, notes: '', date: '', durationMin: null, error: '' },
 
       // Satz-Dialog
-      setModal: { open: false, exercise: null, editIndex: null, weight: 0, reps: 0, distance: 0, time: 0 },
+      setModal: { open: false, exercise: null, editIndex: null, weight: 0, reps: 0, distance: 0, time: 0, rpe: null, isWarmup: false },
 
       // Eigene Übung
       customModal: { open: false, name: '', category: 'Gym', muscleGroup: '', trackingType: TrackingType.WeightReps, busy: false, error: '' },
@@ -116,6 +137,8 @@ const app = createApp({
       selectedDay: null,
 
       TrackingType,
+      SET_RPE,
+      SESSION_RPE,
     };
   },
 
@@ -130,7 +153,9 @@ const app = createApp({
     allWorkouts() {
       const pending = queueAsWorkouts(this.queue);
       const pendingIds = new Set(pending.map((w) => w.clientId));
-      const synced = this.history.filter((w) => !w.clientId || !pendingIds.has(w.clientId));
+      // Noch nicht synchronisierte Änderungen ersetzen die Server-Version in der Anzeige.
+      const updatedIds = new Set(pending.filter((w) => w.op === 'update').map((w) => w.id));
+      const synced = this.history.filter((w) => !(w.clientId && pendingIds.has(w.clientId)) && !updatedIds.has(w.id));
       return [...pending, ...synced].sort((a, b) => new Date(b.date) - new Date(a.date));
     },
 
@@ -192,6 +217,11 @@ const app = createApp({
 
     // ---------- Laufende Einheit ----------
     sessionActive() { return this.session.sets.length > 0; },
+    isEditing() { return !!this.session.editing; },
+    finishLoad() {
+      const f = this.finishModal;
+      return f.sessionRpe > 0 && f.durationMin > 0 ? Math.round(f.sessionRpe * f.durationMin) : 0;
+    },
     sessionElapsed() { return this.session.startedAt ? Math.max(0, (this.now - new Date(this.session.startedAt).getTime()) / 1000) : 0; },
     sessionGroups() { return groupSetsByExercise(this.session.sets); },
     sessionSummary() { return summarizeWorkout({ sets: this.session.sets }); },
@@ -217,7 +247,7 @@ const app = createApp({
     },
     modalIsNewPR() {
       const r = this.modalRecord;
-      if (!r) return false;
+      if (!r || this.setModal.isWarmup) return false;
       if (this.modalType === TrackingType.WeightReps) return (r.maxWeight?.value ?? 0) > 0 && this.setModal.weight > r.maxWeight.value;
       if (this.modalType === TrackingType.DistanceTime) return (r.topSpeed?.value ?? 0) > 0 && this.modalSpeed > r.topSpeed.value;
       return (r.longest?.value ?? 0) > 0 && this.setModal.time > r.longest.value;
@@ -449,7 +479,7 @@ const app = createApp({
       this.history = [];
       this.favorites = [];
       this.queue = [];
-      this.session = { startedAt: null, sets: [] };
+      this.session = EMPTY_SESSION();
       this.timer = { endAt: null, duration: 0 };
       this.profile = null;
       this.tab = 'Gym';
@@ -465,7 +495,7 @@ const app = createApp({
       this.history = readJson(k.history, []);
       this.favorites = readJson(k.favorites, []);
       this.queue = readJson(k.queue, []);
-      this.session = readJson(k.session, { startedAt: null, sets: [] });
+      this.session = { ...EMPTY_SESSION(), ...readJson(k.session, {}) };
       this.timer = readJson(k.timer, { endAt: null, duration: 0 });
       this.migrateLegacyStorage();
     },
@@ -558,7 +588,9 @@ const app = createApp({
       const before = this.queue;
       try {
         const api = this.api();
-        const result = await syncQueue(before, (payload) => api.post('/api/workouts', payload));
+        const result = await syncQueue(before, (payload, entry) => (isUpdate(entry)
+          ? api.put(`/api/workouts/${entry.workoutId}`, payload)
+          : api.post('/api/workouts', payload)));
         if (!this.isAuthenticated) return;
         // Einträge, die während des Syncs neu hinzugekommen sind, nicht verlieren.
         const added = this.queue.filter((q) => !before.includes(q));
@@ -641,6 +673,8 @@ const app = createApp({
         reps: source?.reps ?? (type === TrackingType.WeightReps ? DEFAULTS.reps : 0),
         distance: source?.distance ?? (type === TrackingType.DistanceTime ? DEFAULTS.distance : 0),
         time: source?.time ?? (type === TrackingType.Duration ? DEFAULTS.duration : type === TrackingType.DistanceTime ? DEFAULTS.time : 0),
+        rpe: editIndex !== null ? source?.rpe ?? null : null,
+        isWarmup: editIndex !== null ? !!source?.isWarmup : false,
       };
     },
 
@@ -674,6 +708,8 @@ const app = createApp({
         muscleGroup: ex.muscleGroup,
         category: ex.category,
         weight: null, reps: null, distance: null, time: null,
+        rpe: this.setModal.rpe ?? null,
+        isWarmup: !!this.setModal.isWarmup,
       };
       if (type === TrackingType.WeightReps) {
         set.weight = Math.max(0, num(this.setModal.weight));
@@ -702,7 +738,7 @@ const app = createApp({
       } else {
         if (!this.session.startedAt || !this.session.sets.length) this.session.startedAt = new Date().toISOString();
         this.session.sets.push(set);
-        if (this.settings.autoTimer) this.startTimer(set.category === 'Football' ? this.settings.restField : this.settings.restGym);
+        if (this.settings.autoTimer && !this.isEditing) this.startTimer(set.category === 'Football' ? this.settings.restField : this.settings.restGym);
         if (navigator.vibrate && this.settings.vibration) navigator.vibrate(15);
       }
       this.persistSession();
@@ -722,7 +758,7 @@ const app = createApp({
 
     removeSessionSet(index) {
       this.session.sets.splice(index, 1);
-      if (!this.session.sets.length) { this.session.startedAt = null; this.showReview = false; }
+      if (!this.session.sets.length && !this.isEditing) { this.session.startedAt = null; this.showReview = false; }
       this.persistSession();
     },
 
@@ -737,22 +773,47 @@ const app = createApp({
     },
 
     async abortSession() {
-      const ok = await this.confirm({ title: 'Discard session?', message: 'All sets of the current session will be deleted.', confirmText: 'Discard', danger: true });
+      const ok = await this.confirm(this.isEditing
+        ? { title: 'Discard changes?', message: 'The workout stays as it was before editing.', confirmText: 'Discard', danger: true }
+        : { title: 'Discard session?', message: 'All sets of the current session will be deleted.', confirmText: 'Discard', danger: true });
       if (!ok) return;
-      this.session = { startedAt: null, sets: [] };
+      this.session = EMPTY_SESSION();
       this.persistSession();
       this.stopTimer();
       this.showReview = false;
     },
 
-    async finishSession() {
+    /** Schritt 1: Abschluss-Dialog (Session-RPE, Notiz, Datum, Dauer). */
+    finishSession() {
       if (!this.session.sets.length) return;
+      const meta = this.session.meta;
       const startedAt = this.session.startedAt ?? new Date().toISOString();
-      const duration = Math.round((Date.now() - new Date(startedAt).getTime()) / 1000);
-      const entry = {
-        clientId: newClientId(),
-        date: startedAt,
-        durationSeconds: duration > 0 && duration <= 86_400 ? duration : null,
+      const elapsedMin = Math.round((Date.now() - new Date(startedAt).getTime()) / 60000);
+      this.finishModal = {
+        open: true,
+        sessionRpe: meta?.sessionRpe ?? null,
+        notes: meta?.notes ?? '',
+        date: toLocalInput(meta?.date ?? startedAt),
+        durationMin: meta
+          ? (meta.durationSeconds ? Math.round(meta.durationSeconds / 60) : null)
+          : (elapsedMin > 0 && elapsedMin <= 1440 ? elapsedMin : null),
+        error: '',
+      };
+      this.showReview = false;
+    },
+
+    /** Schritt 2: Einheit lokal sichern (Queue) und synchronisieren. */
+    async confirmFinish() {
+      const f = this.finishModal;
+      const date = f.date ? new Date(f.date) : new Date(this.session.startedAt ?? Date.now());
+      if (Number.isNaN(date.getTime())) { f.error = 'Invalid date.'; return; }
+      if (date.getTime() > Date.now() + 60 * 60 * 1000) { f.error = 'Date cannot be in the future.'; return; }
+      const minutes = Number(f.durationMin);
+      const base = {
+        date: date.toISOString(),
+        durationSeconds: minutes > 0 && minutes <= 1440 ? Math.round(minutes * 60) : null,
+        sessionRpe: f.sessionRpe ?? null,
+        notes: f.notes?.trim() ? f.notes.trim().slice(0, 500) : null,
         workoutType: inferWorkoutType(this.session.sets),
         sets: this.session.sets.map((s) => ({ ...s })),
         status: QueueStatus.Pending,
@@ -761,18 +822,47 @@ const app = createApp({
       };
 
       // 1. Immer zuerst lokal sichern (offline-first) ...
-      this.queue = [...this.queue, entry];
+      const editing = this.session.editing;
+      if (editing?.kind === 'server') {
+        const entry = { ...base, op: 'update', workoutId: editing.id, clientId: editing.clientId ?? newClientId() };
+        this.queue = [...this.queue.filter((q) => !(isUpdate(q) && q.workoutId === editing.id)), entry];
+      } else if (editing?.kind === 'pending') {
+        const existing = this.queue.find((q) => q.clientId === editing.clientId);
+        const entry = { ...base, op: existing?.op ?? 'create', workoutId: existing?.workoutId, clientId: editing.clientId };
+        this.queue = existing ? this.queue.map((q) => (q === existing ? entry : q)) : [...this.queue, entry];
+      } else {
+        this.queue = [...this.queue, { ...base, clientId: newClientId() }];
+      }
       this.persistQueue();
-      this.session = { startedAt: null, sets: [] };
+
+      this.session = EMPTY_SESSION();
       this.persistSession();
       this.stopTimer();
-      this.showReview = false;
+      this.finishModal.open = false;
       this.tab = 'Data';
       this.dataTab = 'history';
-      this.toast(this.online ? 'Workout saved.' : 'Saved offline - will sync automatically.', 'success');
+      const verb = editing ? 'updated' : 'saved';
+      this.toast(this.online ? `Workout ${verb}.` : `Workout ${verb} offline - will sync automatically.`, 'success');
 
       // 2. ... dann synchronisieren.
       await this.syncNow();
+    },
+
+    /** Sätze einer Einheit in das Format der laufenden Session übernehmen. */
+    toSessionSets(sets, { keepDetails }) {
+      return sets.map((s) => {
+        const ex = this.exercisesById.get(s.exerciseId);
+        return {
+          exerciseId: s.exerciseId,
+          exerciseName: s.exerciseName,
+          trackingType: s.trackingType ?? ex?.trackingType ?? trackingOf(s),
+          muscleGroup: s.muscleGroup ?? ex?.muscleGroup,
+          category: s.category ?? ex?.category,
+          weight: s.weight, reps: s.reps, distance: s.distance, time: s.time,
+          rpe: keepDetails ? s.rpe ?? null : null,
+          isWarmup: !!s.isWarmup,
+        };
+      });
     },
 
     async repeatWorkout(workout) {
@@ -780,29 +870,38 @@ const app = createApp({
         const ok = await this.confirm({ title: 'Replace session?', message: 'Your current session will be replaced by this workout.', confirmText: 'Replace' });
         if (!ok) return;
       }
-      this.session = {
-        startedAt: new Date().toISOString(),
-        sets: workout.sets.map((s) => {
-          const ex = this.exercisesById.get(s.exerciseId);
-          return {
-            exerciseId: s.exerciseId,
-            exerciseName: s.exerciseName,
-            trackingType: s.trackingType ?? ex?.trackingType ?? trackingOf(s),
-            muscleGroup: s.muscleGroup ?? ex?.muscleGroup,
-            category: s.category ?? ex?.category,
-            weight: s.weight, reps: s.reps, distance: s.distance, time: s.time,
-          };
-        }),
-      };
+      this.session = { ...EMPTY_SESSION(), startedAt: new Date().toISOString(), sets: this.toSessionSets(workout.sets, { keepDetails: false }) };
       this.persistSession();
       this.tab = this.session.sets.some((s) => s.category === 'Gym') ? 'Gym' : 'Football';
       this.showReview = true;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
 
+    /** Bestehende Einheit bearbeiten: wird in die Session geladen, "Finish" speichert per PUT (auch offline über die Queue). */
+    async editWorkout(workout) {
+      if (!workout.pending && !workout.id) return;
+      if (this.sessionActive) {
+        const ok = await this.confirm({ title: 'Replace session?', message: 'Your current session will be replaced by the workout you edit.', confirmText: 'Edit' });
+        if (!ok) return;
+      }
+      this.stopTimer();
+      this.session = {
+        startedAt: workout.date,
+        sets: this.toSessionSets(workout.sets, { keepDetails: true }),
+        editing: workout.pending ? { kind: 'pending', clientId: workout.clientId } : { kind: 'server', id: workout.id, clientId: workout.clientId },
+        meta: { date: workout.date, durationSeconds: workout.durationSeconds, sessionRpe: workout.sessionRpe, notes: workout.notes },
+      };
+      this.persistSession();
+      this.tab = this.session.sets.some((s) => s.category === 'Football') && !this.session.sets.some((s) => s.category === 'Gym') ? 'Football' : 'Gym';
+      this.showReview = true;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+
     async deleteWorkout(workout) {
       if (workout.pending) {
-        const ok = await this.confirm({ title: 'Discard workout?', message: 'This workout was not synced yet and will be removed from this device.', confirmText: 'Discard', danger: true });
+        const ok = await this.confirm(workout.op === 'update'
+          ? { title: 'Discard changes?', message: 'Your unsynced changes are removed; the saved version stays.', confirmText: 'Discard', danger: true }
+          : { title: 'Discard workout?', message: 'This workout was not synced yet and will be removed from this device.', confirmText: 'Discard', danger: true });
         if (!ok) return;
         this.queue = this.queue.filter((q) => q.clientId !== workout.clientId);
         this.persistQueue();
@@ -844,7 +943,8 @@ const app = createApp({
       if (s.volume > 0) parts.push(`${formatNumber(s.volume, 0)} kg vol`);
       if (s.distance > 0) parts.push(`${formatNumber(s.distance, 0)} m`);
       if (s.durationWork > 0) parts.push(`${formatClock(s.durationWork)} work`);
-      parts.push(`${s.sets} sets`);
+      parts.push(s.warmups ? `${s.workingSets}+${s.warmups}w sets` : `${s.sets} sets`);
+      if (s.load > 0) parts.push(`load ${s.load}`);
       return parts.join(' · ');
     },
 
@@ -982,7 +1082,7 @@ const app = createApp({
       if (this.dataTab === 'overview' && this.$refs.weeklyCanvas) {
         charts.weekly = renderWeeklyChart(this.$refs.weeklyCanvas, this.weekly, {
           metric: this.weeklyMetric,
-          unit: { volume: 'kg', distance: 'm', sessions: '' }[this.weeklyMetric],
+          unit: { volume: 'kg', distance: 'm', sessions: '', load: 'AU' }[this.weeklyMetric],
         });
       }
       if (this.dataTab === 'calendar' && this.$refs.heatScroll) {
@@ -1095,8 +1195,18 @@ const app = createApp({
       }[tone] ?? 'border-accent/40 text-accent';
     },
 
+    /** "SET 1", "SET 2" ... für Arbeitssätze, "WU" für Aufwärmsätze. */
+    setLabel(sets, n) {
+      if (sets[n]?.isWarmup) return 'WU';
+      return `SET ${sets.slice(0, n + 1).filter((x) => !x.isWarmup).length}`;
+    },
+
+    rpeText(value) { return value ? `@${formatNumber(value, 1)}` : ''; },
+    sessionRpeLabel(value) { return SESSION_RPE.find((r) => r.value === value)?.label ?? ''; },
+
     closeTopLayer() {
       if (this.dialog.open) return this.resolveDialog(false);
+      if (this.finishModal.open) { this.finishModal.open = false; return; }
       if (this.setModal.open) return this.closeSetModal();
       if (this.customModal.open) { this.customModal.open = false; return; }
       if (this.showReview) { this.showReview = false; return; }
@@ -1108,6 +1218,7 @@ const app = createApp({
       if (this.dialog.open) this.resolveDialog(false);
       this.setModal.open = false;
       this.customModal.open = false;
+      this.finishModal.open = false;
       this.showReview = false;
       this.settingsOpen = false;
       this.sortOpen = false;

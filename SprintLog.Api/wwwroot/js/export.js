@@ -1,5 +1,5 @@
 // Datenexport (Recht auf Datenübertragbarkeit, Art. 20 DSGVO) als JSON oder CSV.
-import { epley1RM, setVolume, trackingOf } from './analytics.js';
+import { epley1RM, setVolume, trackingOf, sessionLoad } from './analytics.js';
 
 function download(filename, content, mime) {
   const blob = new Blob([content], { type: mime });
@@ -29,7 +29,7 @@ const csvCell = (value) => {
 /** Eine Zeile pro Satz. Trennzeichen ";" + BOM, damit Excel (DE) die Datei direkt korrekt öffnet. */
 export function toCsv(workouts) {
   const header = ['date', 'workout_id', 'workout_type', 'duration_min', 'exercise', 'muscle_group', 'tracking_type',
-    'set', 'weight_kg', 'reps', 'distance_m', 'time_s', 'volume_kg', 'e1rm_kg', 'synced'];
+    'set', 'warmup', 'rpe', 'weight_kg', 'reps', 'distance_m', 'time_s', 'volume_kg', 'e1rm_kg', 'session_rpe', 'load', 'notes', 'synced'];
   const rows = [header.join(';')];
   for (const w of workouts) {
     (w.sets ?? []).forEach((s, i) => {
@@ -42,12 +42,17 @@ export function toCsv(workouts) {
         s.muscleGroup ?? '',
         trackingOf(s),
         s.setNumber ?? i + 1,
+        s.isWarmup ? 'yes' : '',
+        s.rpe ?? '',
         s.weight ?? '',
         s.reps ?? '',
         s.distance ?? '',
         s.time ?? '',
         setVolume(s) || '',
-        epley1RM(s.weight, s.reps) || '',
+        s.isWarmup ? '' : epley1RM(s.weight, s.reps) || '',
+        w.sessionRpe ?? '',
+        sessionLoad(w) || '',
+        i === 0 ? w.notes ?? '' : '',
         w.pending ? 'no' : 'yes',
       ].map(csvCell).join(';'));
     });

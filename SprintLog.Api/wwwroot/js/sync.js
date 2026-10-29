@@ -1,5 +1,7 @@
 // Offline-Warteschlange für Einheiten.
 //
+// Einträge: op "create" (Standard, POST) oder "update" (PUT auf eine bestehende Einheit, workoutId).
+//
 // Ablauf: Einheit wird IMMER zuerst lokal in die Queue geschrieben (mit eigener clientId),
 // danach wird synchronisiert. Der Server erkennt dieselbe clientId wieder (idempotent) -
 // dadurch entstehen auch bei abgebrochenen Verbindungen oder doppelten Versuchen keine Duplikate.
@@ -16,15 +18,21 @@ export function toPayload(entry) {
     clientId: entry.clientId,
     date: entry.date,
     durationSeconds: entry.durationSeconds ?? null,
+    sessionRpe: entry.sessionRpe ?? null,
+    notes: entry.notes ?? null,
     sets: entry.sets.map((s) => ({
       exerciseId: s.exerciseId,
       weight: s.weight ?? null,
       reps: s.reps ?? null,
       distance: s.distance ?? null,
       time: s.time ?? null,
+      rpe: s.rpe ?? null,
+      isWarmup: !!s.isWarmup,
     })),
   };
 }
+
+export const isUpdate = (entry) => entry?.op === 'update' && entry.workoutId != null;
 
 /** Wandelt v2-Queue-Einträge ({ id, workoutType, sets, status }) in das neue Format um. */
 export function migrateLegacyQueue(legacy, newClientId) {
@@ -46,7 +54,7 @@ export function migrateLegacyQueue(legacy, newClientId) {
  * Synchronisiert alle offenen Einträge nacheinander.
  *
  * @param {Array} queue - aktuelle Queue (wird nicht verändert)
- * @param {(payload) => Promise} send - schickt einen Eintrag an die API (wirft ApiError)
+ * @param {(payload, entry) => Promise} send - schickt einen Eintrag an die API (wirft ApiError)
  * @returns {Promise<{ queue: Array, synced: number, stoppedBy: null|'network'|'auth'|'server' }>}
  */
 export async function syncQueue(queue, send) {
@@ -64,7 +72,7 @@ export async function syncQueue(queue, send) {
     }
 
     try {
-      await send(toPayload(entry));
+      await send(toPayload(entry), entry);
       synced += 1;
     } catch (error) {
       if (error?.isNetwork) {
@@ -89,11 +97,14 @@ export async function syncQueue(queue, send) {
 /** Queue-Einträge im Format der Server-Historie (für Anzeige und Auswertungen). */
 export function queueAsWorkouts(queue) {
   return (queue ?? []).map((e) => ({
-    id: null,
+    id: isUpdate(e) ? e.workoutId : null,
     clientId: e.clientId,
     date: e.date,
     workoutType: e.workoutType,
     durationSeconds: e.durationSeconds ?? null,
+    sessionRpe: e.sessionRpe ?? null,
+    notes: e.notes ?? null,
+    op: e.op ?? 'create',
     pending: true,
     status: e.status,
     error: e.error ?? null,
@@ -108,6 +119,8 @@ export function queueAsWorkouts(queue) {
       reps: s.reps ?? null,
       distance: s.distance ?? null,
       time: s.time ?? null,
+      rpe: s.rpe ?? null,
+      isWarmup: !!s.isWarmup,
     })),
   }));
 }

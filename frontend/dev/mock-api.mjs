@@ -48,9 +48,10 @@ const exerciseDto = (e) => ({ id: e.id, name: e.name, category: e.category, musc
 function workoutResponse(w) {
   return {
     id: w.id, clientId: w.clientId, date: w.date, workoutType: w.workoutType, durationSeconds: w.durationSeconds,
+    sessionRpe: w.sessionRpe ?? null, notes: w.notes ?? null,
     sets: w.sets.map((s, i) => {
       const ex = db.exercises.find((e) => e.id === s.exerciseId);
-      return { exerciseId: s.exerciseId, exerciseName: ex?.name ?? '?', trackingType: ex?.trackingType ?? 'WeightReps', muscleGroup: ex?.muscleGroup ?? null, setNumber: i + 1, weight: s.weight ?? null, reps: s.reps ?? null, distance: s.distance ?? null, time: s.time ?? null };
+      return { exerciseId: s.exerciseId, exerciseName: ex?.name ?? '?', trackingType: ex?.trackingType ?? 'WeightReps', muscleGroup: ex?.muscleGroup ?? null, setNumber: i + 1, weight: s.weight ?? null, reps: s.reps ?? null, distance: s.distance ?? null, time: s.time ?? null, rpe: s.rpe ?? null, isWarmup: !!s.isWarmup };
     }),
   };
 }
@@ -68,7 +69,7 @@ function addUser(username, password) {
   return user;
 }
 
-function saveWorkout(user, body) {
+function validateWorkout(user, body) {
   const errors = {};
   if (!['Gym', 'Football', 'Hybrid'].includes(body.workoutType)) errors.workoutType = ['Invalid workout type.'];
   if (!Array.isArray(body.sets) || body.sets.length === 0) errors.sets = ['Cannot save an empty workout.'];
@@ -78,7 +79,13 @@ function saveWorkout(user, body) {
   const ids = visible(user.id).map((e) => e.id);
   const unknown = (body.sets ?? []).map((s) => s.exerciseId).filter((id) => !ids.includes(id));
   if (unknown.length) errors.sets = [`Unknown exercise id(s): ${unknown.join(', ')}.`];
-  if (Object.keys(errors).length) return { status: 400, errors };
+  if (body.sessionRpe != null && (body.sessionRpe < 1 || body.sessionRpe > 10)) errors.sessionRpe = ['Session RPE must be between 1 and 10.'];
+  return Object.keys(errors).length ? errors : null;
+}
+
+function saveWorkout(user, body) {
+  const errors = validateWorkout(user, body);
+  if (errors) return { status: 400, errors };
 
   const clientId = body.clientId ?? body.ClientId ?? null;
   const existing = clientId && db.workouts.find((w) => w.userId === user.id && w.clientId === clientId);
@@ -87,7 +94,8 @@ function saveWorkout(user, body) {
   const w = {
     id: db.nextWorkoutId++, userId: user.id, clientId, workoutType: body.workoutType,
     date: body.date ? new Date(body.date).toISOString() : new Date().toISOString(),
-    durationSeconds: body.durationSeconds ?? null, sets: body.sets,
+    durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null,
+    notes: body.notes?.trim() ? body.notes.trim() : null, sets: body.sets,
   };
   db.workouts.push(w);
   return { status: 201, body: { workoutId: w.id, duplicate: false, message: 'Workout saved.' } };
@@ -175,6 +183,19 @@ async function handleApi(req, res, url) {
     return json(res, 200, db.workouts.filter((w) => w.userId === user.id).sort((a, b) => b.date.localeCompare(a.date)).map(workoutResponse));
   }
   m = path.match(/^\/api\/workouts\/(\d+)$/);
+  if (m && method === 'PUT') {
+    const w = db.workouts.find((x) => x.id === Number(m[1]) && x.userId === user.id);
+    if (!w) return problem(res, 404, 'Not Found');
+    const body = await readBody(req);
+    const errors = validateWorkout(user, body);
+    if (errors) return problem(res, 400, 'One or more validation errors occurred.', errors);
+    Object.assign(w, {
+      workoutType: body.workoutType, date: body.date ? new Date(body.date).toISOString() : w.date,
+      durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null,
+      notes: body.notes?.trim() ? body.notes.trim() : null, sets: body.sets,
+    });
+    return json(res, 200, workoutResponse(w));
+  }
   if (m && method === 'DELETE') {
     const before = db.workouts.length;
     db.workouts = db.workouts.filter((w) => !(w.id === Number(m[1]) && w.userId === user.id));
@@ -223,7 +244,7 @@ function seedDemo() {
         if (s[0] === 'd') return { exerciseId: s[1], time: Math.round(s[2] * (1 + progress)) };
         return { exerciseId: s[0], weight: Math.round((s[1] * (1 + progress)) / 2.5) * 2.5, reps: s[2] };
       });
-      saveWorkout(user, { workoutType: session.type, clientId: randomUUID(), date: date.toISOString(), durationSeconds: 3600 + i * 300, sets });
+      saveWorkout(user, { workoutType: session.type, clientId: randomUUID(), date: date.toISOString(), durationSeconds: 3600 + i * 300, sessionRpe: 5 + ((week + i) % 4), sets });
       day++;
     }
   }

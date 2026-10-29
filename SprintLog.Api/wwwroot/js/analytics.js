@@ -28,7 +28,14 @@ export function epley1RM(weight, reps) {
   return round1(weight * (1 + reps / 30));
 }
 
-export const setVolume = (set) => (set?.weight > 0 && set?.reps > 0 ? set.weight * set.reps : 0);
+/** Arbeitssatz = kein Aufwärmsatz. Nur Arbeitssätze zählen für Rekorde, Volumen und Verläufe. */
+export const isWorkingSet = (set) => !set?.isWarmup;
+
+export const setVolume = (set) => (isWorkingSet(set) && set?.weight > 0 && set?.reps > 0 ? set.weight * set.reps : 0);
+
+/** Trainingslast nach Foster: Session-RPE × Dauer in Minuten (Arbitrary Units). */
+export const sessionLoad = (workout) =>
+  workout?.sessionRpe > 0 && workout?.durationSeconds > 0 ? Math.round(workout.sessionRpe * (workout.durationSeconds / 60)) : 0;
 
 /** Geschwindigkeit in m/s. */
 export const setSpeed = (set) => (set?.distance > 0 && set?.time > 0 ? set.distance / set.time : 0);
@@ -87,8 +94,10 @@ export function summarizeWorkout(workout) {
   let durationWork = 0;
   const exercises = new Set();
 
+  let warmups = 0;
   for (const s of sets) {
     exercises.add(exerciseKey(s));
+    if (!isWorkingSet(s)) { warmups += 1; continue; }
     volume += setVolume(s);
     const type = trackingOf(s);
     if (type === TrackingType.DistanceTime && s.distance > 0) distance += s.distance;
@@ -97,6 +106,9 @@ export function summarizeWorkout(workout) {
 
   return {
     sets: sets.length,
+    workingSets: sets.length - warmups,
+    warmups,
+    load: sessionLoad(workout),
     exercises: exercises.size,
     volume: round1(volume),
     distance: round1(distance),
@@ -153,6 +165,7 @@ export function computeRecords(workouts) {
   for (const w of chronological(workouts)) {
     const seenInWorkout = new Set();
     for (const s of w.sets ?? []) {
+      if (!isWorkingSet(s)) continue;
       const key = exerciseKey(s);
       if (!records.has(key)) records.set(key, emptyRecord(s));
       const r = records.get(key);
@@ -204,6 +217,7 @@ export function detectPRs(workouts) {
   for (const w of chronological(workouts)) {
     const wKey = workoutKey(w);
     (w.sets ?? []).forEach((s, index) => {
+      if (!isWorkingSet(s)) return;
       const key = exerciseKey(s);
       const values = {
         maxWeight: s.weight ?? 0,
@@ -274,7 +288,7 @@ export function metricsFor(trackingType) {
 export function exerciseSeries(workouts, key, metric) {
   const points = [];
   for (const w of chronological(workouts)) {
-    const sets = (w.sets ?? []).filter((s) => exerciseKey(s) === key);
+    const sets = (w.sets ?? []).filter((s) => exerciseKey(s) === key && isWorkingSet(s));
     if (sets.length === 0) continue;
     let value = 0;
     switch (metric) {
@@ -305,7 +319,7 @@ export function weeklyTotals(workouts, weeks = 12, now = new Date()) {
   const byKey = new Map();
   for (let i = weeks - 1; i >= 0; i--) {
     const start = addDays(thisWeek, -7 * i);
-    const bucket = { weekStart: dateKey(start), volume: 0, distance: 0, sessions: 0, sets: 0 };
+    const bucket = { weekStart: dateKey(start), volume: 0, distance: 0, sessions: 0, sets: 0, load: 0 };
     buckets.push(bucket);
     byKey.set(bucket.weekStart, bucket);
   }
@@ -316,7 +330,8 @@ export function weeklyTotals(workouts, weeks = 12, now = new Date()) {
     bucket.volume = round1(bucket.volume + summary.volume);
     bucket.distance = round1(bucket.distance + summary.distance);
     bucket.sessions += 1;
-    bucket.sets += summary.sets;
+    bucket.sets += summary.workingSets;
+    bucket.load += summary.load;
   }
   return buckets;
 }
@@ -342,6 +357,7 @@ export function muscleDistribution(workouts, days = 30, now = new Date()) {
   for (const w of workouts ?? []) {
     if (new Date(w.date).getTime() < since) continue;
     for (const s of w.sets ?? []) {
+      if (!isWorkingSet(s)) continue;
       const group = s.muscleGroup || 'Other';
       counts.set(group, (counts.get(group) ?? 0) + 1);
     }
@@ -400,7 +416,9 @@ export function lastSetFor(workouts, key) {
   const sorted = chronological(workouts).reverse();
   for (const w of sorted) {
     const sets = (w.sets ?? []).filter((s) => exerciseKey(s) === key);
-    if (sets.length) return { ...sets[sets.length - 1], date: w.date };
+    const working = sets.filter(isWorkingSet);
+    const pick = working.length ? working : sets;
+    if (pick.length) return { ...pick[pick.length - 1], date: w.date };
   }
   return null;
 }

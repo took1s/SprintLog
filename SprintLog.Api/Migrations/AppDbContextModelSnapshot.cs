@@ -802,6 +802,13 @@ namespace SprintLog.Api.Migrations
                     b.Property<int?>("DurationSeconds")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int?>("SessionRpe")
+                        .HasColumnType("integer");
+
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
 
@@ -834,8 +841,14 @@ namespace SprintLog.Api.Migrations
                     b.Property<int>("ExerciseId")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsWarmup")
+                        .HasColumnType("boolean");
+
                     b.Property<int?>("Reps")
                         .HasColumnType("integer");
+
+                    b.Property<double?>("Rpe")
+                        .HasColumnType("double precision");
 
                     b.Property<int>("SetNumber")
                         .HasColumnType("integer");
