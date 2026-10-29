@@ -24,6 +24,14 @@ class ParseTests(unittest.TestCase):
         self.assertEqual((env["PGHOST"], env["PGUSER"], env["PGPASSWORD"]), ("h", "u", "p"))
         self.assertEqual((env["PGPORT"], env["PGDATABASE"]), ("5432", "postgres"))
 
+    def test_uri_format_from_supabase(self):
+        env = parse("postgresql://postgres.abcd:p%40ss%3Bword@aws-1-eu-central-1.pooler.supabase.com:5432/postgres")
+        self.assertEqual(env["PGHOST"], "aws-1-eu-central-1.pooler.supabase.com")
+        self.assertEqual(env["PGUSER"], "postgres.abcd")
+        self.assertEqual(env["PGPASSWORD"], "p@ss;word")
+        self.assertEqual(env["PGPORT"], "5432")
+        self.assertEqual(env["PGSSLMODE"], "require")
+
     def test_missing_password_fails(self):
         with self.assertRaises(ValueError):
             parse("Host=h;Username=u")

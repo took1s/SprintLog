@@ -38,12 +38,24 @@ jobs:
         env:
           DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
         run: |
-          python3 .github/scripts/npgsql_to_pgenv.py "$RUNNER_TEMP/pg.env"
+          set +e
+          python3 .github/scripts/npgsql_to_pgenv.py "$RUNNER_TEMP/pg.env" 2> "$RUNNER_TEMP/convert.err"
+          if [ $? -ne 0 ]; then
+            echo "::error title=Connection string::$(tail -c 800 "$RUNNER_TEMP/convert.err" | tr '\n' ' ')"
+            exit 1
+          fi
           mkdir -p out
           docker run --rm --env-file "$RUNNER_TEMP/pg.env" -v "$PWD/out:/out" postgres:17-alpine \
-            pg_dump --format=custom --no-owner --no-privileges --schema=public --file=/out/sprintlog.dump
+            pg_dump --format=custom --no-owner --no-privileges --schema=public --file=/out/sprintlog.dump 2> "$RUNNER_TEMP/dump.err"
+          code=$?
           rm -f "$RUNNER_TEMP/pg.env"
-          docker run --rm -v "$PWD/out:/out" postgres:17-alpine pg_restore --list /out/sprintlog.dump | grep -c "TABLE DATA" | xargs -I{} echo "Tabellen mit Daten im Dump: {}"
+          if [ $code -ne 0 ]; then
+            # Fehlermeldung als Annotation (Passwort ist maskiert, Datei enthält keine Zugangsdaten)
+            echo "::error title=pg_dump failed (exit $code)::$(tail -c 1500 "$RUNNER_TEMP/dump.err" | tr '\n' ' ')"
+            exit 1
+          fi
+          count=$(docker run --rm -v "$PWD/out:/out" postgres:17-alpine pg_restore --list /out/sprintlog.dump | grep -c "TABLE DATA")
+          echo "::notice title=Backup::$count Tabellen mit Daten, $(du -h out/sprintlog.dump | cut -f1)"
 
       - name: Encrypt
         if: steps.check.outputs.ready == 'true'

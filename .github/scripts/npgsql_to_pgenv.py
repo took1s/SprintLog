@@ -7,6 +7,7 @@ Das Passwort wird in GitHub Actions maskiert und nie ausgegeben.
 """
 import os
 import sys
+from urllib.parse import unquote, urlsplit, parse_qs
 
 KEYS = {
     "host": "PGHOST", "server": "PGHOST",
@@ -46,7 +47,33 @@ def split_pairs(connection_string: str):
     return pairs
 
 
+def parse_uri(uri: str) -> dict:
+    """postgresql://user:password@host:5432/db?sslmode=require (Format aus dem Supabase-Dashboard)."""
+    u = urlsplit(uri)
+    env = {"PGSSLMODE": "require", "PGDATABASE": "postgres", "PGPORT": "5432"}
+    if u.hostname:
+        env["PGHOST"] = u.hostname
+    if u.port:
+        env["PGPORT"] = str(u.port)
+    if u.username:
+        env["PGUSER"] = unquote(u.username)
+    if u.password:
+        env["PGPASSWORD"] = unquote(u.password)
+    if u.path and u.path != "/":
+        env["PGDATABASE"] = unquote(u.path.lstrip("/"))
+    mode = parse_qs(u.query).get("sslmode")
+    if mode:
+        env["PGSSLMODE"] = SSL.get(mode[0].lower(), "require")
+    return env
+
+
 def parse(connection_string: str) -> dict:
+    if connection_string.lower().startswith(("postgres://", "postgresql://")):
+        env = parse_uri(connection_string)
+        missing = [k for k in ("PGHOST", "PGUSER", "PGPASSWORD") if k not in env]
+        if missing:
+            raise ValueError(f"Connection URI is missing: {', '.join(missing)}")
+        return env
     env = {"PGSSLMODE": "require", "PGDATABASE": "postgres", "PGPORT": "5432"}
     for key, value in split_pairs(connection_string):
         if key in KEYS:
@@ -55,12 +82,23 @@ def parse(connection_string: str) -> dict:
             env["PGSSLMODE"] = SSL.get(value.lower().replace(" ", ""), "require")
     missing = [k for k in ("PGHOST", "PGUSER", "PGPASSWORD") if k not in env]
     if missing:
-        raise ValueError(f"Connection string is missing: {', '.join(missing)}")
+        keys = sorted({k for k, _ in split_pairs(connection_string)})
+        raise ValueError(f"Connection string is missing: {', '.join(missing)}. "
+                         f"Found keys: {keys or 'none'} (length {len(connection_string)}). "
+                         "Expected 'Host=...;Username=...;Password=...' or 'postgresql://user:pass@host:5432/postgres'.")
     return env
 
 
 def main() -> int:
-    raw = os.environ.get("DB_CONNECTION_STRING", "")
+    raw = os.environ.get("DB_CONNECTION_STRING", "").strip().strip('"').strip("'")
+    # Häufiger Copy-Paste-Fehler: der Variablenname aus Render wurde mitkopiert
+    if raw in ("ConnectionStrings__DefaultConnection", "DB_CONNECTION_STRING"):
+        print("The secret contains the variable NAME instead of its value. In Render open Environment, "
+              "reveal ConnectionStrings__DefaultConnection and copy the value (right column).", file=sys.stderr)
+        return 1
+    for prefix in ("ConnectionStrings__DefaultConnection=", "DB_CONNECTION_STRING="):
+        if raw.startswith(prefix):
+            raw = raw[len(prefix):]
     if not raw:
         print("DB_CONNECTION_STRING is empty", file=sys.stderr)
         return 1
@@ -72,7 +110,10 @@ def main() -> int:
             if "\n" in value:
                 raise ValueError(f"{key} contains a newline")
             f.write(f"{key}={value}\n")
-    print(f"host={env['PGHOST']} port={env['PGPORT']} db={env['PGDATABASE']} sslmode={env['PGSSLMODE']}")
+    summary = f"host={env['PGHOST']} port={env['PGPORT']} db={env['PGDATABASE']} sslmode={env['PGSSLMODE']} user_has_ref={'.' in env['PGUSER']}"
+    print(summary)
+    if os.environ.get("GITHUB_ACTIONS"):
+        print(f"::notice title=Backup target::{summary}")
     return 0
 
 
