@@ -29,6 +29,10 @@ public class InfrastructureTests
         await HttpAssert.StatusAsync(HttpStatusCode.OK, response);
         Assert.Contains("SprintLog", await response.Content.ReadAsStringAsync());
         Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
+        var csp = response.Headers.GetValues("Content-Security-Policy").Single();
+        Assert.Contains("script-src 'self'", csp);
+        Assert.DoesNotContain("unsafe-eval", csp);
+        Assert.DoesNotContain("unsafe-inline", csp);
     }
 
     [Fact]

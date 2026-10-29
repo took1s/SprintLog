@@ -135,9 +135,16 @@ app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
+// Strikte Content-Security-Policy: nur eigene Skripte/Styles, kein eval, kein Inline-Code.
+// Möglich, seit das Frontend vorab kompiliert wird (Vite + Vue SFC). Swagger UI braucht Inline-Skripte -> ausgenommen.
+var contentSecurityPolicy = app.Configuration["Security:ContentSecurityPolicy"];
+
 app.Use(async (context, next) =>
 {
     var headers = context.Response.Headers;
+    if (!string.IsNullOrWhiteSpace(contentSecurityPolicy) && !context.Request.Path.StartsWithSegments("/swagger"))
+        headers.ContentSecurityPolicy = contentSecurityPolicy;
+    headers["Cross-Origin-Opener-Policy"] = "same-origin";
     headers["X-Content-Type-Options"] = "nosniff";
     headers["X-Frame-Options"] = "DENY";
     headers["Referrer-Policy"] = "strict-origin-when-cross-origin";

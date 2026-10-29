@@ -61,7 +61,8 @@ Live-Demo: https://sprintlog-api.onrender.com/
 - Die App startet ohne Netz (Service Worker). Einheiten werden immer zuerst lokal gespeichert und automatisch synchronisiert.
 - Idempotente Synchronisation über eine Client-ID: abgebrochene oder doppelte Sync-Versuche erzeugen keine Duplikate.
 - Export als CSV (Excel-kompatibel) und JSON, Löschen des Accounts inkl. aller Daten (DSGVO Art. 17 und 20).
-- Keine externen CDNs: Vue, Chart.js, Tailwind-CSS und die Schrift werden selbst ausgeliefert (offline-fähig, keine Datenübertragung an Dritte).
+- Keine externen CDNs: Vue, Chart.js, Tailwind-CSS und die Schrift werden mitgebaut und selbst ausgeliefert (offline-fähig, keine Datenübertragung an Dritte).
+- Strikte Content-Security-Policy (`script-src 'self'`, kein `unsafe-eval`, kein `unsafe-inline`): Templates werden zur Build-Zeit kompiliert.
 
 ## Tech-Stack
 
@@ -70,8 +71,8 @@ Live-Demo: https://sprintlog-api.onrender.com/
 | Backend | C# / .NET 8 Minimal API, Entity Framework Core 8 |
 | Datenbank | PostgreSQL (Supabase in Produktion, Docker lokal) |
 | Auth | JWT (HS256, Issuer/Audience-Prüfung), BCrypt, Rate Limiting |
-| Frontend | Vue 3 (ES-Module, ohne Bundler), Tailwind CSS (Build), Chart.js |
-| Tests | xUnit + WebApplicationFactory + Testcontainers (echtes PostgreSQL), Node Test Runner, Playwright (E2E) |
+| Frontend | Vue 3 (Single-File Components, `<script setup>`), TypeScript (strict), Pinia, Vite, Tailwind CSS, Chart.js |
+| Tests | xUnit + WebApplicationFactory + Testcontainers (echtes PostgreSQL), Vitest, vue-tsc, Playwright (E2E) |
 | CI/CD | GitHub Actions, Docker, Render |
 
 ## Architektur
@@ -126,15 +127,24 @@ cd SprintLog.Api
 dotnet run
 ```
 
-### Variante C: nur Frontend (ohne .NET und Datenbank)
+Das Frontend muss dafür einmal gebaut werden (`npm ci && npm run build`, Ausgabe nach `SprintLog.Api/wwwroot`).
 
-Ein Mock-Backend in Node bildet die API im Speicher nach - praktisch für UI-Arbeit:
+### Variante C: Frontend-Entwicklung mit Hot Reload
 
 ```bash
 npm ci
-npm run mock:demo     # http://localhost:5111, Login: demo / demo-password (mit 10 Wochen Demo-Daten)
-npm run watch:css     # Tailwind neu bauen bei Änderungen
+npm run mock:demo     # Mock-API auf http://localhost:5111 (Login: demo / demo-password, 10 Wochen Demo-Daten)
+npm run dev           # Vite auf http://localhost:5173, /api wird an :5111 weitergeleitet
 ```
+
+Statt der Mock-API kann auch die echte API laufen (`dotnet run`, ebenfalls Port 5111).
+
+| Befehl | Zweck |
+| --- | --- |
+| `npm run dev` | Vite-Dev-Server mit Hot Module Replacement |
+| `npm run build` | Typprüfung (`vue-tsc`) + Produktions-Build nach `SprintLog.Api/wwwroot` |
+| `npm test` | Unit-Tests (Vitest) |
+| `npm run test:e2e` | Browser-Tests (Playwright) gegen den Build und die Mock-API |
 
 ### Umgebungsvariablen
 
@@ -152,8 +162,9 @@ In der Cloud (Render) werden die Werte im Dashboard unter *Environment* hinterle
 
 ```bash
 dotnet test                 # Integrationstests gegen echtes PostgreSQL (Docker muss laufen)
-npm test                    # Unit-Tests: Kennzahlen, Rekorde, Sync-Queue, CSV-Export
-npm run test:e2e            # Browser-Tests (Playwright) inkl. Offline-Modus
+npm run build               # Typprüfung (TypeScript strict, auch die Vue-Templates) + Build
+npm test                    # Unit-Tests (Vitest): Kennzahlen, Rekorde, Sync-Queue, Delta-Sync, Pläne, CSV-Export
+npm run test:e2e            # Browser-Tests (Playwright) inkl. Offline-Modus und CSP-Prüfung
 ```
 
 Die Integrationstests starten die echte API mit `WebApplicationFactory` und eine PostgreSQL-Instanz mit Testcontainers. Getestet werden unter anderem:
@@ -165,7 +176,7 @@ Die Integrationstests starten die echte API mit `WebApplicationFactory` und eine
 - Zeitzonen (Datum mit Offset wird als UTC gespeichert)
 - Account löschen mit allen Daten
 
-GitHub Actions führt bei jedem Push aus: Build, Prüfung "EF-Modell passt zu den Migrationen", Backend-Tests, Frontend-Build-Check, Unit- und E2E-Tests sowie den Docker-Build.
+GitHub Actions führt bei jedem Push aus: Build, Prüfung "EF-Modell passt zu den Migrationen", Backend-Tests, Typprüfung und Build des Frontends, Unit- und E2E-Tests sowie den Docker-Build.
 
 ## Datenbank und Migrationen
 
@@ -244,15 +255,20 @@ Alle Endpunkte außer Registrierung, Login und Health erfordern `Authorization: 
 ```
 SprintLog/
 ├── SprintLog.Api/              .NET 8 Minimal API
-│   ├── Endpoints/              Auth, Exercises, Favorites, Workouts
+│   ├── Endpoints/              Auth, Exercises, Favorites, Workouts, Programs
 │   ├── DTOs/                   Request/Response-Records inkl. Validierung
 │   ├── Models/ Data/           Entities, DbContext, Seed-Katalog
 │   ├── Infrastructure/         JWT-Optionen, Validierung, Health-Check
 │   ├── Services/               TokenService
 │   ├── Migrations/             EF-Core-Migrationen
-│   └── wwwroot/                PWA (index.html, js/*, css/app.css, vendor/, sw.js)
+│   └── wwwroot/                Build-Ausgabe des Frontends (nicht eingecheckt)
 ├── tests/SprintLog.Api.Tests/  Integrationstests (xUnit, Testcontainers)
-├── frontend/                   Tailwind-Quelle, Unit-/E2E-Tests, Mock-API
+├── frontend/                   Vue-3-Frontend (Vite)
+│   ├── src/lib/                Fachlogik ohne UI (Kennzahlen, Sync, Pläne, Figur) - unit-getestet
+│   ├── src/stores/             Pinia-Stores (App-Zustand, UI)
+│   ├── src/components/         Single-File Components
+│   ├── src/sw.ts               Service Worker (Precache-Liste wird beim Build eingesetzt)
+│   ├── tests/ e2e/ dev/        Vitest, Playwright, Mock-API
 ├── database/migrate.sql        Idempotentes SQL-Skript für Supabase
 └── docker-compose.yml          API + PostgreSQL
 ```
@@ -263,12 +279,12 @@ SprintLog/
 - **JWT enthielt keine eindeutige Nutzer-ID.** Anfangs steckte nur der Benutzername im Token. Lösung: User-ID als Claim, Auslesen in allen Endpunkten, Favoriten zusätzlich per Migration von Username auf UserId umgestellt.
 - **Offline gespeicherte Einheiten bekamen das falsche Datum.** Der Server setzte das Datum beim Synchronisieren. Lösung: Das Startdatum kommt vom Client, der Server prüft es auf Plausibilität.
 - **Doppelte Einheiten bei instabiler Verbindung.** Kam die Antwort des Servers nicht an, wurde erneut gesendet. Lösung: Client-ID + Unique-Index, der Server antwortet idempotent.
-- **App funktionierte offline nicht vollständig.** Tailwind und Chart.js kamen vom CDN und waren offline nicht verfügbar. Lösung: Tailwind wird zur Build-Zeit erzeugt, alle Bibliotheken liegen in `wwwroot/vendor` und werden vom Service Worker vorgeladen.
+- **App funktionierte offline nicht vollständig.** Tailwind und Chart.js kamen vom CDN und waren offline nicht verfügbar. Lösung: Alles wird mit Vite gebaut und selbst ausgeliefert; der Service Worker lädt die gebauten Dateien (mit Content-Hash) beim Installieren vor.
+- **Keine strikte CSP möglich.** Vue kompilierte die Templates im Browser (`new Function`), das verlangt `unsafe-eval`. Lösung: Umstieg auf Vite + Single-File Components; die Templates werden beim Build kompiliert und die API sendet `script-src 'self'` ohne Ausnahmen. Die E2E-Tests laufen mit derselben Policy und schlagen bei jedem Verstoß fehl.
 - **Feldübungen hatten keine Eingabefelder.** Für Distanz/Zeit gab es im Dialog keine Felder, außerdem waren Kraftübungen in der Kategorie "Football" (z. B. Trap Bar Deadlift) falsch als Zeitübung behandelt. Lösung: `TrackingType` pro Übung in der Datenbank.
 
 ## Ausblick
 
-- Trainingspläne und Vorlagen (z. B. "Push / Pull / Legs", "Sprint-Tag")
 - Körpergewicht und Wellness-Daten (Schlaf, Müdigkeit) für eine Belastungssteuerung
 - Teilen von Rekorden und Mannschafts-Ansicht für das Team
 
