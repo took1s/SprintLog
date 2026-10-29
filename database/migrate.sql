@@ -1187,3 +1187,43 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029014025_V4WorkoutDetails') THEN
+    ALTER TABLE "WorkoutSets" ADD "IsWarmup" boolean NOT NULL DEFAULT FALSE;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029014025_V4WorkoutDetails') THEN
+    ALTER TABLE "WorkoutSets" ADD "Rpe" double precision;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029014025_V4WorkoutDetails') THEN
+    ALTER TABLE "Workouts" ADD "Notes" character varying(500);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029014025_V4WorkoutDetails') THEN
+    ALTER TABLE "Workouts" ADD "SessionRpe" integer;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029014025_V4WorkoutDetails') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261029014025_V4WorkoutDetails', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

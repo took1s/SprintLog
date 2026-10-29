@@ -9,5 +9,5 @@ test('CSV has BOM, header and one row per set with escaped values', () => {
   assert.ok(csv.startsWith('﻿date;workout_id'));
   const row = csv.split('\r\n')[1];
   assert.ok(row.includes('"Curl; ""EZ"""'));
-  assert.ok(row.endsWith(';300;40;yes'));
+  assert.ok(row.endsWith(';300;40;;;;yes'), row);
 });

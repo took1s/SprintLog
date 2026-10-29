@@ -64,6 +64,7 @@ export function createApi({ getToken, onUnauthorized, timeoutMs = 15000 }) {
   return {
     get: (path) => request('GET', path),
     post: (path, body) => request('POST', path, body),
+    put: (path, body) => request('PUT', path, body),
     del: (path, body) => request('DELETE', path, body),
   };
 }

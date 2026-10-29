@@ -116,3 +116,23 @@ test('helpers', () => {
   assert.equal(roundTo(71.2, 2.5), 70);
   assert.equal(lastSetFor([workout(1, '2026-10-01', [bench(60, 8), bench(65, 6)])], 'id:1').weight, 65);
 });
+
+test('warm-up sets are ignored for records, PRs, volume and series', async () => {
+  const { sessionLoad } = await import('../../SprintLog.Api/wwwroot/js/analytics.js');
+  const warm = { ...bench(100, 10), isWarmup: true };
+  const history = [
+    workout(1, '2026-10-01T10:00:00Z', [bench(60, 5)]),
+    workout(2, '2026-10-05T10:00:00Z', [warm, bench(65, 5)]),
+  ];
+  const r = computeRecords(history).get('id:1');
+  assert.equal(r.maxWeight.value, 65, 'warm-up with 100 kg is not a record');
+  const { badges } = detectPRs(history);
+  assert.equal(badges.get('w:2#0'), undefined);
+  assert.ok(badges.get('w:2#1'));
+  const summary = summarizeWorkout(history[1]);
+  assert.equal(summary.volume, 325);
+  assert.equal(summary.warmups, 1);
+  assert.deepEqual(exerciseSeries(history, 'id:1', ChartMetric.MaxWeight).map((p) => p.value), [60, 65]);
+  assert.equal(sessionLoad({ sessionRpe: 7, durationSeconds: 3600 }), 420);
+  assert.equal(sessionLoad({ sessionRpe: null, durationSeconds: 3600 }), 0);
+});

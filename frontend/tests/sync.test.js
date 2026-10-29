@@ -58,7 +58,7 @@ test('payload contains clientId, date and only API fields', () => {
   const p = toPayload(entry('a'));
   assert.equal(p.clientId, 'a');
   assert.equal(p.date, '2026-10-28T10:00:00Z');
-  assert.deepEqual(Object.keys(p.sets[0]).sort(), ['distance', 'exerciseId', 'reps', 'time', 'weight']);
+  assert.deepEqual(Object.keys(p.sets[0]).sort(), ['distance', 'exerciseId', 'isWarmup', 'reps', 'rpe', 'time', 'weight']);
 });
 
 test('legacy v2 queue is migrated with new client ids and original timestamp', () => {
@@ -78,4 +78,13 @@ test('queue entries are shown like server workouts', () => {
   assert.equal(w.pending, true);
   assert.equal(w.sets[0].setNumber, 1);
   assert.equal(w.sets[0].exerciseName, 'Bench');
+});
+
+test('update entries are passed to send() so the caller can use PUT', async () => {
+  const calls = [];
+  const update = { ...entry('u1'), op: 'update', workoutId: 42 };
+  await syncQueue([entry('c1'), update], async (payload, e) => calls.push([e.op ?? 'create', e.workoutId ?? null, payload.clientId]));
+  assert.deepEqual(calls, [['create', null, 'c1'], ['update', 42, 'u1']]);
+  const [, shown] = queueAsWorkouts([entry('c1'), update]);
+  assert.equal(shown.id, 42, 'pending update keeps the server id for display');
 });

@@ -13,6 +13,12 @@ public class WorkoutSet
     public double? Distance { get; set; } // Meter
     public double? Time { get; set; }     // Sekunden
 
+    /// <summary>Anstrengung des Satzes (RPE 1-10, halbe Schritte erlaubt). Optional.</summary>
+    public double? Rpe { get; set; }
+
+    /// <summary>Aufwärmsatz - zählt nicht für Rekorde und Volumen.</summary>
+    public bool IsWarmup { get; set; }
+
     public int WorkoutId { get; set; }
     public Workout Workout { get; set; } = null!;
 

@@ -53,6 +53,12 @@ async function register(page, username) {
   return page.evaluate(() => localStorage.getItem('sprintlog_jwt'));
 }
 
+/** Finish -> Abschluss-Dialog -> speichern. */
+async function finishWorkout(page) {
+  await page.click('button:text-is("Finish")');
+  await page.click('button:has-text("Save workout")');
+}
+
 async function logSet(page, exercise) {
   await page.click(`h3:text-is("${exercise}")`);
   await page.waitForSelector('button:has-text("Log set")');
@@ -70,7 +76,7 @@ test('register, log gym + field sets, finish -> stored on server with client dat
   await page.fill('#in-distance', '40');
   await page.fill('#in-time', '5.1');
   await page.click('button:has-text("Log set")');
-  await page.click('button:has-text("Finish")');
+  await finishWorkout(page);
   await page.waitForSelector('text=Hybrid');
 
   const history = await api('GET', '/api/workouts/history', token);
@@ -97,7 +103,7 @@ test('offline: app loads from service worker, saves workout locally and syncs on
   await page.waitForSelector('h3:has-text("Bench Press")'); // Katalog aus dem Cache
 
   await logSet(page, 'Bench Press');
-  await page.click('button:has-text("Finish")');
+  await finishWorkout(page);
   await page.waitForSelector('text=Pending sync');
   assert.equal((await api('GET', '/api/workouts/history', token)).length, 0);
 
@@ -136,7 +142,7 @@ test('custom exercise, favorites, delete workout', async () => {
   await page.click('button:has-text("Create & log")');
   await page.waitForSelector('text=Distance (m)');
   await page.click('button:has-text("Log set")');
-  await page.click('button:has-text("Finish")');
+  await finishWorkout(page);
   await page.waitForSelector('article:has-text("Sled Push")');
 
   const exercises = await api('GET', '/api/exercises', token);
@@ -149,5 +155,78 @@ test('custom exercise, favorites, delete workout', async () => {
   await page.waitForSelector('text=Workout deleted.');
   assert.equal((await api('GET', '/api/workouts/history', token)).length, 0);
   assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('RPE, warm-up, session RPE and notes are saved; editing a workout updates it via PUT', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `edit_${Date.now()}`);
+
+  // Aufwärmsatz + Arbeitssatz mit RPE
+  await page.click('h3:text-is("Bench Press")');
+  await page.fill('#in-weight', '40');
+  await page.check('text=Warm-up');
+  await page.click('button:has-text("Log set")');
+  await page.click('button[aria-label="Stop timer"]');
+  await page.click('h3:text-is("Bench Press")');
+  await page.fill('#in-weight', '80');
+  await page.click('.preset-btn:text-is("8.5")');
+  await page.click('button:has-text("Log set")');
+
+  await page.click('button:has-text("Finish")');
+  await page.click('[aria-label="Finish workout"] button:text-is("7")');
+  await page.fill('#finish-notes', 'Good session');
+  await page.click('button:has-text("Save workout")');
+  await page.waitForSelector('text=Good session');
+
+  let [w] = await api('GET', '/api/workouts/history', token);
+  assert.equal(w.sessionRpe, 7);
+  assert.equal(w.notes, 'Good session');
+  assert.equal(w.sets[0].isWarmup, true);
+  assert.equal(w.sets[1].rpe, 8.5);
+
+  // Bearbeiten: Gewicht des Arbeitssatzes ändern
+  await page.click('article >> button:text-is("Edit")');
+  await page.waitForSelector('text=Edit workout');
+  await page.click('[aria-label="Session review"] button[aria-label="Edit set"] >> nth=1');
+  await page.fill('#in-weight', '82.5');
+  await page.click('button:has-text("Update set")');
+  await page.click('button:text-is("Save")');
+  await page.click('button:has-text("Save changes")');
+  await page.waitForSelector('text=Workout updated.');
+  await page.waitForTimeout(500);
+
+  const history = await api('GET', '/api/workouts/history', token);
+  assert.equal(history.length, 1, 'edit does not create a second workout');
+  w = history[0];
+  assert.equal(w.sets[1].weight, 82.5);
+  assert.equal(w.sessionRpe, 7, 'session RPE kept');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('editing offline queues the change and syncs it with PUT once online', async () => {
+  const { page, context } = await newPage();
+  const token = await register(page, `offedit_${Date.now()}`);
+  await logSet(page, 'Bench Press');
+  await finishWorkout(page);
+  await page.waitForSelector('article:has-text("Bench Press")');
+  await page.waitForFunction(() => !document.body.innerText.includes('Pending sync'));
+
+  await context.setOffline(true);
+  await page.click('article >> button:text-is("Edit")');
+  await page.click('[aria-label="Session review"] button[aria-label="Edit set"]');
+  await page.fill('#in-reps', '3');
+  await page.click('button:has-text("Update set")');
+  await page.click('button:text-is("Save")');
+  await page.click('button:has-text("Save changes")');
+  await page.waitForSelector('text=Edit pending');
+  assert.notEqual((await api('GET', '/api/workouts/history', token))[0].sets[0].reps, 3);
+
+  await context.setOffline(false);
+  await page.waitForSelector('text=Edit pending', { state: 'detached', timeout: 10000 });
+  const history = await api('GET', '/api/workouts/history', token);
+  assert.equal(history.length, 1);
+  assert.equal(history[0].sets[0].reps, 3);
   await context.close();
 });

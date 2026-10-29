@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SprintLog.Api.DTOs;
 using SprintLog.Api.Models;
 
 namespace SprintLog.Api.Data;
@@ -50,6 +51,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Workout>(e =>
         {
             e.Property(w => w.WorkoutType).HasMaxLength(20);
+            e.Property(w => w.Notes).HasMaxLength(CreateWorkoutRequest.MaxNotesLength);
             e.HasOne(w => w.User).WithMany(u => u.Workouts).HasForeignKey(w => w.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(w => new { w.UserId, w.Date });
             // Idempotenz: dieselbe Client-ID kann pro Nutzer nur einmal gespeichert werden.

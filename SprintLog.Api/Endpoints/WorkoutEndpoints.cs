@@ -16,6 +16,7 @@ public static class WorkoutEndpoints
         group.MapPost("/save", Save).ExcludeFromDescription(); // Alias für ältere, gecachte App-Versionen
         group.MapGet("/history", History);
         group.MapGet("/{id:int}", GetById);
+        group.MapPut("/{id:int}", Update);
         group.MapDelete("/{id:int}", Delete);
     }
 
@@ -37,14 +38,7 @@ public static class WorkoutEndpoints
         }
 
         // 2. Nur Übungen erlauben, die der Nutzer sehen darf (Standard + eigene).
-        var exerciseIds = req.Sets!.Select(s => s.ExerciseId).Distinct().ToList();
-        var knownIds = await db.Exercises.VisibleTo(userId.Value)
-            .Where(e => exerciseIds.Contains(e.Id))
-            .Select(e => e.Id)
-            .ToListAsync(ct);
-        var unknownIds = exerciseIds.Except(knownIds).ToList();
-        if (unknownIds.Count > 0)
-            return new ValidationErrors().Add("sets", $"Unknown exercise id(s): {string.Join(", ", unknownIds)}.").ToResult();
+        if (await CheckExercisesAsync(db, userId.Value, req, ct) is { } exerciseError) return exerciseError;
 
         // 3. Einheit + Sätze in EINEM SaveChanges speichern -> atomar (vorher zwei Schritte, Teil-Speicherung möglich).
         var workout = new Workout
@@ -53,16 +47,10 @@ public static class WorkoutEndpoints
             WorkoutType = req.WorkoutType!,
             Date = (req.Date ?? now).UtcDateTime,
             DurationSeconds = req.DurationSeconds,
+            SessionRpe = req.SessionRpe,
+            Notes = NormalizeNotes(req.Notes),
             ClientId = req.ClientId,
-            Sets = req.Sets!.Select((s, i) => new WorkoutSet
-            {
-                SetNumber = i + 1,
-                ExerciseId = s.ExerciseId,
-                Weight = s.Weight,
-                Reps = s.Reps,
-                Distance = s.Distance,
-                Time = s.Time
-            }).ToList()
+            Sets = MapSets(req)
         };
 
         db.Workouts.Add(workout);
@@ -107,6 +95,35 @@ public static class WorkoutEndpoints
         return workout is null ? Results.NotFound() : Results.Ok(workout);
     }
 
+    /// <summary>Ersetzt eine bestehende Einheit vollständig (Metadaten + alle Sätze) - z. B. nach einer Korrektur.</summary>
+    private static async Task<IResult> Update(int id, CreateWorkoutRequest req, HttpContext http, AppDbContext db, TimeProvider time, CancellationToken ct)
+    {
+        var userId = http.User.GetUserId();
+        if (userId is null) return Results.Unauthorized();
+
+        var errors = req.Validate(time.GetUtcNow());
+        if (errors.HasErrors) return errors.ToResult();
+
+        var workout = await db.Workouts.Include(w => w.Sets).FirstOrDefaultAsync(w => w.Id == id && w.UserId == userId, ct);
+        if (workout is null) return Results.NotFound();
+
+        if (await CheckExercisesAsync(db, userId.Value, req, ct) is { } exerciseError) return exerciseError;
+
+        workout.WorkoutType = req.WorkoutType!;
+        if (req.Date is { } date) workout.Date = date.UtcDateTime;
+        workout.DurationSeconds = req.DurationSeconds;
+        workout.SessionRpe = req.SessionRpe;
+        workout.Notes = NormalizeNotes(req.Notes);
+
+        // Sätze komplett ersetzen - einfacher und eindeutiger als ein Abgleich einzelner Sätze.
+        db.WorkoutSets.RemoveRange(workout.Sets);
+        workout.Sets = MapSets(req);
+        await db.SaveChangesAsync(ct);
+
+        var updated = await Project(db.Workouts.AsNoTracking().Where(w => w.Id == id)).FirstAsync(ct);
+        return Results.Ok(updated);
+    }
+
     private static async Task<IResult> Delete(int id, HttpContext http, AppDbContext db, CancellationToken ct)
     {
         var userId = http.User.GetUserId();
@@ -115,6 +132,35 @@ public static class WorkoutEndpoints
         // Fremde Einheiten liefern 404 statt 403 - so lässt sich nicht herausfinden, welche IDs existieren.
         var deleted = await db.Workouts.Where(w => w.Id == id && w.UserId == userId).ExecuteDeleteAsync(ct);
         return deleted == 0 ? Results.NotFound() : Results.NoContent();
+    }
+
+    private static List<WorkoutSet> MapSets(CreateWorkoutRequest req) =>
+        req.Sets!.Select((s, i) => new WorkoutSet
+        {
+            SetNumber = i + 1,
+            ExerciseId = s.ExerciseId,
+            Weight = s.Weight,
+            Reps = s.Reps,
+            Distance = s.Distance,
+            Time = s.Time,
+            Rpe = s.Rpe,
+            IsWarmup = s.IsWarmup
+        }).ToList();
+
+    private static string? NormalizeNotes(string? notes) =>
+        string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+
+    private static async Task<IResult?> CheckExercisesAsync(AppDbContext db, int userId, CreateWorkoutRequest req, CancellationToken ct)
+    {
+        var exerciseIds = req.Sets!.Select(s => s.ExerciseId).Distinct().ToList();
+        var knownIds = await db.Exercises.VisibleTo(userId)
+            .Where(e => exerciseIds.Contains(e.Id))
+            .Select(e => e.Id)
+            .ToListAsync(ct);
+        var unknownIds = exerciseIds.Except(knownIds).ToList();
+        return unknownIds.Count > 0
+            ? new ValidationErrors().Add("sets", $"Unknown exercise id(s): {string.Join(", ", unknownIds)}.").ToResult()
+            : null;
     }
 
     private static Task<int?> FindByClientId(AppDbContext db, int userId, Guid clientId, CancellationToken ct) =>
@@ -130,6 +176,8 @@ public static class WorkoutEndpoints
             w.Date,
             w.WorkoutType,
             w.DurationSeconds,
+            w.SessionRpe,
+            w.Notes,
             w.Sets
                 .OrderBy(s => s.SetNumber)
                 .Select(s => new WorkoutSetResponse(
@@ -141,6 +189,8 @@ public static class WorkoutEndpoints
                     s.Weight,
                     s.Reps,
                     s.Distance,
-                    s.Time))
+                    s.Time,
+                    s.Rpe,
+                    s.IsWarmup))
                 .ToList()));
 }

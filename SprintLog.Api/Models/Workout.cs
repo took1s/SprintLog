@@ -13,6 +13,12 @@ public class Workout
     /// <summary>Dauer der Einheit in Sekunden (optional).</summary>
     public int? DurationSeconds { get; set; }
 
+    /// <summary>Session-RPE (1-10, Borg CR-10). Mit der Dauer ergibt sich die Trainingslast (sRPE × Minuten).</summary>
+    public int? SessionRpe { get; set; }
+
+    /// <summary>Freitext-Notiz zur Einheit (max. 500 Zeichen).</summary>
+    public string? Notes { get; set; }
+
     /// <summary>Vom Client erzeugte ID - macht das Speichern idempotent (doppelte Sync-Versuche erzeugen keine Duplikate).</summary>
     public Guid? ClientId { get; set; }
 
