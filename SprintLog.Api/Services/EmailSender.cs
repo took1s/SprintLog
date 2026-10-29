@@ -72,7 +72,7 @@ public static class EmailTemplates
 
     private static EmailMessage Build(string to, string subject, string text, string username, string title, string intro, string button, string link, string footer)
     {
-        var e = System.Net.WebUtility.HtmlEncode;
+        static string e(string value) => System.Net.WebUtility.HtmlEncode(value);
         var html = $"""
             <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;color:#0f172a">
               <h2 style="margin:0 0 12px">{e(title)}</h2>
