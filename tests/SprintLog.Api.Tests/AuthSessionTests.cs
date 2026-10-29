@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -17,7 +18,7 @@ public class AuthSessionTests
 
     public AuthSessionTests(SprintLogApiFactory factory) => _factory = factory;
 
-    private BrowserSession NewBrowser(SprintLogApiFactory? factory = null) =>
+    private BrowserSession NewBrowser(WebApplicationFactory<Program>? factory = null) =>
         new((factory ?? _factory).CreateClient(new() { HandleCookies = false }));
 
     private static string NewName() => "web_" + Guid.NewGuid().ToString("N")[..10];

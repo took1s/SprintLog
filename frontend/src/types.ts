@@ -121,8 +121,10 @@ export interface AuthUser {
   username: string;
 }
 
+/** Antwort auf Login/Registrierung/Reset. Die Browser-App bekommt keinen Token (Sitzung im httpOnly-Cookie). */
 export interface AuthResult extends AuthUser {
-  token: string;
+  token?: string | null;
+  recoveryCodes?: string[] | null;
 }
 
 export interface Profile {
@@ -131,6 +133,9 @@ export interface Profile {
   createdAt: string;
   workoutCount: number;
   customExerciseCount: number;
+  email: string | null;
+  emailVerified: boolean;
+  recoveryCodesRemaining: number;
 }
 
 export interface WorkoutChanges {

@@ -16,7 +16,6 @@ function json(body: unknown, status = 200) {
 /** Angemeldeter Store ohne echten Server. */
 function signedIn() {
   const app = useAppStore();
-  app.token = 'test-token';
   app.user = { userId: 7, username: 'tester' };
   app.exercises = [bench, sprint];
   return app;

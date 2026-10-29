@@ -86,7 +86,7 @@ public sealed class SprintLogApiFactory : WebApplicationFactory<Program>, IAsync
         response.EnsureSuccessStatusCode();
         var token = (await response.Content.ReadFromJsonAsync<TokenResponse>(Json))!;
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
-        return new TestUser(client, token.UserId, token.Username, password, token.Token);
+        return new TestUser(client, token.UserId, token.Username, password, token.Token!);
     }
 }
 

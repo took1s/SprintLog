@@ -70,7 +70,7 @@ Live-Demo: https://sprintlog-api.onrender.com/
 | --- | --- |
 | Backend | C# / .NET 8 Minimal API, Entity Framework Core 8 |
 | Datenbank | PostgreSQL (Supabase in Produktion, Docker lokal) |
-| Auth | JWT (HS256, Issuer/Audience-Prüfung), BCrypt, Rate Limiting |
+| Auth | httpOnly-Cookies (Access-JWT 15 min + rotierender Refresh-Token), Bearer-JWT für API-Clients, BCrypt, Rate Limiting |
 | Frontend | Vue 3 (Single-File Components, `<script setup>`), TypeScript (strict), Pinia, Vite, Tailwind CSS, Chart.js |
 | Tests | xUnit + WebApplicationFactory + Testcontainers (echtes PostgreSQL), Vitest, vue-tsc, Playwright (E2E) |
 | CI/CD | GitHub Actions, Docker, Render |
@@ -97,6 +97,15 @@ Ablauf beim Speichern einer Einheit:
 4. Validierungsfehler markieren den Eintrag als fehlgeschlagen (sichtbar in der Historie mit "Retry"), Netzwerk- und Serverfehler werden später automatisch wiederholt.
 
 Laden der Historie (Delta-Sync): Beim ersten Start holt die App alle Einheiten seitenweise über `GET /api/workouts/changes` und speichert sie lokal. Danach fragt sie nur noch `?since=<syncToken>` ab und bekommt neue/bearbeitete Einheiten plus die IDs gelöschter Einheiten (Grabsteine in `DeletedWorkouts`). Auch bei hunderten Einheiten wird so pro Start nur übertragen, was sich geändert hat. Der Token überlappt um 2 Minuten, damit keine Änderung aus einer gerade laufenden Transaktion verloren geht; das Zusammenführen per ID ist idempotent.
+
+Anmeldung und Sitzung:
+
+- Die Browser-App bekommt keine Tokens zu sehen: Access-Token (JWT, 15 min, Pfad `/api`) und Refresh-Token (30 Tage gleitend, Pfad `/api/auth`) liegen in `httpOnly`-, `SameSite=Strict`-Cookies. Ein XSS-Angriff kann so keine Sitzung stehlen.
+- Bei `401` erneuert der Client die Sitzung automatisch (ein Refresh für alle parallelen Requests) und wiederholt den Request. Jeder Refresh rotiert den Refresh-Token; wird ein bereits ersetzter Token später erneut benutzt (Diebstahl), widerruft der Server die ganze Sitzung.
+- CSRF: Schreibende Requests mit Cookie zählen nur mit dem Header `X-Requested-With: SprintLog`, den eine fremde Seite ohne CORS-Freigabe nicht setzen kann.
+- Jeder Token trägt eine Token-Version. Passwort ändern/zurücksetzen und "Überall abmelden" erhöhen sie - alte Tokens sind sofort ungültig.
+- API-Clients ohne diesen Header (Swagger, Skripte, Tests) bekommen wie bisher einen Bearer-Token im Body.
+- Passwort vergessen: 10 Wiederherstellungscodes bei der Registrierung (einmal sichtbar, jederzeit neu erzeugbar) und optional ein Reset-Link an die bestätigte E-Mail (Brevo). Codes und Links werden nur als HMAC gespeichert.
 
 Datenisolation: Jeder Endpunkt liest die Nutzer-ID aus dem JWT. Fremde Einheiten und Übungen liefern `404` (nicht `403`), damit keine IDs erraten werden können.
 
@@ -155,6 +164,11 @@ Statt der Mock-API kann auch die echte API laufen (`dotnet run`, ebenfalls Port 
 | `Database__MigrateOnStartup` | nein | `true` = Migrationen beim Start anwenden (Standard: `false`) |
 | `Swagger__Enabled` | nein | Swagger auch außerhalb von Development anzeigen |
 | `RateLimiting__AuthPermitLimit` | nein | Login-/Registrierungsversuche pro Minute und IP (Standard: 10) |
+| `BREVO_API_KEY` | nein | API-Key von [Brevo](https://www.brevo.com) für E-Mails (Passwort-Reset). Ohne Key: nur Wiederherstellungscodes |
+| `Email__From` | mit Brevo | Absenderadresse (in Brevo als Sender bestätigt) |
+| `Email__FromName` | nein | Absendername (Standard: SprintLog) |
+| `App__PublicUrl` | mit Brevo | Öffentliche URL für Links in E-Mails, z. B. `https://sprintlog-api.onrender.com` |
+| `Jwt__AccessTokenMinutes` / `Jwt__RefreshTokenDays` | nein | Lebensdauer der Cookie-Sitzung (Standard: 15 min / 30 Tage) |
 
 In der Cloud (Render) werden die Werte im Dashboard unter *Environment* hinterlegt.
 
@@ -229,10 +243,18 @@ Alle Endpunkte außer Registrierung, Login und Health erfordern `Authorization: 
 
 | Methode | Pfad | Beschreibung |
 | --- | --- | --- |
-| POST | `/api/auth/register` | Konto anlegen, liefert Token |
-| POST | `/api/auth/login` | Login, liefert Token |
-| POST | `/api/auth/refresh` | Neuen Token ausstellen |
-| GET | `/api/auth/me` | Profil und Kennzahlen |
+| POST | `/api/auth/register` | Konto anlegen; Browser: Cookie-Sitzung, sonst Bearer-Token; liefert 10 Wiederherstellungscodes |
+| POST | `/api/auth/login` | Login (Browser: Cookies, API-Client: Token) |
+| POST | `/api/auth/refresh` | Sitzung erneuern (Refresh-Cookie wird rotiert) bzw. neuen Bearer-Token ausstellen |
+| POST | `/api/auth/logout` \| `logout-all` | Dieses Gerät / alle Geräte abmelden |
+| GET | `/api/auth/me` | Profil, E-Mail-Status, verbleibende Wiederherstellungscodes |
+| GET | `/api/auth/options` | Ist der E-Mail-Reset verfügbar? |
+| POST | `/api/auth/password` | Passwort ändern (aktuelles Passwort nötig, andere Geräte werden abgemeldet) |
+| POST | `/api/auth/recovery-codes` | Neue Wiederherstellungscodes (ersetzt alle alten) |
+| POST | `/api/auth/recover` | Neues Passwort mit Wiederherstellungscode |
+| PUT | `/api/auth/email` | E-Mail setzen (Bestätigungslink) oder entfernen |
+| POST | `/api/auth/email/verify` | E-Mail bestätigen (Token aus dem Link) |
+| POST | `/api/auth/forgot-password` \| `reset-password` | Reset-Link anfordern (Antwort immer gleich) / neues Passwort setzen |
 | DELETE | `/api/auth/account` | Konto inkl. aller Daten löschen (Passwort im Body) |
 | GET | `/api/exercises?category=` | Standardkatalog + eigene Übungen |
 | POST | `/api/exercises` | Eigene Übung anlegen |
