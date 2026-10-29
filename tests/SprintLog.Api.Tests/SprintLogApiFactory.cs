@@ -29,9 +29,21 @@ public sealed class SprintLogApiFactory : WebApplicationFactory<Program>, IAsync
 
     public string ConnectionString => _postgres.GetConnectionString();
 
+    private static readonly string WebRoot = CreateWebRoot();
+
+    private static string CreateWebRoot()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "sprintlog-tests-wwwroot");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "index.html"), "<!DOCTYPE html><title>SprintLog</title><div id=\"app\"></div>");
+        return dir;
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        // Eigenes wwwroot: Die API-Tests hängen nicht vom Frontend-Build (npm run build) ab.
+        builder.UseWebRoot(WebRoot);
         builder.ConfigureAppConfiguration(config => config.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["ConnectionStrings:DefaultConnection"] = _postgres.GetConnectionString(),

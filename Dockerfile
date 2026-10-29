@@ -1,4 +1,13 @@
-# ---------- Build ----------
+# ---------- Frontend (Vue 3 + TypeScript, Vite) ----------
+FROM node:22-alpine AS web
+WORKDIR /src
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci --no-audit --no-fund
+COPY frontend/ frontend/
+# Typprüfung + Build -> /src/SprintLog.Api/wwwroot
+RUN npm run build
+
+# ---------- Backend ----------
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
@@ -8,6 +17,7 @@ COPY SprintLog.Api/SprintLog.Api.csproj SprintLog.Api/
 RUN dotnet restore SprintLog.Api/SprintLog.Api.csproj
 
 COPY SprintLog.Api/ SprintLog.Api/
+COPY --from=web /src/SprintLog.Api/wwwroot SprintLog.Api/wwwroot
 RUN dotnet publish SprintLog.Api/SprintLog.Api.csproj -c Release -o /app/publish --no-restore /p:UseAppHost=false
 
 # ---------- Runtime ----------

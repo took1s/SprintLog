@@ -1,27 +1,41 @@
 {
   "name": "sprintlog-frontend",
   "private": true,
-  "version": "3.0.0",
-  "description": "Build-Tooling f\u00fcr das SprintLog-Frontend (Tailwind-Build, Vendor-Libs, Unit-Tests). Die App selbst l\u00e4uft ohne Bundler.",
+  "version": "4.0.0",
+  "description": "SprintLog-Frontend: Vue 3 + TypeScript (SFC), gebaut mit Vite nach SprintLog.Api/wwwroot.",
   "type": "module",
   "scripts": {
-    "build:css": "tailwindcss -c tailwind.config.cjs -i ./frontend/tailwind.css -o ./SprintLog.Api/wwwroot/css/app.css --minify",
-    "watch:css": "tailwindcss -c tailwind.config.cjs -i ./frontend/tailwind.css -o ./SprintLog.Api/wwwroot/css/app.css --watch",
-    "vendor": "node ./frontend/copy-vendor.mjs",
-    "build": "npm run vendor && npm run build:css",
-    "test": "node --test \"frontend/tests/*.test.js\"",
+    "dev": "vite --config frontend/vite.config.ts",
+    "build": "npm run typecheck && vite build --config frontend/vite.config.ts",
+    "typecheck": "vue-tsc -b frontend/tsconfig.json",
+    "test": "vitest run --config frontend/vite.config.ts",
+    "test:watch": "vitest --config frontend/vite.config.ts",
     "mock": "node ./frontend/dev/mock-api.mjs",
     "mock:demo": "node ./frontend/dev/mock-api.mjs --demo",
     "test:e2e": "node --test frontend/e2e/app.e2e.cjs"
   },
   "devDependencies": {
-    "@fontsource-variable/inter": "5.1.1",
-    "chart.js": "4.4.7",
+    "@types/node": "22.20.5",
+    "@vitejs/plugin-vue": "6.0.10",
+    "@vue/test-utils": "2.5.1",
+    "@vue/tsconfig": "0.9.1",
+    "happy-dom": "21.0.0",
     "playwright": "1.55.0",
+    "postcss": "8.5.29",
     "tailwindcss": "3.4.17",
-    "vue": "3.5.13"
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.3",
+    "vue-tsc": "3.3.12"
   },
   "engines": {
     "node": ">=22"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "5.1.1",
+    "@vue/devtools-api": "8.2.1",
+    "chart.js": "4.4.7",
+    "pinia": "4.0.3",
+    "vue": "3.5.43"
   }
 }

@@ -24,6 +24,8 @@ const seed = [...seedSource.matchAll(/Ex\((\d+), "([^"]+)", "([^"]+)", "([^"]+)"
 
 // Plan-Vorlagen aus SprintLog.Api/Services/ProgramTemplates.cs (W = Kraft, Run = Strecke, Hold = Dauer)
 const templateSource = readFileSync(join(root, 'SprintLog.Api', 'Services', 'ProgramTemplates.cs'), 'utf8');
+// Gleiche Content-Security-Policy wie die echte API -> E2E-Tests finden CSP-Verstöße (Konsolenfehler).
+const CSP = JSON.parse(readFileSync(join(root, 'SprintLog.Api', 'appsettings.json'), 'utf8')).Security.ContentSecurityPolicy;
 function parseItem(kind, args) {
   const named = Object.fromEntries([...args.matchAll(/(\w+):\s*([\d.]+)/g)].map(([, k, v]) => [k, Number(v)]));
   const nums = args.replace(/\w+:\s*[\d.]+/g, '').split(',').map((x) => x.trim()).filter(Boolean).map(Number);
@@ -313,7 +315,7 @@ function serveStatic(res, url) {
   if (!file.startsWith(wwwroot) || !existsSync(file) || statSync(file).isDirectory()) {
     res.writeHead(404); res.end('Not found'); return;
   }
-  res.writeHead(200, { 'Content-Type': MIME[extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-cache' });
+  res.writeHead(200, { 'Content-Type': MIME[extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-cache', 'Content-Security-Policy': CSP });
   res.end(readFileSync(file));
 }
 

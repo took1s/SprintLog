@@ -17,7 +17,8 @@ before(async () => {
     server.stdout.on('data', (d) => d.toString().includes('mock API') && resolve());
     server.on('exit', (code) => reject(new Error(`mock exited ${code}`)));
   });
-  browser = await chromium.launch();
+  // CHROMIUM_PATH: optional vorhandenes Chromium nutzen (sonst das von "npx playwright install").
+  browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 });
 
 after(async () => {
@@ -36,6 +37,10 @@ async function api(method, url, token, body) {
 
 async function newPage() {
   const context = await browser.newContext({ viewport: { width: 420, height: 900 } });
+  await context.addInitScript(() => {
+    window.__cspViolations = [];
+    document.addEventListener('securitypolicyviolation', (e) => window.__cspViolations.push(`${e.violatedDirective}: ${e.blockedURI}`));
+  });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -86,6 +91,15 @@ test('register, log gym + field sets, finish -> stored on server with client dat
   assert.equal(history[0].sets[1].distance, 40);
   assert.equal(history[0].sets[1].time, 5.1);
   assert.ok(history[0].clientId, 'clientId sent for idempotency');
+
+  // Auswertungen inkl. Chart.js laufen unter der strikten CSP (Verstöße wären Konsolenfehler).
+  await page.click('button.subtab:text-is("Overview")');
+  await page.waitForSelector('canvas[aria-label="Weekly totals chart"]');
+  await page.click('button.subtab:text-is("Progress")');
+  await page.waitForSelector('canvas[aria-label="Progress chart"]');
+  await page.click('button.subtab:text-is("Calendar")');
+  await page.waitForSelector('text=Activity');
+  assert.equal(await page.evaluate(() => window.__cspViolations?.length ?? 0), 0, 'no CSP violations');
   assert.deepEqual(errors, []);
   await context.close();
 });

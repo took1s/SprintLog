@@ -59,7 +59,7 @@ jobs:
           PY
 
   frontend:
-    name: Frontend (build check, unit + E2E tests)
+    name: Frontend (type check, build, unit + E2E tests)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -72,11 +72,8 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Build CSS + vendor files
+      - name: Type check + build (vue-tsc, Vite)
         run: npm run build
-
-      - name: Committed build output is up to date
-        run: git diff --exit-code -- SprintLog.Api/wwwroot || (echo "::error::Run 'npm run build' and commit the result." && exit 1)
 
       - name: Unit tests
         run: npm test

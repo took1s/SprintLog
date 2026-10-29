@@ -7,7 +7,10 @@
 .vs/
 .vscode/
 tests/
-frontend/
+frontend/e2e/
+frontend/dev/
+# lokaler Frontend-Build - im Image wird neu gebaut
+SprintLog.Api/wwwroot/
 database/
 *.md
 .env
