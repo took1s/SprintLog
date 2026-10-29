@@ -1,6 +1,7 @@
 // Trainingspläne: nächster Tag, Zielvorgaben mit Double Progression, Belastungssteuerung (ACWR).
 // Reine Funktionen ohne DOM/Netzwerk -> unit-getestet (tests/program.test.ts).
 
+import { t, tDynamic } from '../i18n';
 import { exerciseKey, isWorkingSet, sessionLoad, roundTo } from './analytics';
 import type { Exercise, ProgramDay, ProgramExercise, TrainingProgram, Workout, WorkoutSet } from '../types';
 
@@ -77,8 +78,17 @@ export interface TargetSuggestion {
   reps?: number;
   distance?: number | null;
   time?: number | null;
+  /** Englischer Text (Referenz, u. a. für Tests); angezeigt wird suggestionNote() in der aktuellen Sprache. */
   note: string;
+  noteKey: SuggestionKey;
+  noteParams?: Record<string, string | number>;
 }
+
+export type SuggestionKey = 'reference' | 'sprintNew' | 'holdMore' | 'hold' | 'pickWeight' | 'repRange' | 'addWeight' | 'topReached' | 'sameWeight';
+
+/** Hinweis einer Zielvorgabe in der aktuellen Sprache. */
+export const suggestionNote = (s: Pick<TargetSuggestion, 'note' | 'noteKey' | 'noteParams'>): string =>
+  tDynamic(`plan.suggest.${s.noteKey}`, s.note, s.noteParams);
 
 /**
  * Zielvorgabe für die nächste Einheit (Double Progression):
@@ -98,6 +108,8 @@ export function suggestTarget(px: ProgramExercise, workouts: readonly Workout[] 
       distance: px.distance ?? last?.sets[0]?.distance ?? null,
       time: best ?? null,
       note: best ? `Last best ${best} s over ${px.distance} m` : 'Run at full speed, full rest between reps',
+      noteKey: best ? 'reference' : 'sprintNew',
+      noteParams: best ? { time: best, distance: px.distance ?? '' } : undefined,
     };
   }
 
@@ -105,7 +117,7 @@ export function suggestTarget(px: ProgramExercise, workouts: readonly Workout[] 
     const lastMin = last ? Math.min(...last.sets.map((s) => s.time ?? 0)) : 0;
     const allHit = !!last && last.sets.length >= px.sets && lastMin >= (px.time ?? 0);
     const t = allHit ? Math.max(px.time ?? 0, lastMin) + 5 : px.time ?? lastMin;
-    return { kind: allHit ? 'progress' : last ? 'repeat' : 'new', time: t, note: allHit ? '+5 s - all holds completed last time' : `Hold ${t} s` };
+    return { kind: allHit ? 'progress' : last ? 'repeat' : 'new', time: t, note: allHit ? '+5 s - all holds completed last time' : `Hold ${t} s`, noteKey: allHit ? 'holdMore' : 'hold', noteParams: { time: t } };
   }
 
   const min = px.repsMin ?? px.repsMax ?? 8;
@@ -113,8 +125,8 @@ export function suggestTarget(px: ProgramExercise, workouts: readonly Workout[] 
   const step = px.progressionStep ?? 2.5;
   if (!last) {
     return step > 0
-      ? { kind: 'new', weight: null, reps: max, note: `Pick a weight for ${max} reps with ~2 reps in reserve` }
-      : { kind: 'new', weight: 0, reps: min, note: `${min}-${max} reps per set` };
+      ? { kind: 'new', weight: null, reps: max, note: `Pick a weight for ${max} reps with ~2 reps in reserve`, noteKey: 'pickWeight', noteParams: { reps: max } }
+      : { kind: 'new', weight: 0, reps: min, note: `${min}-${max} reps per set`, noteKey: 'repRange', noteParams: { min, max } };
   }
 
   const topWeight = Math.max(...last.sets.map((s) => s.weight ?? 0));
@@ -123,23 +135,23 @@ export function suggestTarget(px: ProgramExercise, workouts: readonly Workout[] 
   const allHitTop = topSets.length >= px.sets && weakest >= max;
 
   if (allHitTop && step > 0) {
-    return { kind: 'progress', weight: roundTo(topWeight + step, 0.25), reps: min, note: `+${step} kg - you hit ${max} reps on all sets` };
+    return { kind: 'progress', weight: roundTo(topWeight + step, 0.25), reps: min, note: `+${step} kg - you hit ${max} reps on all sets`, noteKey: 'addWeight', noteParams: { step, max } };
   }
   if (allHitTop) {
-    return { kind: 'progress', weight: topWeight, reps: max, note: 'Top of the range reached - add load or a harder variation' };
+    return { kind: 'progress', weight: topWeight, reps: max, note: 'Top of the range reached - add load or a harder variation', noteKey: 'topReached' };
   }
   const reps = Math.min(max, Math.max(min, weakest + 1));
-  return { kind: 'repeat', weight: topWeight, reps, note: `Same weight, aim for ${reps} reps (range ${min}-${max})` };
+  return { kind: 'repeat', weight: topWeight, reps, note: `Same weight, aim for ${reps} reps (range ${min}-${max})`, noteKey: 'sameWeight', noteParams: { reps, min, max } };
 }
 
 /** Kurzform einer Vorgabe: "4 × 5-8 · RPE 8 · 2:00 rest" */
 export function prescriptionText(px: ProgramExercise): string {
   const parts: string[] = [];
-  if (px.trackingType === 'DistanceTime') parts.push(`${px.sets} × ${px.distance} m`);
-  else if (px.trackingType === 'Duration') parts.push(`${px.sets} × ${px.time} s`);
+  if (px.trackingType === 'DistanceTime') parts.push(`${px.sets} × ${px.distance} ${t('units.m')}`);
+  else if (px.trackingType === 'Duration') parts.push(`${px.sets} × ${px.time} ${t('units.s')}`);
   else parts.push(`${px.sets} × ${px.repsMin === px.repsMax || px.repsMax == null ? px.repsMin ?? px.repsMax : `${px.repsMin}-${px.repsMax}`}`);
-  if (px.targetRpe) parts.push(`RPE ${px.targetRpe}`);
-  if (px.restSeconds) parts.push(`${Math.floor(px.restSeconds / 60)}:${String(px.restSeconds % 60).padStart(2, '0')} rest`);
+  if (px.targetRpe) parts.push(t('plan.prescription.rpe', { rpe: px.targetRpe }));
+  if (px.restSeconds) parts.push(t('plan.prescription.rest', { time: `${Math.floor(px.restSeconds / 60)}:${String(px.restSeconds % 60).padStart(2, '0')}` }));
   return parts.join(' · ');
 }
 

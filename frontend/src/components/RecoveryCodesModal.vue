@@ -4,6 +4,7 @@ import { ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
 import { useUiStore } from '@/stores/ui';
+import { t } from '@/i18n';
 
 const app = useAppStore();
 const { recoveryCodes, user } = storeToRefs(app);
@@ -14,8 +15,8 @@ const saved = ref(false);
 watch(recoveryCodes, () => { saved.value = false; });
 
 const asText = () => [
-  `SprintLog recovery codes for "${user.value?.username ?? ''}" (${new Date().toLocaleDateString()})`,
-  'Each code can be used once to set a new password if you forget yours.',
+  t('codes.fileHeader', { name: user.value?.username ?? '', date: new Date().toLocaleDateString() }),
+  t('codes.fileInfo'),
   '',
   ...(recoveryCodes.value ?? []),
 ].join('\n');
@@ -23,9 +24,9 @@ const asText = () => [
 async function copy() {
   try {
     await navigator.clipboard.writeText(asText());
-    toast('Codes copied.', 'success');
+    toast(t('codes.copied'), 'success');
   } catch {
-    toast('Copying is not allowed here - use Download.', 'error');
+    toast(t('codes.copyBlocked'), 'error');
   }
 }
 
@@ -46,22 +47,19 @@ function download() {
   <transition name="fade">
     <div v-if="recoveryCodes" class="fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-ink/90 p-4 backdrop-blur-md">
       <div class="glass-panel modal-panel w-full max-w-sm rounded-[2rem] border border-yellow-400/30 p-6" role="dialog" aria-modal="true" aria-labelledby="codes-title">
-        <h3 id="codes-title" class="mb-1 text-2xl font-black text-white">Recovery <span class="text-yellow-400">codes</span></h3>
-        <p class="mb-5 text-xs leading-relaxed text-slate-300">
-          If you forget your password, one of these codes lets you set a new one. Each code works once.
-          Store them somewhere safe (password manager, screenshot, paper) - they are shown only now.
-        </p>
+        <h3 id="codes-title" class="mb-1 text-2xl font-black text-white">{{ t('codes.title') }} <span class="text-yellow-400">{{ t('codes.titleAccent') }}</span></h3>
+        <p class="mb-5 text-xs leading-relaxed text-slate-300">{{ t('codes.intro') }}</p>
         <ol class="mb-5 grid grid-cols-2 gap-2" data-test="recovery-codes">
           <li v-for="code in recoveryCodes" :key="code" class="rounded-lg border border-white/10 bg-black/40 px-2 py-2 text-center font-mono text-sm font-bold tracking-wider text-white">{{ code }}</li>
         </ol>
         <div class="mb-4 grid grid-cols-2 gap-2">
-          <button type="button" @click="copy" class="cyber-outline-btn rounded-xl py-2.5 text-[10px] font-bold uppercase tracking-widest">Copy</button>
-          <button type="button" @click="download" class="cyber-outline-btn rounded-xl py-2.5 text-[10px] font-bold uppercase tracking-widest">Download .txt</button>
+          <button type="button" @click="copy" class="cyber-outline-btn rounded-xl py-2.5 text-[10px] font-bold uppercase tracking-widest">{{ t('common.copy') }}</button>
+          <button type="button" @click="download" class="cyber-outline-btn rounded-xl py-2.5 text-[10px] font-bold uppercase tracking-widest">{{ t('codes.download') }}</button>
         </div>
         <label class="mb-4 flex cursor-pointer items-center gap-3 rounded-xl border border-white/5 bg-black/20 p-3 text-xs text-slate-200">
-          <input v-model="saved" type="checkbox" class="h-5 w-5 accent-[#facc15]"> I saved the codes somewhere safe
+          <input v-model="saved" type="checkbox" class="h-5 w-5 accent-[#facc15]"> {{ t('codes.saved') }}
         </label>
-        <button type="button" :disabled="!saved" @click="dismissRecoveryCodes" class="cyber-btn w-full rounded-xl py-3 font-bold">Continue</button>
+        <button type="button" :disabled="!saved" @click="dismissRecoveryCodes" class="cyber-btn w-full rounded-xl py-3 font-bold">{{ t('common.continue') }}</button>
       </div>
     </div>
   </transition>

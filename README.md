@@ -62,6 +62,7 @@ Live-Demo: https://sprintlog-api.onrender.com/
 - Idempotente Synchronisation über eine Client-ID: abgebrochene oder doppelte Sync-Versuche erzeugen keine Duplikate.
 - Export als CSV (Excel-kompatibel) und JSON, Löschen des Accounts inkl. aller Daten (DSGVO Art. 17 und 20).
 - Keine externen CDNs: Vue, Chart.js, Tailwind-CSS und die Schrift werden mitgebaut und selbst ausgeliefert (offline-fähig, keine Datenübertragung an Dritte).
+- Oberfläche auf Englisch, Deutsch und Russisch: Sprache wird aus dem Browser erkannt und lässt sich in den Einstellungen wechseln. Standard-Übungen, Vorlagen und Technik-Hinweise sind übersetzt, Zahlen und Datum folgen der Sprache (z. B. `1,5 kg`). Russische Pluralformen über `Intl.PluralRules`.
 - Strikte Content-Security-Policy (`script-src 'self'`, kein `unsafe-eval`, kein `unsafe-inline`): Templates werden zur Build-Zeit kompiliert.
 
 ## Tech-Stack
@@ -217,7 +218,7 @@ dotnet ef migrations script --idempotent -o ../database/migrate.sql
 | Was | Wie | Wo |
 | --- | --- | --- |
 | Migrationen | Werden beim Start automatisch angewendet (`appsettings.Production.json`: `Database:MigrateOnStartup = true`). Schlägt eine Migration fehl, startet die neue Version nicht und Render behält die alte. | Render-Deploy |
-| Keep-alive | Täglicher Aufruf von `/health` - weckt Render und verhindert, dass Supabase das Free-Projekt nach 7 Tagen Inaktivität pausiert. | [`keepalive.yml`](.github/workflows/keepalive.yml) |
+| Keep-alive | Aufruf von `/health` alle 10 min zwischen 5 und 22 Uhr UTC: hält Render Free tagsüber wach (kein Kaltstart von ~1 min) und verhindert, dass Supabase das Free-Projekt pausiert. Nachts nicht, damit die 750 Free-Stunden des Render-Workspaces auch für andere Services reichen. | [`keepalive.yml`](.github/workflows/keepalive.yml) |
 | Backup | Nächtlicher `pg_dump` (PostgreSQL 17), mit AES-256 verschlüsselt, 30 Tage als Artefakt aufbewahrt. | [`backup.yml`](.github/workflows/backup.yml) |
 | Health-Check | `GET /health` prüft API und Datenbank. In Render als *Health Check Path* eintragen. | Render-Settings |
 
@@ -303,6 +304,7 @@ SprintLog/
 - **Doppelte Einheiten bei instabiler Verbindung.** Kam die Antwort des Servers nicht an, wurde erneut gesendet. Lösung: Client-ID + Unique-Index, der Server antwortet idempotent.
 - **App funktionierte offline nicht vollständig.** Tailwind und Chart.js kamen vom CDN und waren offline nicht verfügbar. Lösung: Alles wird mit Vite gebaut und selbst ausgeliefert; der Service Worker lädt die gebauten Dateien (mit Content-Hash) beim Installieren vor.
 - **Keine strikte CSP möglich.** Vue kompilierte die Templates im Browser (`new Function`), das verlangt `unsafe-eval`. Lösung: Umstieg auf Vite + Single-File Components; die Templates werden beim Build kompiliert und die API sendet `script-src 'self'` ohne Ausnahmen. Die E2E-Tests laufen mit derselben Policy und schlagen bei jedem Verstoß fehl.
+- **Übersetzungen ohne Laufzeit-Compiler.** Übliche i18n-Bibliotheken kompilieren Nachrichten zur Laufzeit, was mit der strikten CSP kollidiert. Lösung: eigenes, kleines i18n-Modul; die Schlüssel sind TypeScript-Typen aus den englischen Texten, sodass ein fehlender oder falsch geschriebener Schlüssel in DE/RU schon beim Build auffällt. Ein Test prüft zusätzlich, dass alle Sprachen dieselben Platzhalter haben und jede Übung und Vorlage des Servers übersetzt ist.
 - **Feldübungen hatten keine Eingabefelder.** Für Distanz/Zeit gab es im Dialog keine Felder, außerdem waren Kraftübungen in der Kategorie "Football" (z. B. Trap Bar Deadlift) falsch als Zeitübung behandelt. Lösung: `TrackingType` pro Übung in der Datenbank.
 
 ## Ausblick

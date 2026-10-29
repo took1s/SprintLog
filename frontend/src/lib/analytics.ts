@@ -147,7 +147,7 @@ const chronological = <T extends Pick<Workout, 'date' | 'id'>>(workouts: readonl
   [...(workouts ?? [])].sort((a, b) => time(a.date) - time(b.date) || (a.id ?? 0) - (b.id ?? 0));
 
 export type IndexedSet = WorkoutSet & { index: number };
-export interface SetGroup { key: string; name: string | undefined; trackingType: TrackingTypeValue; sets: IndexedSet[] }
+export interface SetGroup { key: string; exerciseId: number | null; name: string | undefined; trackingType: TrackingTypeValue; sets: IndexedSet[] }
 
 /** Gruppiert die Sätze einer Einheit nach Übung (Reihenfolge des ersten Auftretens bleibt erhalten). */
 export function groupSetsByExercise(sets: readonly WorkoutSet[] | null | undefined): SetGroup[] {
@@ -157,7 +157,7 @@ export function groupSetsByExercise(sets: readonly WorkoutSet[] | null | undefin
     const key = exerciseKey(set);
     if (!index.has(key)) {
       index.set(key, groups.length);
-      groups.push({ key, name: set.exerciseName ?? set.name, trackingType: trackingOf(set), sets: [] });
+      groups.push({ key, exerciseId: set.exerciseId ?? null, name: set.exerciseName ?? set.name, trackingType: trackingOf(set), sets: [] });
     }
     groups[index.get(key)!].sets.push({ ...set, index: i });
   });

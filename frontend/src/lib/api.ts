@@ -4,6 +4,8 @@
 // Jeder Request trägt "X-Requested-With: SprintLog": Daran erkennt die API die Browser-App, und schreibende
 // Requests mit Cookie werden nur mit diesem Header akzeptiert (CSRF-Schutz).
 
+import { t } from '../i18n';
+
 export type FieldErrors = Record<string, string[]>;
 
 export class ApiError extends Error {
@@ -40,7 +42,7 @@ async function parseError(response: Response): Promise<ApiError> {
       message = body.detail && body.title ? `${body.title} ${body.detail}` : body.title || body.detail || body.message || message;
     }
   } catch { /* kein JSON */ }
-  if (response.status === 429) message = 'Too many attempts. Please wait a minute.';
+  if (response.status === 429) message = t('common.tooManyAttempts');
   return new ApiError(response.status, message, fields);
 }
 
@@ -82,7 +84,7 @@ export function createApi({ onUnauthorized, getLegacyToken, onLegacyTokenUsed, t
         signal: controller.signal,
       });
     } catch {
-      throw new ApiError(0, 'No connection to server.');
+      throw new ApiError(0, t('common.noConnection'));
     } finally {
       clearTimeout(timer);
     }
