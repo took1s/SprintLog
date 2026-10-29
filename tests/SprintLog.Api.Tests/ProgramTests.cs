@@ -77,8 +77,8 @@ public class ProgramTests
     public async Task Activate_switches_the_active_program()
     {
         var user = await _factory.CreateUserAsync();
-        var a = await HttpAssert.JsonAsync<ProgramResponse>(HttpStatusCode.Created, await user.Client.PostAsJsonAsync("/api/programs", CustomProgram("A")));
-        var b = await HttpAssert.JsonAsync<ProgramResponse>(HttpStatusCode.Created, await user.Client.PostAsJsonAsync("/api/programs", CustomProgram("B")));
+        var a = await HttpAssert.JsonAsync<ProgramResponse>(HttpStatusCode.Created, await user.Client.PostAsJsonAsync("/api/programs", CustomProgram("Plan A")));
+        var b = await HttpAssert.JsonAsync<ProgramResponse>(HttpStatusCode.Created, await user.Client.PostAsJsonAsync("/api/programs", CustomProgram("Plan B")));
 
         var activated = await HttpAssert.JsonAsync<ProgramResponse>(HttpStatusCode.OK, await user.Client.PostAsync($"/api/programs/{b.Id}/activate", null));
         Assert.True(activated.IsActive);
