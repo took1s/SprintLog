@@ -1712,3 +1712,81 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029185510_V10MachineExercises') THEN
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (107, 'Gym', 'Legs', 'Smith Machine Squat', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (108, 'Gym', 'Chest', 'Smith Machine Bench Press', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (109, 'Gym', 'Shoulders', 'Shoulder Press Machine', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (110, 'Gym', 'Back', 'Machine Row', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (111, 'Gym', 'Back', 'Assisted Pull-up Machine', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (112, 'Gym', 'Arms', 'Assisted Dip Machine', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (113, 'Gym', 'Legs', 'Lying Leg Curl', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (114, 'Gym', 'Legs', 'Glute Kickback Machine', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (115, 'Gym', 'Legs', 'Hip Thrust Machine', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (116, 'Gym', 'Legs', 'Pendulum Squat', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (117, 'Gym', 'Arms', 'Machine Bicep Curl', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (118, 'Gym', 'Core', 'Ab Crunch Machine', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (119, 'Gym', 'Core', 'Rotary Torso Machine', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (120, 'Gym', 'Chest', 'Incline Chest Press Machine', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (121, 'Gym', 'Shoulders', 'Cable Lateral Raise', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (122, 'Gym', 'Arms', 'Cable Bicep Curl', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (123, 'Gym', 'Chest', 'Low-to-High Cable Fly', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (124, 'Gym', 'Legs', 'Standing Calf Raise Machine', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (125, 'Gym', 'Legs', 'Belt Squat', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (126, 'Gym', 'Legs', 'Cable Glute Kickback', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (127, 'Gym', 'Cardio', 'Treadmill', 'DistanceTime', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (128, 'Gym', 'Cardio', 'Stair Climber', 'Duration', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (129, 'Gym', 'Cardio', 'Elliptical Trainer', 'Duration', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (130, 'Gym', 'Cardio', 'Air Bike', 'Duration', NULL);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029185510_V10MachineExercises') THEN
+    PERFORM setval(
+        pg_get_serial_sequence('"Exercises"', 'Id'),
+        GREATEST(
+            (SELECT MAX("Id") FROM "Exercises") + 1,
+            nextval(pg_get_serial_sequence('"Exercises"', 'Id'))),
+        false);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029185510_V10MachineExercises') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261029185510_V10MachineExercises', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

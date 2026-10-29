@@ -98,7 +98,7 @@ const templatesJson = JSON.parse(readFileSync(new URL('../../SprintLog.Api/Data/
 
 test('every seeded exercise has a name in all languages and English matches the server', () => {
   const seeded = [...dbContext.matchAll(/Ex\((\d+), "([^"]+)"/g)].map((m) => [Number(m[1]), m[2]] as const);
-  assert.ok(seeded.length >= 106);
+  assert.ok(seeded.length >= 130);
   for (const [id, name] of seeded) {
     assert.equal((en.exercises as Record<number, string>)[id], name, `en.exercises.${id}`);
     assert.ok((de.exercises as Record<number, string>)[id], `de.exercises.${id} missing`);

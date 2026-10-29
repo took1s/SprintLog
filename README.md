@@ -54,23 +54,23 @@ Live-Demo: https://sprintlog-api.onrender.com/
 - Pro Satz RPE (6-10 in halben Schritten) oder wahlweise RIR (Wdh. in Reserve, gespeichert als RPE), Aufwärmsätze und eine Notiz (z. B. "Knie ok") - Aufwärmsätze zählen nicht für Rekorde, Volumen und Verläufe.
 - Abschluss-Dialog mit Session-RPE (Borg CR-10), Notiz, Datum und Dauer -> Trainingslast nach Foster (sRPE × Minuten) im Wochendiagramm.
 - Einheiten nachträglich bearbeiten (auch offline - die Änderung wird per `PUT` synchronisiert).
-- Technik-Ansicht pro Übung: animierte Figur (eigene SVG-Skelettanimation, offline, ~60 Bewegungsmuster für alle 106 Standardübungen, eigene Übungen werden über den Namen erkannt), Zielmuskulatur und 3-4 Technik-Hinweise.
+- Technik-Ansicht pro Übung: animierte Figur (eigene SVG-Skelettanimation, offline, ~65 Bewegungsmuster für alle 130 Standardübungen, eigene Übungen werden über den Namen erkannt), Zielmuskulatur und 3-4 Technik-Hinweise.
 
 **Fußball**
 - Spiele eintragen (Minuten, Session-RPE, Tore, Vorlagen, Gegner) - ohne Sätze, aber mit Trainingslast (Minuten × RPE), sodass Spiele in die Belastungssteuerung eingehen.
 - Täglicher Check-in nach dem Wellness-Fragebogen von McLean et al. (2010): Schlaf, Energie, Muskeln, Stimmung (je 1-5) -> Bereitschaft in %, 14-Tage-Verlauf und eine Empfehlung zusammen mit der Belastung (z. B. niedrige Bereitschaft oder Lastspitze -> leichter Tag).
 
 **Trainingspläne**
-- 15 Vorlagen aus Studien und bewährten Programmen, jeweils mit Quelle in der App:
+- 16 Vorlagen aus Studien und bewährten Programmen, jeweils mit Quelle in der App:
   - Fußball & Prävention: FIFA 11+ (Soligard 2008, BMJ), Nordic-Hamstring-Protokoll + Copenhagen-Adduktoren-Programm (van der Horst 2015, Harøy 2019), Ausdauer-Intervalle 4×4 (Helgerud 2001), Repeated Sprint Ability (Bishop 2011), Plyometrie, Fußball-Kraft 2x, Speed & Agility.
-  - Gym: 5×5 lineare Progression, GZCLP, 5/3/1 Boring But Big, PHUL, Upper/Lower 4x, Push/Pull/Legs, Ganzkörper für Einsteiger, Körpergewicht-Routine.
+  - Gym: 5×5 lineare Progression, GZCLP, 5/3/1 Boring But Big, PHUL, Upper/Lower 4x, Push/Pull/Legs, Ganzkörper für Einsteiger, Geräte-Ganzkörper (nach ACSM-Empfehlung für Einsteiger), Körpergewicht-Routine.
   - Daten in einer Datei: [`SprintLog.Api/Data/program-templates.json`](SprintLog.Api/Data/program-templates.json) (API, Mock-Backend und Tests lesen dieselbe Datei; jede Vorlage wird mit der API-Validierung geprüft).
 - Periodisierung: Wochen-Stufen pro Übung (z. B. Nordic: Woche 1 2×5 -> ab Woche 5 3×12/10/8), Wochen-Zyklus (5/3/1: 4-Wochen-Wellen) und automatische Entlastungswochen (~60 % der Sätze, -10 % Gewicht).
 - Gewichtsvorschlag: Double Progression (erst das obere Ende des Wdh.-Bereichs in allen Sätzen, dann +Steigerung) oder prozentbasiert vom besten geschätzten 1RM der letzten 120 Tage.
 - "Next up": der nächste Tag rotiert automatisch; Start eines Tages lädt die Vorgaben der aktuellen Woche (Sätze, Wdh., Pause, Ziel-RPE, Hinweise) als Checkliste. Eigener Editor inkl. Wochen-Stufen.
 - Belastungssteuerung: Acute:Chronic Workload Ratio (7 Tage vs. 28-Tage-Schnitt) mit Zonen (Sweet Spot 0.8-1.3, Spike > 1.5), Spiele eingeschlossen.
 - Fortschritt im Plan: geschätztes 1RM der Kraftübungen zu Beginn vs. letzte 3 Wochen.
-- 106 Standard-Übungen, alle mit animierter Technik-Figur (SVG, eigene Skelett-Animation) und Technik-Hinweisen in drei Sprachen.
+- 130 Standard-Übungen (inkl. Maschinen, Multipresse, Kabelzug und Cardio-Geräte), alle mit animierter Technik-Figur (SVG, eigene Skelett-Animation) und Technik-Hinweisen in drei Sprachen.
 
 **Auswertungen**
 - Überblick: Einheiten und Volumen dieser Woche (mit Vergleich zur Vorwoche), Wochen-Serie, 12-Wochen-Diagramm, Muskelgruppen-Verteilung, letzte Rekorde.
