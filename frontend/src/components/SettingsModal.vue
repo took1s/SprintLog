@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
+import AccountSecurity from '@/components/AccountSecurity.vue';
 import { formatDate } from '@/lib/format';
 
 const app = useAppStore();
@@ -49,6 +50,8 @@ const { confirmDeleteAccount, exportData, logout, syncNow } = app;
               <button @click="syncNow()" :disabled="!online || syncing || !pendingCount" class="cyber-outline-btn mb-6 w-full rounded-xl py-3 text-[10px] font-bold uppercase tracking-widest disabled:opacity-40">
                   {{ syncing ? 'Syncing...' : pendingCount ? `Sync ${pendingCount} pending now` : 'Everything synced' }}
               </button>
+
+              <AccountSecurity />
 
               <h4 class="label-xs mb-3 text-accent">Account</h4>
               <button @click="logout" class="mb-3 w-full rounded-xl border border-white/10 bg-white/5 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-300 hover:text-white">Log out</button>

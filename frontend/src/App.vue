@@ -19,12 +19,13 @@ import SettingsModal from '@/components/SettingsModal.vue';
 import ProgramEditor from '@/components/ProgramEditor.vue';
 import FinishModal from '@/components/FinishModal.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import RecoveryCodesModal from '@/components/RecoveryCodesModal.vue';
 
 // Auswertungen inkl. Chart.js erst laden, wenn DATA geöffnet wird (kleineres Start-Bundle; offline per Precache verfügbar).
 const DataView = defineAsyncComponent(() => import('@/components/data/DataView.vue'));
 
 const app = useAppStore();
-const { booting, isAuthenticated, tab } = storeToRefs(app);
+const { booting, isAuthenticated, tab, authMode } = storeToRefs(app);
 
 onMounted(() => { void app.init(); });
 </script>
@@ -39,7 +40,7 @@ onMounted(() => { void app.init(); });
     <RestTimer />
 
     <Spinner v-if="booting" class="py-40" />
-    <AuthView v-else-if="!isAuthenticated" />
+    <AuthView v-else-if="!isAuthenticated || authMode === 'reset'" />
 
     <template v-else>
       <AppHeader />
@@ -60,6 +61,7 @@ onMounted(() => { void app.init(); });
       <FinishModal />
     </template>
 
+    <RecoveryCodesModal />
     <ConfirmDialog />
   </div>
 </template>

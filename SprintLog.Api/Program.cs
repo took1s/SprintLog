@@ -27,12 +27,40 @@ builder.Services.AddOptions<JwtOptions>()
         options.Issuer = config["Jwt:Issuer"] ?? options.Issuer;
         options.Audience = config["Jwt:Audience"] ?? options.Audience;
         options.LifetimeDays = config.GetValue("Jwt:LifetimeDays", options.LifetimeDays);
+        options.AccessTokenMinutes = config.GetValue("Jwt:AccessTokenMinutes", options.AccessTokenMinutes);
+        options.RefreshTokenDays = config.GetValue("Jwt:RefreshTokenDays", options.RefreshTokenDays);
     })
     .Validate(o => o.HasValidSecret, "JWT secret is missing or shorter than 32 bytes. Set JWT_SECRET.")
     .ValidateOnStart();
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<ITokenService, TokenService>();
+builder.Services.AddSingleton<ISecretHasher, SecretHasher>();
+builder.Services.AddScoped<AuthSessionService>();
+builder.Services.AddScoped<RecoveryCodeService>();
+
+// ---------- E-Mail (optional, Brevo) ----------
+builder.Services.AddOptions<EmailOptions>().Configure<IConfiguration>((options, config) =>
+{
+    options.BrevoApiKey = config["Email:BrevoApiKey"] ?? config["BREVO_API_KEY"] ?? string.Empty;
+    options.From = config["Email:From"] ?? string.Empty;
+    options.FromName = config["Email:FromName"] ?? options.FromName;
+    options.PublicUrl = config["App:PublicUrl"] ?? string.Empty;
+});
+var emailEnabled = new EmailOptions
+{
+    BrevoApiKey = builder.Configuration["Email:BrevoApiKey"] ?? builder.Configuration["BREVO_API_KEY"] ?? string.Empty,
+    From = builder.Configuration["Email:From"] ?? string.Empty,
+    PublicUrl = builder.Configuration["App:PublicUrl"] ?? string.Empty
+}.Enabled;
+if (emailEnabled)
+    builder.Services.AddHttpClient<IEmailSender, BrevoEmailSender>(c =>
+    {
+        c.BaseAddress = new Uri("https://api.brevo.com/");
+        c.Timeout = TimeSpan.FromSeconds(10);
+    });
+else
+    builder.Services.AddSingleton<IEmailSender, DisabledEmailSender>();
 
 // ---------- Datenbank ----------
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
@@ -59,6 +87,31 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
             ClockSkew = TimeSpan.FromMinutes(1),
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Value.Secret))
+        };
+        bearer.Events = new JwtBearerEvents
+        {
+            // Browser-App: Token aus dem httpOnly-Cookie, wenn kein Authorization-Header gesetzt ist.
+            OnMessageReceived = ctx =>
+            {
+                if (!string.IsNullOrEmpty(ctx.Request.Headers.Authorization)) return Task.CompletedTask;
+                var cookie = ctx.Request.Cookies[AuthSessionService.AccessCookie];
+                if (string.IsNullOrEmpty(cookie)) return Task.CompletedTask;
+                // CSRF-Schutz: Cookies sendet der Browser automatisch mit. Schreibende Requests zählen nur mit dem
+                // App-Header - den kann eine fremde Seite ohne CORS-Freigabe nicht setzen.
+                var safe = HttpMethods.IsGet(ctx.Request.Method) || HttpMethods.IsHead(ctx.Request.Method) || HttpMethods.IsOptions(ctx.Request.Method);
+                if (safe || AuthSessionService.IsBrowserClient(ctx.Request)) ctx.Token = cookie;
+                return Task.CompletedTask;
+            },
+            // Token-Version prüfen: Nach Passwortwechsel / "überall abmelden" sind alte Tokens sofort ungültig.
+            OnTokenValidated = async ctx =>
+            {
+                var userId = ctx.Principal?.GetUserId();
+                var claimed = int.TryParse(ctx.Principal?.FindFirst(TokenService.VersionClaim)?.Value, out var v) ? v : 0;
+                var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                var current = await db.Users.AsNoTracking().Where(u => u.Id == userId)
+                    .Select(u => (int?)u.TokenVersion).FirstOrDefaultAsync(ctx.HttpContext.RequestAborted);
+                if (current is null || current != claimed) ctx.Fail("Token has been revoked.");
+            }
         };
     });
 builder.Services.AddAuthorization();
@@ -177,6 +230,7 @@ app.UseAuthorization();
 
 app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
+app.MapAccountEndpoints();
 app.MapExerciseEndpoints();
 app.MapFavoriteEndpoints();
 app.MapWorkoutEndpoints();

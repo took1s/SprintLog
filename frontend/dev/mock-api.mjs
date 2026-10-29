@@ -45,7 +45,7 @@ const templates = [...templateSource.matchAll(/new\("([\w-]+)", "([^"]+)",\s*"([
     })),
   }));
 
-const db = { users: [], exercises: [...seed], workouts: [], deleted: [], favorites: [], programs: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
+const db = { users: [], exercises: [...seed], workouts: [], deleted: [], favorites: [], programs: [], refresh: [], codes: [], links: [], outbox: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
 
 function programResponse(p) {
   return {
@@ -78,15 +78,60 @@ const json = (res, status, body) => {
 const problem = (res, status, title, errors) => json(res, status, errors ? { title, status, errors } : { title, status });
 const noContent = (res) => { res.writeHead(204); res.end(); };
 
+// ---------- Auth wie in der echten API: Cookie-Sitzung für die Browser-App, Bearer-Token für API-Clients ----------
 const b64url = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
-const makeToken = (u) => `${b64url({ alg: 'none' })}.${b64url({ nameid: String(u.id), unique_name: u.username, exp: Math.floor(Date.now() / 1000) + 7 * 86400 })}.mock`;
+const makeToken = (u, seconds = 7 * 86400) => `${b64url({ alg: 'none' })}.${b64url({ nameid: String(u.id), unique_name: u.username, ver: u.tokenVersion ?? 0, exp: Math.floor(Date.now() / 1000) + seconds })}.mock`;
+const isBrowser = (req) => req.headers['x-requested-with'] === 'SprintLog';
+const cookiesOf = (req) => Object.fromEntries((req.headers.cookie ?? '').split(';').map((c) => c.trim().split('=')).filter(([k]) => k).map(([k, ...v]) => [k, v.join('=')]));
+const randomToken = () => randomUUID().replace(/-/g, '') + randomUUID().replace(/-/g, '');
+const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const newCode = () => { const c = Array.from({ length: 10 }, () => CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)]).join(''); return `${c.slice(0, 5)}-${c.slice(5)}`; };
+const normalizeCode = (c) => String(c ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+function userFromToken(token) {
+  try {
+    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+    const u = db.users.find((x) => x.id === Number(payload.nameid));
+    if (!u || (payload.ver ?? 0) !== (u.tokenVersion ?? 0) || payload.exp * 1000 < Date.now()) return null;
+    return u;
+  } catch { return null; }
+}
 function authUser(req) {
   const header = req.headers.authorization ?? '';
-  if (!header.startsWith('Bearer ')) return null;
-  try {
-    const payload = JSON.parse(Buffer.from(header.slice(7).split('.')[1], 'base64url').toString());
-    return db.users.find((u) => u.id === Number(payload.nameid)) ?? null;
-  } catch { return null; }
+  if (header.startsWith('Bearer ')) return userFromToken(header.slice(7));
+  const access = cookiesOf(req).sl_at;
+  if (!access) return null;
+  // CSRF: schreibende Requests mit Cookie nur mit dem App-Header
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !isBrowser(req)) return null;
+  return userFromToken(access);
+}
+function setSessionCookies(res, user, familyId = randomUUID()) {
+  const refresh = randomToken();
+  db.refresh.push({ token: refresh, userId: user.id, familyId, revokedAt: null, rotated: false });
+  res.setHeader('Set-Cookie', [
+    `sl_at=${makeToken(user, 15 * 60)}; Path=/api; HttpOnly; SameSite=Strict; Max-Age=${15 * 60}`,
+    `sl_rt=${refresh}; Path=/api/auth; HttpOnly; SameSite=Strict; Max-Age=${30 * 86400}`,
+  ]);
+}
+const clearSessionCookies = (res) => res.setHeader('Set-Cookie', ['sl_at=; Path=/api; HttpOnly; SameSite=Strict; Max-Age=0', 'sl_rt=; Path=/api/auth; HttpOnly; SameSite=Strict; Max-Age=0']);
+function signIn(req, res, status, user, extra = {}) {
+  if (isBrowser(req)) { setSessionCookies(res, user); return json(res, status, { token: null, username: user.username, userId: user.id, ...extra }); }
+  return json(res, status, { token: makeToken(user), username: user.username, userId: user.id, ...extra });
+}
+function regenerateCodes(user) {
+  db.codes = db.codes.filter((c) => c.userId !== user.id);
+  const codes = Array.from({ length: 10 }, newCode);
+  codes.forEach((code) => db.codes.push({ userId: user.id, code: normalizeCode(code), usedAt: null }));
+  return codes;
+}
+function setPassword(user, password) {
+  user.password = password;
+  user.tokenVersion = (user.tokenVersion ?? 0) + 1;
+  db.refresh.filter((t) => t.userId === user.id).forEach((t) => { t.revokedAt ??= Date.now(); });
+}
+function sendMail(to, subject, param, token) {
+  const link = `http://localhost:${port}/?${param}=${token}`;
+  db.outbox.push({ to, subject, link, sentAt: new Date().toISOString() });
 }
 const visible = (userId) => db.exercises.filter((e) => e.userId === null || e.userId === userId);
 const exerciseDto = (e) => ({ id: e.id, name: e.name, category: e.category, muscleGroup: e.muscleGroup, trackingType: e.trackingType, isCustom: e.userId !== null });
@@ -154,6 +199,9 @@ async function handleApi(req, res, url) {
   const method = req.method;
   const user = authUser(req);
 
+  const findUser = (name) => db.users.find((x) => x.username.toLowerCase() === String(name ?? '').trim().toLowerCase());
+  const tooShort = (pw) => !pw || pw.length < 8;
+
   if (method === 'POST' && (path === '/api/auth/register' || path === '/api/auth/login')) {
     const { username = '', password = '' } = await readBody(req);
     if (path.endsWith('register')) {
@@ -161,20 +209,122 @@ async function handleApi(req, res, url) {
       if (!/^[A-Za-z0-9_.-]{3,32}$/.test(username.trim())) errors.username = ["Username must be 3-32 characters: letters, digits, '_', '.', '-'."];
       if (password.length < 8) errors.password = ['Password must be at least 8 characters.'];
       if (Object.keys(errors).length) return problem(res, 400, 'One or more validation errors occurred.', errors);
-      if (db.users.some((u) => u.username.toLowerCase() === username.trim().toLowerCase())) return problem(res, 409, 'Username is already taken.');
+      if (findUser(username)) return problem(res, 409, 'Username is already taken.');
       const u = addUser(username.trim(), password);
-      return json(res, 201, { token: makeToken(u), username: u.username, userId: u.id });
+      return signIn(req, res, 201, u, { recoveryCodes: regenerateCodes(u) });
     }
-    const u = db.users.find((x) => x.username.toLowerCase() === username.trim().toLowerCase());
+    const u = findUser(username);
     if (!u || u.password !== password) return problem(res, 401, 'Invalid username or password.');
-    return json(res, 200, { token: makeToken(u), username: u.username, userId: u.id });
+    return signIn(req, res, 200, u);
   }
+  if (method === 'GET' && path === '/api/auth/options') return json(res, 200, { emailEnabled: true });
+  if (method === 'POST' && path === '/api/auth/refresh') {
+    const rt = cookiesOf(req).sl_rt;
+    if (isBrowser(req) && rt) {
+      const t = db.refresh.find((x) => x.token === rt);
+      if (!t) { clearSessionCookies(res); return problem(res, 401, 'Session expired. Please log in again.'); }
+      if (t.revokedAt) {
+        if (t.rotated && Date.now() - t.revokedAt < 30_000) return problem(res, 409, 'Session is being refreshed. Retry.');
+        db.refresh.filter((x) => x.familyId === t.familyId).forEach((x) => { x.revokedAt ??= Date.now(); });
+        clearSessionCookies(res);
+        return problem(res, 401, 'Session expired. Please log in again.');
+      }
+      const u = db.users.find((x) => x.id === t.userId);
+      if (!u) return problem(res, 401, 'Session expired. Please log in again.');
+      Object.assign(t, { revokedAt: Date.now(), rotated: true });
+      setSessionCookies(res, u, t.familyId);
+      return json(res, 200, { token: null, username: u.username, userId: u.id });
+    }
+    if (!user) return problem(res, 401, 'Unauthorized');
+    return signIn(req, res, 200, user);
+  }
+  if (method === 'POST' && path === '/api/auth/logout') {
+    const rt = cookiesOf(req).sl_rt;
+    const t = db.refresh.find((x) => x.token === rt);
+    if (t) db.refresh.filter((x) => x.familyId === t.familyId).forEach((x) => { x.revokedAt ??= Date.now(); });
+    clearSessionCookies(res);
+    return noContent(res);
+  }
+  if (method === 'POST' && path === '/api/auth/recover') {
+    const { username, code, newPassword } = await readBody(req);
+    if (tooShort(newPassword)) return problem(res, 400, 'One or more validation errors occurred.', { newPassword: ['Password must be at least 8 characters.'] });
+    const u = findUser(username);
+    const entry = u && db.codes.find((c) => c.userId === u.id && c.code === normalizeCode(code) && !c.usedAt);
+    if (!entry) return problem(res, 400, 'Username or recovery code is invalid.');
+    entry.usedAt = Date.now();
+    setPassword(u, newPassword);
+    return signIn(req, res, 200, u);
+  }
+  if (method === 'POST' && path === '/api/auth/forgot-password') {
+    const { login = '' } = await readBody(req);
+    const l = login.trim().toLowerCase();
+    const u = db.users.find((x) => x.emailVerified && (l.includes('@') ? x.email === l : x.username.toLowerCase() === l));
+    if (u) {
+      const token = randomToken();
+      db.links.push({ token, userId: u.id, purpose: 'reset', usedAt: null });
+      sendMail(u.email, 'Reset your SprintLog password', 'reset', token);
+    }
+    return json(res, 202, { message: 'If the account has a confirmed e-mail, a reset link is on its way.' });
+  }
+  if (method === 'POST' && path === '/api/auth/reset-password') {
+    const { token, newPassword } = await readBody(req);
+    if (tooShort(newPassword)) return problem(res, 400, 'One or more validation errors occurred.', { newPassword: ['Password must be at least 8 characters.'] });
+    const link = db.links.find((x) => x.token === token && x.purpose === 'reset' && !x.usedAt);
+    const u = link && db.users.find((x) => x.id === link.userId);
+    if (!u) return problem(res, 400, 'This link is invalid or has expired. Request a new one.');
+    link.usedAt = Date.now();
+    setPassword(u, newPassword);
+    return signIn(req, res, 200, u);
+  }
+  if (method === 'POST' && path === '/api/auth/email/verify') {
+    const { token } = await readBody(req);
+    const link = db.links.find((x) => x.token === token && x.purpose === 'verify' && !x.usedAt);
+    const u = link && db.users.find((x) => x.id === link.userId && x.email === link.email);
+    if (!u) return problem(res, 400, 'This link is invalid or has expired.');
+    link.usedAt = Date.now();
+    u.emailVerified = true;
+    return json(res, 200, { email: u.email });
+  }
+  if (method === 'GET' && path === '/api/__test/outbox') return json(res, 200, db.outbox);
 
   if (!user) return problem(res, 401, 'Unauthorized');
 
-  if (method === 'POST' && path === '/api/auth/refresh') return json(res, 200, { token: makeToken(user), username: user.username, userId: user.id });
   if (method === 'GET' && path === '/api/auth/me') {
-    return json(res, 200, { id: user.id, username: user.username, createdAt: user.createdAt, workoutCount: db.workouts.filter((w) => w.userId === user.id).length, customExerciseCount: 0 });
+    return json(res, 200, {
+      id: user.id, username: user.username, createdAt: user.createdAt, workoutCount: db.workouts.filter((w) => w.userId === user.id).length, customExerciseCount: 0,
+      email: user.email ?? null, emailVerified: !!user.emailVerified, recoveryCodesRemaining: db.codes.filter((c) => c.userId === user.id && !c.usedAt).length,
+    });
+  }
+  if (method === 'POST' && path === '/api/auth/logout-all') {
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
+    db.refresh.filter((t) => t.userId === user.id).forEach((t) => { t.revokedAt ??= Date.now(); });
+    clearSessionCookies(res);
+    return noContent(res);
+  }
+  if (method === 'POST' && path === '/api/auth/password') {
+    const { currentPassword, newPassword } = await readBody(req);
+    if (currentPassword !== user.password) return problem(res, 403, 'Current password is incorrect.');
+    if (tooShort(newPassword)) return problem(res, 400, 'One or more validation errors occurred.', { newPassword: ['Password must be at least 8 characters.'] });
+    setPassword(user, newPassword);
+    return signIn(req, res, 200, user);
+  }
+  if (method === 'POST' && path === '/api/auth/recovery-codes') {
+    const { password } = await readBody(req);
+    if (password !== user.password) return problem(res, 403, 'Password is incorrect.');
+    return json(res, 200, { codes: regenerateCodes(user) });
+  }
+  if (method === 'PUT' && path === '/api/auth/email') {
+    const { email = '', password } = await readBody(req);
+    if (password !== user.password) return problem(res, 403, 'Password is incorrect.');
+    const e = email.trim().toLowerCase();
+    if (!e) { Object.assign(user, { email: null, emailVerified: false }); return noContent(res); }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return problem(res, 400, 'One or more validation errors occurred.', { email: ['Enter a valid e-mail address.'] });
+    if (db.users.some((x) => x.email === e && x.id !== user.id)) return problem(res, 409, 'This e-mail is already used by another account.');
+    Object.assign(user, { email: e, emailVerified: false });
+    const token = randomToken();
+    db.links.push({ token, userId: user.id, purpose: 'verify', email: e, usedAt: null });
+    sendMail(e, 'Confirm your e-mail for SprintLog', 'verify', token);
+    return json(res, 202, { message: 'Check your inbox to confirm the address.' });
   }
   if (method === 'DELETE' && path === '/api/auth/account') {
     const { password } = await readBody(req);
@@ -183,6 +333,9 @@ async function handleApi(req, res, url) {
     db.favorites = db.favorites.filter((f) => f.userId !== user.id);
     db.exercises = db.exercises.filter((e) => e.userId !== user.id);
     db.users = db.users.filter((u) => u.id !== user.id);
+    db.refresh = db.refresh.filter((t) => t.userId !== user.id);
+    db.codes = db.codes.filter((c) => c.userId !== user.id);
+    clearSessionCookies(res);
     return noContent(res);
   }
 

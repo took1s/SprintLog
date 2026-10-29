@@ -128,12 +128,13 @@ const closedSetModal = (): SetModal => ({ open: false, exercise: null, editIndex
 const wakeLock = createWakeLock();
 let reloadOnControllerChange = false;
 
-function readToken(): string {
-  try { return localStorage.getItem(Keys.token) || ''; } catch { return ''; }
+/** Token einer älteren App-Version (localStorage). Wird beim ersten Refresh gegen eine Cookie-Sitzung getauscht. */
+function readLegacyToken(): string | null {
+  try { return localStorage.getItem(Keys.token) || null; } catch { return null; }
 }
-function writeToken(token: string): void {
-  try { if (token) localStorage.setItem(Keys.token, token); else localStorage.removeItem(Keys.token); } catch { /* ignore */ }
-}
+function removeLegacyToken(): void { remove(Keys.token); }
+
+export type AuthMode = 'login' | 'register' | 'recover' | 'forgot' | 'reset';
 
 const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const isNetworkError = (e: unknown) => isApiError(e) && e.isNetwork;
@@ -146,11 +147,15 @@ export const useAppStore = defineStore('app', () => {
   // Zustand
   // =====================================================================
 
-  // Auth
-  const token = ref('');
+  // Auth (die Sitzung selbst liegt in httpOnly-Cookies - hier nur, wer angemeldet ist)
   const user = ref<AuthUser | null>(null);
-  const authMode = ref<'login' | 'register'>('login');
-  const authForm = ref({ username: '', password: '' });
+  const authMode = ref<AuthMode>('login');
+  const authForm = ref({ username: '', password: '', code: '', newPassword: '', login: '' });
+  const authNotice = ref('');
+  const authOptions = ref({ emailEnabled: false });
+  const resetToken = ref<string | null>(null);
+  /** Frisch erzeugte Wiederherstellungscodes - werden genau einmal angezeigt. */
+  const recoveryCodes = ref<string[] | null>(null);
   const authBusy = ref(false);
   const authError = ref('');
   const authFields = ref<FieldErrors>({});
@@ -200,6 +205,7 @@ export const useAppStore = defineStore('app', () => {
   const settings = ref<Settings>({ ...DEFAULT_SETTINGS });
   const profile = ref<Profile | null>(null);
   const deleteAccount = ref({ open: false, password: '', busy: false, error: '' });
+  const security = ref({ section: '' as '' | 'password' | 'email' | 'codes', current: '', next: '', email: '', busy: false, error: '', notice: '' });
 
   // Pausentimer
   const timer = ref<Timer>({ endAt: null, duration: 0 });
@@ -217,7 +223,7 @@ export const useAppStore = defineStore('app', () => {
   // Abgeleitete Werte
   // =====================================================================
 
-  const isAuthenticated = computed(() => !!token.value && !!user.value);
+  const isAuthenticated = computed(() => !!user.value);
   const keys = computed(() => (user.value ? userKeys(user.value.userId) : null));
 
   const exercisesById = computed(() => new Map(exercises.value.map((e) => [e.id, e])));
@@ -383,45 +389,94 @@ export const useAppStore = defineStore('app', () => {
   // =====================================================================
   // Auth
   // =====================================================================
-  function api(): Api {
-    return createApi({ getToken: () => token.value, onUnauthorized: () => handleUnauthorized() });
-  }
+  // Eine Instanz für die ganze App: gleichzeitige 401 teilen sich genau einen Refresh.
+  const client = createApi({
+    onUnauthorized: () => handleUnauthorized(),
+    getLegacyToken: readLegacyToken,
+    onLegacyTokenUsed: removeLegacyToken,
+  });
+  function api(): Api { return client; }
 
   async function submitAuth() {
     authError.value = '';
+    authNotice.value = '';
     authFields.value = {};
-    const username = authForm.value.username.trim();
-    const { password } = authForm.value;
-    if (!username || !password) {
-      authError.value = 'Username and password are required.';
-      return;
-    }
-    if (authMode.value === 'register' && password.length < 8) {
-      authFields.value = { password: ['Password must be at least 8 characters.'] };
-      return;
+    const f = authForm.value;
+    const username = f.username.trim();
+    const mode = authMode.value;
+
+    // Clientseitige Vorprüfung (der Server prüft trotzdem)
+    if (mode === 'forgot') {
+      if (!f.login.trim()) { authError.value = 'Enter your username or e-mail.'; return; }
+    } else if (mode === 'reset') {
+      if (f.newPassword.length < 8) { authFields.value = { newPassword: ['Password must be at least 8 characters.'] }; return; }
+    } else {
+      if (!username) { authError.value = 'Username is required.'; return; }
+      if (mode === 'recover') {
+        if (!f.code.trim()) { authFields.value = { code: ['Enter one of your recovery codes.'] }; return; }
+        if (f.newPassword.length < 8) { authFields.value = { newPassword: ['Password must be at least 8 characters.'] }; return; }
+      } else if (!f.password) {
+        authError.value = 'Username and password are required.';
+        return;
+      } else if (mode === 'register' && f.password.length < 8) {
+        authFields.value = { password: ['Password must be at least 8 characters.'] };
+        return;
+      }
     }
 
     authBusy.value = true;
     try {
-      const path = authMode.value === 'register' ? '/api/auth/register' : '/api/auth/login';
-      const result = await api().post<AuthResult>(path, { username, password });
-      setAuth(result.token, { userId: result.userId, username: result.username });
-      authForm.value.password = '';
-      hydrate();
-      toast(authMode.value === 'register' ? `Welcome, ${result.username}!` : `Logged in as ${result.username}`, 'success');
-      await refreshAll();
+      if (mode === 'forgot') {
+        await api().post('/api/auth/forgot-password', { login: f.login.trim() });
+        authNotice.value = 'If the account has a confirmed e-mail, a reset link is on its way. Check your inbox (and spam).';
+        return;
+      }
+      const request: Record<AuthMode, [string, unknown]> = {
+        login: ['/api/auth/login', { username, password: f.password }],
+        register: ['/api/auth/register', { username, password: f.password }],
+        recover: ['/api/auth/recover', { username, code: f.code, newPassword: f.newPassword }],
+        reset: ['/api/auth/reset-password', { token: resetToken.value, newPassword: f.newPassword }],
+        forgot: ['', null],
+      };
+      const [path, body] = request[mode];
+      const result = await api().post<AuthResult>(path, body);
+      if (result.recoveryCodes?.length) recoveryCodes.value = result.recoveryCodes;
+      await completeSignIn({ userId: result.userId, username: result.username }, {
+        login: `Logged in as ${result.username}`,
+        register: `Welcome, ${result.username}!`,
+        recover: 'Password changed - you are logged in. That recovery code is now used up.',
+        reset: 'Password changed - you are logged in.',
+        forgot: '',
+      }[mode]);
     } catch (e) {
-      authError.value = isNetworkError(e) ? 'No connection to server. Login requires internet once.' : errorMessage(e);
+      authError.value = isNetworkError(e) ? 'No connection to server. Signing in requires internet once.' : errorMessage(e);
       authFields.value = isApiError(e) ? e.fields : {};
     } finally {
       authBusy.value = false;
     }
   }
 
-  function toggleAuthMode() {
-    authMode.value = authMode.value === 'login' ? 'register' : 'login';
+  async function completeSignIn(signedIn: AuthUser, message: string) {
+    setAuth(signedIn);
+    authForm.value = { username: '', password: '', code: '', newPassword: '', login: '' };
+    resetToken.value = null;
+    authMode.value = 'login';
+    hydrate();
+    toast(message, 'success');
+    await refreshAll();
+  }
+
+  function setAuthMode(mode: AuthMode) {
+    authMode.value = mode;
     authError.value = '';
+    authNotice.value = '';
     authFields.value = {};
+  }
+
+  function toggleAuthMode() { setAuthMode(authMode.value === 'login' ? 'register' : 'login'); }
+
+  async function loadAuthOptions() {
+    try { authOptions.value = await api().get<{ emailEnabled: boolean }>('/api/auth/options'); } catch { /* offline: ohne E-Mail-Option */ }
   }
 
   function fieldError(field: string): string {
@@ -429,24 +484,23 @@ export const useAppStore = defineStore('app', () => {
     return entry ? entry[1][0] : '';
   }
 
-  function setAuth(newToken: string, newUser: AuthUser) {
-    token.value = newToken;
+  function setAuth(newUser: AuthUser) {
     user.value = newUser;
-    writeToken(newToken);
     writeJson(Keys.user, newUser);
   }
 
-  async function refreshToken() {
+  /** Beim Start: Sitzung erneuern (gleitende 30 Tage). Offline bleibt man angemeldet und arbeitet lokal. */
+  async function refreshSession() {
     try {
-      const result = await api().post<AuthResult>('/api/auth/refresh');
-      setAuth(result.token, { userId: result.userId, username: result.username });
+      if (await client.refreshSession()) online.value = true;
+      else handleUnauthorized();
     } catch (e) {
       if (isNetworkError(e)) online.value = false;
     }
   }
 
   function handleUnauthorized() {
-    if (!token.value) return;
+    if (!user.value) return;
     toast('Session expired. Please log in again.', 'error');
     clearAuth();
   }
@@ -461,6 +515,7 @@ export const useAppStore = defineStore('app', () => {
       if (!ok) return;
     }
     settingsOpen.value = false;
+    try { await api().post('/api/auth/logout'); } catch { /* offline: Cookies laufen ab, Server-Sitzung bleibt bis dahin */ }
     clearAuth();
   }
 
@@ -474,10 +529,10 @@ export const useAppStore = defineStore('app', () => {
       remove(k.favorites);
       remove(k.programs);
     }
-    writeToken('');
+    removeLegacyToken();
     remove(Keys.user);
-    token.value = '';
     user.value = null;
+    recoveryCodes.value = null;
     exercises.value = [];
     history.value = [];
     favorites.value = [];
@@ -532,7 +587,7 @@ export const useAppStore = defineStore('app', () => {
 
   async function refreshAll({ refreshToken: refresh = false } = {}) {
     if (!isAuthenticated.value) return;
-    if (refresh) await refreshToken();
+    if (refresh) await refreshSession();
     if (!isAuthenticated.value) return;
     await Promise.allSettled([loadExercises(), loadFavorites(), loadPrograms(), loadTemplates()]);
     await syncNow({ reload: false });
@@ -1235,7 +1290,9 @@ export const useAppStore = defineStore('app', () => {
   function openSettings() {
     settingsOpen.value = true;
     deleteAccount.value = { open: false, password: '', busy: false, error: '' };
+    openSecurity('');
     void loadProfile();
+    void loadAuthOptions();
   }
 
   function exportData(format: 'csv' | 'json') {
@@ -1354,27 +1411,110 @@ export const useAppStore = defineStore('app', () => {
 
     registerServiceWorker();
 
-    const stored = readToken();
-    if (stored) {
-      const storedUser = readJson<AuthUser>(Keys.user);
-      const decoded = decodeToken(stored);
-      const restored = storedUser?.userId ? storedUser : decoded.userId ? { userId: decoded.userId, username: decoded.username ?? '' } : null;
-      if (restored) {
-        token.value = stored;
-        user.value = restored;
-        hydrate();
-        booting.value = false;
-        await refreshAll({ refreshToken: true });
-        return;
-      }
-      writeToken('');
+    handleLinkParams();
+
+    // Angemeldet ist, wer einen gespeicherten Nutzer hat (Cookies sind für JS unsichtbar).
+    // Ältere App-Versionen: Nutzer aus dem alten Token lesen - der Token wird beim Refresh gegen Cookies getauscht.
+    const storedUser = readJson<AuthUser>(Keys.user);
+    const legacy = readLegacyToken();
+    const decoded = legacy ? decodeToken(legacy) : null;
+    const restored = storedUser?.userId ? storedUser : decoded?.userId ? { userId: decoded.userId, username: decoded.username ?? '' } : null;
+    if (restored) {
+      user.value = restored;
+      hydrate();
+      booting.value = false;
+      await refreshAll({ refreshToken: true });
+      return;
     }
+    removeLegacyToken();
     booting.value = false;
+    void loadAuthOptions();
   }
+
+  /** Links aus E-Mails: ?reset=<token> (neues Passwort) und ?verify=<token> (Adresse bestätigen). */
+  function handleLinkParams() {
+    const params = new URLSearchParams(window.location.search);
+    const reset = params.get('reset');
+    const verify = params.get('verify');
+    if (!reset && !verify) return;
+    window.history.replaceState(null, '', window.location.pathname); // Token nicht in der Adresszeile/History lassen
+    if (reset) {
+      resetToken.value = reset;
+      setAuthMode('reset');
+    }
+    if (verify) {
+      api().post('/api/auth/email/verify', { token: verify })
+        .then(() => { toast('E-mail confirmed. You can now reset your password by e-mail.', 'success'); if (isAuthenticated.value) void loadProfile(); })
+        .catch((e: unknown) => toast(isNetworkError(e) ? 'Open the link again when you are online.' : errorMessage(e), 'error'));
+    }
+  }
+
+  // =====================================================================
+  // Konto-Sicherheit (Einstellungen)
+  // =====================================================================
+  function openSecurity(section: 'password' | 'email' | 'codes' | '') {
+    security.value = { section, current: '', next: '', email: profile.value?.email ?? '', busy: false, error: '', notice: '' };
+  }
+
+  async function securityAction(run: () => Promise<string | void>) {
+    const s = security.value;
+    s.error = '';
+    s.notice = '';
+    if (!online.value) { s.error = 'This needs a connection.'; return; }
+    s.busy = true;
+    try {
+      const notice = await run();
+      if (notice) s.notice = notice;
+      await loadProfile();
+    } catch (e) {
+      s.error = errorMessage(e);
+    } finally {
+      s.busy = false;
+    }
+  }
+
+  const changePassword = () => securityAction(async () => {
+    const s = security.value;
+    if (s.next.length < 8) throw new Error('The new password must be at least 8 characters.');
+    await api().post('/api/auth/password', { currentPassword: s.current, newPassword: s.next });
+    s.current = '';
+    s.next = '';
+    s.section = '';
+    toast('Password changed. Other devices are logged out.', 'success');
+  });
+
+  const saveEmail = (remove = false) => securityAction(async () => {
+    const s = security.value;
+    await api().put('/api/auth/email', { email: remove ? '' : s.email, password: s.current });
+    s.current = '';
+    if (remove) { s.section = ''; toast('E-mail removed.', 'success'); return; }
+    return `We sent a confirmation link to ${s.email.trim().toLowerCase()}. Open it to activate password reset by e-mail.`;
+  });
+
+  const regenerateRecoveryCodes = () => securityAction(async () => {
+    const s = security.value;
+    const result = await api().post<{ codes: string[] }>('/api/auth/recovery-codes', { password: s.current });
+    s.current = '';
+    s.section = '';
+    recoveryCodes.value = result.codes;
+  });
+
+  async function logoutEverywhere() {
+    const ok = await confirm({ title: 'Log out everywhere?', message: 'All devices including this one are logged out. Unsynced workouts stay on this device.', confirmText: 'Log out all', danger: true });
+    if (!ok) return;
+    try {
+      await api().post('/api/auth/logout-all');
+      settingsOpen.value = false;
+      clearAuth();
+      toast('Logged out on all devices.', 'success');
+    } catch (e) { toast(errorMessage(e), 'error'); }
+  }
+
+  function dismissRecoveryCodes() { recoveryCodes.value = null; }
 
   return {
     // Zustand
-    token, user, authMode, authForm, authBusy, authError, authFields, booting,
+    user, authMode, authForm, authBusy, authError, authFields, authNotice, authOptions, resetToken, recoveryCodes, booting, security,
     online, syncing, updateWorker,
     exercises, history, favorites, queue, loadingExercises, loadingHistory, programs, templates, loadingPrograms, programEditor, expandedDay,
     tab, dataTab, search, sortMode, sortOpen, muscleFilters,
@@ -1395,7 +1535,8 @@ export const useAppStore = defineStore('app', () => {
     progressOptions, progressRecord, progressMetrics, progressMetric, progressSeries, progressDelta,
     recordList, heatmap, selectedDayWorkouts, activeDaysLast30,
     // Aktionen
-    init, api, submitAuth, toggleAuthMode, fieldError, logout, clearAuth, refreshAll,
+    init, api, submitAuth, toggleAuthMode, setAuthMode, loadAuthOptions, fieldError, logout, clearAuth, refreshAll,
+    openSecurity, changePassword, saveEmail, regenerateRecoveryCodes, logoutEverywhere, dismissRecoveryCodes,
     loadExercises, loadHistory, loadPrograms, loadTemplates, loadFavorites, loadProfile,
     syncNow, retryEntry, toggleFavorite, toggleMuscleFilter, selectSort, lastSetLabel,
     planTargetFor, openSetModal, closeSetModal, step, setWeightByPercentage, copyPrevious, saveSet,

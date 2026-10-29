@@ -48,14 +48,36 @@ async function newPage() {
   return { context, page, errors };
 }
 
-async function register(page, username) {
+const PASSWORD = 'secret-password';
+
+/** Registrierung über die UI. Liefert einen Bearer-Token für direkte API-Prüfungen und die Wiederherstellungscodes. */
+async function registerWithCodes(page, username) {
   await page.goto(BASE);
-  await page.click('form button[type=button]');
+  await page.click('[data-test=to-register]');
   await page.fill('#auth-user', username);
-  await page.fill('#auth-pass', 'secret-password');
+  await page.fill('#auth-pass', PASSWORD);
   await page.click('button[type=submit]');
+  // Wiederherstellungscodes werden genau einmal gezeigt und müssen bestätigt werden.
+  await page.waitForSelector('[data-test=recovery-codes] li');
+  const codes = await page.$$eval('[data-test=recovery-codes] li', (items) => items.map((li) => li.textContent.trim()));
+  await page.check('text=I saved the codes somewhere safe');
+  await page.click('button:has-text("Continue")');
   await page.waitForSelector('h3:has-text("Bench Press")');
-  return page.evaluate(() => localStorage.getItem('sprintlog_jwt'));
+  // Die Browser-Sitzung liegt in httpOnly-Cookies - JavaScript sieht keinen Token.
+  assert.equal(await page.evaluate(() => localStorage.getItem('sprintlog_jwt')), null);
+  assert.equal(await page.evaluate(() => document.cookie), '', 'session cookies are httpOnly');
+  const { token } = await api('POST', '/api/auth/login', null, { username, password: PASSWORD });
+  return { token, codes };
+}
+
+async function register(page, username) {
+  return (await registerWithCodes(page, username)).token;
+}
+
+async function logoutViaSettings(page) {
+  await page.click('button[aria-label=Settings]');
+  await page.click('button:text-is("Log out")');
+  await page.waitForSelector('#auth-user');
 }
 
 /** Finish -> Abschluss-Dialog -> speichern. */
@@ -271,6 +293,82 @@ test('training program: start template, follow the plan day, next day rotates', 
 
   await page.click('nav >> text=PLAN');
   await page.waitForSelector('button:has-text("Start Full body B")');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('forgot password: recovery code and e-mail reset link, sessions are httpOnly cookies', async () => {
+  const { page, errors, context } = await newPage();
+  const username = `rec_${Date.now()}`;
+  const { codes } = await registerWithCodes(page, username);
+  assert.equal(codes.length, 10);
+
+  const cookies = await context.cookies();
+  for (const name of ['sl_at', 'sl_rt']) {
+    const c = cookies.find((x) => x.name === name);
+    assert.ok(c?.httpOnly, `${name} is httpOnly`);
+    assert.equal(c.sameSite, 'Strict');
+  }
+
+  // 1. Mit Wiederherstellungscode
+  await logoutViaSettings(page);
+  await page.click('[data-test=forgot]');
+  await page.click('text=Use a recovery code instead');
+  await page.fill('#auth-user', username);
+  await page.fill('#auth-code', codes[0].replace('-', '').toLowerCase());
+  await page.fill('#auth-new', 'recovered-password-1');
+  await page.click('button:has-text("Set new password")');
+  await page.waitForSelector('h3:has-text("Bench Press")');
+  assert.equal((await fetch(`${BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password: PASSWORD }) })).status, 401);
+
+  // 2. E-Mail hinterlegen und bestätigen
+  await page.click('button[aria-label=Settings]');
+  await page.click('text=E-mail for password reset');
+  await page.fill('[data-test=security] input[type=email]', `${username}@example.com`);
+  await page.fill('[data-test=security] input[placeholder="Confirm with password"]', 'recovered-password-1');
+  await page.click('[data-test=security] button:has-text("Save")');
+  await page.waitForSelector('text=We sent a confirmation link');
+  const verify = (await api('GET', '/api/__test/outbox')).at(-1);
+  await page.goto(verify.link);
+  await page.waitForSelector('text=E-mail confirmed');
+  assert.ok(!page.url().includes('verify='), 'token removed from the address bar');
+
+  // 3. Passwort per E-Mail-Link zurücksetzen
+  await logoutViaSettings(page);
+  await page.click('[data-test=forgot]');
+  await page.fill('#auth-login', `${username}@example.com`);
+  await page.click('button:has-text("Send reset link")');
+  await page.waitForSelector('text=a reset link is on its way');
+  const reset = (await api('GET', '/api/__test/outbox')).at(-1);
+  assert.ok(reset.link.includes('reset='));
+  await page.goto(reset.link);
+  await page.fill('#auth-new', 'from-email-password-2');
+  await page.click('button:has-text("Save new password")');
+  await page.waitForSelector('h3:has-text("Bench Press")');
+  const login = await api('POST', '/api/auth/login', null, { username, password: 'from-email-password-2' });
+  assert.ok(login.token);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('older app versions with a token in localStorage are moved to a cookie session', async () => {
+  const username = `legacytok_${Date.now()}`;
+  const registered = await api('POST', '/api/auth/register', null, { username, password: PASSWORD });
+  const { page, errors, context } = await newPage();
+  await page.goto(BASE);
+  await page.evaluate(([token, user]) => {
+    localStorage.setItem('sprintlog_jwt', token);
+    localStorage.setItem('sprintlog:user', JSON.stringify(user));
+  }, [registered.token, { userId: registered.userId, username }]);
+  await page.reload();
+  await page.waitForSelector('h3:has-text("Bench Press")');
+  await page.waitForFunction(() => !localStorage.getItem('sprintlog_jwt'));
+  assert.ok((await context.cookies()).some((c) => c.name === 'sl_rt'), 'refresh cookie issued');
+  // Schreiben funktioniert mit der neuen Cookie-Sitzung
+  await logSet(page, 'Bench Press');
+  await finishWorkout(page);
+  await page.waitForSelector('text=Workout saved.');
+  assert.equal((await api('GET', '/api/workouts/history', registered.token)).length, 1);
   assert.deepEqual(errors, []);
   await context.close();
 });
