@@ -798,6 +798,182 @@ namespace SprintLog.Api.Migrations
                             MuscleGroup = "Cardio",
                             Name = "Cycling (Stationary)",
                             TrackingType = "DistanceTime"
+                        },
+                        new
+                        {
+                            Id = 85,
+                            Category = "Football",
+                            MuscleGroup = "Legs",
+                            Name = "Copenhagen Adduction",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 86,
+                            Category = "Football",
+                            MuscleGroup = "Legs",
+                            Name = "Single-Leg Balance",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 87,
+                            Category = "Football",
+                            MuscleGroup = "Cardio",
+                            Name = "Interval Run",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 88,
+                            Category = "Football",
+                            MuscleGroup = "Agility",
+                            Name = "Repeated Shuttle Sprints",
+                            TrackingType = "DistanceTime"
+                        },
+                        new
+                        {
+                            Id = 89,
+                            Category = "Football",
+                            MuscleGroup = "Explosive",
+                            Name = "Flying Sprints",
+                            TrackingType = "DistanceTime"
+                        },
+                        new
+                        {
+                            Id = 90,
+                            Category = "Football",
+                            MuscleGroup = "Explosive",
+                            Name = "Countermovement Jump",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 91,
+                            Category = "Football",
+                            MuscleGroup = "Explosive",
+                            Name = "Lateral Bounds",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 92,
+                            Category = "Football",
+                            MuscleGroup = "Agility",
+                            Name = "A-Skips",
+                            TrackingType = "DistanceTime"
+                        },
+                        new
+                        {
+                            Id = 93,
+                            Category = "Football",
+                            MuscleGroup = "Cardio",
+                            Name = "Tempo Runs",
+                            TrackingType = "DistanceTime"
+                        },
+                        new
+                        {
+                            Id = 94,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Inverted Row",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 95,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Hollow Body Hold",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 96,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Pallof Press",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 97,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Single-Leg Romanian Deadlift",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 98,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Step-ups",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 99,
+                            Category = "Gym",
+                            MuscleGroup = "Back/Legs",
+                            Name = "Kettlebell Swing",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 100,
+                            Category = "Gym",
+                            MuscleGroup = "Explosive",
+                            Name = "Power Clean",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 101,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Push Press",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 102,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Reverse Lunges",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 103,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Lateral Lunge",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 104,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Dead Bug",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 105,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Bodyweight Squat",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 106,
+                            Category = "Football",
+                            MuscleGroup = "Cardio",
+                            Name = "Warm-up Jog",
+                            TrackingType = "Duration"
                         });
                 });
 
@@ -870,6 +1046,13 @@ namespace SprintLog.Api.Migrations
                         .HasColumnType("double precision");
 
                     b.Property<int>("ExerciseId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int?>("PercentOf1Rm")
                         .HasColumnType("integer");
 
                     b.Property<int>("Position")
@@ -987,6 +1170,12 @@ namespace SprintLog.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("CycleWeeks")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DeloadEvery")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Goal")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -1017,7 +1206,12 @@ namespace SprintLog.Api.Migrations
 
                     b.HasIndex("UserId", "IsActive");
 
-                    b.ToTable("Programs", (string)null);
+                    b.ToTable("Programs", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Programs_CycleWeeks", "\"CycleWeeks\" IS NULL OR \"CycleWeeks\" BETWEEN 1 AND 12");
+
+                            t.HasCheckConstraint("CK_Programs_DeloadEvery", "\"DeloadEvery\" IS NULL OR \"DeloadEvery\" BETWEEN 2 AND 12");
+                        });
                 });
 
             modelBuilder.Entity("SprintLog.Api.Models.User", b =>
@@ -1132,6 +1326,10 @@ namespace SprintLog.Api.Migrations
                     b.Property<bool>("IsWarmup")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<int?>("Reps")
                         .HasColumnType("integer");
 
@@ -1231,9 +1429,58 @@ namespace SprintLog.Api.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
+                    b.OwnsMany("SprintLog.Api.Models.WeekStep", "WeekSteps", b1 =>
+                        {
+                            b1.Property<int>("ProgramExerciseId")
+                                .HasColumnType("integer");
+
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            b1.Property<double?>("Distance")
+                                .HasColumnType("double precision");
+
+                            b1.Property<int>("FromWeek")
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("Note")
+                                .HasMaxLength(80)
+                                .HasColumnType("character varying(80)");
+
+                            b1.Property<int?>("PercentOf1Rm")
+                                .HasColumnType("integer");
+
+                            b1.Property<int?>("RepsMax")
+                                .HasColumnType("integer");
+
+                            b1.Property<int?>("RepsMin")
+                                .HasColumnType("integer");
+
+                            b1.Property<int?>("Sets")
+                                .HasColumnType("integer");
+
+                            b1.Property<double?>("TargetRpe")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double?>("Time")
+                                .HasColumnType("double precision");
+
+                            b1.HasKey("ProgramExerciseId", "Id");
+
+                            b1.ToTable("ProgramExercises");
+
+                            b1.ToJson("WeekSteps");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProgramExerciseId");
+                        });
+
                     b.Navigation("Day");
 
                     b.Navigation("Exercise");
+
+                    b.Navigation("WeekSteps");
                 });
 
             modelBuilder.Entity("SprintLog.Api.Models.RecoveryCode", b =>
