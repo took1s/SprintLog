@@ -147,6 +147,8 @@ export type AuthMode = 'login' | 'register' | 'recover' | 'forgot' | 'reset';
 
 const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const isNetworkError = (e: unknown) => isApiError(e) && e.isNetwork;
+/** Danach gilt ein laufender Sync als hängend und ein neuer darf starten (ein Request hat 15 s Timeout, Refresh inklusive ~45 s). */
+export const SYNC_LOCK_MS = 60_000;
 
 export const useAppStore = defineStore('app', () => {
   const ui = useUiStore();
@@ -287,7 +289,7 @@ export const useAppStore = defineStore('app', () => {
   const failedCount = computed(() => queue.value.filter((q) => q.status === QueueStatus.Failed).length);
 
   const syncState = computed(() => {
-    if (!online.value) return { label: t('sync.offline'), tone: 'red' };
+    if (!online.value) return { label: pendingCount.value ? `${t('sync.offline')} · ${tn('sync.pending', pendingCount.value)}` : t('sync.offline'), tone: 'red' };
     if (syncing.value) return { label: t('sync.syncing'), tone: 'blue' };
     if (failedCount.value) return { label: tn('sync.failed', failedCount.value), tone: 'red' };
     if (pendingCount.value) return { label: tn('sync.pending', pendingCount.value), tone: 'orange' };
@@ -705,22 +707,32 @@ export const useAppStore = defineStore('app', () => {
   // =====================================================================
   // Synchronisation
   // =====================================================================
+  // Sperre gegen parallele Läufe - aber mit Ablaufzeit: Hängt ein Lauf (iOS friert die WebView mitten im Request ein),
+  // darf er die Queue nicht für immer blockieren. Ein neuerer Lauf übernimmt; das Ergebnis des alten wird verworfen.
+  // Doppelte Sendungen sind harmlos: Der Server erkennt dieselbe clientId wieder.
+  let syncRun = 0;
+  let syncStartedAt = 0;
+
   async function syncNow({ reload = true } = {}) {
-    if (syncing.value || !isAuthenticated.value || !queue.value.some((q) => q.status === QueueStatus.Pending)) return;
+    if (!isAuthenticated.value || !queue.value.some((q) => q.status === QueueStatus.Pending)) return;
+    if (syncing.value && Date.now() - syncStartedAt < SYNC_LOCK_MS) return;
+    const run = ++syncRun;
     syncing.value = true;
+    syncStartedAt = Date.now();
     const before = queue.value;
     try {
       const client = api();
       const result = await syncQueue(before, (payload, entry) => (isUpdate(entry)
         ? client.put(`/api/workouts/${entry.workoutId}`, payload)
         : client.post('/api/workouts', payload)));
-      if (!isAuthenticated.value) return;
+      if (run !== syncRun || !isAuthenticated.value) return;
       // Einträge, die während des Syncs neu hinzugekommen sind, nicht verlieren.
       const added = queue.value.filter((q) => !before.includes(q));
       const syncedEntries = before.filter((q) => !result.queue.some((r) => r.clientId === q.clientId));
       queue.value = [...result.queue, ...added];
       persistQueue();
 
+      if (result.synced > 0) online.value = true;
       if (result.stoppedBy === 'network') online.value = false;
       if (result.stoppedBy === 'auth') handleUnauthorized();
       const newlyFailed = result.queue.filter((q) => q.status === QueueStatus.Failed && !before.find((b) => b.clientId === q.clientId && b.status === QueueStatus.Failed));
@@ -734,8 +746,34 @@ export const useAppStore = defineStore('app', () => {
         }
       }
     } finally {
-      syncing.value = false;
+      if (run === syncRun) syncing.value = false;
     }
+  }
+
+  /**
+   * Offene Einheiten bei jeder Gelegenheit senden. Bewusst NICHT an online.value gekoppelt: Das Flag kann nach
+   * einem einzelnen Fehler (Funkloch im Gym) auf false stehen bleiben, ohne dass der Browser je ein 'online'-Event schickt.
+   * Ein Versuch ohne Netz scheitert sofort und kostet nichts.
+   */
+  function kickSync() {
+    if (isAuthenticated.value && pendingCount.value) void syncNow();
+  }
+
+  /**
+   * Nach dem Speichern senden und ehrlich melden, wo die Einheit liegt: "gespeichert" erst, wenn der Server sie hat.
+   * Scheitert das Senden (Funkloch), heißt es "auf dem Gerät gespeichert, wird automatisch synchronisiert".
+   */
+  async function syncAndAnnounce(clientId: string, savedMessage: string, offlineMessage: string) {
+    if (!online.value) {
+      toast(offlineMessage, 'success');
+      await syncNow();
+      return;
+    }
+    await syncNow();
+    const entry = queue.value.find((q) => q.clientId === clientId);
+    if (!entry) toast(savedMessage, 'success');
+    else if (entry.status === QueueStatus.Pending) toast(offlineMessage, 'info');
+    // Failed: syncNow hat die Ablehnung bereits gemeldet.
   }
 
   async function retryEntry(workout: Workout) {
@@ -961,15 +999,18 @@ export const useAppStore = defineStore('app', () => {
 
     // 1. Immer zuerst lokal sichern (offline-first) ...
     const editing = s.editing;
+    let saved: QueueEntry;
     if (editing?.kind === 'server') {
-      const entry: QueueEntry = { ...base, op: 'update', workoutId: editing.id, clientId: editing.clientId ?? newClientId() };
-      queue.value = [...queue.value.filter((q) => !(isUpdate(q) && q.workoutId === editing.id)), entry];
+      saved = { ...base, op: 'update', workoutId: editing.id, clientId: editing.clientId ?? newClientId() };
+      queue.value = [...queue.value.filter((q) => !(isUpdate(q) && q.workoutId === editing.id)), saved];
     } else if (editing?.kind === 'pending') {
       const existing = queue.value.find((q) => q.clientId === editing.clientId);
-      const entry: QueueEntry = { ...base, op: existing?.op ?? 'create', workoutId: existing?.workoutId, clientId: editing.clientId };
+      saved = { ...base, op: existing?.op ?? 'create', workoutId: existing?.workoutId, clientId: editing.clientId };
+      const entry = saved;
       queue.value = existing ? queue.value.map((q) => (q === existing ? entry : q)) : [...queue.value, entry];
     } else {
-      queue.value = [...queue.value, { ...base, clientId: newClientId() }];
+      saved = { ...base, clientId: newClientId() };
+      queue.value = [...queue.value, saved];
     }
     persistQueue();
 
@@ -979,10 +1020,8 @@ export const useAppStore = defineStore('app', () => {
     finishModal.value.open = false;
     tab.value = 'Data';
     dataTab.value = 'history';
-    toast(online.value ? t(editing ? 'finish.toast.updated' : 'finish.toast.saved') : t(editing ? 'finish.toast.updatedOffline' : 'finish.toast.savedOffline'), 'success');
-
     // 2. ... dann synchronisieren.
-    await syncNow();
+    await syncAndAnnounce(saved.clientId, t(editing ? 'finish.toast.updated' : 'finish.toast.saved'), t(editing ? 'finish.toast.updatedOffline' : 'finish.toast.savedOffline'));
   }
 
   /** Sätze einer Einheit in das Format der laufenden Session übernehmen. */
@@ -1112,22 +1151,24 @@ export const useAppStore = defineStore('app', () => {
       error: null,
     };
     const editing = m.editing;
+    let saved: QueueEntry;
     if (editing?.kind === 'server') {
-      const entry: QueueEntry = { ...base, op: 'update', workoutId: editing.id, clientId: editing.clientId ?? newClientId() };
-      queue.value = [...queue.value.filter((q) => !(isUpdate(q) && q.workoutId === editing.id)), entry];
+      saved = { ...base, op: 'update', workoutId: editing.id, clientId: editing.clientId ?? newClientId() };
+      queue.value = [...queue.value.filter((q) => !(isUpdate(q) && q.workoutId === editing.id)), saved];
     } else if (editing?.kind === 'pending') {
       const existing = queue.value.find((q) => q.clientId === editing.clientId);
-      const entry: QueueEntry = { ...base, op: existing?.op ?? 'create', workoutId: existing?.workoutId, clientId: editing.clientId };
+      saved = { ...base, op: existing?.op ?? 'create', workoutId: existing?.workoutId, clientId: editing.clientId };
+      const entry = saved;
       queue.value = existing ? queue.value.map((q) => (q === existing ? entry : q)) : [...queue.value, entry];
     } else {
-      queue.value = [...queue.value, { ...base, clientId: newClientId() }];
+      saved = { ...base, clientId: newClientId() };
+      queue.value = [...queue.value, saved];
     }
     persistQueue();
     m.open = false;
     tab.value = 'Data';
     dataTab.value = 'history';
-    toast(online.value ? t(editing ? 'finish.toast.updated' : 'match.toast.saved') : t(editing ? 'finish.toast.updatedOffline' : 'finish.toast.savedOffline'), 'success');
-    await syncNow();
+    await syncAndAnnounce(saved.clientId, t(editing ? 'finish.toast.updated' : 'match.toast.saved'), t(editing ? 'finish.toast.updatedOffline' : 'finish.toast.savedOffline'));
   }
 
   // =====================================================================
@@ -1565,15 +1606,18 @@ export const useAppStore = defineStore('app', () => {
       if (document.visibilityState === 'visible') {
         now.value = Date.now();
         clock.value = Date.now();
-        if (isAuthenticated.value && online.value) void syncNow();
+        kickSync();
       }
     });
+    // In-App-Browser (Telegram, Instagram) und iOS melden das Zurückkehren nicht immer per visibilitychange.
+    window.addEventListener('pageshow', kickSync);
+    window.addEventListener('focus', kickSync);
     window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeTopLayer(); });
 
     setInterval(() => { now.value = Date.now(); checkTimer(); }, 500);
     setInterval(() => { clock.value = Date.now(); }, 60_000);
-    // Hintergrund-Sync alle 2 Minuten, falls etwas offen ist.
-    setInterval(() => { if (isAuthenticated.value && online.value && pendingCount.value) void syncNow(); }, 120_000);
+    // Hintergrund-Sync jede Minute, falls etwas offen ist.
+    setInterval(kickSync, 60_000);
 
     registerServiceWorker();
 

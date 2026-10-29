@@ -4,6 +4,7 @@ import type { Messages } from '.';
 
 export const de: Messages = {
   common: {
+    sessionBusy: 'Die Sitzung wird gerade erneuert - bitte gleich nochmal versuchen.',
     cancel: 'Abbrechen',
     close: 'Schließen',
     save: 'Speichern',
@@ -63,6 +64,7 @@ export const de: Messages = {
     'Legs/Back': 'Beine/Rücken', 'Back/Legs': 'Rücken/Beine', Explosive: 'Explosivkraft', Agility: 'Agilität', Other: 'Sonstiges',
   },
   sync: {
+    tapToSync: 'Tippen, um jetzt zu senden',
     offline: 'Offline',
     syncing: 'Synchronisiert',
     synced: 'Synchron',
@@ -411,6 +413,9 @@ export const de: Messages = {
     noRecords: 'Übertriff eine frühere Bestleistung, um hier Rekorde zu sehen.',
   },
   history: {
+    unsent: { one: '{n} Einheit ist nur auf diesem Gerät und noch nicht auf dem Server.', other: '{n} Einheiten sind nur auf diesem Gerät und noch nicht auf dem Server.' },
+    unsentFailed: { one: '{n} Einheit wurde vom Server abgelehnt.', other: '{n} Einheiten wurden vom Server abgelehnt.' },
+    sendNow: 'Jetzt senden',
     syncFailed: 'Sync fehlgeschlagen',
     editPending: 'Änderung ausstehend',
     pendingSync: 'Sync ausstehend',

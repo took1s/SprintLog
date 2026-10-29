@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
-import { createRefreshingApi, ApiError } from '../src/lib/api';
+import { createApi, createRefreshingApi, ApiError, REFRESH_RACE_DELAYS } from '../src/lib/api';
 
 const res = (status: number, body: unknown = {}) => new Response(status === 204 ? null : JSON.stringify(body), { status });
 const read = async <T,>(r: Response): Promise<T> => {
@@ -61,6 +61,24 @@ describe('session refresh', () => {
     expect(calls.filter((c) => c.key === 'POST /api/auth/refresh')).toHaveLength(2);
   });
 
+  test('a persisting 409 is not an expired session: no logout, retryable error', async () => {
+    vi.useFakeTimers();
+    try {
+      const { send, calls } = server({ 'GET /api/workouts/changes': [401], 'POST /api/auth/refresh': [409] });
+      const onUnauthorized = vi.fn();
+      const api = createRefreshingApi(send, read, { onUnauthorized });
+      const result = api.get('/api/workouts/changes').catch((e: unknown) => e);
+      await vi.runAllTimersAsync();
+      const error = await result;
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).isRetryable).toBe(true);
+      expect(onUnauthorized).not.toHaveBeenCalled();
+      expect(calls.filter((c) => c.key === 'POST /api/auth/refresh')).toHaveLength(1 + REFRESH_RACE_DELAYS.length);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   test('a token of an older app version is sent once and then dropped', async () => {
     const { send, calls } = server({ 'POST /api/auth/refresh': [200] });
     let legacy: string | null = 'old.jwt.token';
@@ -69,5 +87,34 @@ describe('session refresh', () => {
     await api.refreshSession();
     expect(calls[0].headers.Authorization).toBe('Bearer old.jwt.token');
     expect(calls[1].headers.Authorization).toBeUndefined();
+  });
+});
+
+describe('transport timeout', () => {
+  test('a response whose body never finishes is aborted (does not hang the caller)', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('{"partial":'));
+          init.signal?.addEventListener('abort', () => controller.error(new DOMException('Aborted', 'AbortError')));
+        },
+      });
+      return new Response(body, { status: 201 });
+    }));
+    try {
+      const api = createApi({ timeoutMs: 50 });
+      await expect(api.post('/api/workouts', {})).rejects.toMatchObject({ status: 0 });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test('a normal JSON response is read as before', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ workoutId: 5 }), { status: 201 })));
+    try {
+      await expect(createApi().post('/api/workouts', {})).resolves.toEqual({ workoutId: 5 });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

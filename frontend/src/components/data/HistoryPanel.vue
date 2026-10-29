@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { t } from '@/i18n';
+import { t, tn } from '@/i18n';
 import { exerciseName, categoryName } from '@/i18n/content';
 
 const FILTERS = ['all', 'Gym', 'Football', 'Match', 'Hybrid'] as const;
@@ -9,12 +9,25 @@ import { describeSet, formatDate, formatDuration, formatTime, formatWeekday } fr
 import { groupSetsByExercise, workoutKey } from '@/lib/analytics';
 
 const app = useAppStore();
-const { filteredHistory, historyFilter, historyLimit, settings, visibleHistory } = storeToRefs(app);
-const { deleteWorkout, editWorkout, programNameForDay, repeatWorkout, retryEntry, setBadges } = app;
+const { failedCount, filteredHistory, historyFilter, historyLimit, pendingCount, settings, syncing, visibleHistory } = storeToRefs(app);
+const { deleteWorkout, editWorkout, programNameForDay, repeatWorkout, retryEntry, setBadges, syncNow } = app;
 </script>
 
 <template>
   <div class="space-y-5">
+      <!-- Nicht gesendete Einheiten deutlich zeigen: Sie existieren nur auf diesem Gerät (anderer Browser sieht sie nicht). -->
+      <div v-if="pendingCount || failedCount" role="status" data-testid="unsent-banner"
+           class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-400/40 bg-orange-400/10 p-4">
+          <div class="min-w-0 text-xs font-bold text-orange-200">
+              <p v-if="pendingCount">{{ tn('history.unsent', pendingCount) }}</p>
+              <p v-if="failedCount" class="text-red-300">{{ tn('history.unsentFailed', failedCount) }}</p>
+          </div>
+          <button v-if="pendingCount" @click="syncNow()" :disabled="syncing"
+                  class="cyber-outline-btn rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-widest disabled:opacity-40">
+              {{ syncing ? t('settings.syncing') : t('history.sendNow') }}
+          </button>
+      </div>
+
       <div class="flex flex-wrap gap-2">
           <button v-for="f in FILTERS" :key="f" @click="historyFilter = f; historyLimit = 20"
                   class="chip" :class="historyFilter === f ? 'chip-active' : 'chip-idle'">{{ f === 'all' ? t('common.all') : t(`categories.${f}`) }}</button>
