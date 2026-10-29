@@ -35,8 +35,8 @@ async function api(method, url, token, body) {
   return res.status === 204 ? null : res.json();
 }
 
-async function newPage() {
-  const context = await browser.newContext({ viewport: { width: 420, height: 900 } });
+async function newPage({ locale = 'en-US' } = {}) {
+  const context = await browser.newContext({ viewport: { width: 420, height: 900 }, locale });
   await context.addInitScript(() => {
     window.__cspViolations = [];
     document.addEventListener('securitypolicyviolation', (e) => window.__cspViolations.push(`${e.violatedDirective}: ${e.blockedURI}`));
@@ -224,7 +224,7 @@ test('RPE, warm-up, session RPE and notes are saved; editing a workout updates i
   // Bearbeiten: Gewicht des Arbeitssatzes ändern
   await page.click('article >> button:text-is("Edit")');
   await page.waitForSelector('text=Edit workout');
-  await page.click('[aria-label="Session review"] button[aria-label="Edit set"] >> nth=1');
+  await page.click('[aria-label="Session review" i] button[aria-label="Edit set"] >> nth=1');
   await page.fill('#in-weight', '82.5');
   await page.click('button:has-text("Update set")');
   await page.click('button:text-is("Save")');
@@ -251,7 +251,7 @@ test('editing offline queues the change and syncs it with PUT once online', asyn
 
   await context.setOffline(true);
   await page.click('article >> button:text-is("Edit")');
-  await page.click('[aria-label="Session review"] button[aria-label="Edit set"]');
+  await page.click('[aria-label="Session review" i] button[aria-label="Edit set"]');
   await page.fill('#in-reps', '3');
   await page.click('button:has-text("Update set")');
   await page.click('button:text-is("Save")');
@@ -293,6 +293,33 @@ test('training program: start template, follow the plan day, next day rotates', 
 
   await page.click('nav >> text=PLAN');
   await page.waitForSelector('button:has-text("Start Full body B")');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('language: browser language is detected, switching in settings translates the app and persists', async () => {
+  // Deutscher Browser -> Anmeldemaske auf Deutsch, ohne etwas einzustellen.
+  const german = await newPage({ locale: 'de-DE' });
+  await german.page.goto(BASE);
+  await german.page.waitForSelector('text=Passwort vergessen?');
+  assert.equal(await german.page.evaluate(() => document.documentElement.lang), 'de');
+  assert.deepEqual(german.errors, []);
+  await german.context.close();
+
+  const { page, errors, context } = await newPage();
+  await register(page, `lang_${Date.now()}`);
+  await page.click('button[aria-label=Settings]');
+  await page.click('button[lang=ru]');
+  await page.click('button[aria-label="Закрыть"]');
+  await page.waitForSelector('nav >> text=ПЛАН');
+  // Standard-Übungen und Vorlagen werden übersetzt.
+  await page.waitForSelector('h3:text-is("Жим штанги лёжа")');
+  await page.click('nav >> text=ПЛАН');
+  await page.waitForSelector('h4:text-is("Сила для футболиста 2x")');
+  // Nach dem Neuladen bleibt die Sprache erhalten.
+  await page.reload();
+  await page.waitForSelector('nav >> text=ДАННЫЕ');
+  assert.equal(await page.evaluate(() => document.documentElement.lang), 'ru');
   assert.deepEqual(errors, []);
   await context.close();
 });

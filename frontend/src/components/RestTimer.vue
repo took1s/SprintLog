@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
 import { formatClock } from '@/lib/format';
@@ -10,7 +11,7 @@ const { adjustTimer, stopTimer } = app;
 
 <template>
   <transition name="slide-up">
-      <div v-if="isAuthenticated && timerActive" class="glass-panel modal-panel fixed bottom-28 left-1/2 z-[35] flex -translate-x-1/2 items-center gap-3 rounded-full border border-accent/40 py-2 pl-2 pr-3 shadow-[0_15px_35px_rgba(0,195,255,0.25)]" role="timer" aria-label="Rest timer">
+      <div v-if="isAuthenticated && timerActive" class="glass-panel modal-panel fixed bottom-28 left-1/2 z-[35] flex -translate-x-1/2 items-center gap-3 rounded-full border border-accent/40 py-2 pl-2 pr-3 shadow-[0_15px_35px_rgba(0,195,255,0.25)]" role="timer" :aria-label="t('timer.label')">
           <svg class="h-9 w-9 -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
               <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3"></circle>
               <circle cx="18" cy="18" r="15" fill="none" stroke="#00c3ff" stroke-width="3" stroke-linecap="round"
@@ -18,9 +19,9 @@ const { adjustTimer, stopTimer } = app;
           </svg>
           <div class="w-14 text-center font-mono text-lg font-black tracking-wider text-white">{{ formatClock(timerLeft) }}</div>
           <div class="flex items-center gap-1 border-l border-white/10 pl-2">
-              <button @click="adjustTimer(-15)" class="h-8 w-9 rounded-full text-[10px] font-bold text-slate-400 transition-colors hover:bg-white/10 hover:text-white" aria-label="Minus 15 seconds">-15</button>
-              <button @click="adjustTimer(15)" class="h-8 w-9 rounded-full text-[10px] font-bold text-slate-400 transition-colors hover:bg-white/10 hover:text-white" aria-label="Plus 15 seconds">+15</button>
-              <button @click="stopTimer" class="danger-btn ml-1 flex h-8 w-8 items-center justify-center rounded-full" aria-label="Stop timer">
+              <button @click="adjustTimer(-15)" class="h-8 w-9 rounded-full text-[10px] font-bold text-slate-400 transition-colors hover:bg-white/10 hover:text-white" :aria-label="t('timer.minus')">-15</button>
+              <button @click="adjustTimer(15)" class="h-8 w-9 rounded-full text-[10px] font-bold text-slate-400 transition-colors hover:bg-white/10 hover:text-white" :aria-label="t('timer.plus')">+15</button>
+              <button @click="stopTimer" class="danger-btn ml-1 flex h-8 w-8 items-center justify-center rounded-full" :aria-label="t('timer.stop')">
                   <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
           </div>

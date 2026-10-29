@@ -634,10 +634,10 @@ export function motionFor(exercise: ExerciseLike | null | undefined): string | n
 }
 
 /** Bewegung + Technik-Hinweise für eine Übung (beides kann null sein). */
-export function techniqueFor(exercise: ExerciseLike | null | undefined): { motion: string | null; technique: Technique | null } {
+export function techniqueFor(exercise: ExerciseLike | null | undefined): { motion: string | null; key: string | null; technique: Technique | null } {
   const motion = motionFor(exercise);
   const key = motion ?? (exercise?.id && !exercise.isCustom ? EXERCISE_TECHNIQUE_ONLY[exercise.id] : null) ?? null;
-  return { motion, technique: key ? TECHNIQUE[key] ?? null : null };
+  return { motion, key, technique: key ? TECHNIQUE[key] ?? null : null };
 }
 
 /** Technik-Hinweise und Zielmuskulatur pro Bewegungsmuster. */

@@ -1,13 +1,22 @@
 name: Keep-alive
 
-# Ruft täglich /health auf. Das weckt den Render-Service und erzeugt Datenbank-Aktivität,
-# damit das kostenlose Supabase-Projekt nicht nach 7 Tagen Inaktivität pausiert wird.
+# Hält den kostenlosen Render-Service tagsüber wach (Render schläft nach 15 min ohne Anfrage ein,
+# der Kaltstart dauert ~1 min) und erzeugt Datenbank-Aktivität, damit Supabase Free nicht pausiert.
+#
+# Nur 05-21 Uhr UTC (= 6-23 Uhr deutscher Winterzeit): 17 h × 31 Tage ≈ 530 Instanz-Stunden.
+# Render Free hat 750 h pro Monat für ALLE Services des Workspaces - rund um die Uhr (744 h)
+# bliebe für andere Services nichts übrig. Nachts dauert der erste Aufruf deshalb wieder ~1 min.
+# GitHub startet geplante Workflows mit Verzögerung (oft 5-15 min) - daher alle 10 statt 14 min.
 on:
   schedule:
-    - cron: "17 5 * * *"   # täglich 05:17 UTC
+    - cron: "*/10 5-21 * * *"
   workflow_dispatch:
 
 permissions: {}
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
 
 jobs:
   ping:

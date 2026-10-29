@@ -28,6 +28,8 @@ import type {
   TrackingType as TrackingTypeValue, TrainingProgram, Workout, WorkoutSet,
 } from '../types';
 import { useUiStore } from './ui';
+import { t, tn, tDynamic, intlLocale } from '../i18n';
+import { localizedTechnique, muscleName as trMuscleName, exerciseName as trExerciseName, dayName as trDayName, programName as trProgramName } from '../i18n/content';
 
 // ---------- Konstanten ----------
 
@@ -248,7 +250,10 @@ export const useAppStore = defineStore('app', () => {
   const otherPrograms = computed(() => programs.value.filter((p) => !p.isActive));
   const programInfo = computed(() => (activeProgram.value ? programStatus(activeProgram.value, allWorkouts.value, clockDate.value) : null));
   const loadInfo = computed(() => loadStatus(allWorkouts.value, clockDate.value));
-  const loadZone = computed(() => ZONE_INFO[loadInfo.value.zone]);
+  const loadZone = computed(() => {
+    const zone = loadInfo.value.zone;
+    return { ...ZONE_INFO[zone], label: tDynamic(`plan.zones.${zone}.label`, ZONE_INFO[zone].label), advice: tDynamic(`plan.zones.${zone}.advice`, ZONE_INFO[zone].advice) };
+  });
   const planTargets = computed(() => (session.value.plan?.targets ?? []).map((t) => ({ ...t, done: setsDone(t.exerciseId, session.value.sets) })));
   const planProgress = computed(() => {
     const t = planTargets.value;
@@ -258,18 +263,18 @@ export const useAppStore = defineStore('app', () => {
   });
   const exerciseGroups = computed(() => {
     const byCat = (cat: string) => exercises.value.filter((e) => e.category === cat).sort((a, b) => a.name.localeCompare(b.name));
-    return [{ label: 'Gym', items: byCat('Gym') }, { label: 'Field', items: byCat('Football') }];
+    return [{ label: 'Gym', category: 'Gym', items: byCat('Gym') }, { label: 'Field', category: 'Football', items: byCat('Football') }];
   });
 
   const pendingCount = computed(() => queue.value.filter((q) => q.status === QueueStatus.Pending).length);
   const failedCount = computed(() => queue.value.filter((q) => q.status === QueueStatus.Failed).length);
 
   const syncState = computed(() => {
-    if (!online.value) return { label: 'Offline', tone: 'red' };
-    if (syncing.value) return { label: 'Syncing', tone: 'blue' };
-    if (failedCount.value) return { label: `${failedCount.value} failed`, tone: 'red' };
-    if (pendingCount.value) return { label: `${pendingCount.value} pending`, tone: 'orange' };
-    return { label: 'Synced', tone: 'green' };
+    if (!online.value) return { label: t('sync.offline'), tone: 'red' };
+    if (syncing.value) return { label: t('sync.syncing'), tone: 'blue' };
+    if (failedCount.value) return { label: tn('sync.failed', failedCount.value), tone: 'red' };
+    if (pendingCount.value) return { label: tn('sync.pending', pendingCount.value), tone: 'orange' };
+    return { label: t('sync.synced'), tone: 'green' };
   });
 
   // ---------- Übungsliste ----------
@@ -280,13 +285,14 @@ export const useAppStore = defineStore('app', () => {
   const filteredExercises = computed(() => {
     const q = search.value.toLowerCase().trim();
     let list = categoryExercises.value;
-    if (q) list = list.filter((e) => e.name.toLowerCase().includes(q) || (e.muscleGroup ?? '').toLowerCase().includes(q));
+    // Suche findet die Übung über den übersetzten und den englischen Namen sowie die Muskelgruppe.
+    if (q) list = list.filter((e) => [e.name, trExerciseName(e), e.muscleGroup ?? '', trMuscleName(e.muscleGroup)].some((v) => v.toLowerCase().includes(q)));
     if (muscleFilters.value.length) list = list.filter((e) => muscleFilters.value.includes(e.muscleGroup || 'Other'));
 
     const fav = (e: Exercise) => (favorites.value.includes(e.id) ? 1 : 0);
     const used = (e: Exercise) => usage.value.get(`id:${e.id}`) ?? 0;
     const last = (e: Exercise) => records.value.get(`id:${e.id}`)?.lastDate ?? '';
-    const byName = (a: Exercise, b: Exercise) => a.name.localeCompare(b.name);
+    const byName = (a: Exercise, b: Exercise) => trExerciseName(a).localeCompare(trExerciseName(b), intlLocale());
     const sorters: Record<SortMode, (a: Exercise, b: Exercise) => number> = {
       fav: (a, b) => fav(b) - fav(a) || byName(a, b),
       freq: (a, b) => used(b) - used(a) || byName(a, b),
@@ -297,7 +303,7 @@ export const useAppStore = defineStore('app', () => {
     return [...list].sort(sorters[sortMode.value] ?? byName);
   });
 
-  const sortLabel = computed(() => sortOptions.find((o) => o.key === sortMode.value)?.label);
+  const sortLabel = computed(() => tDynamic(`catalog.sort.${sortMode.value}`, sortOptions.find((o) => o.key === sortMode.value)?.label ?? ''));
 
   // ---------- Laufende Einheit ----------
   const sessionActive = computed(() => session.value.sets.length > 0);
@@ -317,7 +323,10 @@ export const useAppStore = defineStore('app', () => {
   const modalRecord = computed<ExerciseRecord | null>(() => (modalEx.value ? records.value.get(modalKey.value) ?? null : null));
   const modalPrevious = computed(() => (modalEx.value ? lastSetFor(allWorkouts.value, modalKey.value) : null));
   const modalSessionSets = computed(() => session.value.sets.filter((s) => s.exerciseId === modalEx.value?.id));
-  const modalTechnique = computed(() => techniqueFor(modalEx.value));
+  const modalTechnique = computed(() => {
+    const info = techniqueFor(modalEx.value);
+    return { ...info, technique: localizedTechnique(info.key, info.technique) };
+  });
   const modalTarget = computed(() => planTargetFor(modalEx.value?.id));
   const modalE1RM = computed(() => epley1RM(setModal.value.weight, setModal.value.reps));
   const modalIntensity = computed(() => {
@@ -379,7 +388,7 @@ export const useAppStore = defineStore('app', () => {
   });
 
   const recordList = computed(() => [...records.value.values()].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')));
-  const heatmap = computed(() => activityHeatmap(allWorkouts.value, 26, clockDate.value));
+  const heatmap = computed(() => activityHeatmap(allWorkouts.value, 26, clockDate.value, intlLocale()));
   const selectedDayWorkouts = computed(() => (selectedDay.value ? allWorkouts.value.filter((w) => dateKey(w.date) === selectedDay.value) : []));
   const activeDaysLast30 = computed(() => {
     const since = clock.value - 30 * 86_400_000;
@@ -407,19 +416,19 @@ export const useAppStore = defineStore('app', () => {
 
     // Clientseitige Vorprüfung (der Server prüft trotzdem)
     if (mode === 'forgot') {
-      if (!f.login.trim()) { authError.value = 'Enter your username or e-mail.'; return; }
+      if (!f.login.trim()) { authError.value = t('auth.errors.loginRequired'); return; }
     } else if (mode === 'reset') {
-      if (f.newPassword.length < 8) { authFields.value = { newPassword: ['Password must be at least 8 characters.'] }; return; }
+      if (f.newPassword.length < 8) { authFields.value = { newPassword: [t('auth.errors.passwordShort')] }; return; }
     } else {
-      if (!username) { authError.value = 'Username is required.'; return; }
+      if (!username) { authError.value = t('auth.errors.usernameRequired'); return; }
       if (mode === 'recover') {
-        if (!f.code.trim()) { authFields.value = { code: ['Enter one of your recovery codes.'] }; return; }
-        if (f.newPassword.length < 8) { authFields.value = { newPassword: ['Password must be at least 8 characters.'] }; return; }
+        if (!f.code.trim()) { authFields.value = { code: [t('auth.errors.codeRequired')] }; return; }
+        if (f.newPassword.length < 8) { authFields.value = { newPassword: [t('auth.errors.passwordShort')] }; return; }
       } else if (!f.password) {
-        authError.value = 'Username and password are required.';
+        authError.value = t('auth.errors.credentialsRequired');
         return;
       } else if (mode === 'register' && f.password.length < 8) {
-        authFields.value = { password: ['Password must be at least 8 characters.'] };
+        authFields.value = { password: [t('auth.errors.passwordShort')] };
         return;
       }
     }
@@ -428,7 +437,7 @@ export const useAppStore = defineStore('app', () => {
     try {
       if (mode === 'forgot') {
         await api().post('/api/auth/forgot-password', { login: f.login.trim() });
-        authNotice.value = 'If the account has a confirmed e-mail, a reset link is on its way. Check your inbox (and spam).';
+        authNotice.value = t('auth.notice.resetSent');
         return;
       }
       const request: Record<AuthMode, [string, unknown]> = {
@@ -442,14 +451,14 @@ export const useAppStore = defineStore('app', () => {
       const result = await api().post<AuthResult>(path, body);
       if (result.recoveryCodes?.length) recoveryCodes.value = result.recoveryCodes;
       await completeSignIn({ userId: result.userId, username: result.username }, {
-        login: `Logged in as ${result.username}`,
-        register: `Welcome, ${result.username}!`,
-        recover: 'Password changed - you are logged in. That recovery code is now used up.',
-        reset: 'Password changed - you are logged in.',
+        login: t('auth.toast.login', { name: result.username }),
+        register: t('auth.toast.register', { name: result.username }),
+        recover: t('auth.toast.recover'),
+        reset: t('auth.toast.reset'),
         forgot: '',
       }[mode]);
     } catch (e) {
-      authError.value = isNetworkError(e) ? 'No connection to server. Signing in requires internet once.' : errorMessage(e);
+      authError.value = isNetworkError(e) ? t('auth.errors.offline') : errorMessage(e);
       authFields.value = isApiError(e) ? e.fields : {};
     } finally {
       authBusy.value = false;
@@ -501,16 +510,16 @@ export const useAppStore = defineStore('app', () => {
 
   function handleUnauthorized() {
     if (!user.value) return;
-    toast('Session expired. Please log in again.', 'error');
+    toast(t('auth.errors.sessionExpired'), 'error');
     clearAuth();
   }
 
   async function logout() {
     if (queue.value.length) {
       const ok = await confirm({
-        title: 'Unsynced workouts',
-        message: `${queue.value.length} workout(s) are not synced yet. They stay on this device and sync after your next login.`,
-        confirmText: 'Log out',
+        title: t('settings.confirm.unsyncedTitle'),
+        message: tn('settings.confirm.unsyncedMessage', queue.value.length),
+        confirmText: t('settings.confirm.logout'),
       });
       if (!ok) return;
     }
@@ -697,7 +706,7 @@ export const useAppStore = defineStore('app', () => {
       if (result.stoppedBy === 'network') online.value = false;
       if (result.stoppedBy === 'auth') handleUnauthorized();
       const newlyFailed = result.queue.filter((q) => q.status === QueueStatus.Failed && !before.find((b) => b.clientId === q.clientId && b.status === QueueStatus.Failed));
-      if (newlyFailed.length) toast(`${newlyFailed.length} workout(s) rejected by server: ${newlyFailed[0].error}`, 'error');
+      if (newlyFailed.length) toast(tn('finish.toast.rejected', newlyFailed.length, { error: newlyFailed[0].error ?? '' }), 'error');
 
       if (result.synced > 0) {
         const loaded = reload ? await loadHistory() : true;
@@ -721,7 +730,7 @@ export const useAppStore = defineStore('app', () => {
   // Favoriten / Übungsliste
   // =====================================================================
   async function toggleFavorite(ex: Exercise) {
-    if (!online.value) { toast('Favorites need a connection.', 'error'); return; }
+    if (!online.value) { toast(t('favorites.needsConnection'), 'error'); return; }
     const isFav = favorites.value.includes(ex.id);
     favorites.value = isFav ? favorites.value.filter((id) => id !== ex.id) : [...favorites.value, ex.id];
     try {
@@ -816,15 +825,15 @@ export const useAppStore = defineStore('app', () => {
     if (type === TrackingType.WeightReps) {
       set.weight = Math.max(0, num(m.weight));
       set.reps = Math.max(0, Math.round(num(m.reps)));
-      if (set.reps < 1) return { error: 'Reps must be at least 1.' };
-      if (set.weight > 1000) return { error: 'Weight looks wrong (max 1000 kg).' };
+      if (set.reps < 1) return { error: t('set.errors.reps') };
+      if (set.weight > 1000) return { error: t('set.errors.weight') };
     } else if (type === TrackingType.DistanceTime) {
       set.distance = Math.max(0, num(m.distance));
       set.time = Math.max(0, num(m.time));
-      if (!(set.distance > 0) && !(set.time > 0)) return { error: 'Enter distance and/or time.' };
+      if (!(set.distance > 0) && !(set.time > 0)) return { error: t('set.errors.distanceTime') };
     } else {
       set.time = Math.max(0, num(m.time));
-      if (!(set.time > 0)) return { error: 'Duration must be greater than 0.' };
+      if (!(set.time > 0)) return { error: t('set.errors.duration') };
     }
     return { set };
   }
@@ -848,7 +857,7 @@ export const useAppStore = defineStore('app', () => {
     }
     persistSession();
     closeSetModal();
-    if (wasPR) toast(`New record on ${set.exerciseName}!`, 'gold');
+    if (wasPR) toast(t('set.toast.record', { name: trExerciseName(set.exerciseId, set.exerciseName) }), 'gold');
   }
 
   function editSessionSet(index: number) {
@@ -880,8 +889,8 @@ export const useAppStore = defineStore('app', () => {
 
   async function abortSession() {
     const ok = await confirm(isEditing.value
-      ? { title: 'Discard changes?', message: 'The workout stays as it was before editing.', confirmText: 'Discard', danger: true }
-      : { title: 'Discard session?', message: 'All sets of the current session will be deleted.', confirmText: 'Discard', danger: true });
+      ? { title: t('session.confirm.discardChangesTitle'), message: t('session.confirm.discardChangesMessage'), confirmText: t('session.discard'), danger: true }
+      : { title: t('session.confirm.discardSessionTitle'), message: t('session.confirm.discardSessionMessage'), confirmText: t('session.discard'), danger: true });
     if (!ok) return;
     session.value = EMPTY_SESSION();
     persistSession();
@@ -913,8 +922,8 @@ export const useAppStore = defineStore('app', () => {
     const f = finishModal.value;
     const s = session.value;
     const date = f.date ? new Date(f.date) : new Date(s.startedAt ?? Date.now());
-    if (Number.isNaN(date.getTime())) { f.error = 'Invalid date.'; return; }
-    if (date.getTime() > Date.now() + 60 * 60 * 1000) { f.error = 'Date cannot be in the future.'; return; }
+    if (Number.isNaN(date.getTime())) { f.error = t('finish.errors.date'); return; }
+    if (date.getTime() > Date.now() + 60 * 60 * 1000) { f.error = t('finish.errors.future'); return; }
     const minutes = Number(f.durationMin);
     const base = {
       date: date.toISOString(),
@@ -949,8 +958,7 @@ export const useAppStore = defineStore('app', () => {
     finishModal.value.open = false;
     tab.value = 'Data';
     dataTab.value = 'history';
-    const verb = editing ? 'updated' : 'saved';
-    toast(online.value ? `Workout ${verb}.` : `Workout ${verb} offline - will sync automatically.`, 'success');
+    toast(online.value ? t(editing ? 'finish.toast.updated' : 'finish.toast.saved') : t(editing ? 'finish.toast.updatedOffline' : 'finish.toast.savedOffline'), 'success');
 
     // 2. ... dann synchronisieren.
     await syncNow();
@@ -975,7 +983,7 @@ export const useAppStore = defineStore('app', () => {
 
   async function repeatWorkout(workout: Workout) {
     if (sessionActive.value) {
-      const ok = await confirm({ title: 'Replace session?', message: 'Your current session will be replaced by this workout.', confirmText: 'Replace' });
+      const ok = await confirm({ title: t('session.confirm.replaceTitle'), message: t('session.confirm.replaceRepeat'), confirmText: t('session.confirm.replace') });
       if (!ok) return;
     }
     session.value = { ...EMPTY_SESSION(), startedAt: new Date().toISOString(), sets: toSessionSets(workout.sets, { keepDetails: false }) };
@@ -989,7 +997,7 @@ export const useAppStore = defineStore('app', () => {
   async function editWorkout(workout: Workout) {
     if (!workout.pending && !workout.id) return;
     if (sessionActive.value) {
-      const ok = await confirm({ title: 'Replace session?', message: 'Your current session will be replaced by the workout you edit.', confirmText: 'Edit' });
+      const ok = await confirm({ title: t('session.confirm.replaceTitle'), message: t('session.confirm.replaceEdit'), confirmText: t('common.edit') });
       if (!ok) return;
     }
     stopTimer();
@@ -1010,18 +1018,18 @@ export const useAppStore = defineStore('app', () => {
   async function deleteWorkout(workout: Workout) {
     if (workout.pending) {
       const ok = await confirm(workout.op === 'update'
-        ? { title: 'Discard changes?', message: 'Your unsynced changes are removed; the saved version stays.', confirmText: 'Discard', danger: true }
-        : { title: 'Discard workout?', message: 'This workout was not synced yet and will be removed from this device.', confirmText: 'Discard', danger: true });
+        ? { title: t('history.confirm.discardChangesTitle'), message: t('history.confirm.discardChangesMessage'), confirmText: t('session.discard'), danger: true }
+        : { title: t('history.confirm.discardTitle'), message: t('history.confirm.discardMessage'), confirmText: t('session.discard'), danger: true });
       if (!ok) return;
       queue.value = queue.value.filter((q) => q.clientId !== workout.clientId);
       persistQueue();
       return;
     }
-    if (!online.value) { toast('Deleting needs a connection.', 'error'); return; }
+    if (!online.value) { toast(t('history.toast.needsConnection'), 'error'); return; }
     const ok = await confirm({
-      title: 'Delete workout?',
-      message: `${formatDate(workout.date)} · ${workout.sets.length} sets. This cannot be undone.`,
-      confirmText: 'Delete',
+      title: t('history.confirm.deleteTitle'),
+      message: t('history.confirm.deleteMessage', { date: formatDate(workout.date), sets: tn('units.sets', workout.sets.length) }),
+      confirmText: t('common.delete'),
       danger: true,
     });
     if (!ok) return;
@@ -1029,7 +1037,7 @@ export const useAppStore = defineStore('app', () => {
       await api().del(`/api/workouts/${workout.id}`);
       history.value = history.value.filter((w) => w.id !== workout.id);
       writeJson(keys.value!.history, history.value);
-      toast('Workout deleted.', 'success');
+      toast(t('history.toast.deleted'), 'success');
     } catch (e) {
       toast(errorMessage(e), 'error');
     }
@@ -1040,13 +1048,13 @@ export const useAppStore = defineStore('app', () => {
   // =====================================================================
   function dayLabel(day: ProgramDay): string {
     const last = programInfo.value?.lastByDay.get(day.id);
-    return last ? `last ${formatRelative(last, clockDate.value)}` : 'not done yet';
+    return last ? t('plan.lastRelative', { when: formatRelative(last, clockDate.value) }) : t('plan.notDone');
   }
 
   function programNameForDay(dayId: number): string | null {
     for (const p of programs.value) {
       const day = p.days.find((d) => d.id === dayId);
-      if (day) return `${p.name} · ${day.name}`;
+      if (day) return `${trProgramName(p)} · ${trDayName(p, day)}`;
     }
     return null;
   }
@@ -1054,7 +1062,7 @@ export const useAppStore = defineStore('app', () => {
   /** Plan-Tag starten: Session mit Zielvorgaben und Gewichtsvorschlägen (Double Progression). */
   async function startProgramDay(day: ProgramDay) {
     if (sessionActive.value) {
-      const ok = await confirm({ title: 'Replace session?', message: 'Your current session will be replaced by this plan day.', confirmText: 'Start day' });
+      const ok = await confirm({ title: t('plan.confirm.replaceTitle'), message: t('plan.confirm.replaceDay'), confirmText: t('plan.confirm.startDay') });
       if (!ok) return;
     }
     const targets: PlanTarget[] = day.exercises.map((x) => ({
@@ -1072,7 +1080,7 @@ export const useAppStore = defineStore('app', () => {
     persistSession();
     tab.value = targets[0]?.category === 'Football' ? 'Football' : 'Gym';
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    toast(`${day.name} started - follow the plan below.`, 'success');
+    toast(t('plan.toast.dayStarted', { name: trDayName(activeProgram.value, day) }), 'success');
   }
 
   function openPlanTarget(target: PlanTarget) {
@@ -1085,9 +1093,9 @@ export const useAppStore = defineStore('app', () => {
   }
 
   async function startTemplate(template: ProgramTemplate) {
-    if (!online.value) { toast('Starting a program needs a connection.', 'error'); return; }
+    if (!online.value) { toast(t('plan.toast.needsConnection'), 'error'); return; }
     if (activeProgram.value) {
-      const ok = await confirm({ title: 'Switch program?', message: `"${activeProgram.value.name}" will be paused (not deleted).`, confirmText: 'Start' });
+      const ok = await confirm({ title: t('plan.confirm.switchTitle'), message: t('plan.confirm.switchMessage', { name: trProgramName(activeProgram.value) }), confirmText: t('common.start') });
       if (!ok) return;
     }
     try {
@@ -1101,16 +1109,16 @@ export const useAppStore = defineStore('app', () => {
   }
 
   async function activateProgram(program: TrainingProgram) {
-    if (!online.value) { toast('Needs a connection.', 'error'); return; }
+    if (!online.value) { toast(t('common.needsConnection'), 'error'); return; }
     try {
       await api().post(`/api/programs/${program.id}/activate`);
       await loadPrograms();
-      toast(`"${program.name}" is active - week 1 starts today.`, 'success');
+      toast(t('plan.toast.activated', { name: trProgramName(program) }), 'success');
     } catch (e) { toast(errorMessage(e), 'error'); }
   }
 
   async function stopProgram(program: TrainingProgram) {
-    const ok = await confirm({ title: 'Pause program?', message: 'Your workouts stay saved. You can restart the program later.', confirmText: 'Pause' });
+    const ok = await confirm({ title: t('plan.confirm.pauseTitle'), message: t('plan.confirm.pauseMessage'), confirmText: t('plan.pause') });
     if (!ok) return;
     try {
       await api().post(`/api/programs/${program.id}/deactivate`);
@@ -1120,21 +1128,21 @@ export const useAppStore = defineStore('app', () => {
 
   async function deleteProgram(program: TrainingProgram | undefined) {
     if (!program) return;
-    const ok = await confirm({ title: 'Delete program?', message: `"${program.name}" will be deleted. Your workouts stay saved.`, confirmText: 'Delete', danger: true });
+    const ok = await confirm({ title: t('plan.confirm.deleteTitle'), message: t('plan.confirm.deleteMessage', { name: trProgramName(program) }), confirmText: t('common.delete'), danger: true });
     if (!ok) return;
     try {
       await api().del(`/api/programs/${program.id}`);
       programs.value = programs.value.filter((p) => p.id !== program.id);
       writeJson(keys.value!.programs, programs.value);
       programEditor.value.open = false;
-      toast('Program deleted.', 'success');
+      toast(t('plan.toast.deleted'), 'success');
       void loadHistory(); // Einheiten verlieren die Verknüpfung
     } catch (e) { toast(errorMessage(e), 'error'); }
   }
 
   // ---------- Plan-Editor ----------
   function openProgramEditor(program: TrainingProgram | null = null) {
-    if (!online.value) { toast('Editing programs needs a connection.', 'error'); return; }
+    if (!online.value) { toast(t('plan.toast.needsConnection'), 'error'); return; }
     programEditor.value = { open: true, draft: program ? toDraft(program) : emptyProgramDraft(), busy: false, error: '' };
   }
   function addDay() {
@@ -1162,16 +1170,16 @@ export const useAppStore = defineStore('app', () => {
     const ed = programEditor.value;
     ed.error = '';
     const payload = draftToPayload(ed.draft, exercisesById.value);
-    if (payload.name.length < 2) { ed.error = 'Give the program a name.'; return; }
+    if (payload.name.length < 2) { ed.error = t('editor.errors.name'); return; }
     const emptyDay = payload.days.find((d) => !d.exercises.length);
-    if (emptyDay) { ed.error = `"${emptyDay.name}" has no exercises.`; return; }
+    if (emptyDay) { ed.error = t('editor.errors.emptyDay', { name: emptyDay.name }); return; }
     ed.busy = true;
     try {
       if (ed.draft.id) await api().put(`/api/programs/${ed.draft.id}`, payload);
       else await api().post('/api/programs', payload);
       await loadPrograms();
       ed.open = false;
-      toast('Program saved.', 'success');
+      toast(t('plan.toast.saved'), 'success');
     } catch (e) {
       ed.error = errorMessage(e);
     } finally {
@@ -1183,7 +1191,7 @@ export const useAppStore = defineStore('app', () => {
   // Eigene Übungen
   // =====================================================================
   function openCustomModal() {
-    if (!online.value) { toast('Creating exercises needs a connection.', 'error'); return; }
+    if (!online.value) { toast(t('custom.toast.needsConnection'), 'error'); return; }
     customModal.value = {
       open: true,
       name: search.value.trim(),
@@ -1198,7 +1206,7 @@ export const useAppStore = defineStore('app', () => {
   async function saveCustomExercise() {
     const m = customModal.value;
     m.error = '';
-    if (m.name.trim().length < 2) { m.error = 'Name must be at least 2 characters.'; return; }
+    if (m.name.trim().length < 2) { m.error = t('custom.errors.name'); return; }
     m.busy = true;
     try {
       const created = await api().post<Exercise>('/api/exercises', {
@@ -1219,7 +1227,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   async function deleteCustomExercise(ex: Exercise) {
-    const ok = await confirm({ title: 'Delete exercise?', message: `"${ex.name}" will be removed from your catalog.`, confirmText: 'Delete', danger: true });
+    const ok = await confirm({ title: t('custom.confirm.title'), message: t('custom.confirm.message', { name: ex.name }), confirmText: t('common.delete'), danger: true });
     if (!ok) return;
     try {
       await api().del(`/api/exercises/${ex.id}`);
@@ -1227,7 +1235,7 @@ export const useAppStore = defineStore('app', () => {
       favorites.value = favorites.value.filter((id) => id !== ex.id);
       writeJson(keys.value!.exercises, exercises.value);
       closeSetModal();
-      toast('Exercise deleted.', 'success');
+      toast(t('custom.toast.deleted'), 'success');
     } catch (e) {
       toast(errorMessage(e), 'error');
     }
@@ -1257,7 +1265,7 @@ export const useAppStore = defineStore('app', () => {
     // Alarm nur, wenn das Ende "live" erlebt wurde (nicht nach Stunden im Hintergrund).
     if (lateBy < 60_000) {
       playRestAlarm({ sound: settings.value.sound, vibration: settings.value.vibration });
-      toast('Rest is over - next set!', 'success');
+      toast(t('timer.over'), 'success');
     }
   }
 
@@ -1296,7 +1304,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function exportData(format: 'csv' | 'json') {
-    if (!allWorkouts.value.length) { toast('Nothing to export yet.', 'error'); return; }
+    if (!allWorkouts.value.length) { toast(t('settings.nothingToExport'), 'error'); return; }
     if (format === 'csv') exportCsv(user.value!.username, allWorkouts.value);
     else exportJson(user.value!.username, allWorkouts.value);
   }
@@ -1304,12 +1312,12 @@ export const useAppStore = defineStore('app', () => {
   async function confirmDeleteAccount() {
     const d = deleteAccount.value;
     d.error = '';
-    if (!d.password) { d.error = 'Enter your password to confirm.'; return; }
+    if (!d.password) { d.error = t('settings.errors.password'); return; }
     d.busy = true;
     try {
       await api().del('/api/auth/account', { password: d.password });
       if (keys.value) Object.values(keys.value).forEach(remove);
-      toast('Account and all data deleted.', 'success');
+      toast(t('settings.toast.accountDeleted'), 'success');
       clearAuth();
     } catch (e) {
       d.error = errorMessage(e);
@@ -1444,8 +1452,8 @@ export const useAppStore = defineStore('app', () => {
     }
     if (verify) {
       api().post('/api/auth/email/verify', { token: verify })
-        .then(() => { toast('E-mail confirmed. You can now reset your password by e-mail.', 'success'); if (isAuthenticated.value) void loadProfile(); })
-        .catch((e: unknown) => toast(isNetworkError(e) ? 'Open the link again when you are online.' : errorMessage(e), 'error'));
+        .then(() => { toast(t('auth.toast.emailConfirmed'), 'success'); if (isAuthenticated.value) void loadProfile(); })
+        .catch((e: unknown) => toast(isNetworkError(e) ? t('auth.toast.openLinkOnline') : errorMessage(e), 'error'));
     }
   }
 
@@ -1460,7 +1468,7 @@ export const useAppStore = defineStore('app', () => {
     const s = security.value;
     s.error = '';
     s.notice = '';
-    if (!online.value) { s.error = 'This needs a connection.'; return; }
+    if (!online.value) { s.error = t('common.needsConnection'); return; }
     s.busy = true;
     try {
       const notice = await run();
@@ -1475,20 +1483,20 @@ export const useAppStore = defineStore('app', () => {
 
   const changePassword = () => securityAction(async () => {
     const s = security.value;
-    if (s.next.length < 8) throw new Error('The new password must be at least 8 characters.');
+    if (s.next.length < 8) throw new Error(t('security.errors.passwordShort'));
     await api().post('/api/auth/password', { currentPassword: s.current, newPassword: s.next });
     s.current = '';
     s.next = '';
     s.section = '';
-    toast('Password changed. Other devices are logged out.', 'success');
+    toast(t('security.toast.passwordChanged'), 'success');
   });
 
   const saveEmail = (remove = false) => securityAction(async () => {
     const s = security.value;
     await api().put('/api/auth/email', { email: remove ? '' : s.email, password: s.current });
     s.current = '';
-    if (remove) { s.section = ''; toast('E-mail removed.', 'success'); return; }
-    return `We sent a confirmation link to ${s.email.trim().toLowerCase()}. Open it to activate password reset by e-mail.`;
+    if (remove) { s.section = ''; toast(t('security.toast.emailRemoved'), 'success'); return; }
+    return t('security.emailSent', { email: s.email.trim().toLowerCase() });
   });
 
   const regenerateRecoveryCodes = () => securityAction(async () => {
@@ -1500,13 +1508,13 @@ export const useAppStore = defineStore('app', () => {
   });
 
   async function logoutEverywhere() {
-    const ok = await confirm({ title: 'Log out everywhere?', message: 'All devices including this one are logged out. Unsynced workouts stay on this device.', confirmText: 'Log out all', danger: true });
+    const ok = await confirm({ title: t('security.confirm.title'), message: t('security.confirm.message'), confirmText: t('security.confirm.action'), danger: true });
     if (!ok) return;
     try {
       await api().post('/api/auth/logout-all');
       settingsOpen.value = false;
       clearAuth();
-      toast('Logged out on all devices.', 'success');
+      toast(t('security.toast.loggedOutAll'), 'success');
     } catch (e) { toast(errorMessage(e), 'error'); }
   }
 
@@ -1554,11 +1562,11 @@ export function trackingLabel(type: TrackingTypeValue): string {
   return ({ WeightReps: 'Weight × Reps', DistanceTime: 'Distance + Time', Duration: 'Duration' } as const)[type] ?? type;
 }
 export function setLabel(sets: readonly WorkoutSet[], n: number): string {
-  if (sets[n]?.isWarmup) return 'WU';
-  return `SET ${sets.slice(0, n + 1).filter((x) => !x.isWarmup).length}`;
+  if (sets[n]?.isWarmup) return t('history.warmupShort');
+  return t('history.setLabel', { n: sets.slice(0, n + 1).filter((x) => !x.isWarmup).length });
 }
 export const rpeText = (value: number | null | undefined) => (value ? `@${formatNumber(value, 1)}` : '');
-export const sessionRpeLabel = (value: number | null | undefined) => SESSION_RPE.find((r) => r.value === value)?.label ?? '';
+export const sessionRpeLabel = (value: number | null | undefined) => (SESSION_RPE.some((r) => r.value === value) ? tDynamic(`rpe.${value}`, '') : '');
 export function zoneClass(tone: string): string {
   return ({
     green: 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10',
@@ -1584,11 +1592,11 @@ export function toastClass(tone: string): string {
 export function workoutStats(workout: Workout): string {
   const s = summarizeWorkout(workout);
   const parts: string[] = [];
-  if (s.volume > 0) parts.push(`${formatNumber(s.volume, 0)} kg vol`);
-  if (s.distance > 0) parts.push(`${formatNumber(s.distance, 0)} m`);
-  if (s.durationWork > 0) parts.push(`${formatClock(s.durationWork)} work`);
-  parts.push(s.warmups ? `${s.workingSets}+${s.warmups}w sets` : `${s.sets} sets`);
-  if (s.load > 0) parts.push(`load ${s.load}`);
+  if (s.volume > 0) parts.push(t('history.vol', { kg: formatNumber(s.volume, 0) }));
+  if (s.distance > 0) parts.push(`${formatNumber(s.distance, 0)} ${t('units.m')}`);
+  if (s.durationWork > 0) parts.push(t('history.work', { time: formatClock(s.durationWork) }));
+  parts.push(s.warmups ? t('history.setsWarmups', { working: s.workingSets, warmups: s.warmups }) : tn('units.sets', s.sets));
+  if (s.load > 0) parts.push(t('history.load', { load: s.load }));
   return parts.join(' · ');
 }
 export function recordHeadline(r: ExerciseRecord): string {
@@ -1611,5 +1619,5 @@ export function prValue(event: { field: string; value: number }): string {
 }
 export function heatTitle(day: { future: boolean; date: string; sessions: number; sets: number }): string {
   if (day.future) return '';
-  return `${formatDate(day.date)}: ${day.sessions ? `${day.sessions} workout(s), ${day.sets} sets` : 'rest day'}`;
+  return t('calendar.dayTitle', { date: formatDate(day.date), summary: day.sessions ? t('calendar.daySummary', { workouts: tn('units.workouts', day.sessions), sets: tn('units.sets', day.sets) }) : t('calendar.restDay') });
 }
