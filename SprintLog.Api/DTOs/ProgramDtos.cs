@@ -42,6 +42,8 @@ public record ProgramDayInput(int? Id, string? Name, string? Notes, List<Program
 public record ProgramInput(string? Name, string? Goal, int Weeks, List<ProgramDayInput>? Days, int? CycleWeeks = null, int? DeloadEvery = null)
 {
     public const int MaxWeekSteps = 12;
+    /// <summary>Sätze bzw. Läufe pro Übung (Sprint-Protokolle haben bis zu 24 Wiederholungen).</summary>
+    public const int MaxSets = 30;
 
     public static readonly string[] AllowedGoals = { "Strength", "Hypertrophy", "Speed", "General" };
     public const int MaxDays = 7;
@@ -77,7 +79,7 @@ public record ProgramInput(string? Name, string? Goal, int Weeks, List<ProgramDa
                 var x = day.Exercises[i];
                 var key = $"days[{d}].exercises[{i}]";
                 errors
-                    .AddIf(x.Sets is < 1 or > 20, key, "Sets must be between 1 and 20.")
+                    .AddIf(x.Sets is < 1 or > MaxSets, key, $"Sets must be between 1 and {MaxSets}.")
                     .AddIf(x.RepsMin is < 1 or > 100 || x.RepsMax is < 1 or > 100, key, "Reps must be between 1 and 100.")
                     .AddIf(x.RepsMin is { } min && x.RepsMax is { } max && min > max, key, "Minimum reps cannot exceed maximum reps.")
                     .AddIf(x.Distance is <= 0 or > 10_000, key, "Distance must be between 1 and 10000 m.")
@@ -98,7 +100,7 @@ public record ProgramInput(string? Name, string? Goal, int Weeks, List<ProgramDa
                     errors
                         .AddIf(step.FromWeek <= previous, key, "Week steps must be in ascending week order without duplicates.")
                         .AddIf(step.FromWeek < 1 || step.FromWeek > maxWeek, key, $"Week steps must start between week 1 and {maxWeek}.")
-                        .AddIf(step.Sets is < 1 or > 20, key, "Sets must be between 1 and 20.")
+                        .AddIf(step.Sets is < 1 or > MaxSets, key, $"Sets must be between 1 and {MaxSets}.")
                         .AddIf(step.RepsMin is < 1 or > 100 || step.RepsMax is < 1 or > 100, key, "Reps must be between 1 and 100.")
                         .AddIf(step.RepsMin is { } smin && step.RepsMax is { } smax && smin > smax, key, "Minimum reps cannot exceed maximum reps.")
                         .AddIf(step.Distance is <= 0 or > 10_000, key, "Distance must be between 1 and 10000 m.")
