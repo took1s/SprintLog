@@ -51,6 +51,9 @@ public static class WorkoutEndpoints
             Date = (req.Date ?? now).UtcDateTime,
             DurationSeconds = req.DurationSeconds,
             SessionRpe = req.SessionRpe,
+            Goals = req.Match?.Goals,
+            Assists = req.Match?.Assists,
+            Opponent = string.IsNullOrWhiteSpace(req.Match?.Opponent) ? null : req.Match.Opponent.Trim(),
             Notes = NormalizeNotes(req.Notes),
             ProgramDayId = req.ProgramDayId,
             ClientId = req.ClientId,
@@ -121,6 +124,9 @@ public static class WorkoutEndpoints
         if (req.Date is { } date) workout.Date = date.UtcDateTime;
         workout.DurationSeconds = req.DurationSeconds;
         workout.SessionRpe = req.SessionRpe;
+        workout.Goals = req.Match?.Goals;
+        workout.Assists = req.Match?.Assists;
+        workout.Opponent = string.IsNullOrWhiteSpace(req.Match?.Opponent) ? null : req.Match.Opponent.Trim();
         workout.Notes = NormalizeNotes(req.Notes);
         workout.UpdatedAt = now.UtcDateTime;
 
@@ -242,7 +248,7 @@ public static class WorkoutEndpoints
     }
 
     private static List<WorkoutSet> MapSets(CreateWorkoutRequest req) =>
-        req.Sets!.Select((s, i) => new WorkoutSet
+        (req.Sets ?? new()).Select((s, i) => new WorkoutSet
         {
             SetNumber = i + 1,
             ExerciseId = s.ExerciseId,
@@ -260,7 +266,8 @@ public static class WorkoutEndpoints
 
     private static async Task<IResult?> CheckExercisesAsync(AppDbContext db, int userId, CreateWorkoutRequest req, CancellationToken ct)
     {
-        var exerciseIds = req.Sets!.Select(s => s.ExerciseId).Distinct().ToList();
+        var exerciseIds = (req.Sets ?? new()).Select(s => s.ExerciseId).Distinct().ToList();
+        if (exerciseIds.Count == 0) return null;
         var knownIds = await db.Exercises.VisibleTo(userId)
             .Where(e => exerciseIds.Contains(e.Id))
             .Select(e => e.Id)
@@ -310,5 +317,6 @@ public static class WorkoutEndpoints
                     s.IsWarmup,
                     s.Note))
                 .ToList(),
-            w.UpdatedAt));
+            w.UpdatedAt,
+            w.WorkoutType == CreateWorkoutRequest.MatchType ? new MatchDetails(w.Goals, w.Assists, w.Opponent) : null));
 }
