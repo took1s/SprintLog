@@ -427,3 +427,8 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# SprintLog
+.env
+TestResults/
+node_modules/

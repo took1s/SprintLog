@@ -1,14 +1,41 @@
+# Lokale Umgebung: API + PostgreSQL mit einem Befehl.
+#   cp .env.example .env   (JWT_SECRET setzen)
+#   docker compose up --build
+# App:      http://localhost:5111
+# Swagger:  http://localhost:5111/swagger
 services:
-  sprintlog-api:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sprintlog
+      POSTGRES_USER: sprintlog
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sprintlog}
+    ports:
+      - "5433:5432"   # optional: Zugriff mit DBeaver/pgAdmin über localhost:5433
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sprintlog -d sprintlog"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  api:
     build:
       context: .
       dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
-      - "5111:80"
-    env_file:
-      - .env
+      - "5111:8080"
     environment:
-      - SprintLogApiKey=${SPRINTLOG_API_KEY}
-      - ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
-      - JWT_SECRET=${JWT_SECRET}
-    restart: always
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=sprintlog;Username=sprintlog;Password=${POSTGRES_PASSWORD:-sprintlog}"
+      JWT_SECRET: ${JWT_SECRET:?Bitte JWT_SECRET in .env setzen (mind. 32 Zeichen)}
+      Database__MigrateOnStartup: "true"
+      Swagger__Enabled: "true"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
