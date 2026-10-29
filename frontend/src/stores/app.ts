@@ -17,8 +17,9 @@ import { formatNumber, formatClock, formatDate, formatRelative, formatSeconds, d
 import { unlockAudio, playRestAlarm, createWakeLock } from '../lib/feedback';
 import { exportCsv, exportJson } from '../lib/export';
 import { techniqueFor, BODYWEIGHT_EXERCISES } from '../lib/figure';
+import { localDay, readiness, readinessAdvice, readinessTrend, weeklyAverage, type WellnessEntry, type WellnessField } from '../lib/wellness';
 import {
-  programStatus, suggestTarget, setsDone, loadStatus, ZONE_INFO, effectivePrescription,
+  programStatus, suggestTarget, setsDone, loadStatus, ZONE_INFO, effectivePrescription, programProgress,
   emptyProgramDraft, emptyDraftRow, toDraft, draftToPayload,
   type ProgramDraft, type DraftDay, type TargetSuggestion, type DraftExercise,
 } from '../lib/program';
@@ -60,6 +61,8 @@ export const SESSION_RPE = Object.freeze([
 ]);
 
 export type Tab = 'Gym' | 'Football' | 'Plan' | 'Data';
+/** Workout-Typ eines Spiels (ohne Sätze). */
+export const MATCH = 'Match';
 export type DataTab = 'overview' | 'history' | 'progress' | 'records' | 'calendar';
 export type SortMode = 'fav' | 'freq' | 'recent' | 'az' | 'za';
 
@@ -219,7 +222,7 @@ export const useAppStore = defineStore('app', () => {
   const clock = ref(Date.now());  // Minutentakt (Auswertungen)
 
   // Auswertungen
-  const historyFilter = ref<'all' | 'Gym' | 'Football' | 'Hybrid'>('all');
+  const historyFilter = ref<'all' | 'Gym' | 'Football' | 'Hybrid' | 'Match'>('all');
   const historyLimit = ref(20);
   const progress = ref({ key: '', metric: '' });
   const weeklyMetric = ref<WeeklyMetric>('volume');
@@ -551,6 +554,7 @@ export const useAppStore = defineStore('app', () => {
       remove(k.exercises);
       remove(k.favorites);
       remove(k.programs);
+      remove(k.wellness);
     }
     removeLegacyToken();
     remove(Keys.user);
@@ -612,7 +616,7 @@ export const useAppStore = defineStore('app', () => {
     if (!isAuthenticated.value) return;
     if (refresh) await refreshSession();
     if (!isAuthenticated.value) return;
-    await Promise.allSettled([loadExercises(), loadFavorites(), loadPrograms(), loadTemplates()]);
+    await Promise.allSettled([loadExercises(), loadFavorites(), loadPrograms(), loadTemplates(), loadWellness()]);
     await syncNow({ reload: false });
     await loadHistory();
   }
@@ -994,6 +998,7 @@ export const useAppStore = defineStore('app', () => {
         weight: s.weight, reps: s.reps, distance: s.distance, time: s.time,
         rpe: keepDetails ? s.rpe ?? null : null,
         isWarmup: !!s.isWarmup,
+        note: keepDetails ? s.note ?? null : null,
       };
     });
   }
@@ -1013,6 +1018,7 @@ export const useAppStore = defineStore('app', () => {
   /** Bestehende Einheit bearbeiten: wird in die Session geladen, "Finish" speichert per PUT (auch offline über die Queue). */
   async function editWorkout(workout: Workout) {
     if (!workout.pending && !workout.id) return;
+    if (workout.workoutType === MATCH) { openMatchModal(workout); return; }
     if (sessionActive.value) {
       const ok = await confirm({ title: t('session.confirm.replaceTitle'), message: t('session.confirm.replaceEdit'), confirmText: t('common.edit') });
       if (!ok) return;
@@ -1063,6 +1069,138 @@ export const useAppStore = defineStore('app', () => {
   // =====================================================================
   // Trainingspläne
   // =====================================================================
+  // =====================================================================
+  // Spiele (Match): ohne Sätze, Last = Minuten × Session-RPE
+  // =====================================================================
+  const matchModal = ref({
+    open: false, editing: null as Editing | null, date: '', minutes: 90 as number | null, rpe: null as number | null,
+    goals: null as number | null, assists: null as number | null, opponent: '', notes: '', error: '',
+  });
+
+  function openMatchModal(workout?: Workout) {
+    matchModal.value = workout
+      ? {
+          open: true,
+          editing: workout.pending ? { kind: 'pending', clientId: workout.clientId! } : { kind: 'server', id: workout.id!, clientId: workout.clientId },
+          date: toLocalInput(workout.date), minutes: workout.durationSeconds ? Math.round(workout.durationSeconds / 60) : 90,
+          rpe: workout.sessionRpe ?? null, goals: workout.match?.goals ?? null, assists: workout.match?.assists ?? null,
+          opponent: workout.match?.opponent ?? '', notes: workout.notes ?? '', error: '',
+        }
+      : { open: true, editing: null, date: toLocalInput(new Date()), minutes: 90, rpe: null, goals: null, assists: null, opponent: '', notes: '', error: '' };
+  }
+
+  async function saveMatch() {
+    const m = matchModal.value;
+    const date = new Date(m.date);
+    if (Number.isNaN(date.getTime())) { m.error = t('finish.errors.date'); return; }
+    if (date.getTime() > Date.now() + 60 * 60 * 1000) { m.error = t('finish.errors.future'); return; }
+    const minutes = Number(m.minutes);
+    if (!(minutes > 0 && minutes <= 180)) { m.error = t('match.errors.minutes'); return; }
+    if (!m.rpe) { m.error = t('match.errors.rpe'); return; }
+    const count = (v: unknown) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Math.max(0, Math.min(20, Math.round(Number(v)))));
+    const base = {
+      date: date.toISOString(),
+      durationSeconds: Math.round(minutes * 60),
+      sessionRpe: m.rpe,
+      notes: m.notes.trim() ? m.notes.trim().slice(0, 500) : null,
+      programDayId: null,
+      workoutType: MATCH,
+      sets: [] as WorkoutSet[],
+      match: { goals: count(m.goals), assists: count(m.assists), opponent: m.opponent.trim().slice(0, 60) || null },
+      status: QueueStatus.Pending,
+      attempts: 0,
+      error: null,
+    };
+    const editing = m.editing;
+    if (editing?.kind === 'server') {
+      const entry: QueueEntry = { ...base, op: 'update', workoutId: editing.id, clientId: editing.clientId ?? newClientId() };
+      queue.value = [...queue.value.filter((q) => !(isUpdate(q) && q.workoutId === editing.id)), entry];
+    } else if (editing?.kind === 'pending') {
+      const existing = queue.value.find((q) => q.clientId === editing.clientId);
+      const entry: QueueEntry = { ...base, op: existing?.op ?? 'create', workoutId: existing?.workoutId, clientId: editing.clientId };
+      queue.value = existing ? queue.value.map((q) => (q === existing ? entry : q)) : [...queue.value, entry];
+    } else {
+      queue.value = [...queue.value, { ...base, clientId: newClientId() }];
+    }
+    persistQueue();
+    m.open = false;
+    tab.value = 'Data';
+    dataTab.value = 'history';
+    toast(online.value ? t(editing ? 'finish.toast.updated' : 'match.toast.saved') : t(editing ? 'finish.toast.updatedOffline' : 'finish.toast.savedOffline'), 'success');
+    await syncNow();
+  }
+
+  // =====================================================================
+  // Tägliches Befinden (Wellness) - lokal zuerst, dann PUT pro Tag
+  // =====================================================================
+  const wellness = ref<WellnessEntry[]>([]);
+  const checkIn = ref({ open: false, date: localDay(), sleep: 3, energy: 3, soreness: 3, mood: 3, sleepHours: null as number | null, note: '', busy: false });
+  const todayWellness = computed(() => wellness.value.find((w) => w.date === localDay(clockDate.value)) ?? null);
+  const readinessToday = computed(() => readiness(todayWellness.value));
+  const readinessWeek = computed(() => weeklyAverage(wellness.value, clockDate.value));
+  const readinessDays = computed(() => readinessTrend(wellness.value, 14, clockDate.value));
+  const readinessHint = computed(() => readinessAdvice(readinessToday.value, loadInfo.value.zone));
+
+  function persistWellness() { if (keys.value) writeJson(keys.value.wellness, wellness.value); }
+
+  async function loadWellness() {
+    if (!keys.value) return;
+    wellness.value = readJson<WellnessEntry[]>(keys.value.wellness, []);
+    if (!online.value) return;
+    try {
+      await pushPendingWellness();
+      const fresh = await api().get<WellnessEntry[]>('/api/wellness?days=56');
+      const pending = wellness.value.filter((w) => w.pending);
+      wellness.value = [...pending, ...fresh.filter((f) => !pending.some((p) => p.date === f.date))].sort((a, b) => b.date.localeCompare(a.date));
+      persistWellness();
+    } catch (e) {
+      if (!isNetworkError(e)) console.warn('[wellness] load failed', e);
+    }
+  }
+
+  async function pushPendingWellness() {
+    for (const entry of wellness.value.filter((w) => w.pending)) {
+      const { date, pending: _pending, updatedAt: _updated, ...body } = entry;
+      try {
+        await api().put(`/api/wellness/${date}`, body);
+        entry.pending = false;
+      } catch (e) {
+        if (isNetworkError(e)) return;
+        throw e;
+      }
+    }
+    persistWellness();
+  }
+
+  function openCheckIn() {
+    const today = todayWellness.value;
+    checkIn.value = {
+      open: true, date: localDay(clockDate.value), busy: false,
+      sleep: today?.sleep ?? 3, energy: today?.energy ?? 3, soreness: today?.soreness ?? 3, mood: today?.mood ?? 3,
+      sleepHours: today?.sleepHours ?? null, note: today?.note ?? '',
+    };
+  }
+
+  function setWellnessValue(field: WellnessField, value: number) { checkIn.value[field] = value; }
+
+  async function saveCheckIn() {
+    const c = checkIn.value;
+    const hours = c.sleepHours == null || (c.sleepHours as unknown) === '' ? null : Math.max(0, Math.min(24, Number(c.sleepHours)));
+    const entry: WellnessEntry = {
+      date: c.date, sleep: c.sleep, energy: c.energy, soreness: c.soreness, mood: c.mood,
+      sleepHours: Number.isFinite(hours) ? hours : null, note: c.note.trim().slice(0, 200) || null, pending: true,
+    };
+    wellness.value = [entry, ...wellness.value.filter((w) => w.date !== entry.date)];
+    persistWellness();
+    c.open = false;
+    toast(t('wellness.toast.saved'), 'success');
+    if (online.value) {
+      try { await pushPendingWellness(); } catch (e) { toast(errorMessage(e), 'error'); }
+    }
+  }
+
+  const progressInPlan = computed(() => programProgress(activeProgram.value, allWorkouts.value, clockDate.value));
+
   function dayLabel(day: ProgramDay): string {
     const last = programInfo.value?.lastByDay.get(day.id);
     return last ? t('plan.lastRelative', { when: formatRelative(last, clockDate.value) }) : t('plan.notDone');
@@ -1554,6 +1692,8 @@ export const useAppStore = defineStore('app', () => {
     isAuthenticated, keys, exercisesById, allWorkouts, records, prInfo, usage, clockDate,
     activeProgram, otherPrograms, programInfo, loadInfo, loadZone, planTargets, planProgress, exerciseGroups,
     planWeek, isDeloadNow, currentPrescription, templateFilter, filteredTemplates,
+    matchModal, openMatchModal, saveMatch, wellness, checkIn, todayWellness, readinessToday, readinessWeek, readinessDays, readinessHint,
+    loadWellness, openCheckIn, setWellnessValue, saveCheckIn, progressInPlan,
     pendingCount, failedCount, syncState,
     categoryExercises, availableMuscleGroups, allMuscleGroups, filteredExercises, sortLabel,
     sessionActive, isEditing, finishLoad, sessionElapsed, sessionGroups, sessionSummary,
@@ -1615,6 +1755,10 @@ export function toastClass(tone: string): string {
   } as Record<string, string>)[tone] ?? 'border-accent/40 text-accent';
 }
 export function workoutStats(workout: Workout): string {
+  if (workout.workoutType === MATCH) {
+    const minutes = Math.round((workout.durationSeconds ?? 0) / 60);
+    return t('match.summary', { minutes, rpe: workout.sessionRpe ?? '-', load: workout.sessionRpe ? workout.sessionRpe * minutes : 0 });
+  }
   const s = summarizeWorkout(workout);
   const parts: string[] = [];
   if (s.volume > 0) parts.push(t('history.vol', { kg: formatNumber(s.volume, 0) }));

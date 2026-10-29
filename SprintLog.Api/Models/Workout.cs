@@ -7,7 +7,7 @@ public class Workout
     /// <summary>Zeitpunkt, an dem die Einheit begonnen wurde (UTC) - kommt vom Client, damit Offline-Einheiten das richtige Datum behalten.</summary>
     public DateTime Date { get; set; } = DateTime.UtcNow;
 
-    /// <summary>"Gym", "Football" oder "Hybrid".</summary>
+    /// <summary>"Gym", "Football", "Hybrid" oder "Match" (Spiel: ohne Sätze, Last aus Minuten × Session-RPE).</summary>
     public string WorkoutType { get; set; } = string.Empty;
 
     /// <summary>Dauer der Einheit in Sekunden (optional).</summary>
@@ -28,6 +28,11 @@ public class Workout
     /// <summary>Trainingstag aus einem Plan, zu dem diese Einheit gehört (optional).</summary>
     public int? ProgramDayId { get; set; }
     public ProgramDay? ProgramDay { get; set; }
+
+    // Nur bei "Match": Tore, Vorlagen, Gegner (optional)
+    public int? Goals { get; set; }
+    public int? Assists { get; set; }
+    public string? Opponent { get; set; }
 
     public int UserId { get; set; }
     public User User { get; set; } = null!;

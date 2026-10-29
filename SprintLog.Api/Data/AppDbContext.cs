@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<RecoveryCode> RecoveryCodes => Set<RecoveryCode>();
     public DbSet<AuthToken> AuthTokens => Set<AuthToken>();
+    public DbSet<WellnessEntry> Wellness => Set<WellnessEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,6 +62,7 @@ public class AppDbContext : DbContext
         {
             e.Property(w => w.WorkoutType).HasMaxLength(20);
             e.Property(w => w.Notes).HasMaxLength(CreateWorkoutRequest.MaxNotesLength);
+            e.Property(w => w.Opponent).HasMaxLength(60);
             e.HasOne(w => w.User).WithMany(u => u.Workouts).HasForeignKey(w => w.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(w => new { w.UserId, w.Date });
             // Delta-Sync: "alles seit X" pro Nutzer, stabil sortiert nach (UpdatedAt, Id).
@@ -95,6 +97,18 @@ public class AppDbContext : DbContext
             e.HasIndex(t => t.TokenHash).IsUnique();
             e.HasIndex(t => new { t.UserId, t.Purpose });
             e.HasOne<User>().WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<WellnessEntry>(e =>
+        {
+            e.ToTable("Wellness", t =>
+            {
+                foreach (var column in new[] { "Sleep", "Energy", "Soreness", "Mood" })
+                    t.HasCheckConstraint($"CK_Wellness_{column}", $"\"{column}\" BETWEEN 1 AND 5");
+            });
+            e.HasIndex(w => new { w.UserId, w.Date }).IsUnique();
+            e.Property(w => w.Note).HasMaxLength(200);
+            e.HasOne<User>().WithMany().HasForeignKey(w => w.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<DeletedWorkout>(e =>

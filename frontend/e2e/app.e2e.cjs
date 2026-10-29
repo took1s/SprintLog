@@ -336,6 +336,48 @@ test('periodized template: week-1 prescription and notes, set note and RIR are s
   await context.close();
 });
 
+test('match without sets is saved, edited and counted; daily check-in is stored', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `match_${Date.now()}`);
+
+  await page.click('nav >> text=FIELD');
+  await page.click('[data-test=log-match]');
+  await page.fill('#match-minutes', '80');
+  await page.click('[data-match-rpe="8"]');
+  await page.waitForSelector('text=training load 640 AU');
+  await page.fill('#match-opponent', 'TSV Pfuhl');
+  await page.fill('input[placeholder="0"] >> nth=0', '1');
+  await page.click('button:has-text("Save match")');
+  await page.waitForSelector('[data-test=match-summary] >> text=vs TSV Pfuhl');
+  await page.waitForSelector('text=1 G · 0 A');
+
+  let history = await api('GET', '/api/workouts/history', token);
+  assert.equal(history.length, 1);
+  assert.deepEqual([history[0].workoutType, history[0].durationSeconds, history[0].sessionRpe, history[0].sets.length, history[0].match.goals], ['Match', 4800, 8, 0, 1]);
+
+  // Bearbeiten öffnet wieder den Spiel-Dialog
+  await page.click('article >> button:text-is("Edit")');
+  await page.fill('#match-minutes', '90');
+  await page.click('button:has-text("Save changes")');
+  await page.waitForSelector('text=Workout updated.');
+  await page.waitForTimeout(400);
+  history = await api('GET', '/api/workouts/history', token);
+  assert.equal(history.length, 1, 'edit does not create a second match');
+  assert.equal(history[0].durationSeconds, 5400);
+
+  // Check-in
+  await page.click('nav >> text=PLAN');
+  await page.click('[data-test=check-in]');
+  for (const [field, value] of [['sleep', 4], ['energy', 5], ['soreness', 3], ['mood', 4]]) await page.click(`[data-wellness="${field}-${value}"]`);
+  await page.click('button:has-text("Save check-in")');
+  await page.waitForSelector('[data-test=readiness]:text-is("75%")');
+  await page.waitForTimeout(300);
+  const wellness = await api('GET', '/api/wellness', token);
+  assert.deepEqual([wellness.length, wellness[0].sleep, wellness[0].energy], [1, 4, 5]);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
 test('language: browser language is detected, switching in settings translates the app and persists', async () => {
   // Deutscher Browser -> Anmeldemaske auf Deutsch, ohne etwas einzustellen.
   const german = await newPage({ locale: 'de-DE' });

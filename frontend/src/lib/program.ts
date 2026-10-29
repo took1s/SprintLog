@@ -470,3 +470,44 @@ export function draftToPayload(draft: ProgramDraft, exercisesById: ReadonlyMap<n
     })),
   };
 }
+
+// ---------- Fortschritt im Plan ----------
+
+export interface ExerciseProgress { exerciseId: number; name?: string; start: number; current: number; change: number }
+
+function bestE1RMBetween(exerciseId: number, workouts: readonly Workout[] | null | undefined, from: number, to: number): number {
+  const key = exerciseKey({ exerciseId });
+  let best = 0;
+  for (const w of workouts ?? []) {
+    const ts = time(w.date);
+    if (ts < from || ts > to) continue;
+    for (const s of w.sets ?? []) if (exerciseKey(s) === key && isWorkingSet(s)) best = Math.max(best, epley1RM(s.weight, s.reps));
+  }
+  return best;
+}
+
+/**
+ * Geschätztes 1RM zu Beginn des Plans (4 Wochen davor bis 2 Wochen danach) vs. jetzt (letzte 3 Wochen),
+ * für die Kraftübungen des Plans. Erst ab 3 Wochen Laufzeit, sonst wäre "jetzt" = "Start".
+ */
+export function programProgress(
+  program: Pick<TrainingProgram, 'startedAt' | 'days'> | null | undefined,
+  workouts: readonly Workout[] | null | undefined,
+  now = new Date(),
+  limit = 5,
+): ExerciseProgress[] {
+  if (!program?.startedAt) return [];
+  const start = time(program.startedAt);
+  const t = now.getTime();
+  if (t - start < 21 * DAY_MS) return [];
+  const seen = new Map<number, string | undefined>();
+  for (const d of program.days) for (const x of d.exercises) if ((x.trackingType ?? 'WeightReps') === 'WeightReps') seen.set(x.exerciseId, x.exerciseName);
+  const out: ExerciseProgress[] = [];
+  for (const [exerciseId, name] of seen) {
+    const startValue = bestE1RMBetween(exerciseId, workouts, start - 28 * DAY_MS, start + 14 * DAY_MS);
+    const current = bestE1RMBetween(exerciseId, workouts, t - 21 * DAY_MS, t);
+    if (!startValue || !current) continue;
+    out.push({ exerciseId, name, start: startValue, current, change: Math.round(((current - startValue) / startValue) * 1000) / 10 });
+  }
+  return out.sort((a, b) => b.change - a.change).slice(0, limit);
+}

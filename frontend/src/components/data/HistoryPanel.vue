@@ -2,7 +2,7 @@
 import { t } from '@/i18n';
 import { exerciseName, categoryName } from '@/i18n/content';
 
-const FILTERS = ['all', 'Gym', 'Football', 'Hybrid'] as const;
+const FILTERS = ['all', 'Gym', 'Football', 'Match', 'Hybrid'] as const;
 import { storeToRefs } from 'pinia';
 import { useAppStore, badgeClass, rpeText, sessionRpeLabel, setLabel, workoutStats } from '@/stores/app';
 import { describeSet, formatDate, formatDuration, formatTime, formatWeekday } from '@/lib/format';
@@ -21,7 +21,7 @@ const { deleteWorkout, editWorkout, programNameForDay, repeatWorkout, retryEntry
       </div>
 
       <article v-for="w in visibleHistory" :key="workoutKey(w)" class="glass-panel group relative rounded-2xl border-l-4 p-5"
-               :class="{ 'border-l-purple-500': w.workoutType === 'Gym', 'border-l-accent': w.workoutType === 'Football', 'border-l-emerald-500': w.workoutType === 'Hybrid' }">
+               :class="{ 'border-l-purple-500': w.workoutType === 'Gym', 'border-l-accent': w.workoutType === 'Football', 'border-l-emerald-500': w.workoutType === 'Hybrid', 'border-l-yellow-400': w.workoutType === 'Match' }">
           <div class="mb-4 flex items-start justify-between gap-3 border-b border-white/5 pb-4">
               <div class="min-w-0">
                   <div class="text-xl font-black tracking-tight text-white">{{ formatDate(w.date) }}</div>
@@ -37,14 +37,20 @@ const { deleteWorkout, editWorkout, programNameForDay, repeatWorkout, retryEntry
                         :class="{
                           'border-purple-500/30 bg-purple-500/20 text-purple-400': w.workoutType === 'Gym',
                           'border-accent/30 bg-accent/10 text-accent': w.workoutType === 'Football',
-                          'border-emerald-500/30 bg-emerald-500/20 text-emerald-400': w.workoutType === 'Hybrid'
-                        }">{{ categoryName(w.workoutType) }}</span>
+                          'border-emerald-500/30 bg-emerald-500/20 text-emerald-400': w.workoutType === 'Hybrid',
+                          'border-yellow-400/30 bg-yellow-400/10 text-yellow-300': w.workoutType === 'Match'
+                        }">{{ w.workoutType === 'Match' ? '⚽ ' : '' }}{{ categoryName(w.workoutType) }}</span>
                   <span v-if="w.pending && w.status === 'failed'" class="rounded border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-red-400" :title="w.error ?? undefined">{{ t('history.syncFailed') }}</span>
                   <span v-else-if="w.pending" class="rounded border border-orange-400/40 bg-orange-400/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-orange-300">{{ w.op === 'update' ? t('history.editPending') : t('history.pendingSync') }}</span>
               </div>
           </div>
 
-          <div class="space-y-3">
+          <div v-if="w.workoutType === 'Match'" class="mb-1 flex flex-wrap items-center gap-2 text-sm" data-test="match-summary">
+              <span v-if="w.match?.opponent" class="font-bold text-white">{{ t('match.vs', { opponent: w.match.opponent }) }}</span>
+              <span v-if="w.match?.goals || w.match?.assists" class="rounded-md border border-yellow-400/30 bg-yellow-400/10 px-2 py-0.5 font-mono text-[10px] font-bold text-yellow-300">
+                  {{ t('match.goalsAssists', { goals: w.match?.goals ?? 0, assists: w.match?.assists ?? 0 }) }}</span>
+          </div>
+          <div v-else class="space-y-3">
               <div v-for="group in groupSetsByExercise(w.sets)" :key="group.key" class="overflow-hidden rounded-xl border border-white/5 bg-black/20">
                   <div class="border-b border-white/5 bg-white/5 px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-accent">{{ exerciseName(group.exerciseId, group.name) }}</div>
                   <div class="space-y-1 p-2">

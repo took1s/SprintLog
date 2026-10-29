@@ -20,6 +20,8 @@ import ProgramEditor from '@/components/ProgramEditor.vue';
 import FinishModal from '@/components/FinishModal.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import RecoveryCodesModal from '@/components/RecoveryCodesModal.vue';
+import MatchModal from '@/components/MatchModal.vue';
+import { t } from '@/i18n';
 
 // Auswertungen inkl. Chart.js erst laden, wenn DATA geöffnet wird (kleineres Start-Bundle; offline per Precache verfügbar).
 const DataView = defineAsyncComponent(() => import('@/components/data/DataView.vue'));
@@ -47,6 +49,11 @@ onMounted(() => { void app.init(); });
 
       <section v-if="tab === 'Gym' || tab === 'Football'">
         <PlanChecklist />
+        <button v-if="tab === 'Football'" type="button" @click="app.openMatchModal()" data-test="log-match"
+                class="glass-panel mb-5 flex w-full items-center justify-between rounded-2xl border border-accent/30 px-5 py-4 text-left transition-colors hover:border-accent/60">
+          <span class="font-black text-white">{{ t('match.log') }}</span>
+          <span class="font-mono text-[10px] text-slate-400">{{ t('match.info') }}</span>
+        </button>
         <ExerciseCatalog />
       </section>
       <PlanView v-else-if="tab === 'Plan'" />
@@ -59,6 +66,7 @@ onMounted(() => { void app.init(); });
       <SettingsModal />
       <ProgramEditor />
       <FinishModal />
+      <MatchModal />
     </template>
 
     <RecoveryCodesModal />

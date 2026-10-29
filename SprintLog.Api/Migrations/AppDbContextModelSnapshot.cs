@@ -1255,6 +1255,59 @@ namespace SprintLog.Api.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("SprintLog.Api.Models.WellnessEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Energy")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Mood")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Sleep")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("SleepHours")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("Soreness")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("Wellness", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Wellness_Energy", "\"Energy\" BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("CK_Wellness_Mood", "\"Mood\" BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("CK_Wellness_Sleep", "\"Sleep\" BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("CK_Wellness_Soreness", "\"Soreness\" BETWEEN 1 AND 5");
+                        });
+                });
+
             modelBuilder.Entity("SprintLog.Api.Models.Workout", b =>
                 {
                     b.Property<int>("Id")
@@ -1262,6 +1315,9 @@ namespace SprintLog.Api.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("Assists")
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("ClientId")
                         .HasColumnType("uuid");
@@ -1272,9 +1328,16 @@ namespace SprintLog.Api.Migrations
                     b.Property<int?>("DurationSeconds")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("Goals")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Opponent")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
 
                     b.Property<int?>("ProgramDayId")
                         .HasColumnType("integer");
@@ -1510,6 +1573,15 @@ namespace SprintLog.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SprintLog.Api.Models.WellnessEntry", b =>
+                {
+                    b.HasOne("SprintLog.Api.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SprintLog.Api.Models.Workout", b =>

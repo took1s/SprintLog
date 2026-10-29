@@ -13,12 +13,16 @@ public record CreateWorkoutRequest(
     int? DurationSeconds = null,
     int? SessionRpe = null,
     string? Notes = null,
-    int? ProgramDayId = null)
+    int? ProgramDayId = null,
+    MatchDetails? Match = null)
 {
+    public const string MatchType = "Match";
+    public bool IsMatch => WorkoutType == MatchType;
+
     public const int MaxNotesLength = 500;
     public const int MaxSetNoteLength = 200;
 
-    public static readonly string[] AllowedTypes = { "Gym", "Football", "Hybrid" };
+    public static readonly string[] AllowedTypes = { "Gym", "Football", "Hybrid", MatchType };
     public const int MaxSets = 200;
 
     // Plausibilitätsgrenzen - schützen vor Tippfehlern (z. B. 2000 kg) und Missbrauch.
@@ -30,8 +34,14 @@ public record CreateWorkoutRequest(
     public ValidationErrors Validate(DateTimeOffset now)
     {
         var errors = new ValidationErrors()
-            .AddIf(WorkoutType is null || !AllowedTypes.Contains(WorkoutType), "workoutType", "Workout type must be 'Gym', 'Football' or 'Hybrid'.")
-            .AddIf(Sets is null || Sets.Count == 0, "sets", "Cannot save an empty workout.")
+            .AddIf(WorkoutType is null || !AllowedTypes.Contains(WorkoutType), "workoutType", "Workout type must be 'Gym', 'Football', 'Hybrid' or 'Match'.")
+            // Ein Spiel hat keine Sätze, braucht aber Minuten und Session-RPE (sonst keine Trainingslast).
+            .AddIf(!IsMatch && (Sets is null || Sets.Count == 0), "sets", "Cannot save an empty workout.")
+            .AddIf(IsMatch && DurationSeconds is null or <= 0, "durationSeconds", "Enter the minutes played.")
+            .AddIf(IsMatch && SessionRpe is null, "sessionRpe", "Rate how hard the match was (1-10).")
+            .AddIf(Match is { Goals: < 0 or > 20 } || Match is { Assists: < 0 or > 20 }, "match", "Goals and assists must be between 0 and 20.")
+            .AddIf(Match is { Opponent.Length: > 60 }, "match", "Opponent must not exceed 60 characters.")
+            .AddIf(!IsMatch && Match is not null, "match", "Match details are only allowed for matches.")
             .AddIf(Sets is { Count: > MaxSets }, "sets", $"A workout cannot contain more than {MaxSets} sets.")
             .AddIf(Date is { } d && d > now.AddDays(1), "date", "Workout date cannot be in the future.")
             .AddIf(Date is { } d2 && d2 < now.AddYears(-5), "date", "Workout date is too far in the past.")
@@ -39,7 +49,7 @@ public record CreateWorkoutRequest(
             .AddIf(SessionRpe is < 1 or > 10, "sessionRpe", "Session RPE must be between 1 and 10.")
             .AddIf(Notes is { Length: > MaxNotesLength }, "notes", $"Notes must not exceed {MaxNotesLength} characters.");
 
-        if (Sets is null) return errors;
+        if (Sets is null || Sets.Count == 0) return errors;
 
         for (var i = 0; i < Sets.Count && i < MaxSets; i++)
         {
@@ -81,7 +91,11 @@ public record WorkoutResponse(
     string? Notes,
     int? ProgramDayId,
     List<WorkoutSetResponse> Sets,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    MatchDetails? Match = null);
+
+/// <summary>Spiel-Details (nur bei WorkoutType "Match").</summary>
+public record MatchDetails(int? Goals, int? Assists, string? Opponent);
 
 /// <summary>Eine Seite der Historie (neueste zuerst). <c>NextCursor</c> = null -> keine weiteren Seiten.</summary>
 public record WorkoutPageResponse(List<WorkoutResponse> Items, string? NextCursor);

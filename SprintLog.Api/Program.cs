@@ -245,6 +245,7 @@ app.MapExerciseEndpoints();
 app.MapFavoriteEndpoints();
 app.MapWorkoutEndpoints();
 app.MapProgramEndpoints();
+app.MapWellnessEndpoints();
 app.MapMonitoringEndpoints();
 
 var monitoring = app.Services.GetRequiredService<MonitoringOptions>();
