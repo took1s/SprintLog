@@ -1,6 +1,51 @@
-@SprintLog.Api_HostAddress = http://localhost:5111
+# REST-Client-Datei (Visual Studio / Rider / VS Code "REST Client").
+# 1) Login ausführen, 2) Token unten bei @token eintragen.
 
-GET {{SprintLog.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+@host = http://localhost:5111
+@token = <paste-token-here>
 
-###
+### Health
+GET {{host}}/health
+
+### Registrierung
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{ "username": "demo", "password": "demo-password-123" }
+
+### Login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "demo", "password": "demo-password-123" }
+
+### Übungen (Standard + eigene)
+GET {{host}}/api/exercises
+Authorization: Bearer {{token}}
+
+### Eigene Übung anlegen
+POST {{host}}/api/exercises
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Sled Push", "category": "Football", "muscleGroup": "Legs", "trackingType": "DistanceTime" }
+
+### Einheit speichern (idempotent über clientId)
+POST {{host}}/api/workouts
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "workoutType": "Hybrid",
+  "clientId": "3f2c1a8e-1111-4c1e-9d2a-000000000001",
+  "date": "2026-10-28T17:30:00Z",
+  "durationSeconds": 3600,
+  "sets": [
+    { "exerciseId": 1, "weight": 80, "reps": 8 },
+    { "exerciseId": 12, "distance": 30, "time": 4.2 }
+  ]
+}
+
+### Historie
+GET {{host}}/api/workouts/history
+Authorization: Bearer {{token}}

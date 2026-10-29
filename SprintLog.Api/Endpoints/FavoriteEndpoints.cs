@@ -1,43 +1,65 @@
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 using SprintLog.Api.Data;
+using SprintLog.Api.Infrastructure;
 using SprintLog.Api.Models;
 
-namespace SprintLog.Api.Endpoints; // Убедись, что namespace совпадает с твоим проектом
+namespace SprintLog.Api.Endpoints;
 
-// 1. Обязательно public static class
-public static class FavoriteEndpoints 
+public static class FavoriteEndpoints
 {
-    // 2. Внутри него наш метод
     public static void MapFavoriteEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/favorites").RequireAuthorization();
+        var group = app.MapGroup("/api/favorites").RequireAuthorization().WithTags("Favorites");
 
-        // Получить список избранного
-        group.MapGet("/", async (AppDbContext db, ClaimsPrincipal user) => {
-            var username = user.Identity!.Name!;
-            return await db.Favorites.Where(f => f.Username == username).Select(f => f.ExerciseId).ToListAsync();
-        });
+        group.MapGet("/", GetAll);
+        group.MapPost("/{exerciseId:int}", Add);
+        group.MapDelete("/{exerciseId:int}", Remove);
+    }
 
-        // Добавить в избранное
-        group.MapPost("/{exerciseId}", async (AppDbContext db, ClaimsPrincipal user, int exerciseId) => {
-            var username = user.Identity!.Name!;
-            if (!await db.Favorites.AnyAsync(f => f.Username == username && f.ExerciseId == exerciseId)) {
-                db.Favorites.Add(new Favorite { Username = username, ExerciseId = exerciseId });
-                await db.SaveChangesAsync();
+    private static async Task<IResult> GetAll(HttpContext http, AppDbContext db, CancellationToken ct)
+    {
+        var userId = http.User.GetUserId();
+        if (userId is null) return Results.Unauthorized();
+
+        var ids = await db.Favorites.AsNoTracking()
+            .Where(f => f.UserId == userId)
+            .Select(f => f.ExerciseId)
+            .ToListAsync(ct);
+
+        return Results.Ok(ids);
+    }
+
+    private static async Task<IResult> Add(int exerciseId, HttpContext http, AppDbContext db, CancellationToken ct)
+    {
+        var userId = http.User.GetUserId();
+        if (userId is null) return Results.Unauthorized();
+
+        if (!await db.Exercises.VisibleTo(userId.Value).AnyAsync(e => e.Id == exerciseId, ct))
+            return Results.NotFound();
+
+        // Idempotent: doppeltes Hinzufügen ist kein Fehler.
+        if (!await db.Favorites.AnyAsync(f => f.UserId == userId && f.ExerciseId == exerciseId, ct))
+        {
+            db.Favorites.Add(new Favorite { UserId = userId.Value, ExerciseId = exerciseId });
+            try
+            {
+                await db.SaveChangesAsync(ct);
             }
-            return Results.Ok();
-        });
-
-        // Удалить из избранного
-        group.MapDelete("/{exerciseId}", async (AppDbContext db, ClaimsPrincipal user, int exerciseId) => {
-            var username = user.Identity!.Name!;
-            var fav = await db.Favorites.FirstOrDefaultAsync(f => f.Username == username && f.ExerciseId == exerciseId);
-            if (fav != null) {
-                db.Favorites.Remove(fav);
-                await db.SaveChangesAsync();
+            catch (DbUpdateException)
+            {
+                // Paralleler Request hat den Favoriten bereits angelegt (Unique-Index) - Ergebnis ist dasselbe.
             }
-            return Results.NoContent();
-        });
+        }
+
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> Remove(int exerciseId, HttpContext http, AppDbContext db, CancellationToken ct)
+    {
+        var userId = http.User.GetUserId();
+        if (userId is null) return Results.Unauthorized();
+
+        await db.Favorites.Where(f => f.UserId == userId && f.ExerciseId == exerciseId).ExecuteDeleteAsync(ct);
+        return Results.NoContent();
     }
 }

@@ -3,13 +3,21 @@ namespace SprintLog.Api.Models;
 public class Workout
 {
     public int Id { get; set; }
-    public DateTime Date { get; set; } = DateTime.UtcNow; // Автоматически ставим время сервера
-    public string WorkoutType { get; set; } = string.Empty; // Gym или Football
-    
-    // --- НОВЫЕ ПОЛЯ ДЛЯ ИЗОЛЯЦИИ ДАННЫХ ---
-    public int UserId { get; set; } // Внешний ключ
-    public User User { get; set; } = null!; // Навигационное свойство
-    
-    // Связь 1-ко-многим: одна тренировка содержит список подходов
+
+    /// <summary>Zeitpunkt, an dem die Einheit begonnen wurde (UTC) - kommt vom Client, damit Offline-Einheiten das richtige Datum behalten.</summary>
+    public DateTime Date { get; set; } = DateTime.UtcNow;
+
+    /// <summary>"Gym", "Football" oder "Hybrid".</summary>
+    public string WorkoutType { get; set; } = string.Empty;
+
+    /// <summary>Dauer der Einheit in Sekunden (optional).</summary>
+    public int? DurationSeconds { get; set; }
+
+    /// <summary>Vom Client erzeugte ID - macht das Speichern idempotent (doppelte Sync-Versuche erzeugen keine Duplikate).</summary>
+    public Guid? ClientId { get; set; }
+
+    public int UserId { get; set; }
+    public User User { get; set; } = null!;
+
     public List<WorkoutSet> Sets { get; set; } = new();
 }
