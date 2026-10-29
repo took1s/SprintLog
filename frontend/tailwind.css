@@ -178,3 +178,23 @@ input[type="number"] { -moz-appearance: textfield; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ---------- Übungsfigur (figure.js) - außerhalb von @layer, damit nichts entfernt wird ---------- */
+.fx-wrap svg { width: 100%; height: 100%; display: block; }
+.fx-limb { stroke: #00c3ff; stroke-width: 5; stroke-linecap: round; filter: drop-shadow(0 0 3px rgba(0, 195, 255, 0.45)); }
+.fx-torso { stroke: #00c3ff; stroke-width: 7; stroke-linecap: round; filter: drop-shadow(0 0 4px rgba(0, 195, 255, 0.5)); }
+.fx-far { opacity: 0.35; filter: none; }
+.fx-head { fill: #00c3ff; filter: drop-shadow(0 0 4px rgba(0, 195, 255, 0.6)); }
+.fx-joint { fill: #02040a; }
+.fx-ground { stroke: rgba(255, 255, 255, 0.12); stroke-width: 2; }
+.fx-shadow { fill: rgba(0, 195, 255, 0.14); }
+.fx-plate { fill: #0b111c; stroke: #e2e8f0; stroke-width: 3; }
+.fx-hub, .fx-db { fill: #e2e8f0; }
+.fx-ball, .fx-cone { fill: #f97316; }
+.fx-gear { fill: #1e293b; stroke: #475569; stroke-width: 1; }
+.fx-gear-soft { fill: rgba(30, 41, 59, 0.55); }
+.fx-gear-line { stroke: #475569; stroke-width: 3; stroke-linecap: round; }
+.fx-bar { stroke: #e2e8f0; stroke-width: 4; stroke-linecap: round; }
+.fx-cable { stroke: #94a3b8; stroke-width: 1.5; }
+.fx-cable-thick { stroke: #94a3b8; stroke-width: 5; stroke-linecap: round; }
+.fx-wheel { fill: none; stroke: #475569; stroke-width: 3; }
