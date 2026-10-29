@@ -6,7 +6,7 @@ import { useAppStore, rpeText, setLabel } from '@/stores/app';
 import { describeSet, formatClock, formatDate } from '@/lib/format';
 
 const app = useAppStore();
-const { isEditing, session, sessionElapsed, sessionGroups, showReview } = storeToRefs(app);
+const { isEditing, session, sessionElapsed, sessionGroups, settings, showReview } = storeToRefs(app);
 const { abortSession, editSessionSet, finishSession, removeSessionSet } = app;
 </script>
 
@@ -31,7 +31,7 @@ const { abortSession, editSessionSet, finishSession, removeSessionSet } = app;
                       <div v-for="(set, n) in g.sets" :key="set.index" class="flex items-center justify-between px-4 py-2.5">
                           <div class="flex items-center gap-3">
                               <span class="w-10 font-mono text-[10px] font-bold text-slate-500">{{ setLabel(g.sets, n) }}</span>
-                              <span class="font-mono text-xs font-bold" :class="set.isWarmup ? 'text-slate-500' : 'text-white'">{{ describeSet(set, g.trackingType) }}<span v-if="set.rpe" class="ml-1.5 text-[10px] text-orange-300">{{ rpeText(set.rpe) }}</span></span>
+                              <span class="font-mono text-xs font-bold" :class="set.isWarmup ? 'text-slate-500' : 'text-white'">{{ describeSet(set, g.trackingType) }}<span v-if="set.rpe" class="ml-1.5 text-[10px] text-orange-300">{{ rpeText(set.rpe, settings.useRir) }}</span></span>
                           </div>
                           <div class="flex gap-2">
                               <button @click="editSessionSet(set.index)" class="cyber-outline-btn flex h-8 w-8 items-center justify-center rounded-lg" :aria-label="t('session.editSet')">

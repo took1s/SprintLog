@@ -2,7 +2,7 @@
 import { t, tDynamic } from '@/i18n';
 import { exerciseName, muscleName } from '@/i18n/content';
 import { storeToRefs } from 'pinia';
-import { useAppStore, SET_RPE } from '@/stores/app';
+import { useAppStore, SET_RPE, rpeToRir } from '@/stores/app';
 import { describeSet, formatClock, formatNumber, formatRelative, formatSeconds } from '@/lib/format';
 import { msToKmh } from '@/lib/analytics';
 import { prescriptionText, suggestionNote } from '@/lib/program';
@@ -172,15 +172,24 @@ const { closeSetModal, copyPrevious, deleteCustomExercise, saveSet, setWeightByP
               <!-- RPE + Aufwärmsatz -->
               <div class="mb-6">
                   <div class="mb-2 flex items-center justify-between">
-                      <span class="label-xs">{{ t('set.rpe') }} <span class="normal-case tracking-normal text-slate-500">{{ t('set.rpeHint') }}</span></span>
+                      <span class="label-xs">{{ settings.useRir ? t('set.rir') : t('set.rpe') }} <span class="normal-case tracking-normal text-slate-500">{{ settings.useRir ? t('set.rirHint') : t('set.rpeHint') }}</span></span>
                       <label class="flex cursor-pointer items-center gap-2 text-[10px] font-bold uppercase tracking-widest" :class="setModal.isWarmup ? 'text-orange-300' : 'text-slate-500'">
                           <input v-model="setModal.isWarmup" type="checkbox" class="h-4 w-4 accent-[#fb923c]"> {{ t('set.warmup') }}
                       </label>
                   </div>
                   <div class="flex gap-1.5">
                       <button @click="setModal.rpe = null" class="preset-btn" :class="{ '!border-accent/50 !text-accent': setModal.rpe === null }">-</button>
-                      <button v-for="r in SET_RPE" :key="r" @click="setModal.rpe = r" class="preset-btn" :class="{ '!border-orange-400/60 !text-orange-300': setModal.rpe === r }">{{ r }}</button>
+                      <button v-for="r in SET_RPE" :key="r" @click="setModal.rpe = r" class="preset-btn" :class="{ '!border-orange-400/60 !text-orange-300': setModal.rpe === r }" :data-rpe="r">{{ settings.useRir ? rpeToRir(r) : r }}</button>
                   </div>
+              </div>
+
+              <!-- Notiz zum Satz -->
+              <div class="mb-6">
+                  <button v-if="!setModal.showNote" type="button" @click="setModal.showNote = true" class="text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-accent">{{ t('set.addNote') }}</button>
+                  <template v-else>
+                      <label for="in-set-note" class="label-xs mb-2 block">{{ t('set.note') }}</label>
+                      <input id="in-set-note" v-model="setModal.note" maxlength="200" class="cyber-input w-full rounded-xl p-3 text-sm" :placeholder="t('set.notePlaceholder')">
+                  </template>
               </div>
 
               <p v-if="modalIsNewPR" class="mb-3 text-center text-[10px] font-black uppercase tracking-widest text-yellow-400">{{ t('set.newRecord') }}</p>

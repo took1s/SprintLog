@@ -573,6 +573,134 @@ export const MOTIONS: Record<string, Motion> = {
       { lean: 10, aR: 30, fR: 20, aL: -10, fL: 10, tR: 12, sR: -4 },
     ],
   },
+
+  // ---------- v5: Prävention, Feld, Athletik ----------
+  copenhagen: {
+    // Seitstütz auf dem Unterarm, oberes Bein auf der Bank, unteres Bein kommt von unten an die Bank.
+    label: 'Copenhagen adduction', duration: 2800, anchor: 'handN', at: [178, GROUND - 3], props: ['benchLow'],
+    frames: [
+      { torso: 66, head: 70, aN: 2, fN: 90, aF: 0, fF: 88, tN: -106, sN: -106, tF: -40, sF: -30, ftN: 180, ftF: 180 },
+      { torso: 80, head: 84, aN: 2, fN: 90, aF: 0, fF: 88, tN: -100, sN: -100, tF: -96, sF: -96, ftN: 180, ftF: 180 },
+    ],
+  },
+  balance: {
+    label: 'Single-leg balance', duration: 3200, anchor: 'ankleN', at: [CX, GROUND - 3], props: ['ballFront'],
+    frames: [
+      pose({ torso: 178, aN: 60, fN: 100, aF: 56, fF: 96, tN: 4, sN: -2, tF: 62, sF: -24 }),
+      pose({ torso: 174, aN: 72, fN: 108, aF: 68, fF: 104, tN: 8, sN: -6, tF: 74, sF: -12 }),
+    ],
+  },
+  jog: {
+    label: 'Run', duration: 900, anchor: 'lowest', at: [CX, GROUND],
+    frames: (() => {
+      const a = pose({ torso: 174, aN: -30, fN: 60, aF: 35, fF: 120, tN: 45, sN: -20, tF: -22, sF: -55, ftN: 95, ftF: 40 });
+      const b = pose({ torso: 174, aN: 2, fN: 85, aF: -2, fF: 80, tN: 10, sN: -30, tF: -4, sF: -10, ftN: 90, ftF: 70 });
+      return [a, b, swapSides(a), swapSides(b)];
+    })(),
+  },
+  skip: {
+    label: 'A-skip', duration: 1000, anchor: 'lowest', at: [CX, GROUND],
+    frames: (() => {
+      const a = pose({ torso: 178, aN: -45, fN: 45, aF: 60, fF: 150, tN: 92, sN: 2, tF: -4, sF: -6, ftN: 80, ftF: 70 });
+      const b = pose({ torso: 178, aN: 2, fN: 80, aF: -2, fF: 76, tN: 20, sN: -6, tF: 2, sF: -2, ftN: 90, ftF: 80 });
+      return [a, b, swapSides(a), swapSides(b)];
+    })(),
+  },
+  lateralBound: {
+    label: 'Lateral bound', view: 'front', duration: 1800, anchor: 'ground', at: GROUND_AT,
+    frames: [
+      { lean: 10, aR: 30, fR: 60, aL: -10, fL: 20, tR: 30, sR: -6, tL: 30, sL: 60, at: [CX - 42, GROUND] },
+      { lean: 0, aR: 50, fR: 80, aL: 50, fL: 80, tR: 10, sR: 30, tL: 10, sL: 30, at: [CX, GROUND - 26] },
+      { lean: -10, aR: -10, fR: 20, aL: 30, fL: 60, tR: 30, sR: 60, tL: 30, sL: -6, at: [CX + 42, GROUND] },
+      { lean: 0, aR: 50, fR: 80, aL: 50, fL: 80, tR: 10, sR: 30, tL: 10, sL: 30, at: [CX, GROUND - 26] },
+    ],
+  },
+  airSquat: {
+    label: 'Bodyweight squat', duration: 2600, anchor: 'ground', at: GROUND_AT,
+    frames: [
+      pose({ torso: 178, aN: 4, fN: 4, aF: -4, fF: -4 }),
+      pose({ torso: 142, aN: 88, fN: 92, aF: 84, fF: 88, tN: 90, sN: -25, tF: 86, sF: -24 }),
+      pose({ torso: 180, aN: 4, fN: 4, aF: -4, fF: -4, ftN: 55, ftF: 55, at: [CX, GROUND - 5] }),
+    ],
+  },
+  invertedRow: {
+    // Fersen bleiben am Boden (Anker), der gerade Körper dreht sich um die Fersen zur Stange.
+    label: 'Inverted row', duration: 2400, anchor: 'ankleN', at: [44, GROUND - 3], props: ['pullBar'],
+    frames: [
+      { torso: 110, head: 112, aN: 172, fN: 172, aF: 168, fF: 168, tN: -70, sN: -70, tF: -71, sF: -71, ftN: 170, ftF: 170 },
+      { torso: 134, head: 136, aN: -44, fN: 150, aF: -48, fF: 146, tN: -46, sN: -46, tF: -47, sF: -47, ftN: 170, ftF: 170 },
+    ],
+  },
+  hollow: {
+    label: 'Hollow hold', duration: 3000, anchor: 'lowest', at: [CX, GROUND], props: [],
+    frames: [
+      { torso: -70, head: -62, aN: -100, fN: -100, aF: -102, fF: -102, tN: 106, sN: 106, tF: 105, sF: 105, ftN: 130, ftF: 130 },
+      { torso: -64, head: -56, aN: -96, fN: -96, aF: -98, fF: -98, tN: 112, sN: 112, tF: 111, sF: 111, ftN: 136, ftF: 136 },
+    ],
+  },
+  pallof: {
+    label: 'Pallof press', duration: 2400, anchor: 'ground', at: [CX - 20, GROUND], props: ['cableFront'],
+    frames: [
+      pose({ torso: 178, aN: 22, fN: 150, aF: 18, fF: 146, tN: 14, sN: -10, tF: -8, sF: -14 }),
+      pose({ torso: 178, aN: 88, fN: 90, aF: 84, fF: 86, tN: 14, sN: -10, tF: -8, sF: -14 }),
+    ],
+  },
+  slRdl: {
+    label: 'Single-leg RDL', duration: 3000, anchor: 'ankleN', at: [CX + 10, GROUND - 3], props: ['dumbbells'],
+    frames: [
+      pose({ torso: 180, aN: 2, fN: 2, aF: -2, fF: -2, tN: 4, sN: 0, tF: -12, sF: -24 }),
+      pose({ torso: 98, aN: 2, fN: 2, aF: -2, fF: -2, tN: 14, sN: -4, tF: -84, sF: -86, ftF: 0 }),
+    ],
+  },
+  stepUp: {
+    label: 'Step-up', duration: 2800, anchor: 'ankleN', at: [146, GROUND - 39], props: ['box', 'dumbbells'],
+    frames: [
+      pose({ torso: 168, aN: 2, fN: 2, aF: -2, fF: -2, tN: 78, sN: -8, tF: -10, sF: -10 }),
+      pose({ torso: 180, aN: 2, fN: 2, aF: -2, fF: -2, tN: 2, sN: 0, tF: 20, sF: -40 }),
+    ],
+  },
+  kbSwing: {
+    label: 'Kettlebell swing', duration: 1600, anchor: 'ground', at: GROUND_AT, props: ['kettlebell'],
+    frames: [
+      pose({ torso: 112, aN: -22, fN: -26, aF: -26, fF: -30, tN: 26, sN: -12, tF: 22, sF: -12 }),
+      pose({ torso: 182, aN: 88, fN: 90, aF: 84, fF: 86, tN: 2, sN: 0, tF: -2, sF: 0 }),
+    ],
+  },
+  clean: {
+    label: 'Power clean', duration: 2400, anchor: 'ground', at: GROUND_AT, props: ['barbell'],
+    frames: [
+      pose({ torso: 120, aN: 2, fN: 2, aF: -2, fF: -2, tN: 62, sN: -18, tF: 58, sF: -16 }),
+      pose({ torso: 150, aN: 6, fN: 6, aF: 2, fF: 2, tN: 30, sN: -10, tF: 26, sF: -10 }),
+      pose({ torso: 186, head: 190, aN: 10, fN: 10, aF: 6, fF: 6, ftN: 50, ftF: 50, shrug: 3, at: [CX, GROUND - 6] }),
+      pose({ torso: 172, aN: 96, fN: 220, aF: 92, fF: 216, tN: 50, sN: -20, tF: 46, sF: -20 }),
+      pose({ torso: 180, aN: 96, fN: 220, aF: 92, fF: 216 }),
+    ],
+  },
+  pushPress: {
+    label: 'Push press', duration: 2200, anchor: 'ground', at: GROUND_AT, props: ['barbell'],
+    frames: [
+      pose({ aN: 38, fN: 178, aF: 34, fF: 176 }),
+      pose({ torso: 176, aN: 38, fN: 178, aF: 34, fF: 176, tN: 34, sN: -14, tF: 30, sF: -14 }),
+      pose({ aN: 178, fN: 178, aF: 174, fF: 174, ftN: 60, ftF: 60, at: [CX, GROUND - 4] }),
+      pose({ aN: 178, fN: 178, aF: 174, fF: 174 }),
+    ],
+  },
+  lateralLunge: {
+    label: 'Lateral lunge', view: 'front', duration: 2600, anchor: 'ground', at: GROUND_AT,
+    frames: [
+      { aR: 14, fR: 60, aL: 14, fL: 60, tR: 22, sR: 22, tL: 22, sL: 22 },
+      { lean: -8, aR: 30, fR: 80, aL: 30, fL: 80, tR: 74, sR: -4, tL: 52, sL: 52 },
+    ],
+  },
+  deadBug: {
+    label: 'Dead bug', duration: 2600, anchor: 'lowest', at: [CX, GROUND], props: [],
+    frames: [
+      { torso: -90, head: -88, aN: 180, fN: 180, aF: 178, fF: 178, tN: 180, sN: 90, tF: 178, sF: 88, ftN: 180, ftF: 180 },
+      { torso: -90, head: -88, aN: -96, fN: -96, aF: 178, fF: 178, tN: 180, sN: 90, tF: 98, sF: 98, ftN: 180, ftF: 120 },
+      { torso: -90, head: -88, aN: 180, fN: 180, aF: 178, fF: 178, tN: 180, sN: 90, tF: 178, sF: 88, ftN: 180, ftF: 180 },
+      { torso: -90, head: -88, aN: 180, fN: 180, aF: -96, fF: -96, tN: 98, sN: 98, tF: 178, sF: 88, ftN: 120, ftF: 180 },
+    ],
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -593,10 +721,19 @@ export const EXERCISE_MOTION: Record<number, string | null> = {
   69: 'lateralRaise', 70: 'frontRaise', 71: 'facePull', 72: 'shrug', 73: 'squat', 74: 'squat', 75: 'hipThrust',
   76: 'lunge', 77: 'barbellCurl', 78: 'bench', 79: 'cableCrunch', 80: 'abWheel', 81: 'crunch', 82: 'jumpRope',
   83: 'rowing', 84: 'cycling',
+  85: 'copenhagen', 86: 'balance', 87: 'jog', 88: 'shuttle', 89: 'sprint', 90: 'jump', 91: 'lateralBound', 92: 'skip',
+  93: 'jog', 94: 'invertedRow', 95: 'hollow', 96: 'pallof', 97: 'slRdl', 98: 'stepUp', 99: 'kbSwing', 100: 'clean',
+  101: 'pushPress', 102: 'lunge', 103: 'lateralLunge', 104: 'deadBug', 105: 'airSquat', 106: 'jog',
 };
 
 /** Erkennung für eigene Übungen über den Namen (Reihenfolge = Priorität). */
 const KEYWORDS: [RegExp, string][] = [
+  [/copenhagen|kopenhagen/i, 'copenhagen'], [/single[- ]leg (balance|stance)|einbeinstand|balance/i, 'balance'],
+  [/single[- ]leg (rdl|romanian|deadlift)/i, 'slRdl'], [/inverted row|australian/i, 'invertedRow'], [/hollow/i, 'hollow'],
+  [/pallof/i, 'pallof'], [/dead ?bug/i, 'deadBug'], [/step[- ]?up/i, 'stepUp'], [/kettlebell swing|kb swing|swing/i, 'kbSwing'],
+  [/power clean|hang clean|clean/i, 'clean'], [/push press/i, 'pushPress'], [/lateral lunge|side lunge|cossack/i, 'lateralLunge'],
+  [/lateral bound|skater|seitsprung/i, 'lateralBound'], [/a[- ]skip/i, 'skip'], [/bodyweight squat|air squat/i, 'airSquat'],
+  [/tempo run|interval run|jog|warm[- ]?up run|einlaufen/i, 'jog'],
   [/nordic/i, 'nordic'], [/hip thrust/i, 'hipThrust'], [/bridge/i, 'bridge'],
   [/skull/i, 'skullCrusher'], [/pushdown|push-down/i, 'pushdown'], [/overhead.*(ext|tricep)|french press/i, 'overheadExt'],
   [/incline/i, 'inclineBench'], [/bench|chest press|floor press/i, 'bench'], [/fly|crossover|pec deck/i, 'fly'],
@@ -618,6 +755,9 @@ const KEYWORDS: [RegExp, string][] = [
   [/jump|sprung|plyo/i, 'jump'], [/ladder|leiter/i, 'ladder'], [/shuttle|cone|cod|change of direction|richtungswechsel/i, 'shuttle'],
   [/sprint|run|lauf|jog/i, 'sprint'], [/cycl|bike|fahrrad|rad/i, 'cycling'],
 ];
+
+/** Standard-Übungen mit Körpergewicht: Startwert 0 kg statt Hantelgewicht. */
+export const BODYWEIGHT_EXERCISES: ReadonlySet<number> = new Set([17, 20, 34, 46, 50, 51, 52, 55, 65, 81, 85, 90, 91, 94, 104, 105]);
 
 /** Übungen ohne Animation, aber mit Technik-Hinweisen. */
 const EXERCISE_TECHNIQUE_ONLY: Record<number, string> = { 10: 'wristCurl', 11: 'wristCurl' };
@@ -698,6 +838,22 @@ export const TECHNIQUE: Record<string, Technique> = {
   adduction: { muscles: ['Adductors'], cues: ['Sit tall, back against the pad', 'Squeeze the knees together', 'Control the opening'] },
   twist: { muscles: ['Obliques', 'Abs'], cues: ['Lean back slightly, chest up', 'Rotate the shoulders, not only the arms', 'Feet on the floor for beginners'] },
   woodchop: { muscles: ['Obliques', 'Core', 'Shoulders'], cues: ['Arms almost straight', 'Rotate through the torso diagonally', 'Pivot on the back foot'] },
+  copenhagen: { muscles: ['Adductors', 'Core', 'Obliques'], cues: ['Forearm under the shoulder, top foot or knee on the bench', 'Lift the hips until the body is straight', 'Bring the bottom leg up to the bench', 'Lower slowly - stop if groin pain goes above 3/10'] },
+  balance: { muscles: ['Ankle stability', 'Glute medius', 'Core'], cues: ['Standing knee slightly bent, hip level', 'Weight over the middle of the foot', 'Look ahead, keep the trunk still'] },
+  jog: { muscles: ['Calves', 'Quads', 'Conditioning'], cues: ['Relaxed shoulders, arms swing forward and back', 'Short, quick steps under the body', 'Breathe steadily - pace by heart rate or talk test'] },
+  skip: { muscles: ['Hip flexors', 'Calves', 'Coordination'], cues: ['Drive the knee to hip height', 'Push the foot down under the hip', 'Arms opposite to the legs, stay tall'] },
+  lateralBound: { muscles: ['Glutes', 'Glute medius', 'Quads'], cues: ['Push off sideways from the outside leg', 'Land on one leg, knee over the toes', 'Hold the landing for a second before the next bound'] },
+  airSquat: { muscles: ['Quads', 'Glutes', 'Core'], cues: ['Feet shoulder-width, toes slightly out', 'Sit down and back, chest up', 'Knees follow the toes, heels down'] },
+  invertedRow: { muscles: ['Upper back', 'Lats', 'Biceps', 'Core'], cues: ['Body straight from heels to head', 'Pull the chest to the bar', 'Squeeze the shoulder blades, lower slowly'] },
+  hollow: { muscles: ['Abs', 'Core'], cues: ['Press the lower back into the floor', 'Arms and legs long and low', 'Hold the banana shape and breathe'] },
+  pallof: { muscles: ['Core', 'Obliques'], cues: ['Stand side-on to the cable or band', 'Press the hands straight forward from the chest', 'Do not let the trunk rotate - hold 1-2 s'] },
+  slRdl: { muscles: ['Hamstrings', 'Glutes', 'Glute medius'], cues: ['Standing knee soft, hips square', 'Hinge forward, free leg goes back in one line', 'Stop at a hamstring stretch, drive the hip forward'] },
+  stepUp: { muscles: ['Quads', 'Glutes'], cues: ['Whole foot on the box', 'Push up through the front leg - no jump from the back foot', 'Control the way down'] },
+  kbSwing: { muscles: ['Glutes', 'Hamstrings', 'Lower back', 'Core'], cues: ['Hinge, do not squat - hips go back', 'Snap the hips forward, arms just guide the bell', 'Bell floats to chest height, glutes tight at the top'] },
+  clean: { muscles: ['Glutes', 'Quads', 'Traps', 'Explosive power'], cues: ['Start like a deadlift, bar close to the shins', 'Jump explosively: hips, knees and ankles extend', 'Pull under and catch the bar on the shoulders, elbows high'] },
+  pushPress: { muscles: ['Shoulders', 'Triceps', 'Quads'], cues: ['Short dip of the knees, trunk upright', 'Drive up with the legs and press at the same time', 'Lock out overhead, bar over the mid-foot'] },
+  lateralLunge: { muscles: ['Adductors', 'Glutes', 'Quads'], cues: ['Big step to the side, toes forward', 'Sit back into the bent leg, other leg straight', 'Push back to the start through the heel'] },
+  deadBug: { muscles: ['Abs', 'Core'], cues: ['Lower back stays on the floor', 'Lower opposite arm and leg slowly', 'Breathe out as you extend'] },
 };
 
 // ---------------------------------------------------------------------------
@@ -758,6 +914,7 @@ function renderProp(name: string, s: Skeleton, phase: number): string {
     case 'dumbbells': return [s.handN, s.handF].map((h) => rect(h[0] - 6, h[1] - 3.5, 12, 7, 'fx-db', 2)).join('');
     case 'dumbbellOne': return rect(hm[0] - 7, hm[1] - 4, 14, 8, 'fx-db', 2);
     case 'dumbbellChest': return rect(hm[0] - 6, hm[1] - 6, 12, 12, 'fx-db', 3);
+    case 'kettlebell': return circle(add(hm, [0, 8]), 7, 'fx-db') + `<path class="fx-cable" fill="none" d="M ${f1(hm[0] - 5)} ${f1(hm[1] + 4)} Q ${f1(hm[0])} ${f1(hm[1] - 4)} ${f1(hm[0] + 5)} ${f1(hm[1] + 4)}"/>`;
     case 'ball': return circle(add(hm, [0, -4]), 8, 'fx-ball');
     case 'ballFront': return circle(hm, 7, 'fx-ball');
     case 'wheel': return circle(add(hm, [0, 4]), 7, 'fx-plate') + circle(add(hm, [0, 4]), 2, 'fx-hub');

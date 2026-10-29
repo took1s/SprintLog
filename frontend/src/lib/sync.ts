@@ -28,6 +28,7 @@ export interface WorkoutPayload {
     distance: number | null;
     time: number | null;
     rpe: number | null;
+    note?: string | null;
     isWarmup: boolean;
   }[];
 }
@@ -50,6 +51,7 @@ export function toPayload(entry: QueueEntry): WorkoutPayload {
       time: s.time ?? null,
       rpe: s.rpe ?? null,
       isWarmup: !!s.isWarmup,
+      note: s.note ?? null,
     })),
   };
 }

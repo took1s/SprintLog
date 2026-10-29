@@ -59,7 +59,7 @@ test('payload contains clientId, date and only API fields', () => {
   const p = toPayload(entry('a'));
   assert.equal(p.clientId, 'a');
   assert.equal(p.date, '2026-10-28T10:00:00Z');
-  assert.deepEqual(Object.keys(p.sets[0]).sort(), ['distance', 'exerciseId', 'isWarmup', 'reps', 'rpe', 'time', 'weight']);
+  assert.deepEqual(Object.keys(p.sets[0]).sort(), ['distance', 'exerciseId', 'isWarmup', 'note', 'reps', 'rpe', 'time', 'weight']);
 });
 
 test('legacy v2 queue is migrated with new client ids and original timestamp', () => {

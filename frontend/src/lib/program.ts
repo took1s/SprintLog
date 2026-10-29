@@ -2,8 +2,8 @@
 // Reine Funktionen ohne DOM/Netzwerk -> unit-getestet (tests/program.test.ts).
 
 import { t, tDynamic } from '../i18n';
-import { exerciseKey, isWorkingSet, sessionLoad, roundTo } from './analytics';
-import type { Exercise, ProgramDay, ProgramExercise, TrainingProgram, Workout, WorkoutSet } from '../types';
+import { epley1RM, exerciseKey, isWorkingSet, sessionLoad, roundTo } from './analytics';
+import type { Exercise, ProgramDay, ProgramExercise, TrainingProgram, WeekStep, Workout, WorkoutSet } from '../types';
 
 const DAY_MS = 86_400_000;
 const time = (d: string | Date) => new Date(d).getTime();
@@ -16,6 +16,77 @@ export function currentWeek(program: Pick<TrainingProgram, 'startedAt'> | null |
 }
 
 /** Einheiten, die zu diesem Plan gehören (über programDayId), neueste zuerst. */
+// ---------- Periodisierung ----------
+
+/** Woche innerhalb des Zyklus (1-basiert), z. B. Woche 6 bei 4-Wochen-Zyklus -> 2. Ohne Zyklus = Planwoche. */
+export function cycleWeek(program: Pick<TrainingProgram, 'cycleWeeks'> | null | undefined, week: number): number {
+  const cycle = program?.cycleWeeks;
+  return cycle && cycle > 0 ? ((week - 1) % cycle) + 1 : week;
+}
+
+/** Jede N-te Planwoche ist eine Entlastungswoche (deloadEvery). */
+export function isDeloadWeek(program: Pick<TrainingProgram, 'deloadEvery'> | null | undefined, week: number): boolean {
+  const every = program?.deloadEvery;
+  return !!every && every > 1 && week > 0 && week % every === 0;
+}
+
+/** Vorgabe einer Übung in einer bestimmten Woche: Grundwerte + gültige Wochen-Stufe + ggf. Entlastung. */
+export interface EffectivePrescription extends ProgramExercise {
+  /** Woche, nach der sich die Vorgabe richtet (Zyklus-Woche). */
+  week: number;
+  /** Ab welcher Woche die angewendete Stufe gilt (null = Grundwerte). */
+  stepWeek: number | null;
+  deload: boolean;
+}
+
+export function activeStep(steps: readonly WeekStep[] | null | undefined, week: number): WeekStep | null {
+  let best: WeekStep | null = null;
+  for (const step of steps ?? []) if (step.fromWeek <= week && (!best || step.fromWeek > best.fromWeek)) best = step;
+  return best;
+}
+
+export function effectivePrescription(
+  px: ProgramExercise,
+  program: Pick<TrainingProgram, 'cycleWeeks' | 'deloadEvery'> | null | undefined,
+  week: number,
+): EffectivePrescription {
+  const w = cycleWeek(program, week);
+  const step = activeStep(px.weekSteps, w);
+  const out: EffectivePrescription = {
+    ...px,
+    sets: step?.sets ?? px.sets,
+    repsMin: step?.repsMin ?? px.repsMin,
+    repsMax: step?.repsMax ?? px.repsMax,
+    distance: step?.distance ?? px.distance,
+    time: step?.time ?? px.time,
+    percentOf1Rm: step?.percentOf1Rm ?? px.percentOf1Rm,
+    targetRpe: step?.targetRpe ?? px.targetRpe,
+    note: step?.note ?? px.note,
+    week: w,
+    stepWeek: step?.fromWeek ?? null,
+    deload: isDeloadWeek(program, week),
+  };
+  if (out.deload) {
+    // Entlastung: ~60 % der Sätze, Intensität runter - Anpassung kommt in der Erholung.
+    out.sets = Math.max(1, Math.ceil(out.sets * 0.6));
+    if (out.targetRpe) out.targetRpe = Math.max(5, out.targetRpe - 2);
+    if (out.percentOf1Rm) out.percentOf1Rm = Math.round(out.percentOf1Rm * 0.9);
+  }
+  return out;
+}
+
+/** Bestes geschätztes 1RM (Epley, Arbeitssätze bis 12 Wdh.) der letzten `days` Tage. */
+export function bestRecentE1RM(exerciseId: number, workouts: readonly Workout[] | null | undefined, now = new Date(), days = 120): number {
+  const key = exerciseKey({ exerciseId });
+  const since = now.getTime() - days * DAY_MS;
+  let best = 0;
+  for (const w of workouts ?? []) {
+    if (time(w.date) < since) continue;
+    for (const s of w.sets ?? []) if (exerciseKey(s) === key && isWorkingSet(s)) best = Math.max(best, epley1RM(s.weight, s.reps));
+  }
+  return best;
+}
+
 export function programWorkouts(program: Pick<TrainingProgram, 'days'> | null | undefined, workouts: readonly Workout[] | null | undefined): Workout[] {
   const dayIds = new Set((program?.days ?? []).map((d) => d.id));
   return (workouts ?? [])
@@ -73,7 +144,7 @@ function lastPerformance(exerciseId: number, workouts: readonly Workout[] | null
 }
 
 export interface TargetSuggestion {
-  kind: 'new' | 'progress' | 'repeat' | 'reference';
+  kind: 'new' | 'progress' | 'repeat' | 'reference' | 'percent' | 'deload';
   weight?: number | null;
   reps?: number;
   distance?: number | null;
@@ -84,11 +155,19 @@ export interface TargetSuggestion {
   noteParams?: Record<string, string | number>;
 }
 
-export type SuggestionKey = 'reference' | 'sprintNew' | 'holdMore' | 'hold' | 'pickWeight' | 'repRange' | 'addWeight' | 'topReached' | 'sameWeight';
+export type SuggestionKey = 'none' | 'reference' | 'sprintNew' | 'holdMore' | 'hold' | 'pickWeight' | 'repRange' | 'addWeight' | 'topReached' | 'sameWeight'
+  | 'percent' | 'percentNoMax' | 'deload' | 'deloadEasy';
 
 /** Hinweis einer Zielvorgabe in der aktuellen Sprache. */
 export const suggestionNote = (s: Pick<TargetSuggestion, 'note' | 'noteKey' | 'noteParams'>): string =>
-  tDynamic(`plan.suggest.${s.noteKey}`, s.note, s.noteParams);
+  s.noteKey === 'none' ? '' : tDynamic(`plan.suggest.${s.noteKey}`, s.note, s.noteParams);
+
+/** 25 -> "25 s", 480 -> "8:00" (ohne Sprachabhängigkeit der Einheit bei Minuten). */
+export function formatDurationShort(seconds: number | null | undefined): string {
+  const v = Math.round(seconds ?? 0);
+  if (v < 60) return `${v} ${t('units.s')}`;
+  return `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}`;
+}
 
 /**
  * Zielvorgabe für die nächste Einheit (Double Progression):
@@ -96,7 +175,33 @@ export const suggestionNote = (s: Pick<TargetSuggestion, 'note' | 'noteKey' | 'n
  *  - Sonst gleiches Gewicht, eine Wiederholung mehr als beim schwächsten Satz (innerhalb des Bereichs).
  *  - Keine Historie -> Gewicht selbst wählen (ca. 2 Wdh. Reserve).
  */
-export function suggestTarget(px: ProgramExercise, workouts: readonly Workout[] | null | undefined): TargetSuggestion {
+export function suggestTarget(
+  px: ProgramExercise & { deload?: boolean },
+  workouts: readonly Workout[] | null | undefined,
+  now = new Date(),
+): TargetSuggestion {
+  const type = px.trackingType ?? 'WeightReps';
+  // Prozentbasiert (z. B. 5/3/1): Gewicht = % des besten geschätzten 1RM.
+  if (type === 'WeightReps' && px.percentOf1Rm) {
+    const reps = px.repsMax ?? px.repsMin ?? 5;
+    const max = bestRecentE1RM(px.exerciseId, workouts, now);
+    if (!max) {
+      return { kind: 'new', weight: null, reps, note: `Work up to a heavy set of 3-5 reps first - then weights are calculated at ${px.percentOf1Rm} %`, noteKey: 'percentNoMax', noteParams: { pct: px.percentOf1Rm } };
+    }
+    const weight = roundTo((max * px.percentOf1Rm) / 100, 2.5);
+    return { kind: 'percent', weight, reps, note: `${px.percentOf1Rm} % of your estimated 1RM (${roundTo(max, 0.5)} kg)`, noteKey: 'percent', noteParams: { pct: px.percentOf1Rm, max: roundTo(max, 0.5) } };
+  }
+
+  const base = baseSuggestion(px, workouts);
+  if (!px.deload) return base;
+  if (base.weight && base.weight > 0) {
+    const weight = roundTo(base.weight * 0.9, 2.5);
+    return { ...base, kind: 'deload', weight, note: `Deload week: ${weight} kg, fewer sets, easy reps`, noteKey: 'deload', noteParams: { weight } };
+  }
+  return { ...base, kind: 'deload', note: 'Deload week: fewer sets, keep it easy', noteKey: 'deloadEasy', noteParams: undefined };
+}
+
+function baseSuggestion(px: ProgramExercise, workouts: readonly Workout[] | null | undefined): TargetSuggestion {
   const last = lastPerformance(px.exerciseId, workouts);
   const type = px.trackingType ?? 'WeightReps';
 
@@ -108,7 +213,8 @@ export function suggestTarget(px: ProgramExercise, workouts: readonly Workout[] 
       distance: px.distance ?? last?.sets[0]?.distance ?? null,
       time: best ?? null,
       note: best ? `Last best ${best} s over ${px.distance} m` : 'Run at full speed, full rest between reps',
-      noteKey: best ? 'reference' : 'sprintNew',
+      // Eigener Hinweis der Vorgabe (z. B. "75-80 % Tempo") hat Vorrang vor dem allgemeinen Sprint-Hinweis.
+      noteKey: best ? 'reference' : px.note ? 'none' : 'sprintNew',
       noteParams: best ? { time: best, distance: px.distance ?? '' } : undefined,
     };
   }
@@ -117,7 +223,16 @@ export function suggestTarget(px: ProgramExercise, workouts: readonly Workout[] 
     const lastMin = last ? Math.min(...last.sets.map((s) => s.time ?? 0)) : 0;
     const allHit = !!last && last.sets.length >= px.sets && lastMin >= (px.time ?? 0);
     const t = allHit ? Math.max(px.time ?? 0, lastMin) + 5 : px.time ?? lastMin;
-    return { kind: allHit ? 'progress' : last ? 'repeat' : 'new', time: t, note: allHit ? '+5 s - all holds completed last time' : `Hold ${t} s`, noteKey: allHit ? 'holdMore' : 'hold', noteParams: { time: t } };
+    // Lange Dauern (Läufe, Intervalle) nicht steigern - nur Halteübungen bis 2 min bekommen +5 s.
+    const holdLike = (px.time ?? 0) <= 120;
+    const target = allHit && holdLike ? t : px.time ?? lastMin;
+    return {
+      kind: allHit && holdLike ? 'progress' : last ? 'repeat' : 'new',
+      time: target,
+      note: allHit && holdLike ? '+5 s - all holds completed last time' : `Target ${target} s`,
+      noteKey: allHit && holdLike ? 'holdMore' : px.note && !last ? 'none' : 'hold',
+      noteParams: { time: formatDurationShort(target) },
+    };
   }
 
   const min = px.repsMin ?? px.repsMax ?? 8;
@@ -148,8 +263,9 @@ export function suggestTarget(px: ProgramExercise, workouts: readonly Workout[] 
 export function prescriptionText(px: ProgramExercise): string {
   const parts: string[] = [];
   if (px.trackingType === 'DistanceTime') parts.push(`${px.sets} × ${px.distance} ${t('units.m')}`);
-  else if (px.trackingType === 'Duration') parts.push(`${px.sets} × ${px.time} ${t('units.s')}`);
+  else if (px.trackingType === 'Duration') parts.push(`${px.sets} × ${formatDurationShort(px.time)}`);
   else parts.push(`${px.sets} × ${px.repsMin === px.repsMax || px.repsMax == null ? px.repsMin ?? px.repsMax : `${px.repsMin}-${px.repsMax}`}`);
+  if (px.percentOf1Rm) parts.push(t('plan.prescription.percent', { pct: px.percentOf1Rm }));
   if (px.targetRpe) parts.push(t('plan.prescription.rpe', { rpe: px.targetRpe }));
   if (px.restSeconds) parts.push(t('plan.prescription.rest', { time: `${Math.floor(px.restSeconds / 60)}:${String(px.restSeconds % 60).padStart(2, '0')}` }));
   return parts.join(' · ');
@@ -230,9 +346,26 @@ export interface DraftExercise {
   targetRpe?: FormNumber;
   restSeconds?: FormNumber;
   progressionStep?: FormNumber;
+  percentOf1Rm?: FormNumber;
+  note?: string;
+  weekSteps?: DraftStep[];
+}
+/** Wochen-Stufe im Editor (leere Felder = Grundwert der Übung). */
+export interface DraftStep {
+  fromWeek: FormNumber;
+  sets?: FormNumber;
+  repsMin?: FormNumber;
+  repsMax?: FormNumber;
+  distance?: FormNumber;
+  time?: FormNumber;
+  percentOf1Rm?: FormNumber;
+  note?: string;
 }
 export interface DraftDay { id: number | null; name: string; notes: string; exercises: DraftExercise[] }
-export interface ProgramDraft { id: number | null; name: string; goal: string; weeks: FormNumber; days: DraftDay[] }
+export interface ProgramDraft {
+  id: number | null; name: string; goal: string; weeks: FormNumber; days: DraftDay[];
+  cycleWeeks?: FormNumber; deloadEvery?: FormNumber;
+}
 
 /** Leeres Programm für den Editor. */
 export const emptyProgramDraft = (): ProgramDraft => ({
@@ -241,11 +374,20 @@ export const emptyProgramDraft = (): ProgramDraft => ({
   goal: 'Strength',
   weeks: 8,
   days: [{ id: null, name: 'Day A', notes: '', exercises: [] }],
+  cycleWeeks: null,
+  deloadEvery: null,
 });
 
 export const emptyDraftRow = (): DraftExercise => ({
   exerciseId: '', sets: 3, repsMin: 8, repsMax: 10, distance: 20, time: 30, targetRpe: null, restSeconds: 90, progressionStep: 2.5,
+  percentOf1Rm: null, note: '', weekSteps: [],
 });
+
+/** Neue Wochen-Stufe: eine Woche nach der letzten, Werte noch leer (= wie bisher). */
+export function newDraftStep(row: DraftExercise, maxWeek: number): DraftStep {
+  const last = Math.max(1, ...(row.weekSteps ?? []).map((st) => Number(st.fromWeek) || 1));
+  return { fromWeek: Math.min(maxWeek, (row.weekSteps?.length ? last : 1) + 1), sets: null, repsMin: null, repsMax: null, distance: null, time: null, percentOf1Rm: null, note: '' };
+}
 
 /** Programm (API) -> bearbeitbare Kopie für den Editor. */
 export function toDraft(program: TrainingProgram): ProgramDraft {
@@ -254,6 +396,8 @@ export function toDraft(program: TrainingProgram): ProgramDraft {
     name: program.name,
     goal: program.goal,
     weeks: program.weeks,
+    cycleWeeks: program.cycleWeeks ?? null,
+    deloadEvery: program.deloadEvery ?? null,
     days: program.days.map((d) => ({
       id: d.id,
       name: d.name,
@@ -261,6 +405,11 @@ export function toDraft(program: TrainingProgram): ProgramDraft {
       exercises: d.exercises.map((x) => ({
         exerciseId: x.exerciseId, sets: x.sets, repsMin: x.repsMin ?? null, repsMax: x.repsMax ?? null, distance: x.distance ?? null,
         time: x.time ?? null, targetRpe: x.targetRpe ?? null, restSeconds: x.restSeconds ?? null, progressionStep: x.progressionStep ?? null,
+        percentOf1Rm: x.percentOf1Rm ?? null, note: x.note ?? '',
+        weekSteps: (x.weekSteps ?? []).map((st) => ({
+          fromWeek: st.fromWeek, sets: st.sets ?? null, repsMin: st.repsMin ?? null, repsMax: st.repsMax ?? null,
+          distance: st.distance ?? null, time: st.time ?? null, percentOf1Rm: st.percentOf1Rm ?? null, note: st.note ?? '',
+        })),
       })),
     })),
   };
@@ -270,6 +419,8 @@ export interface ProgramPayload {
   name: string;
   goal: string;
   weeks: number;
+  cycleWeeks: number | null;
+  deloadEvery: number | null;
   days: { id: number | null; name: string; notes: string | null; exercises: Omit<ProgramExercise, 'id' | 'position' | 'exerciseName' | 'trackingType' | 'muscleGroup'>[] }[];
 }
 
@@ -280,6 +431,8 @@ export function draftToPayload(draft: ProgramDraft, exercisesById: ReadonlyMap<n
     name: draft.name.trim(),
     goal: draft.goal,
     weeks: Number(draft.weeks) || 1,
+    cycleWeeks: num(draft.cycleWeeks),
+    deloadEvery: num(draft.deloadEvery),
     days: draft.days.map((d) => ({
       id: d.id ?? null,
       name: d.name.trim(),
@@ -296,6 +449,22 @@ export function draftToPayload(draft: ProgramDraft, exercisesById: ReadonlyMap<n
           targetRpe: num(x.targetRpe),
           restSeconds: num(x.restSeconds),
           progressionStep: type === 'WeightReps' ? num(x.progressionStep) ?? 2.5 : null,
+          percentOf1Rm: type === 'WeightReps' ? num(x.percentOf1Rm) : null,
+          note: x.note?.trim() || null,
+          weekSteps: (x.weekSteps ?? [])
+            .filter((st) => num(st.fromWeek))
+            .map((st) => ({
+              fromWeek: num(st.fromWeek)!,
+              sets: num(st.sets),
+              repsMin: type === 'WeightReps' ? num(st.repsMin) : null,
+              repsMax: type === 'WeightReps' ? num(st.repsMax) ?? num(st.repsMin) : null,
+              distance: type === 'DistanceTime' ? num(st.distance) : null,
+              time: type === 'Duration' ? num(st.time) : null,
+              percentOf1Rm: type === 'WeightReps' ? num(st.percentOf1Rm) : null,
+              targetRpe: null,
+              note: st.note?.trim() || null,
+            }))
+            .sort((a, b) => a.fromWeek - b.fromWeek),
         };
       }),
     })),

@@ -9,7 +9,7 @@ import { describeSet, formatDate, formatDuration, formatTime, formatWeekday } fr
 import { groupSetsByExercise, workoutKey } from '@/lib/analytics';
 
 const app = useAppStore();
-const { filteredHistory, historyFilter, historyLimit, visibleHistory } = storeToRefs(app);
+const { filteredHistory, historyFilter, historyLimit, settings, visibleHistory } = storeToRefs(app);
 const { deleteWorkout, editWorkout, programNameForDay, repeatWorkout, retryEntry, setBadges } = app;
 </script>
 
@@ -48,13 +48,16 @@ const { deleteWorkout, editWorkout, programNameForDay, repeatWorkout, retryEntry
               <div v-for="group in groupSetsByExercise(w.sets)" :key="group.key" class="overflow-hidden rounded-xl border border-white/5 bg-black/20">
                   <div class="border-b border-white/5 bg-white/5 px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-accent">{{ exerciseName(group.exerciseId, group.name) }}</div>
                   <div class="space-y-1 p-2">
-                      <div v-for="(set, n) in group.sets" :key="set.index" class="flex items-center justify-between rounded-lg px-2 py-2 text-sm transition-colors hover:bg-white/5">
+                      <template v-for="(set, n) in group.sets" :key="set.index">
+                      <div class="flex items-center justify-between rounded-lg px-2 py-2 text-sm transition-colors hover:bg-white/5">
                           <div class="flex items-center gap-3">
                               <span class="w-10 font-mono text-[10px] font-bold" :class="set.isWarmup ? 'text-slate-600' : 'text-slate-500'">{{ setLabel(group.sets, n) }}</span>
                               <span v-for="b in setBadges(w, set.index).slice(0, 2)" :key="b.field" class="rounded border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest" :class="badgeClass(b.tone)">{{ b.icon }} {{ t(`records.badges.${b.field}`) }}</span>
                           </div>
-                          <span class="font-mono text-xs font-bold" :class="set.isWarmup ? 'text-slate-500' : 'text-white'">{{ describeSet(set, group.trackingType) }}<span v-if="set.rpe" class="ml-1.5 text-[10px] text-orange-300">{{ rpeText(set.rpe) }}</span></span>
+                          <span class="font-mono text-xs font-bold" :class="set.isWarmup ? 'text-slate-500' : 'text-white'">{{ describeSet(set, group.trackingType) }}<span v-if="set.rpe" class="ml-1.5 text-[10px] text-orange-300">{{ rpeText(set.rpe, settings.useRir) }}</span></span>
                       </div>
+                      <p v-if="set.note" class="-mt-1 mb-1 pl-[3.75rem] pr-2 text-[11px] italic text-slate-400" data-test="set-note">{{ set.note }}</p>
+                      </template>
                   </div>
               </div>
           </div>

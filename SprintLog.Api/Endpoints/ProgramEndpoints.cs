@@ -240,6 +240,6 @@ public static class ProgramEndpoints
             d.Exercises.OrderBy(x => x.Position).Select(x => new ProgramExerciseResponse(
                 x.Id, x.Position, x.ExerciseId, x.Exercise.Name, x.Exercise.TrackingType, x.Exercise.MuscleGroup,
                 x.Sets, x.RepsMin, x.RepsMax, x.Distance, x.Time, x.TargetRpe, x.RestSeconds, x.ProgressionStep,
-                x.PercentOf1Rm, x.Note, x.WeekSteps.OrderBy(s => s.FromWeek).Select(WeekStepDto.From).ToList())).ToList()
+                x.PercentOf1Rm, x.Note, (x.WeekSteps ?? new()).OrderBy(s => s.FromWeek).Select(WeekStepDto.From).ToList())).ToList()
         )).ToList(), p.CycleWeeks, p.DeloadEvery);
 }

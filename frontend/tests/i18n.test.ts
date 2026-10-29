@@ -93,11 +93,12 @@ test('template programs are translated until the user renames them', () => {
 // ---------- Abgleich mit dem Server-Katalog ----------
 
 const dbContext = readFileSync(new URL('../../SprintLog.Api/Data/AppDbContext.cs', import.meta.url), 'utf8');
-const templatesCs = readFileSync(new URL('../../SprintLog.Api/Services/ProgramTemplates.cs', import.meta.url), 'utf8');
+type TemplateJson = { key: string; name: string; description: string; days: { name: string; notes?: string; exercises: { note?: string; weekSteps?: { note?: string }[] }[] }[] };
+const templatesJson = JSON.parse(readFileSync(new URL('../../SprintLog.Api/Data/program-templates.json', import.meta.url), 'utf8')) as TemplateJson[];
 
 test('every seeded exercise has a name in all languages and English matches the server', () => {
   const seeded = [...dbContext.matchAll(/Ex\((\d+), "([^"]+)"/g)].map((m) => [Number(m[1]), m[2]] as const);
-  assert.ok(seeded.length >= 84);
+  assert.ok(seeded.length >= 106);
   for (const [id, name] of seeded) {
     assert.equal((en.exercises as Record<number, string>)[id], name, `en.exercises.${id}`);
     assert.ok((de.exercises as Record<number, string>)[id], `de.exercises.${id} missing`);
@@ -106,13 +107,31 @@ test('every seeded exercise has a name in all languages and English matches the 
 });
 
 test('every server template has texts in all languages and English matches the server', () => {
-  const keys = [...templatesCs.matchAll(/new\("([a-z0-9-]+)", "([^"]+)"/g)].map((m) => [m[1], m[2]] as const);
-  assert.ok(keys.length >= 5);
-  for (const [key, name] of keys) {
-    for (const [lang, catalog] of [['en', en], ['de', de], ['ru', ru]] as const) {
-      const tpl = (catalog.templates as Record<string, { name: string }>)[key];
-      assert.ok(tpl?.name, `${lang}.templates.${key} missing`);
+  assert.ok(templatesJson.length >= 15);
+  for (const tpl of templatesJson) {
+    const english = (en.templates as Record<string, { name: string; description: string; days: Record<number, { name: string; notes: string }> }>)[tpl.key];
+    assert.ok(english, `en.templates.${tpl.key} missing`);
+    assert.equal(english.name, tpl.name, `en.templates.${tpl.key}.name`);
+    assert.equal(english.description, tpl.description, `en.templates.${tpl.key}.description`);
+    tpl.days.forEach((d, i) => {
+      assert.equal(english.days[i]?.name, d.name, `en.templates.${tpl.key}.days.${i}.name`);
+      assert.equal(english.days[i]?.notes, d.notes ?? '', `en.templates.${tpl.key}.days.${i}.notes`);
+    });
+    for (const [lang, catalog] of [['de', de], ['ru', ru]] as const) {
+      const tr = (catalog.templates as Record<string, { name: string; days: Record<number, { name: string }> }>)[tpl.key];
+      assert.ok(tr?.name, `${lang}.templates.${tpl.key} missing`);
+      assert.equal(Object.keys(tr.days).length, tpl.days.length, `${lang}.templates.${tpl.key}.days`);
     }
-    assert.equal((en.templates as Record<string, { name: string }>)[key].name, name, `en.templates.${key}.name`);
+  }
+});
+
+test('every exercise and week-step note in the templates is translated', () => {
+  const known = new Set(Object.values(en.notes as Record<string, string>));
+  for (const tpl of templatesJson) {
+    for (const x of tpl.days.flatMap((d) => d.exercises)) {
+      for (const note of [x.note, ...(x.weekSteps ?? []).map((st) => st.note)]) {
+        if (note) assert.ok(known.has(note), `note "${note}" (${tpl.key}) missing in en.notes`);
+      }
+    }
   }
 });
