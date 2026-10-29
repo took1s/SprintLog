@@ -974,6 +974,198 @@ namespace SprintLog.Api.Migrations
                             MuscleGroup = "Cardio",
                             Name = "Warm-up Jog",
                             TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 107,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Smith Machine Squat",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 108,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Smith Machine Bench Press",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 109,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Shoulder Press Machine",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 110,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Machine Row",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 111,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Assisted Pull-up Machine",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 112,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Assisted Dip Machine",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 113,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Lying Leg Curl",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 114,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Glute Kickback Machine",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 115,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Hip Thrust Machine",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 116,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Pendulum Squat",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 117,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Machine Bicep Curl",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 118,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Ab Crunch Machine",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 119,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Rotary Torso Machine",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 120,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Incline Chest Press Machine",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 121,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Cable Lateral Raise",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 122,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Cable Bicep Curl",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 123,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Low-to-High Cable Fly",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 124,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Standing Calf Raise Machine",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 125,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Belt Squat",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 126,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Cable Glute Kickback",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 127,
+                            Category = "Gym",
+                            MuscleGroup = "Cardio",
+                            Name = "Treadmill",
+                            TrackingType = "DistanceTime"
+                        },
+                        new
+                        {
+                            Id = 128,
+                            Category = "Gym",
+                            MuscleGroup = "Cardio",
+                            Name = "Stair Climber",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 129,
+                            Category = "Gym",
+                            MuscleGroup = "Cardio",
+                            Name = "Elliptical Trainer",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 130,
+                            Category = "Gym",
+                            MuscleGroup = "Cardio",
+                            Name = "Air Bike",
+                            TrackingType = "Duration"
                         });
                 });
 
