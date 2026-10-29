@@ -45,6 +45,12 @@ Live-Demo: https://sprintlog-api.onrender.com/
 - Einheiten nachträglich bearbeiten (auch offline - die Änderung wird per `PUT` synchronisiert).
 - Technik-Ansicht pro Übung: animierte Figur (eigene SVG-Skelettanimation, offline, ~45 Bewegungsmuster für alle 84 Standardübungen, eigene Übungen werden über den Namen erkannt), Zielmuskulatur und 3-4 Technik-Hinweise.
 
+**Trainingspläne**
+- 5 Vorlagen (Footballer Strength 2x, Speed & Agility, Full Body Beginner, Upper/Lower 4x, Push/Pull/Legs) und eigene Pläne mit Editor.
+- "Next up": der nächste Tag rotiert automatisch; Start eines Tages lädt Vorgaben (Sätze, Wdh.-Bereich, Pause, Ziel-RPE) als Checkliste.
+- Gewichtsvorschlag per Double Progression: erst das obere Ende des Wiederholungsbereichs in allen Sätzen schaffen, dann +Steigerung.
+- Belastungssteuerung: Acute:Chronic Workload Ratio (7 Tage vs. 28-Tage-Schnitt) mit Zonen (Sweet Spot 0.8-1.3, Spike > 1.5).
+
 **Auswertungen**
 - Überblick: Einheiten und Volumen dieser Woche (mit Vergleich zur Vorwoche), Wochen-Serie, 12-Wochen-Diagramm, Muskelgruppen-Verteilung, letzte Rekorde.
 - Fortschritt pro Übung: Max-Gewicht, geschätztes 1RM, Volumen bzw. Top-Speed, Bestzeit, Distanz.
@@ -220,6 +226,11 @@ Alle Endpunkte außer Registrierung, Login und Health erfordern `Authorization: 
 | POST | `/api/workouts` | Einheit speichern (idempotent über `clientId`) |
 | GET | `/api/workouts/history` | Alle Einheiten des Nutzers |
 | GET / PUT / DELETE | `/api/workouts/{id}` | Einzelne Einheit lesen / ersetzen / löschen |
+| GET | `/api/programs` | Eigene Trainingspläne inkl. Tage und Vorgaben |
+| GET | `/api/programs/templates` | Eingebaute Vorlagen |
+| POST | `/api/programs/templates/{key}` | Plan aus Vorlage starten (wird aktiv) |
+| POST / PUT / DELETE | `/api/programs[/{id}]` | Eigenen Plan anlegen / bearbeiten / löschen |
+| POST | `/api/programs/{id}/activate` \| `deactivate` | Plan aktivieren (Woche 1 beginnt) / pausieren |
 | GET | `/health` | Health-Check inkl. Datenbank |
 
 ## Projektstruktur

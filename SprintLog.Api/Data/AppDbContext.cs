@@ -13,6 +13,9 @@ public class AppDbContext : DbContext
     public DbSet<Workout> Workouts => Set<Workout>();
     public DbSet<WorkoutSet> WorkoutSets => Set<WorkoutSet>();
     public DbSet<Favorite> Favorites => Set<Favorite>();
+    public DbSet<TrainingProgram> Programs => Set<TrainingProgram>();
+    public DbSet<ProgramDay> ProgramDays => Set<ProgramDay>();
+    public DbSet<ProgramExercise> ProgramExercises => Set<ProgramExercise>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -54,8 +57,34 @@ public class AppDbContext : DbContext
             e.Property(w => w.Notes).HasMaxLength(CreateWorkoutRequest.MaxNotesLength);
             e.HasOne(w => w.User).WithMany(u => u.Workouts).HasForeignKey(w => w.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(w => new { w.UserId, w.Date });
+            // Wird ein Plan(-tag) gelöscht, bleibt die Einheit erhalten - nur die Verknüpfung entfällt.
+            e.HasOne(w => w.ProgramDay).WithMany().HasForeignKey(w => w.ProgramDayId).OnDelete(DeleteBehavior.SetNull);
             // Idempotenz: dieselbe Client-ID kann pro Nutzer nur einmal gespeichert werden.
             e.HasIndex(w => new { w.UserId, w.ClientId }).IsUnique();
+        });
+
+        modelBuilder.Entity<TrainingProgram>(e =>
+        {
+            e.ToTable("Programs");
+            e.Property(p => p.Name).HasMaxLength(60);
+            e.Property(p => p.Goal).HasMaxLength(20);
+            e.Property(p => p.TemplateKey).HasMaxLength(40);
+            e.HasOne(p => p.User).WithMany(u => u.Programs).HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(p => new { p.UserId, p.IsActive });
+        });
+
+        modelBuilder.Entity<ProgramDay>(e =>
+        {
+            e.Property(d => d.Name).HasMaxLength(40);
+            e.Property(d => d.Notes).HasMaxLength(200);
+            e.HasOne(d => d.Program).WithMany(p => p.Days).HasForeignKey(d => d.ProgramId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProgramExercise>(e =>
+        {
+            e.HasOne(x => x.Day).WithMany(d => d.Exercises).HasForeignKey(x => x.DayId).OnDelete(DeleteBehavior.Cascade);
+            // Übungen, die in einem Plan stehen, dürfen nicht gelöscht werden (gleiches Prinzip wie bei der Historie).
+            e.HasOne(x => x.Exercise).WithMany().HasForeignKey(x => x.ExerciseId).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<WorkoutSet>(e =>

@@ -22,6 +22,10 @@ public class Workout
     /// <summary>Vom Client erzeugte ID - macht das Speichern idempotent (doppelte Sync-Versuche erzeugen keine Duplikate).</summary>
     public Guid? ClientId { get; set; }
 
+    /// <summary>Trainingstag aus einem Plan, zu dem diese Einheit gehört (optional).</summary>
+    public int? ProgramDayId { get; set; }
+    public ProgramDay? ProgramDay { get; set; }
+
     public int UserId { get; set; }
     public User User { get; set; } = null!;
 

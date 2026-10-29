@@ -20,6 +20,7 @@ export function toPayload(entry) {
     durationSeconds: entry.durationSeconds ?? null,
     sessionRpe: entry.sessionRpe ?? null,
     notes: entry.notes ?? null,
+    programDayId: entry.programDayId ?? null,
     sets: entry.sets.map((s) => ({
       exerciseId: s.exerciseId,
       weight: s.weight ?? null,
@@ -105,6 +106,7 @@ export function queueAsWorkouts(queue) {
     sessionRpe: e.sessionRpe ?? null,
     notes: e.notes ?? null,
     op: e.op ?? 'create',
+    programDayId: e.programDayId ?? null,
     pending: true,
     status: e.status,
     error: e.error ?? null,

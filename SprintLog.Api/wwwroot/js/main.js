@@ -20,6 +20,10 @@ import { renderProgressChart, renderWeeklyChart } from './charts.js';
 import { unlockAudio, playRestAlarm, createWakeLock } from './feedback.js';
 import { exportCsv, exportJson } from './export.js';
 import { ExerciseFigure, techniqueFor } from './figure.js';
+import {
+  programStatus, suggestTarget, prescriptionText, setsDone, loadStatus, ZONE_INFO,
+  emptyProgramDraft, toDraft, draftToPayload,
+} from './program.js';
 
 const DEFAULT_SETTINGS = Object.freeze({
   restGym: 90,
@@ -51,7 +55,7 @@ function toLocalInput(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-const EMPTY_SESSION = () => ({ startedAt: null, sets: [], editing: null, meta: null });
+const EMPTY_SESSION = () => ({ startedAt: null, sets: [], editing: null, meta: null, plan: null });
 
 // Chart-Instanzen bewusst NICHT reaktiv halten (Vue-Proxies um Chart.js kosten viel Performance).
 const charts = { progress: null, weekly: null };
@@ -92,6 +96,11 @@ const app = createApp({
       queue: [],
       loadingExercises: false,
       loadingHistory: false,
+      programs: [],
+      templates: [],
+      loadingPrograms: false,
+      programEditor: { open: false, draft: emptyProgramDraft(), busy: false, error: '' },
+      expandedDay: null,
 
       // Navigation
       tab: 'Gym',
@@ -162,6 +171,26 @@ const app = createApp({
     records() { return computeRecords(this.allWorkouts); },
     prInfo() { return detectPRs(this.allWorkouts); },
     usage() { return usageCounts(this.allWorkouts); },
+    // ---------- Trainingspläne ----------
+    activeProgram() { return this.programs.find((p) => p.isActive) ?? null; },
+    otherPrograms() { return this.programs.filter((p) => !p.isActive); },
+    programInfo() { return this.activeProgram ? programStatus(this.activeProgram, this.allWorkouts, this.clockDate) : null; },
+    loadInfo() { return loadStatus(this.allWorkouts, this.clockDate); },
+    loadZone() { return ZONE_INFO[this.loadInfo.zone]; },
+    planTargets() {
+      return (this.session.plan?.targets ?? []).map((t) => ({ ...t, done: setsDone(t.exerciseId, this.session.sets) }));
+    },
+    planProgress() {
+      const t = this.planTargets;
+      const total = t.reduce((sum, x) => sum + x.sets, 0);
+      const done = t.reduce((sum, x) => sum + Math.min(x.done, x.sets), 0);
+      return { total, done, percent: total ? Math.round((done / total) * 100) : 0 };
+    },
+    exerciseGroups() {
+      const byCat = (cat) => this.exercises.filter((e) => e.category === cat).sort((a, b) => a.name.localeCompare(b.name));
+      return [{ label: 'Gym', items: byCat('Gym') }, { label: 'Field', items: byCat('Football') }];
+    },
+
     pendingCount() { return this.queue.filter((q) => q.status === QueueStatus.Pending).length; },
     failedCount() { return this.queue.filter((q) => q.status === QueueStatus.Failed).length; },
 
@@ -325,6 +354,7 @@ const app = createApp({
     },
     tab(value) {
       this.muscleFilters = [];
+      if (value === 'Plan' && this.online) this.loadPrograms();
       if (value === 'Data') {
         if (this.online) this.loadHistory();
         this.renderCharts();
@@ -470,6 +500,7 @@ const app = createApp({
         remove(this.keys.history);
         remove(this.keys.exercises);
         remove(this.keys.favorites);
+        remove(this.keys.programs);
       }
       writeToken('');
       remove(Keys.user);
@@ -478,6 +509,8 @@ const app = createApp({
       this.exercises = [];
       this.history = [];
       this.favorites = [];
+      this.programs = [];
+      this.templates = [];
       this.queue = [];
       this.session = EMPTY_SESSION();
       this.timer = { endAt: null, duration: 0 };
@@ -497,6 +530,8 @@ const app = createApp({
       this.queue = readJson(k.queue, []);
       this.session = { ...EMPTY_SESSION(), ...readJson(k.session, {}) };
       this.timer = readJson(k.timer, { endAt: null, duration: 0 });
+      this.programs = readJson(k.programs, []);
+      this.templates = readJson(k.templates, []);
       this.migrateLegacyStorage();
     },
 
@@ -526,7 +561,7 @@ const app = createApp({
       if (!this.isAuthenticated) return;
       if (refreshToken) await this.refreshToken();
       if (!this.isAuthenticated) return;
-      await Promise.allSettled([this.loadExercises(), this.loadFavorites()]);
+      await Promise.allSettled([this.loadExercises(), this.loadFavorites(), this.loadPrograms(), this.loadTemplates()]);
       await this.syncNow({ reload: false });
       await this.loadHistory();
     },
@@ -561,6 +596,26 @@ const app = createApp({
       }
     },
 
+    async loadPrograms() {
+      if (!this.isAuthenticated) return;
+      this.loadingPrograms = !this.programs.length;
+      try {
+        this.programs = await this.api().get('/api/programs');
+        writeJson(this.keys.programs, this.programs);
+      } catch (e) {
+        if (e.isNetwork) this.online = false;
+      } finally {
+        this.loadingPrograms = false;
+      }
+    },
+
+    async loadTemplates() {
+      try {
+        this.templates = await this.api().get('/api/programs/templates');
+        writeJson(this.keys.templates, this.templates);
+      } catch { /* Vorlagen sind optional */ }
+    },
+
     async loadFavorites() {
       try {
         this.favorites = await this.api().get('/api/favorites');
@@ -576,7 +631,7 @@ const app = createApp({
     },
 
     persistQueue() { if (this.keys) writeJson(this.keys.queue, this.queue); },
-    persistSession() { if (this.keys) writeJson(this.keys.session, this.session.sets.length ? this.session : null); },
+    persistSession() { if (this.keys) writeJson(this.keys.session, this.session.sets.length || this.session.plan || this.session.editing ? this.session : null); },
     persistTimer() { if (this.keys) writeJson(this.keys.timer, this.timer.endAt ? this.timer : null); },
 
     // =====================================================================
@@ -660,9 +715,14 @@ const app = createApp({
     // =====================================================================
     openSetModal(ex, editIndex = null) {
       const sessionSets = this.session.sets.filter((s) => s.exerciseId === ex.id);
+      const target = this.planTargetFor(ex.id);
+      const suggestion = target?.suggestion;
+      const fromPlan = suggestion && (suggestion.weight != null || suggestion.reps != null || suggestion.distance != null || suggestion.time != null)
+        ? { weight: suggestion.weight ?? undefined, reps: suggestion.reps ?? undefined, distance: suggestion.distance ?? undefined, time: suggestion.time ?? undefined }
+        : null;
       const source = editIndex !== null
         ? this.session.sets[editIndex]
-        : sessionSets[sessionSets.length - 1] ?? lastSetFor(this.allWorkouts, `id:${ex.id}`);
+        : sessionSets[sessionSets.length - 1] ?? fromPlan ?? lastSetFor(this.allWorkouts, `id:${ex.id}`);
 
       const type = ex.trackingType ?? TrackingType.WeightReps;
       this.setModal = {
@@ -738,7 +798,8 @@ const app = createApp({
       } else {
         if (!this.session.startedAt || !this.session.sets.length) this.session.startedAt = new Date().toISOString();
         this.session.sets.push(set);
-        if (this.settings.autoTimer && !this.isEditing) this.startTimer(set.category === 'Football' ? this.settings.restField : this.settings.restGym);
+        const planRest = this.planTargetFor(set.exerciseId)?.restSeconds;
+        if (this.settings.autoTimer && !this.isEditing) this.startTimer(planRest || (set.category === 'Football' ? this.settings.restField : this.settings.restGym));
         if (navigator.vibrate && this.settings.vibration) navigator.vibrate(15);
       }
       this.persistSession();
@@ -814,6 +875,7 @@ const app = createApp({
         durationSeconds: minutes > 0 && minutes <= 1440 ? Math.round(minutes * 60) : null,
         sessionRpe: f.sessionRpe ?? null,
         notes: f.notes?.trim() ? f.notes.trim().slice(0, 500) : null,
+        programDayId: this.session.plan?.dayId ?? this.session.meta?.programDayId ?? null,
         workoutType: inferWorkoutType(this.session.sets),
         sets: this.session.sets.map((s) => ({ ...s })),
         status: QueueStatus.Pending,
@@ -889,12 +951,167 @@ const app = createApp({
         startedAt: workout.date,
         sets: this.toSessionSets(workout.sets, { keepDetails: true }),
         editing: workout.pending ? { kind: 'pending', clientId: workout.clientId } : { kind: 'server', id: workout.id, clientId: workout.clientId },
-        meta: { date: workout.date, durationSeconds: workout.durationSeconds, sessionRpe: workout.sessionRpe, notes: workout.notes },
+        meta: { date: workout.date, durationSeconds: workout.durationSeconds, sessionRpe: workout.sessionRpe, notes: workout.notes, programDayId: workout.programDayId ?? null },
       };
       this.persistSession();
       this.tab = this.session.sets.some((s) => s.category === 'Football') && !this.session.sets.some((s) => s.category === 'Gym') ? 'Football' : 'Gym';
       this.showReview = true;
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+
+    // =====================================================================
+    // Trainingspläne
+    // =====================================================================
+    planTargetFor(exerciseId) {
+      return this.session.plan?.targets?.find((t) => t.exerciseId === exerciseId) ?? null;
+    },
+
+    prescriptionText,
+
+    dayLabel(day) {
+      const last = this.programInfo?.lastByDay.get(day.id);
+      return last ? `last ${formatRelative(last, this.clockDate)}` : 'not done yet';
+    },
+
+    programNameForDay(dayId) {
+      for (const p of this.programs) {
+        const day = p.days.find((d) => d.id === dayId);
+        if (day) return `${p.name} · ${day.name}`;
+      }
+      return null;
+    },
+
+    /** Plan-Tag starten: Session mit Zielvorgaben und Gewichtsvorschlägen (Double Progression). */
+    async startProgramDay(day) {
+      if (this.sessionActive) {
+        const ok = await this.confirm({ title: 'Replace session?', message: 'Your current session will be replaced by this plan day.', confirmText: 'Start day' });
+        if (!ok) return;
+      }
+      const targets = day.exercises.map((x) => ({
+        ...x,
+        name: x.exerciseName,
+        category: this.exercisesById.get(x.exerciseId)?.category ?? 'Gym',
+        suggestion: suggestTarget(x, this.allWorkouts),
+      }));
+      this.stopTimer();
+      this.session = {
+        ...EMPTY_SESSION(),
+        startedAt: new Date().toISOString(),
+        plan: { programId: this.activeProgram?.id, programName: this.activeProgram?.name, dayId: day.id, dayName: day.name, targets },
+      };
+      this.persistSession();
+      this.tab = targets[0]?.category === 'Football' ? 'Football' : 'Gym';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      this.toast(`${day.name} started - follow the plan below.`, 'success');
+    },
+
+    openPlanTarget(target) {
+      const ex = this.exercisesById.get(target.exerciseId) ?? {
+        id: target.exerciseId, name: target.exerciseName, category: target.category, muscleGroup: target.muscleGroup, trackingType: target.trackingType,
+      };
+      if (ex.category && this.tab !== 'Plan' && ex.category !== this.tab) this.tab = ex.category;
+      this.openSetModal(ex);
+    },
+
+    async startTemplate(template) {
+      if (!this.online) { this.toast('Starting a program needs a connection.', 'error'); return; }
+      if (this.activeProgram) {
+        const ok = await this.confirm({ title: 'Switch program?', message: `"${this.activeProgram.name}" will be paused (not deleted).`, confirmText: 'Start' });
+        if (!ok) return;
+      }
+      try {
+        await this.api().post(`/api/programs/templates/${encodeURIComponent(template.key)}`);
+        await this.loadPrograms();
+        this.toast(`"${template.name}" started.`, 'success');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (e) {
+        this.toast(e.message, 'error');
+      }
+    },
+
+    async activateProgram(program) {
+      if (!this.online) { this.toast('Needs a connection.', 'error'); return; }
+      try {
+        await this.api().post(`/api/programs/${program.id}/activate`);
+        await this.loadPrograms();
+        this.toast(`"${program.name}" is active - week 1 starts today.`, 'success');
+      } catch (e) { this.toast(e.message, 'error'); }
+    },
+
+    async stopProgram(program) {
+      const ok = await this.confirm({ title: 'Pause program?', message: 'Your workouts stay saved. You can restart the program later.', confirmText: 'Pause' });
+      if (!ok) return;
+      try {
+        await this.api().post(`/api/programs/${program.id}/deactivate`);
+        await this.loadPrograms();
+      } catch (e) { this.toast(e.message, 'error'); }
+    },
+
+    async deleteProgram(program) {
+      const ok = await this.confirm({ title: 'Delete program?', message: `"${program.name}" will be deleted. Your workouts stay saved.`, confirmText: 'Delete', danger: true });
+      if (!ok) return;
+      try {
+        await this.api().del(`/api/programs/${program.id}`);
+        this.programs = this.programs.filter((p) => p.id !== program.id);
+        writeJson(this.keys.programs, this.programs);
+        this.programEditor.open = false;
+        this.toast('Program deleted.', 'success');
+      } catch (e) { this.toast(e.message, 'error'); }
+    },
+
+    // ---------- Plan-Editor ----------
+    openProgramEditor(program = null) {
+      if (!this.online) { this.toast('Editing programs needs a connection.', 'error'); return; }
+      const draft = program ? toDraft(program) : emptyProgramDraft();
+      this.programEditor = { open: true, draft, busy: false, error: '' };
+    },
+    addDay() {
+      const days = this.programEditor.draft.days;
+      if (days.length >= 7) return;
+      days.push({ id: null, name: `Day ${String.fromCharCode(65 + days.length)}`, notes: '', exercises: [] });
+    },
+    removeDay(index) { this.programEditor.draft.days.splice(index, 1); },
+    addExerciseRow(day) {
+      if (day.exercises.length >= 15) return;
+      day.exercises.push({ exerciseId: '', sets: 3, repsMin: 8, repsMax: 10, distance: 20, time: 30, targetRpe: null, restSeconds: 90, progressionStep: 2.5 });
+    },
+    removeExerciseRow(day, index) { day.exercises.splice(index, 1); },
+    moveExerciseRow(day, index, delta) {
+      const to = index + delta;
+      if (to < 0 || to >= day.exercises.length) return;
+      const [row] = day.exercises.splice(index, 1);
+      day.exercises.splice(to, 0, row);
+    },
+    rowType(row) { return this.exercisesById.get(Number(row.exerciseId))?.trackingType ?? 'WeightReps'; },
+
+    async saveProgram() {
+      const ed = this.programEditor;
+      ed.error = '';
+      const payload = draftToPayload(ed.draft, this.exercisesById);
+      if (payload.name.length < 2) { ed.error = 'Give the program a name.'; return; }
+      const emptyDay = payload.days.find((d) => !d.exercises.length);
+      if (emptyDay) { ed.error = `"${emptyDay.name}" has no exercises.`; return; }
+      ed.busy = true;
+      try {
+        if (ed.draft.id) await this.api().put(`/api/programs/${ed.draft.id}`, payload);
+        else await this.api().post('/api/programs', payload);
+        await this.loadPrograms();
+        ed.open = false;
+        this.toast('Program saved.', 'success');
+      } catch (e) {
+        ed.error = e.message;
+      } finally {
+        ed.busy = false;
+      }
+    },
+
+    zoneClass(tone) {
+      return {
+        green: 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10',
+        orange: 'text-orange-300 border-orange-400/30 bg-orange-400/10',
+        red: 'text-red-400 border-red-500/40 bg-red-500/10',
+        blue: 'text-accent border-accent/30 bg-accent/10',
+      }[tone] ?? 'text-slate-400 border-white/10 bg-white/5';
     },
 
     async deleteWorkout(workout) {
@@ -1207,6 +1424,7 @@ const app = createApp({
     closeTopLayer() {
       if (this.dialog.open) return this.resolveDialog(false);
       if (this.finishModal.open) { this.finishModal.open = false; return; }
+      if (this.programEditor.open) { this.programEditor.open = false; return; }
       if (this.setModal.open) return this.closeSetModal();
       if (this.customModal.open) { this.customModal.open = false; return; }
       if (this.showReview) { this.showReview = false; return; }
@@ -1219,6 +1437,7 @@ const app = createApp({
       this.setModal.open = false;
       this.customModal.open = false;
       this.finishModal.open = false;
+      this.programEditor.open = false;
       this.showReview = false;
       this.settingsOpen = false;
       this.sortOpen = false;

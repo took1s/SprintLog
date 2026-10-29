@@ -230,3 +230,33 @@ test('editing offline queues the change and syncs it with PUT once online', asyn
   assert.equal(history[0].sets[0].reps, 3);
   await context.close();
 });
+
+test('training program: start template, follow the plan day, next day rotates', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `plan_${Date.now()}`);
+
+  await page.click('nav >> text=PLAN');
+  await page.click('div.glass-panel:has(h4:text-is("Full Body Beginner")) >> button:text-is("Start")');
+  await page.waitForSelector('text=Active program');
+  const [program] = await api('GET', '/api/programs', token);
+  assert.equal(program.isActive, true);
+
+  await page.click('button:has-text("Start Full body A")');
+  await page.waitForSelector('text=0/12');
+  await page.click('button:has(div:text-is("Barbell Squat"))');
+  await page.waitForSelector('text=Pick a weight for 10 reps');
+  await page.fill('#in-weight', '60');
+  await page.click('button:has-text("Log set")');
+  await page.click('button[aria-label="Stop timer"]');
+  await page.waitForSelector('text=1/12');
+
+  await finishWorkout(page);
+  await page.waitForSelector('text=📋 Full Body Beginner · Full body A');
+  const [workout] = await api('GET', '/api/workouts/history', token);
+  assert.equal(workout.programDayId, program.days[0].id);
+
+  await page.click('nav >> text=PLAN');
+  await page.waitForSelector('button:has-text("Start Full body B")');
+  assert.deepEqual(errors, []);
+  await context.close();
+});

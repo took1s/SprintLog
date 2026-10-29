@@ -122,6 +122,7 @@ public static class AuthEndpoints
         await db.WorkoutSets.Where(s => s.Workout.UserId == userId).ExecuteDeleteAsync(ct);
         await db.Workouts.Where(w => w.UserId == userId).ExecuteDeleteAsync(ct);
         await db.Favorites.Where(f => f.UserId == userId).ExecuteDeleteAsync(ct);
+        await db.Programs.Where(p => p.UserId == userId).ExecuteDeleteAsync(ct); // Tage + Vorgaben per Cascade
         await db.Exercises.Where(e => e.UserId == userId).ExecuteDeleteAsync(ct);
         await db.Users.Where(u => u.Id == userId).ExecuteDeleteAsync(ct);
         await tx.CommitAsync(ct);

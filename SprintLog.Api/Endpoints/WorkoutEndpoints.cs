@@ -37,8 +37,9 @@ public static class WorkoutEndpoints
                 return Results.Ok(new SaveWorkoutResponse(existingId.Value, true, "Workout already saved."));
         }
 
-        // 2. Nur Übungen erlauben, die der Nutzer sehen darf (Standard + eigene).
+        // 2. Nur Übungen erlauben, die der Nutzer sehen darf (Standard + eigene) - und nur eigene Plan-Tage.
         if (await CheckExercisesAsync(db, userId.Value, req, ct) is { } exerciseError) return exerciseError;
+        if (await CheckProgramDayAsync(db, userId.Value, req, ct) is { } dayError) return dayError;
 
         // 3. Einheit + Sätze in EINEM SaveChanges speichern -> atomar (vorher zwei Schritte, Teil-Speicherung möglich).
         var workout = new Workout
@@ -49,6 +50,7 @@ public static class WorkoutEndpoints
             DurationSeconds = req.DurationSeconds,
             SessionRpe = req.SessionRpe,
             Notes = NormalizeNotes(req.Notes),
+            ProgramDayId = req.ProgramDayId,
             ClientId = req.ClientId,
             Sets = MapSets(req)
         };
@@ -108,8 +110,10 @@ public static class WorkoutEndpoints
         if (workout is null) return Results.NotFound();
 
         if (await CheckExercisesAsync(db, userId.Value, req, ct) is { } exerciseError) return exerciseError;
+        if (await CheckProgramDayAsync(db, userId.Value, req, ct) is { } dayError) return dayError;
 
         workout.WorkoutType = req.WorkoutType!;
+        workout.ProgramDayId = req.ProgramDayId;
         if (req.Date is { } date) workout.Date = date.UtcDateTime;
         workout.DurationSeconds = req.DurationSeconds;
         workout.SessionRpe = req.SessionRpe;
@@ -163,6 +167,13 @@ public static class WorkoutEndpoints
             : null;
     }
 
+    private static async Task<IResult?> CheckProgramDayAsync(AppDbContext db, int userId, CreateWorkoutRequest req, CancellationToken ct)
+    {
+        if (req.ProgramDayId is not { } dayId) return null;
+        var owned = await db.ProgramDays.AnyAsync(d => d.Id == dayId && d.Program.UserId == userId, ct);
+        return owned ? null : new ValidationErrors().Add("programDayId", "Unknown program day.").ToResult();
+    }
+
     private static Task<int?> FindByClientId(AppDbContext db, int userId, Guid clientId, CancellationToken ct) =>
         db.Workouts.AsNoTracking()
             .Where(w => w.UserId == userId && w.ClientId == clientId)
@@ -178,6 +189,7 @@ public static class WorkoutEndpoints
             w.DurationSeconds,
             w.SessionRpe,
             w.Notes,
+            w.ProgramDayId,
             w.Sets
                 .OrderBy(s => s.SetNumber)
                 .Select(s => new WorkoutSetResponse(

@@ -10,4 +10,5 @@ public class User
     public List<Workout> Workouts { get; set; } = new();
     public List<Favorite> Favorites { get; set; } = new();
     public List<Exercise> CustomExercises { get; set; } = new();
+    public List<TrainingProgram> Programs { get; set; } = new();
 }

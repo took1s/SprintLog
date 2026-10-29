@@ -82,6 +82,11 @@ public static class ExerciseEndpoints
                 title: "Exercise is used in your history.",
                 detail: "Delete the workouts that contain this exercise first.");
 
+        if (await db.ProgramExercises.AnyAsync(x => x.ExerciseId == id, ct))
+            return Results.Problem(statusCode: StatusCodes.Status409Conflict,
+                title: "Exercise is used in a training program.",
+                detail: "Remove it from your programs first.");
+
         await db.Favorites.Where(f => f.ExerciseId == id).ExecuteDeleteAsync(ct);
         db.Exercises.Remove(exercise);
         await db.SaveChangesAsync(ct);
