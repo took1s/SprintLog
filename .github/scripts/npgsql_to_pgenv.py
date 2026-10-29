@@ -92,6 +92,10 @@ def parse(connection_string: str) -> dict:
 def main() -> int:
     raw = os.environ.get("DB_CONNECTION_STRING", "").strip().strip('"').strip("'")
     # Häufiger Copy-Paste-Fehler: der Variablenname aus Render wurde mitkopiert
+    if raw in ("ConnectionStrings__DefaultConnection", "DB_CONNECTION_STRING"):
+        print("The secret contains the variable NAME instead of its value. In Render open Environment, "
+              "reveal ConnectionStrings__DefaultConnection and copy the value (right column).", file=sys.stderr)
+        return 1
     for prefix in ("ConnectionStrings__DefaultConnection=", "DB_CONNECTION_STRING="):
         if raw.startswith(prefix):
             raw = raw[len(prefix):]
