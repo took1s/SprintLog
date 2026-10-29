@@ -3,397 +3,2066 @@
     "key": "football-strength",
     "name": "Footballer Strength 2x",
     "description": "In-season strength & power around team training: heavy lower body, sprint work, hamstring and groin protection (Nordics, Copenhagen).",
-    "goal": "Strength", "level": "Intermediate", "weeks": 8, "category": "Football",
+    "goal": "Strength",
+    "level": "Intermediate",
+    "weeks": 8,
+    "category": "Football",
     "days": [
-      { "name": "Lower power", "notes": "Not the day before a match.", "exercises": [
-        { "exerciseId": 29, "sets": 4, "repsMin": 3, "repsMax": 5, "targetRpe": 8, "restSeconds": 180, "progressionStep": 2.5 },
-        { "exerciseId": 51, "sets": 3, "repsMin": 4, "repsMax": 5, "restSeconds": 90, "progressionStep": 0 },
-        { "exerciseId": 33, "sets": 3, "repsMin": 6, "repsMax": 8, "restSeconds": 120, "progressionStep": 2.5, "note": "Per leg" },
-        { "exerciseId": 50, "sets": 3, "repsMin": 4, "repsMax": 6, "restSeconds": 120, "progressionStep": 0 },
-        { "exerciseId": 85, "sets": 2, "repsMin": 8, "repsMax": 12, "restSeconds": 60, "progressionStep": 0, "note": "Per side" }
-      ] },
-      { "name": "Upper + speed", "notes": "Sprints first, fully rested.", "exercises": [
-        { "exerciseId": 12, "sets": 6, "distance": 20, "restSeconds": 120 },
-        { "exerciseId": 1, "sets": 4, "repsMin": 4, "repsMax": 6, "targetRpe": 8, "restSeconds": 150, "progressionStep": 2.5 },
-        { "exerciseId": 17, "sets": 4, "repsMin": 5, "repsMax": 8, "restSeconds": 120, "progressionStep": 0 },
-        { "exerciseId": 75, "sets": 3, "repsMin": 8, "repsMax": 10, "restSeconds": 90, "progressionStep": 5 },
-        { "exerciseId": 96, "sets": 3, "repsMin": 10, "repsMax": 12, "restSeconds": 60, "progressionStep": 2.5, "note": "Per side" }
-      ] }
+      {
+        "name": "Lower power",
+        "notes": "Not the day before a match.",
+        "exercises": [
+          {
+            "exerciseId": 29,
+            "sets": 4,
+            "repsMin": 3,
+            "repsMax": 5,
+            "targetRpe": 8,
+            "restSeconds": 180,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 51,
+            "sets": 3,
+            "repsMin": 4,
+            "repsMax": 5,
+            "restSeconds": 90,
+            "progressionStep": 0
+          },
+          {
+            "exerciseId": 33,
+            "sets": 3,
+            "repsMin": 6,
+            "repsMax": 8,
+            "restSeconds": 120,
+            "progressionStep": 2.5,
+            "note": "Per leg"
+          },
+          {
+            "exerciseId": 50,
+            "sets": 3,
+            "repsMin": 4,
+            "repsMax": 6,
+            "restSeconds": 120,
+            "progressionStep": 0
+          },
+          {
+            "exerciseId": 85,
+            "sets": 2,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 0,
+            "note": "Per side"
+          }
+        ]
+      },
+      {
+        "name": "Upper + speed",
+        "notes": "Sprints first, fully rested.",
+        "exercises": [
+          {
+            "exerciseId": 12,
+            "sets": 6,
+            "distance": 20,
+            "restSeconds": 120
+          },
+          {
+            "exerciseId": 1,
+            "sets": 4,
+            "repsMin": 4,
+            "repsMax": 6,
+            "targetRpe": 8,
+            "restSeconds": 150,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 17,
+            "sets": 4,
+            "repsMin": 5,
+            "repsMax": 8,
+            "restSeconds": 120,
+            "progressionStep": 0
+          },
+          {
+            "exerciseId": 75,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 10,
+            "restSeconds": 90,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 96,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 2.5,
+            "note": "Per side"
+          }
+        ]
+      }
     ]
   },
   {
     "key": "speed-agility",
     "name": "Speed & Agility",
     "description": "Field sessions for acceleration, max velocity and change of direction. Quality over quantity - full rest between reps.",
-    "goal": "Speed", "level": "All levels", "weeks": 6, "category": "Football",
+    "goal": "Speed",
+    "level": "All levels",
+    "weeks": 6,
+    "category": "Football",
     "days": [
-      { "name": "Acceleration", "notes": "Warm up 15 min first.", "exercises": [
-        { "exerciseId": 92, "sets": 3, "distance": 20, "restSeconds": 60 },
-        { "exerciseId": 12, "sets": 8, "distance": 15, "restSeconds": 90 },
-        { "exerciseId": 34, "sets": 4, "repsMin": 3, "repsMax": 3, "restSeconds": 90, "progressionStep": 0 },
-        { "exerciseId": 58, "sets": 6, "distance": 20, "restSeconds": 90 },
-        { "exerciseId": 56, "sets": 4, "time": 30, "restSeconds": 60 }
-      ] },
-      { "name": "Max velocity", "notes": "", "exercises": [
-        { "exerciseId": 92, "sets": 3, "distance": 20, "restSeconds": 60 },
-        { "exerciseId": 89, "sets": 5, "distance": 30, "restSeconds": 180, "note": "20 m build-up, then 30 m at max speed" },
-        { "exerciseId": 51, "sets": 4, "repsMin": 3, "repsMax": 3, "restSeconds": 120, "progressionStep": 0 },
-        { "exerciseId": 57, "sets": 4, "distance": 25, "restSeconds": 120 },
-        { "exerciseId": 50, "sets": 3, "repsMin": 4, "repsMax": 6, "restSeconds": 120, "progressionStep": 0 }
-      ] }
+      {
+        "name": "Acceleration",
+        "notes": "Warm up 15 min first.",
+        "exercises": [
+          {
+            "exerciseId": 92,
+            "sets": 3,
+            "distance": 20,
+            "restSeconds": 60
+          },
+          {
+            "exerciseId": 12,
+            "sets": 8,
+            "distance": 15,
+            "restSeconds": 90
+          },
+          {
+            "exerciseId": 34,
+            "sets": 4,
+            "repsMin": 3,
+            "repsMax": 3,
+            "restSeconds": 90,
+            "progressionStep": 0
+          },
+          {
+            "exerciseId": 58,
+            "sets": 6,
+            "distance": 20,
+            "restSeconds": 90
+          },
+          {
+            "exerciseId": 56,
+            "sets": 4,
+            "time": 30,
+            "restSeconds": 60
+          }
+        ]
+      },
+      {
+        "name": "Max velocity",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 92,
+            "sets": 3,
+            "distance": 20,
+            "restSeconds": 60
+          },
+          {
+            "exerciseId": 89,
+            "sets": 5,
+            "distance": 30,
+            "restSeconds": 180,
+            "note": "20 m build-up, then 30 m at max speed"
+          },
+          {
+            "exerciseId": 51,
+            "sets": 4,
+            "repsMin": 3,
+            "repsMax": 3,
+            "restSeconds": 120,
+            "progressionStep": 0
+          },
+          {
+            "exerciseId": 57,
+            "sets": 4,
+            "distance": 25,
+            "restSeconds": 120
+          },
+          {
+            "exerciseId": 50,
+            "sets": 3,
+            "repsMin": 4,
+            "repsMax": 6,
+            "restSeconds": 120,
+            "progressionStep": 0
+          }
+        ]
+      }
     ]
   },
   {
     "key": "fifa-11-plus",
     "name": "FIFA 11+ Injury Prevention",
     "description": "The FIFA 11+ warm-up before training (about 20 min): running drills, core, Nordics, balance, squats and jumps. Teams doing it at least twice a week had about a third fewer injuries.",
-    "goal": "General", "level": "All levels", "weeks": 12, "sessionsPerWeek": 2, "category": "Football",
+    "goal": "General",
+    "level": "All levels",
+    "weeks": 12,
+    "sessionsPerWeek": 2,
+    "category": "Football",
     "sources": [
-      { "title": "Soligard et al. 2008, BMJ - cluster RCT, 1892 players", "url": "https://www.bmj.com/content/337/bmj.a2469" }
+      {
+        "title": "Soligard et al. 2008, BMJ - cluster RCT, 1892 players",
+        "url": "https://www.bmj.com/content/337/bmj.a2469"
+      }
     ],
     "days": [
-      { "name": "11+ warm-up", "notes": "Before training. Level 1 in weeks 1-4, level 2 in weeks 5-8, level 3 from week 9 - only move up when the current level is easy.", "exercises": [
-        { "exerciseId": 106, "sets": 1, "time": 480, "restSeconds": 0, "note": "Part 1: jog, hip out/in, partner circles, shoulder contact, forward/backward sprints - 2 lengths each" },
-        { "exerciseId": 47, "sets": 3, "time": 25, "restSeconds": 30, "note": "Level 1: static",
-          "weekSteps": [ { "fromWeek": 5, "note": "Level 2: lift legs alternately" }, { "fromWeek": 9, "note": "Level 3: one leg lifted and held" } ] },
-        { "exerciseId": 48, "sets": 3, "time": 25, "restSeconds": 30, "note": "Each side - level 1: static",
-          "weekSteps": [ { "fromWeek": 5, "note": "Each side - level 2: raise and lower the hip" }, { "fromWeek": 9, "note": "Each side - level 3: with leg lift" } ] },
-        { "exerciseId": 50, "sets": 1, "repsMin": 3, "repsMax": 5, "restSeconds": 60, "progressionStep": 0,
-          "weekSteps": [ { "fromWeek": 5, "repsMin": 7, "repsMax": 10 }, { "fromWeek": 9, "repsMin": 12, "repsMax": 15 } ] },
-        { "exerciseId": 86, "sets": 2, "time": 30, "restSeconds": 15, "note": "Each leg - level 1: hold the ball",
-          "weekSteps": [ { "fromWeek": 5, "note": "Each leg - level 2: throw the ball with a partner" }, { "fromWeek": 9, "note": "Each leg - level 3: partner tests your balance" } ] },
-        { "exerciseId": 105, "sets": 2, "repsMin": 10, "repsMax": 12, "restSeconds": 30, "progressionStep": 0, "note": "Level 1: squat with toe raise (30 s)",
-          "weekSteps": [ { "fromWeek": 5, "note": "Level 2: walking lunges (30 s)" }, { "fromWeek": 9, "repsMin": 10, "repsMax": 10, "note": "Level 3: one-leg squats, 10 per leg" } ] },
-        { "exerciseId": 90, "sets": 2, "repsMin": 10, "repsMax": 12, "restSeconds": 30, "progressionStep": 0, "note": "Level 1: vertical jumps (30 s)",
-          "weekSteps": [ { "fromWeek": 5, "note": "Level 2: lateral jumps (30 s)" }, { "fromWeek": 9, "note": "Level 3: box jumps (30 s)" } ] },
-        { "exerciseId": 12, "sets": 2, "distance": 60, "restSeconds": 45, "note": "Part 3: across the pitch at 75-80 % of max pace, jog back" },
-        { "exerciseId": 58, "sets": 2, "distance": 60, "restSeconds": 45, "note": "Part 3: bounding, then plant & cut" }
-      ] }
+      {
+        "name": "11+ warm-up",
+        "notes": "Before training. Level 1 in weeks 1-4, level 2 in weeks 5-8, level 3 from week 9 - only move up when the current level is easy.",
+        "exercises": [
+          {
+            "exerciseId": 106,
+            "sets": 1,
+            "time": 480,
+            "restSeconds": 0,
+            "note": "Part 1: jog, hip out/in, partner circles, shoulder contact, forward/backward sprints - 2 lengths each"
+          },
+          {
+            "exerciseId": 47,
+            "sets": 3,
+            "time": 25,
+            "restSeconds": 30,
+            "note": "Level 1: static",
+            "weekSteps": [
+              {
+                "fromWeek": 5,
+                "note": "Level 2: lift legs alternately"
+              },
+              {
+                "fromWeek": 9,
+                "note": "Level 3: one leg lifted and held"
+              }
+            ]
+          },
+          {
+            "exerciseId": 48,
+            "sets": 3,
+            "time": 25,
+            "restSeconds": 30,
+            "note": "Each side - level 1: static",
+            "weekSteps": [
+              {
+                "fromWeek": 5,
+                "note": "Each side - level 2: raise and lower the hip"
+              },
+              {
+                "fromWeek": 9,
+                "note": "Each side - level 3: with leg lift"
+              }
+            ]
+          },
+          {
+            "exerciseId": 50,
+            "sets": 1,
+            "repsMin": 3,
+            "repsMax": 5,
+            "restSeconds": 60,
+            "progressionStep": 0,
+            "weekSteps": [
+              {
+                "fromWeek": 5,
+                "repsMin": 7,
+                "repsMax": 10
+              },
+              {
+                "fromWeek": 9,
+                "repsMin": 12,
+                "repsMax": 15
+              }
+            ]
+          },
+          {
+            "exerciseId": 86,
+            "sets": 2,
+            "time": 30,
+            "restSeconds": 15,
+            "note": "Each leg - level 1: hold the ball",
+            "weekSteps": [
+              {
+                "fromWeek": 5,
+                "note": "Each leg - level 2: throw the ball with a partner"
+              },
+              {
+                "fromWeek": 9,
+                "note": "Each leg - level 3: partner tests your balance"
+              }
+            ]
+          },
+          {
+            "exerciseId": 105,
+            "sets": 2,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 30,
+            "progressionStep": 0,
+            "note": "Level 1: squat with toe raise (30 s)",
+            "weekSteps": [
+              {
+                "fromWeek": 5,
+                "note": "Level 2: walking lunges (30 s)"
+              },
+              {
+                "fromWeek": 9,
+                "repsMin": 10,
+                "repsMax": 10,
+                "note": "Level 3: one-leg squats, 10 per leg"
+              }
+            ]
+          },
+          {
+            "exerciseId": 90,
+            "sets": 2,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 30,
+            "progressionStep": 0,
+            "note": "Level 1: vertical jumps (30 s)",
+            "weekSteps": [
+              {
+                "fromWeek": 5,
+                "note": "Level 2: lateral jumps (30 s)"
+              },
+              {
+                "fromWeek": 9,
+                "note": "Level 3: box jumps (30 s)"
+              }
+            ]
+          },
+          {
+            "exerciseId": 12,
+            "sets": 2,
+            "distance": 60,
+            "restSeconds": 45,
+            "note": "Part 3: across the pitch at 75-80 % of max pace, jog back"
+          },
+          {
+            "exerciseId": 58,
+            "sets": 2,
+            "distance": 60,
+            "restSeconds": 45,
+            "note": "Part 3: bounding, then plant & cut"
+          }
+        ]
+      }
     ]
   },
   {
     "key": "hamstring-groin-shield",
     "name": "Hamstring & Groin Shield",
     "description": "The two best-studied prevention exercises for footballers: the Nordic hamstring protocol (about half of hamstring strains prevented) and the Copenhagen adductor programme (41 % fewer groin problems). 10 weeks, then once a week.",
-    "goal": "Strength", "level": "All levels", "weeks": 10, "sessionsPerWeek": 3, "category": "Football",
+    "goal": "Strength",
+    "level": "All levels",
+    "weeks": 10,
+    "sessionsPerWeek": 3,
+    "category": "Football",
     "sources": [
-      { "title": "van der Horst et al. 2015, Am J Sports Med - Nordic hamstring RCT", "url": "https://journals.sagepub.com/doi/10.1177/0363546515574057" },
-      { "title": "Harøy et al. 2019, Br J Sports Med - Copenhagen adductor RCT", "url": "https://bjsm.bmj.com/content/53/3/150" }
+      {
+        "title": "van der Horst et al. 2015, Am J Sports Med - Nordic hamstring RCT",
+        "url": "https://journals.sagepub.com/doi/10.1177/0363546515574057"
+      },
+      {
+        "title": "Harøy et al. 2019, Br J Sports Med - Copenhagen adductor RCT",
+        "url": "https://bjsm.bmj.com/content/53/3/150"
+      }
     ],
     "days": [
-      { "name": "Prevention", "notes": "Week 1: 1 session, week 2: 2, weeks 3-10: 3 per week. Afterwards keep 1 session per week. Fits after team training.", "exercises": [
-        { "exerciseId": 50, "sets": 2, "repsMin": 5, "repsMax": 5, "restSeconds": 120, "progressionStep": 0, "note": "Partner holds the heels, fall as slowly as possible",
-          "weekSteps": [
-            { "fromWeek": 2, "sets": 2, "repsMin": 6, "repsMax": 6 },
-            { "fromWeek": 3, "sets": 3, "repsMin": 6, "repsMax": 8 },
-            { "fromWeek": 4, "sets": 3, "repsMin": 8, "repsMax": 10 },
-            { "fromWeek": 5, "sets": 3, "repsMin": 8, "repsMax": 12, "note": "Sets of 12, 10 and 8 reps" }
-          ] },
-        { "exerciseId": 85, "sets": 1, "repsMin": 3, "repsMax": 5, "restSeconds": 60, "progressionStep": 0, "note": "Per side - groin pain above 3/10: short lever (knee on the bench)",
-          "weekSteps": [ { "fromWeek": 3, "repsMin": 7, "repsMax": 10 }, { "fromWeek": 5, "repsMin": 12, "repsMax": 15 } ] }
-      ] }
+      {
+        "name": "Prevention",
+        "notes": "Week 1: 1 session, week 2: 2, weeks 3-10: 3 per week. Afterwards keep 1 session per week. Fits after team training.",
+        "exercises": [
+          {
+            "exerciseId": 50,
+            "sets": 2,
+            "repsMin": 5,
+            "repsMax": 5,
+            "restSeconds": 120,
+            "progressionStep": 0,
+            "note": "Partner holds the heels, fall as slowly as possible",
+            "weekSteps": [
+              {
+                "fromWeek": 2,
+                "sets": 2,
+                "repsMin": 6,
+                "repsMax": 6
+              },
+              {
+                "fromWeek": 3,
+                "sets": 3,
+                "repsMin": 6,
+                "repsMax": 8
+              },
+              {
+                "fromWeek": 4,
+                "sets": 3,
+                "repsMin": 8,
+                "repsMax": 10
+              },
+              {
+                "fromWeek": 5,
+                "sets": 3,
+                "repsMin": 8,
+                "repsMax": 12,
+                "note": "Sets of 12, 10 and 8 reps"
+              }
+            ]
+          },
+          {
+            "exerciseId": 85,
+            "sets": 1,
+            "repsMin": 3,
+            "repsMax": 5,
+            "restSeconds": 60,
+            "progressionStep": 0,
+            "note": "Per side - groin pain above 3/10: short lever (knee on the bench)",
+            "weekSteps": [
+              {
+                "fromWeek": 3,
+                "repsMin": 7,
+                "repsMax": 10
+              },
+              {
+                "fromWeek": 5,
+                "repsMin": 12,
+                "repsMax": 15
+              }
+            ]
+          }
+        ]
+      }
     ]
   },
   {
     "key": "aerobic-4x4",
     "name": "Aerobic Intervals 4x4",
     "description": "4 × 4 minutes at 90-95 % of max heart rate with 3 minutes of jogging. In the original study players improved VO2max by 11 % and covered 20 % more distance per match.",
-    "goal": "General", "level": "All levels", "weeks": 8, "sessionsPerWeek": 2, "category": "Football",
+    "goal": "General",
+    "level": "All levels",
+    "weeks": 8,
+    "sessionsPerWeek": 2,
+    "category": "Football",
     "sources": [
-      { "title": "Helgerud et al. 2001, Med Sci Sports Exerc - elite junior footballers", "url": "https://coachsci.sdsu.edu/csa/vol101/helgeru1.htm" }
+      {
+        "title": "Helgerud et al. 2001, Med Sci Sports Exerc - elite junior footballers",
+        "url": "https://coachsci.sdsu.edu/csa/vol101/helgeru1.htm"
+      }
     ],
     "days": [
-      { "name": "4x4 intervals", "notes": "Hard but steady: you can only say a few words. Uphill or dribbling with the ball also works.", "exercises": [
-        { "exerciseId": 106, "sets": 1, "time": 600, "restSeconds": 0, "note": "Easy warm-up jog" },
-        { "exerciseId": 87, "sets": 4, "time": 240, "restSeconds": 180, "note": "90-95 % of max heart rate, 3 min jog between" }
-      ] }
+      {
+        "name": "4x4 intervals",
+        "notes": "Hard but steady: you can only say a few words. Uphill or dribbling with the ball also works.",
+        "exercises": [
+          {
+            "exerciseId": 106,
+            "sets": 1,
+            "time": 600,
+            "restSeconds": 0,
+            "note": "Easy warm-up jog"
+          },
+          {
+            "exerciseId": 87,
+            "sets": 4,
+            "time": 240,
+            "restSeconds": 180,
+            "note": "90-95 % of max heart rate, 3 min jog between"
+          }
+        ]
+      }
     ]
   },
   {
     "key": "repeated-sprint",
     "name": "Repeated Sprint Ability",
     "description": "Short shuttle sprints with short rests - trains the ability to sprint again and again in the second half. 6 weeks, 1-2 sessions per week.",
-    "goal": "Speed", "level": "Intermediate", "weeks": 6, "sessionsPerWeek": 2, "category": "Football",
+    "goal": "Speed",
+    "level": "Intermediate",
+    "weeks": 6,
+    "sessionsPerWeek": 2,
+    "category": "Football",
     "sources": [
-      { "title": "Bishop, Girard & Mendez-Villanueva 2011, Sports Med - training recommendations", "url": "https://pubmed.ncbi.nlm.nih.gov/21846163/" }
+      {
+        "title": "Bishop, Girard & Mendez-Villanueva 2011, Sports Med - training recommendations",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/21846163/"
+      }
     ],
     "days": [
-      { "name": "RSA session", "notes": "Not the day before a match. Stop the block when sprint times drop clearly.", "exercises": [
-        { "exerciseId": 106, "sets": 1, "time": 600, "restSeconds": 0 },
-        { "exerciseId": 92, "sets": 3, "distance": 20, "restSeconds": 60 },
-        { "exerciseId": 89, "sets": 3, "distance": 20, "restSeconds": 120, "note": "Prime the speed" },
-        { "exerciseId": 88, "sets": 18, "distance": 40, "restSeconds": 20, "note": "20 m + 20 m - 3 blocks of 6, 4 min between blocks",
-          "weekSteps": [ { "fromWeek": 3, "sets": 21, "note": "20 m + 20 m - 3 blocks of 7, 4 min between blocks" }, { "fromWeek": 5, "sets": 24, "note": "20 m + 20 m - 4 blocks of 6, 4 min between blocks" } ] }
-      ] }
+      {
+        "name": "RSA session",
+        "notes": "Not the day before a match. Stop the block when sprint times drop clearly.",
+        "exercises": [
+          {
+            "exerciseId": 106,
+            "sets": 1,
+            "time": 600,
+            "restSeconds": 0
+          },
+          {
+            "exerciseId": 92,
+            "sets": 3,
+            "distance": 20,
+            "restSeconds": 60
+          },
+          {
+            "exerciseId": 89,
+            "sets": 3,
+            "distance": 20,
+            "restSeconds": 120,
+            "note": "Prime the speed"
+          },
+          {
+            "exerciseId": 88,
+            "sets": 18,
+            "distance": 40,
+            "restSeconds": 20,
+            "note": "20 m + 20 m - 3 blocks of 6, 4 min between blocks",
+            "weekSteps": [
+              {
+                "fromWeek": 3,
+                "sets": 21,
+                "note": "20 m + 20 m - 3 blocks of 7, 4 min between blocks"
+              },
+              {
+                "fromWeek": 5,
+                "sets": 24,
+                "note": "20 m + 20 m - 4 blocks of 6, 4 min between blocks"
+              }
+            ]
+          }
+        ]
+      }
     ]
   },
   {
     "key": "plyo-power",
     "name": "Plyometric Power",
     "description": "Jump training for higher jumps, faster sprints and sharper cuts. Two sessions per week for 6 weeks, from about 60 to 100 ground contacts.",
-    "goal": "Speed", "level": "Intermediate", "weeks": 6, "category": "Football",
+    "goal": "Speed",
+    "level": "Intermediate",
+    "weeks": 6,
+    "category": "Football",
     "sources": [
-      { "title": "Meta-analysis 2025 - plyometric training in adolescent soccer players", "url": "https://pubmed.ncbi.nlm.nih.gov/40300007/" }
+      {
+        "title": "Meta-analysis 2025 - plyometric training in adolescent soccer players",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/40300007/"
+      }
     ],
     "days": [
-      { "name": "Vertical & horizontal", "notes": "Every jump at full effort, land quietly. Stop when the jumps get slower.", "exercises": [
-        { "exerciseId": 90, "sets": 3, "repsMin": 6, "repsMax": 6, "restSeconds": 90, "progressionStep": 0,
-          "weekSteps": [ { "fromWeek": 3, "sets": 4 }, { "fromWeek": 5, "sets": 4, "repsMin": 8, "repsMax": 8 } ] },
-        { "exerciseId": 34, "sets": 3, "repsMin": 5, "repsMax": 5, "restSeconds": 90, "progressionStep": 0,
-          "weekSteps": [ { "fromWeek": 3, "sets": 4 } ] },
-        { "exerciseId": 91, "sets": 3, "repsMin": 6, "repsMax": 6, "restSeconds": 90, "progressionStep": 0, "note": "Per side, stick each landing" },
-        { "exerciseId": 51, "sets": 3, "repsMin": 5, "repsMax": 5, "restSeconds": 90, "progressionStep": 0 }
-      ] },
-      { "name": "Reactive & sprint", "notes": "Short ground contacts - like the floor is hot.", "exercises": [
-        { "exerciseId": 82, "sets": 3, "time": 20, "restSeconds": 60, "note": "Pogo jumps without a rope also work" },
-        { "exerciseId": 52, "sets": 3, "repsMin": 5, "repsMax": 5, "restSeconds": 120, "progressionStep": 0, "note": "From a 30 cm box, jump up right after landing",
-          "weekSteps": [ { "fromWeek": 3, "sets": 4 }, { "fromWeek": 5, "sets": 4, "repsMin": 6, "repsMax": 6 } ] },
-        { "exerciseId": 91, "sets": 3, "repsMin": 6, "repsMax": 6, "restSeconds": 90, "progressionStep": 0, "note": "Per side, quick rebound" },
-        { "exerciseId": 89, "sets": 4, "distance": 20, "restSeconds": 150 }
-      ] }
+      {
+        "name": "Vertical & horizontal",
+        "notes": "Every jump at full effort, land quietly. Stop when the jumps get slower.",
+        "exercises": [
+          {
+            "exerciseId": 90,
+            "sets": 3,
+            "repsMin": 6,
+            "repsMax": 6,
+            "restSeconds": 90,
+            "progressionStep": 0,
+            "weekSteps": [
+              {
+                "fromWeek": 3,
+                "sets": 4
+              },
+              {
+                "fromWeek": 5,
+                "sets": 4,
+                "repsMin": 8,
+                "repsMax": 8
+              }
+            ]
+          },
+          {
+            "exerciseId": 34,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 5,
+            "restSeconds": 90,
+            "progressionStep": 0,
+            "weekSteps": [
+              {
+                "fromWeek": 3,
+                "sets": 4
+              }
+            ]
+          },
+          {
+            "exerciseId": 91,
+            "sets": 3,
+            "repsMin": 6,
+            "repsMax": 6,
+            "restSeconds": 90,
+            "progressionStep": 0,
+            "note": "Per side, stick each landing"
+          },
+          {
+            "exerciseId": 51,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 5,
+            "restSeconds": 90,
+            "progressionStep": 0
+          }
+        ]
+      },
+      {
+        "name": "Reactive & sprint",
+        "notes": "Short ground contacts - like the floor is hot.",
+        "exercises": [
+          {
+            "exerciseId": 82,
+            "sets": 3,
+            "time": 20,
+            "restSeconds": 60,
+            "note": "Pogo jumps without a rope also work"
+          },
+          {
+            "exerciseId": 52,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 5,
+            "restSeconds": 120,
+            "progressionStep": 0,
+            "note": "From a 30 cm box, jump up right after landing",
+            "weekSteps": [
+              {
+                "fromWeek": 3,
+                "sets": 4
+              },
+              {
+                "fromWeek": 5,
+                "sets": 4,
+                "repsMin": 6,
+                "repsMax": 6
+              }
+            ]
+          },
+          {
+            "exerciseId": 91,
+            "sets": 3,
+            "repsMin": 6,
+            "repsMax": 6,
+            "restSeconds": 90,
+            "progressionStep": 0,
+            "note": "Per side, quick rebound"
+          },
+          {
+            "exerciseId": 89,
+            "sets": 4,
+            "distance": 20,
+            "restSeconds": 150
+          }
+        ]
+      }
     ]
   },
   {
     "key": "full-body-3x",
     "name": "Full Body Beginner",
     "description": "Two full-body workouts alternated three times a week. Learn the main lifts and build a base.",
-    "goal": "General", "level": "Beginner", "weeks": 8, "sessionsPerWeek": 3,
+    "goal": "General",
+    "level": "Beginner",
+    "weeks": 8,
+    "sessionsPerWeek": 3,
     "days": [
-      { "name": "Full body A", "notes": "", "exercises": [
-        { "exerciseId": 35, "sets": 3, "repsMin": 8, "repsMax": 10, "restSeconds": 120, "progressionStep": 2.5 },
-        { "exerciseId": 1, "sets": 3, "repsMin": 8, "repsMax": 10, "restSeconds": 120, "progressionStep": 2.5 },
-        { "exerciseId": 14, "sets": 3, "repsMin": 10, "repsMax": 12, "restSeconds": 90, "progressionStep": 2.5 },
-        { "exerciseId": 47, "sets": 3, "time": 40, "restSeconds": 60 }
-      ] },
-      { "name": "Full body B", "notes": "", "exercises": [
-        { "exerciseId": 63, "sets": 3, "repsMin": 5, "repsMax": 6, "restSeconds": 150, "progressionStep": 5 },
-        { "exerciseId": 68, "sets": 3, "repsMin": 8, "repsMax": 10, "restSeconds": 120, "progressionStep": 2.5 },
-        { "exerciseId": 44, "sets": 3, "repsMin": 10, "repsMax": 12, "restSeconds": 90, "progressionStep": 2.5 },
-        { "exerciseId": 41, "sets": 3, "repsMin": 10, "repsMax": 12, "restSeconds": 90, "progressionStep": 2.5 }
-      ] }
+      {
+        "name": "Full body A",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 35,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 10,
+            "restSeconds": 120,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 1,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 10,
+            "restSeconds": 120,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 14,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 47,
+            "sets": 3,
+            "time": 40,
+            "restSeconds": 60
+          }
+        ]
+      },
+      {
+        "name": "Full body B",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 63,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 6,
+            "restSeconds": 150,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 68,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 10,
+            "restSeconds": 120,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 44,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 41,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 2.5
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "machine-full-body",
+    "name": "Machine Full Body",
+    "description": "Full-body strength on machines and cables - easy to learn, safe to push close to failure. Two workouts alternated, three times a week, 2-3 sets of 10-12 reps as recommended for beginners.",
+    "goal": "General",
+    "level": "Beginner",
+    "weeks": 8,
+    "sessionsPerWeek": 3,
+    "category": "Gym",
+    "sources": [
+      {
+        "title": "ACSM position stand 2009 - progression models in resistance training",
+        "url": "https://sfu.ca/~ryand/kin343/ACSMresistance.pdf"
+      }
+    ],
+    "days": [
+      {
+        "name": "Machines A",
+        "notes": "Set the seat so the joint lines up with the machine's pivot. Add weight once you reach 12 reps in all sets.",
+        "exercises": [
+          {
+            "exerciseId": 7,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 10
+          },
+          {
+            "exerciseId": 18,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 44,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 109,
+            "sets": 2,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 3,
+            "sets": 2,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 118,
+            "sets": 2,
+            "repsMin": 12,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 5
+          }
+        ]
+      },
+      {
+        "name": "Machines B",
+        "notes": "Same rules: controlled reps, 2 reps in reserve on the last set.",
+        "exercises": [
+          {
+            "exerciseId": 74,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 120,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 110,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 120,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 115,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 10
+          },
+          {
+            "exerciseId": 2,
+            "sets": 2,
+            "repsMin": 12,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 121,
+            "sets": 2,
+            "repsMin": 12,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 1.25
+          }
+        ]
+      }
     ]
   },
   {
     "key": "linear-5x5",
     "name": "5x5 Linear Progression",
     "description": "The classic beginner strength programme: two workouts, three times a week, 5 sets of 5 on the big lifts and a little more weight every session.",
-    "goal": "Strength", "level": "Beginner", "weeks": 12, "sessionsPerWeek": 3,
+    "goal": "Strength",
+    "level": "Beginner",
+    "weeks": 12,
+    "sessionsPerWeek": 3,
     "sources": [
-      { "title": "StrongLifts 5x5 (based on Bill Starr's 5x5)", "url": "https://stronglifts.com/5x5/" }
+      {
+        "title": "StrongLifts 5x5 (based on Bill Starr's 5x5)",
+        "url": "https://stronglifts.com/5x5/"
+      }
     ],
     "days": [
-      { "name": "Workout A", "notes": "Start light (about 50 % of your 5-rep max). Failed the same weight 3 times? Take 10 % off and build up again.", "exercises": [
-        { "exerciseId": 35, "sets": 5, "repsMin": 5, "repsMax": 5, "restSeconds": 180, "progressionStep": 2.5 },
-        { "exerciseId": 1, "sets": 5, "repsMin": 5, "repsMax": 5, "restSeconds": 180, "progressionStep": 2.5 },
-        { "exerciseId": 26, "sets": 5, "repsMin": 5, "repsMax": 5, "restSeconds": 180, "progressionStep": 2.5 }
-      ] },
-      { "name": "Workout B", "notes": "", "exercises": [
-        { "exerciseId": 35, "sets": 5, "repsMin": 5, "repsMax": 5, "restSeconds": 180, "progressionStep": 2.5 },
-        { "exerciseId": 68, "sets": 5, "repsMin": 5, "repsMax": 5, "restSeconds": 180, "progressionStep": 2.5 },
-        { "exerciseId": 63, "sets": 1, "repsMin": 5, "repsMax": 5, "restSeconds": 180, "progressionStep": 5 }
-      ] }
+      {
+        "name": "Workout A",
+        "notes": "Start light (about 50 % of your 5-rep max). Failed the same weight 3 times? Take 10 % off and build up again.",
+        "exercises": [
+          {
+            "exerciseId": 35,
+            "sets": 5,
+            "repsMin": 5,
+            "repsMax": 5,
+            "restSeconds": 180,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 1,
+            "sets": 5,
+            "repsMin": 5,
+            "repsMax": 5,
+            "restSeconds": 180,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 26,
+            "sets": 5,
+            "repsMin": 5,
+            "repsMax": 5,
+            "restSeconds": 180,
+            "progressionStep": 2.5
+          }
+        ]
+      },
+      {
+        "name": "Workout B",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 35,
+            "sets": 5,
+            "repsMin": 5,
+            "repsMax": 5,
+            "restSeconds": 180,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 68,
+            "sets": 5,
+            "repsMin": 5,
+            "repsMax": 5,
+            "restSeconds": 180,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 63,
+            "sets": 1,
+            "repsMin": 5,
+            "repsMax": 5,
+            "restSeconds": 180,
+            "progressionStep": 5
+          }
+        ]
+      }
     ]
   },
   {
     "key": "gzclp",
     "name": "GZCLP",
     "description": "Beginner linear progression in three tiers: heavy T1 (5 × 3), moderate T2 (3 × 10) and light T3 (3 × 15+). Four workouts rotate, 3-4 sessions per week.",
-    "goal": "Strength", "level": "Beginner", "weeks": 12, "sessionsPerWeek": 3,
+    "goal": "Strength",
+    "level": "Beginner",
+    "weeks": 12,
+    "sessionsPerWeek": 3,
     "sources": [
-      { "title": "GZCL method by Cody Lefever", "url": "https://www.boostcamp.app/methodology/gzcl" }
+      {
+        "title": "GZCL method by Cody Lefever",
+        "url": "https://www.boostcamp.app/methodology/gzcl"
+      }
     ],
     "days": [
-      { "name": "Day 1", "notes": "", "exercises": [
-        { "exerciseId": 35, "sets": 5, "repsMin": 3, "repsMax": 3, "restSeconds": 180, "progressionStep": 5, "note": "T1 - last set as many reps as possible" },
-        { "exerciseId": 1, "sets": 3, "repsMin": 10, "repsMax": 10, "restSeconds": 120, "progressionStep": 2.5, "note": "T2" },
-        { "exerciseId": 44, "sets": 3, "repsMin": 15, "repsMax": 25, "restSeconds": 60, "progressionStep": 2.5, "note": "T3 - last set as many reps as possible, add weight at 25" }
-      ] },
-      { "name": "Day 2", "notes": "", "exercises": [
-        { "exerciseId": 68, "sets": 5, "repsMin": 3, "repsMax": 3, "restSeconds": 180, "progressionStep": 2.5, "note": "T1 - last set as many reps as possible" },
-        { "exerciseId": 63, "sets": 3, "repsMin": 10, "repsMax": 10, "restSeconds": 120, "progressionStep": 5, "note": "T2" },
-        { "exerciseId": 36, "sets": 3, "repsMin": 15, "repsMax": 25, "restSeconds": 60, "progressionStep": 2.5, "note": "T3 - last set as many reps as possible, add weight at 25" }
-      ] },
-      { "name": "Day 3", "notes": "", "exercises": [
-        { "exerciseId": 1, "sets": 5, "repsMin": 3, "repsMax": 3, "restSeconds": 180, "progressionStep": 2.5, "note": "T1 - last set as many reps as possible" },
-        { "exerciseId": 35, "sets": 3, "repsMin": 10, "repsMax": 10, "restSeconds": 120, "progressionStep": 5, "note": "T2" },
-        { "exerciseId": 44, "sets": 3, "repsMin": 15, "repsMax": 25, "restSeconds": 60, "progressionStep": 2.5, "note": "T3 - last set as many reps as possible, add weight at 25" }
-      ] },
-      { "name": "Day 4", "notes": "", "exercises": [
-        { "exerciseId": 63, "sets": 5, "repsMin": 3, "repsMax": 3, "restSeconds": 180, "progressionStep": 5, "note": "T1 - last set as many reps as possible" },
-        { "exerciseId": 68, "sets": 3, "repsMin": 10, "repsMax": 10, "restSeconds": 120, "progressionStep": 2.5, "note": "T2" },
-        { "exerciseId": 36, "sets": 3, "repsMin": 15, "repsMax": 25, "restSeconds": 60, "progressionStep": 2.5, "note": "T3 - last set as many reps as possible, add weight at 25" }
-      ] }
+      {
+        "name": "Day 1",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 35,
+            "sets": 5,
+            "repsMin": 3,
+            "repsMax": 3,
+            "restSeconds": 180,
+            "progressionStep": 5,
+            "note": "T1 - last set as many reps as possible"
+          },
+          {
+            "exerciseId": 1,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 10,
+            "restSeconds": 120,
+            "progressionStep": 2.5,
+            "note": "T2"
+          },
+          {
+            "exerciseId": 44,
+            "sets": 3,
+            "repsMin": 15,
+            "repsMax": 25,
+            "restSeconds": 60,
+            "progressionStep": 2.5,
+            "note": "T3 - last set as many reps as possible, add weight at 25"
+          }
+        ]
+      },
+      {
+        "name": "Day 2",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 68,
+            "sets": 5,
+            "repsMin": 3,
+            "repsMax": 3,
+            "restSeconds": 180,
+            "progressionStep": 2.5,
+            "note": "T1 - last set as many reps as possible"
+          },
+          {
+            "exerciseId": 63,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 10,
+            "restSeconds": 120,
+            "progressionStep": 5,
+            "note": "T2"
+          },
+          {
+            "exerciseId": 36,
+            "sets": 3,
+            "repsMin": 15,
+            "repsMax": 25,
+            "restSeconds": 60,
+            "progressionStep": 2.5,
+            "note": "T3 - last set as many reps as possible, add weight at 25"
+          }
+        ]
+      },
+      {
+        "name": "Day 3",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 1,
+            "sets": 5,
+            "repsMin": 3,
+            "repsMax": 3,
+            "restSeconds": 180,
+            "progressionStep": 2.5,
+            "note": "T1 - last set as many reps as possible"
+          },
+          {
+            "exerciseId": 35,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 10,
+            "restSeconds": 120,
+            "progressionStep": 5,
+            "note": "T2"
+          },
+          {
+            "exerciseId": 44,
+            "sets": 3,
+            "repsMin": 15,
+            "repsMax": 25,
+            "restSeconds": 60,
+            "progressionStep": 2.5,
+            "note": "T3 - last set as many reps as possible, add weight at 25"
+          }
+        ]
+      },
+      {
+        "name": "Day 4",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 63,
+            "sets": 5,
+            "repsMin": 3,
+            "repsMax": 3,
+            "restSeconds": 180,
+            "progressionStep": 5,
+            "note": "T1 - last set as many reps as possible"
+          },
+          {
+            "exerciseId": 68,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 10,
+            "restSeconds": 120,
+            "progressionStep": 2.5,
+            "note": "T2"
+          },
+          {
+            "exerciseId": 36,
+            "sets": 3,
+            "repsMin": 15,
+            "repsMax": 25,
+            "restSeconds": 60,
+            "progressionStep": 2.5,
+            "note": "T3 - last set as many reps as possible, add weight at 25"
+          }
+        ]
+      }
     ]
   },
   {
     "key": "531-bbb",
     "name": "5/3/1 Boring But Big",
     "description": "Jim Wendler's 4-week waves on the main lift (5s, 3s, 5/3/1, deload) plus 5 × 10 volume on the opposite lift. Weights are calculated from your estimated 1RM.",
-    "goal": "Strength", "level": "Intermediate", "weeks": 12, "cycleWeeks": 4, "category": "Gym",
+    "goal": "Strength",
+    "level": "Intermediate",
+    "weeks": 12,
+    "cycleWeeks": 4,
+    "category": "Gym",
     "sources": [
-      { "title": "5/3/1 Boring But Big by Jim Wendler", "url": "https://www.boostcamp.app/coaches/jim-wendler/5-3-1-boring-but-big" }
+      {
+        "title": "5/3/1 Boring But Big by Jim Wendler",
+        "url": "https://www.boostcamp.app/coaches/jim-wendler/5-3-1-boring-but-big"
+      }
     ],
     "days": [
-      { "name": "Press day", "notes": "Main sets ramp up (e.g. 65/75/85 %), the last one as many reps as possible.", "exercises": [
-        { "exerciseId": 68, "sets": 3, "repsMin": 5, "repsMax": 5, "percentOf1Rm": 77, "restSeconds": 180, "note": "Top set as many reps as possible",
-          "weekSteps": [ { "fromWeek": 2, "repsMin": 3, "repsMax": 3, "percentOf1Rm": 81 }, { "fromWeek": 3, "repsMin": 1, "repsMax": 5, "percentOf1Rm": 86, "note": "Sets of 5, 3 and 1+" }, { "fromWeek": 4, "repsMin": 5, "repsMax": 5, "percentOf1Rm": 54, "note": "Deload week - easy sets" } ] },
-        { "exerciseId": 1, "sets": 5, "repsMin": 10, "repsMax": 10, "percentOf1Rm": 45, "restSeconds": 90, "note": "Boring But Big" },
-        { "exerciseId": 65, "sets": 5, "repsMin": 6, "repsMax": 10, "restSeconds": 90, "progressionStep": 0 },
-        { "exerciseId": 55, "sets": 3, "repsMin": 10, "repsMax": 15, "restSeconds": 60, "progressionStep": 0 }
-      ] },
-      { "name": "Deadlift day", "notes": "Main sets ramp up (e.g. 65/75/85 %), the last one as many reps as possible.", "exercises": [
-        { "exerciseId": 63, "sets": 3, "repsMin": 5, "repsMax": 5, "percentOf1Rm": 77, "restSeconds": 180, "note": "Top set as many reps as possible",
-          "weekSteps": [ { "fromWeek": 2, "repsMin": 3, "repsMax": 3, "percentOf1Rm": 81 }, { "fromWeek": 3, "repsMin": 1, "repsMax": 5, "percentOf1Rm": 86, "note": "Sets of 5, 3 and 1+" }, { "fromWeek": 4, "repsMin": 5, "repsMax": 5, "percentOf1Rm": 54, "note": "Deload week - easy sets" } ] },
-        { "exerciseId": 35, "sets": 5, "repsMin": 10, "repsMax": 10, "percentOf1Rm": 45, "restSeconds": 120, "note": "Boring But Big" },
-        { "exerciseId": 3, "sets": 3, "repsMin": 10, "repsMax": 12, "restSeconds": 60, "progressionStep": 2.5 },
-        { "exerciseId": 80, "sets": 3, "repsMin": 8, "repsMax": 12, "restSeconds": 60, "progressionStep": 0 }
-      ] },
-      { "name": "Bench day", "notes": "Main sets ramp up (e.g. 65/75/85 %), the last one as many reps as possible.", "exercises": [
-        { "exerciseId": 1, "sets": 3, "repsMin": 5, "repsMax": 5, "percentOf1Rm": 77, "restSeconds": 180, "note": "Top set as many reps as possible",
-          "weekSteps": [ { "fromWeek": 2, "repsMin": 3, "repsMax": 3, "percentOf1Rm": 81 }, { "fromWeek": 3, "repsMin": 1, "repsMax": 5, "percentOf1Rm": 86, "note": "Sets of 5, 3 and 1+" }, { "fromWeek": 4, "repsMin": 5, "repsMax": 5, "percentOf1Rm": 54, "note": "Deload week - easy sets" } ] },
-        { "exerciseId": 68, "sets": 5, "repsMin": 10, "repsMax": 10, "percentOf1Rm": 45, "restSeconds": 90, "note": "Boring But Big" },
-        { "exerciseId": 36, "sets": 5, "repsMin": 10, "repsMax": 10, "restSeconds": 60, "progressionStep": 2.5 },
-        { "exerciseId": 8, "sets": 3, "repsMin": 10, "repsMax": 15, "restSeconds": 60, "progressionStep": 2.5 }
-      ] },
-      { "name": "Squat day", "notes": "Main sets ramp up (e.g. 65/75/85 %), the last one as many reps as possible.", "exercises": [
-        { "exerciseId": 35, "sets": 3, "repsMin": 5, "repsMax": 5, "percentOf1Rm": 77, "restSeconds": 180, "note": "Top set as many reps as possible",
-          "weekSteps": [ { "fromWeek": 2, "repsMin": 3, "repsMax": 3, "percentOf1Rm": 81 }, { "fromWeek": 3, "repsMin": 1, "repsMax": 5, "percentOf1Rm": 86, "note": "Sets of 5, 3 and 1+" }, { "fromWeek": 4, "repsMin": 5, "repsMax": 5, "percentOf1Rm": 54, "note": "Deload week - easy sets" } ] },
-        { "exerciseId": 63, "sets": 5, "repsMin": 10, "repsMax": 10, "percentOf1Rm": 45, "restSeconds": 120, "note": "Boring But Big" },
-        { "exerciseId": 76, "sets": 3, "repsMin": 10, "repsMax": 12, "restSeconds": 90, "progressionStep": 2.5 },
-        { "exerciseId": 55, "sets": 3, "repsMin": 10, "repsMax": 15, "restSeconds": 60, "progressionStep": 0 }
-      ] }
+      {
+        "name": "Press day",
+        "notes": "Main sets ramp up (e.g. 65/75/85 %), the last one as many reps as possible.",
+        "exercises": [
+          {
+            "exerciseId": 68,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 5,
+            "percentOf1Rm": 77,
+            "restSeconds": 180,
+            "note": "Top set as many reps as possible",
+            "weekSteps": [
+              {
+                "fromWeek": 2,
+                "repsMin": 3,
+                "repsMax": 3,
+                "percentOf1Rm": 81
+              },
+              {
+                "fromWeek": 3,
+                "repsMin": 1,
+                "repsMax": 5,
+                "percentOf1Rm": 86,
+                "note": "Sets of 5, 3 and 1+"
+              },
+              {
+                "fromWeek": 4,
+                "repsMin": 5,
+                "repsMax": 5,
+                "percentOf1Rm": 54,
+                "note": "Deload week - easy sets"
+              }
+            ]
+          },
+          {
+            "exerciseId": 1,
+            "sets": 5,
+            "repsMin": 10,
+            "repsMax": 10,
+            "percentOf1Rm": 45,
+            "restSeconds": 90,
+            "note": "Boring But Big"
+          },
+          {
+            "exerciseId": 65,
+            "sets": 5,
+            "repsMin": 6,
+            "repsMax": 10,
+            "restSeconds": 90,
+            "progressionStep": 0
+          },
+          {
+            "exerciseId": 55,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 0
+          }
+        ]
+      },
+      {
+        "name": "Deadlift day",
+        "notes": "Main sets ramp up (e.g. 65/75/85 %), the last one as many reps as possible.",
+        "exercises": [
+          {
+            "exerciseId": 63,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 5,
+            "percentOf1Rm": 77,
+            "restSeconds": 180,
+            "note": "Top set as many reps as possible",
+            "weekSteps": [
+              {
+                "fromWeek": 2,
+                "repsMin": 3,
+                "repsMax": 3,
+                "percentOf1Rm": 81
+              },
+              {
+                "fromWeek": 3,
+                "repsMin": 1,
+                "repsMax": 5,
+                "percentOf1Rm": 86,
+                "note": "Sets of 5, 3 and 1+"
+              },
+              {
+                "fromWeek": 4,
+                "repsMin": 5,
+                "repsMax": 5,
+                "percentOf1Rm": 54,
+                "note": "Deload week - easy sets"
+              }
+            ]
+          },
+          {
+            "exerciseId": 35,
+            "sets": 5,
+            "repsMin": 10,
+            "repsMax": 10,
+            "percentOf1Rm": 45,
+            "restSeconds": 120,
+            "note": "Boring But Big"
+          },
+          {
+            "exerciseId": 3,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 80,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 0
+          }
+        ]
+      },
+      {
+        "name": "Bench day",
+        "notes": "Main sets ramp up (e.g. 65/75/85 %), the last one as many reps as possible.",
+        "exercises": [
+          {
+            "exerciseId": 1,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 5,
+            "percentOf1Rm": 77,
+            "restSeconds": 180,
+            "note": "Top set as many reps as possible",
+            "weekSteps": [
+              {
+                "fromWeek": 2,
+                "repsMin": 3,
+                "repsMax": 3,
+                "percentOf1Rm": 81
+              },
+              {
+                "fromWeek": 3,
+                "repsMin": 1,
+                "repsMax": 5,
+                "percentOf1Rm": 86,
+                "note": "Sets of 5, 3 and 1+"
+              },
+              {
+                "fromWeek": 4,
+                "repsMin": 5,
+                "repsMax": 5,
+                "percentOf1Rm": 54,
+                "note": "Deload week - easy sets"
+              }
+            ]
+          },
+          {
+            "exerciseId": 68,
+            "sets": 5,
+            "repsMin": 10,
+            "repsMax": 10,
+            "percentOf1Rm": 45,
+            "restSeconds": 90,
+            "note": "Boring But Big"
+          },
+          {
+            "exerciseId": 36,
+            "sets": 5,
+            "repsMin": 10,
+            "repsMax": 10,
+            "restSeconds": 60,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 8,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 2.5
+          }
+        ]
+      },
+      {
+        "name": "Squat day",
+        "notes": "Main sets ramp up (e.g. 65/75/85 %), the last one as many reps as possible.",
+        "exercises": [
+          {
+            "exerciseId": 35,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 5,
+            "percentOf1Rm": 77,
+            "restSeconds": 180,
+            "note": "Top set as many reps as possible",
+            "weekSteps": [
+              {
+                "fromWeek": 2,
+                "repsMin": 3,
+                "repsMax": 3,
+                "percentOf1Rm": 81
+              },
+              {
+                "fromWeek": 3,
+                "repsMin": 1,
+                "repsMax": 5,
+                "percentOf1Rm": 86,
+                "note": "Sets of 5, 3 and 1+"
+              },
+              {
+                "fromWeek": 4,
+                "repsMin": 5,
+                "repsMax": 5,
+                "percentOf1Rm": 54,
+                "note": "Deload week - easy sets"
+              }
+            ]
+          },
+          {
+            "exerciseId": 63,
+            "sets": 5,
+            "repsMin": 10,
+            "repsMax": 10,
+            "percentOf1Rm": 45,
+            "restSeconds": 120,
+            "note": "Boring But Big"
+          },
+          {
+            "exerciseId": 76,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 55,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 0
+          }
+        ]
+      }
     ]
   },
   {
     "key": "phul",
     "name": "PHUL",
     "description": "Power Hypertrophy Upper Lower: two heavy days (3-5 reps) and two volume days (8-12 reps) per week - strength and muscle together.",
-    "goal": "Hypertrophy", "level": "Intermediate", "weeks": 12,
+    "goal": "Hypertrophy",
+    "level": "Intermediate",
+    "weeks": 12,
     "sources": [
-      { "title": "PHUL by Brandon Campbell (Muscle & Strength)", "url": "https://www.muscleandstrength.com/workouts/phul-workout" }
+      {
+        "title": "PHUL by Brandon Campbell (Muscle & Strength)",
+        "url": "https://www.muscleandstrength.com/workouts/phul-workout"
+      }
     ],
     "days": [
-      { "name": "Upper power", "notes": "", "exercises": [
-        { "exerciseId": 1, "sets": 4, "repsMin": 3, "repsMax": 5, "restSeconds": 180, "progressionStep": 2.5 },
-        { "exerciseId": 60, "sets": 3, "repsMin": 6, "repsMax": 10, "restSeconds": 120, "progressionStep": 2 },
-        { "exerciseId": 26, "sets": 4, "repsMin": 3, "repsMax": 5, "restSeconds": 180, "progressionStep": 2.5 },
-        { "exerciseId": 44, "sets": 3, "repsMin": 6, "repsMax": 10, "restSeconds": 120, "progressionStep": 2.5 },
-        { "exerciseId": 68, "sets": 3, "repsMin": 5, "repsMax": 8, "restSeconds": 120, "progressionStep": 2.5 },
-        { "exerciseId": 9, "sets": 3, "repsMin": 6, "repsMax": 10, "restSeconds": 90, "progressionStep": 2.5 },
-        { "exerciseId": 16, "sets": 3, "repsMin": 6, "repsMax": 10, "restSeconds": 90, "progressionStep": 2 }
-      ] },
-      { "name": "Lower power", "notes": "", "exercises": [
-        { "exerciseId": 35, "sets": 4, "repsMin": 3, "repsMax": 5, "restSeconds": 180, "progressionStep": 5 },
-        { "exerciseId": 63, "sets": 3, "repsMin": 3, "repsMax": 5, "restSeconds": 180, "progressionStep": 5 },
-        { "exerciseId": 7, "sets": 4, "repsMin": 10, "repsMax": 15, "restSeconds": 120, "progressionStep": 10 },
-        { "exerciseId": 3, "sets": 3, "repsMin": 6, "repsMax": 10, "restSeconds": 90, "progressionStep": 2.5 },
-        { "exerciseId": 4, "sets": 4, "repsMin": 6, "repsMax": 10, "restSeconds": 60, "progressionStep": 5 }
-      ] },
-      { "name": "Upper hypertrophy", "notes": "", "exercises": [
-        { "exerciseId": 59, "sets": 4, "repsMin": 8, "repsMax": 12, "restSeconds": 90, "progressionStep": 2.5 },
-        { "exerciseId": 62, "sets": 3, "repsMin": 8, "repsMax": 12, "restSeconds": 60, "progressionStep": 2.5 },
-        { "exerciseId": 14, "sets": 4, "repsMin": 8, "repsMax": 12, "restSeconds": 90, "progressionStep": 2.5 },
-        { "exerciseId": 36, "sets": 3, "repsMin": 8, "repsMax": 12, "restSeconds": 90, "progressionStep": 2 },
-        { "exerciseId": 69, "sets": 3, "repsMin": 8, "repsMax": 12, "restSeconds": 60, "progressionStep": 1 },
-        { "exerciseId": 13, "sets": 3, "repsMin": 8, "repsMax": 12, "restSeconds": 60, "progressionStep": 1 },
-        { "exerciseId": 8, "sets": 3, "repsMin": 8, "repsMax": 12, "restSeconds": 60, "progressionStep": 2.5 }
-      ] },
-      { "name": "Lower hypertrophy", "notes": "", "exercises": [
-        { "exerciseId": 73, "sets": 4, "repsMin": 8, "repsMax": 12, "restSeconds": 120, "progressionStep": 2.5 },
-        { "exerciseId": 76, "sets": 3, "repsMin": 8, "repsMax": 12, "restSeconds": 90, "progressionStep": 2, "note": "Per leg" },
-        { "exerciseId": 2, "sets": 3, "repsMin": 10, "repsMax": 15, "restSeconds": 60, "progressionStep": 2.5 },
-        { "exerciseId": 3, "sets": 3, "repsMin": 10, "repsMax": 15, "restSeconds": 60, "progressionStep": 2.5 },
-        { "exerciseId": 21, "sets": 4, "repsMin": 8, "repsMax": 12, "restSeconds": 60, "progressionStep": 5 }
-      ] }
+      {
+        "name": "Upper power",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 1,
+            "sets": 4,
+            "repsMin": 3,
+            "repsMax": 5,
+            "restSeconds": 180,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 60,
+            "sets": 3,
+            "repsMin": 6,
+            "repsMax": 10,
+            "restSeconds": 120,
+            "progressionStep": 2
+          },
+          {
+            "exerciseId": 26,
+            "sets": 4,
+            "repsMin": 3,
+            "repsMax": 5,
+            "restSeconds": 180,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 44,
+            "sets": 3,
+            "repsMin": 6,
+            "repsMax": 10,
+            "restSeconds": 120,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 68,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 8,
+            "restSeconds": 120,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 9,
+            "sets": 3,
+            "repsMin": 6,
+            "repsMax": 10,
+            "restSeconds": 90,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 16,
+            "sets": 3,
+            "repsMin": 6,
+            "repsMax": 10,
+            "restSeconds": 90,
+            "progressionStep": 2
+          }
+        ]
+      },
+      {
+        "name": "Lower power",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 35,
+            "sets": 4,
+            "repsMin": 3,
+            "repsMax": 5,
+            "restSeconds": 180,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 63,
+            "sets": 3,
+            "repsMin": 3,
+            "repsMax": 5,
+            "restSeconds": 180,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 7,
+            "sets": 4,
+            "repsMin": 10,
+            "repsMax": 15,
+            "restSeconds": 120,
+            "progressionStep": 10
+          },
+          {
+            "exerciseId": 3,
+            "sets": 3,
+            "repsMin": 6,
+            "repsMax": 10,
+            "restSeconds": 90,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 4,
+            "sets": 4,
+            "repsMin": 6,
+            "repsMax": 10,
+            "restSeconds": 60,
+            "progressionStep": 5
+          }
+        ]
+      },
+      {
+        "name": "Upper hypertrophy",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 59,
+            "sets": 4,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 62,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 14,
+            "sets": 4,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 36,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 2
+          },
+          {
+            "exerciseId": 69,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 1
+          },
+          {
+            "exerciseId": 13,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 1
+          },
+          {
+            "exerciseId": 8,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 2.5
+          }
+        ]
+      },
+      {
+        "name": "Lower hypertrophy",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 73,
+            "sets": 4,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 120,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 76,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 2,
+            "note": "Per leg"
+          },
+          {
+            "exerciseId": 2,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 3,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 21,
+            "sets": 4,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 5
+          }
+        ]
+      }
     ]
   },
   {
     "key": "upper-lower-4x",
     "name": "Upper / Lower 4x",
     "description": "Classic 4-day split for muscle and strength with two upper and two lower days per week.",
-    "goal": "Hypertrophy", "level": "Intermediate", "weeks": 8, "deloadEvery": 4,
+    "goal": "Hypertrophy",
+    "level": "Intermediate",
+    "weeks": 8,
+    "deloadEvery": 4,
     "days": [
-      { "name": "Upper A", "notes": "", "exercises": [
-        { "exerciseId": 1, "sets": 4, "repsMin": 6, "repsMax": 8, "targetRpe": 8, "restSeconds": 150, "progressionStep": 2.5 },
-        { "exerciseId": 26, "sets": 4, "repsMin": 6, "repsMax": 8, "restSeconds": 120, "progressionStep": 2.5 },
-        { "exerciseId": 40, "sets": 3, "repsMin": 8, "repsMax": 10, "restSeconds": 90, "progressionStep": 2 },
-        { "exerciseId": 44, "sets": 3, "repsMin": 10, "repsMax": 12, "restSeconds": 90, "progressionStep": 2.5 },
-        { "exerciseId": 22, "sets": 2, "repsMin": 10, "repsMax": 12, "restSeconds": 60, "progressionStep": 2.5 },
-        { "exerciseId": 8, "sets": 2, "repsMin": 10, "repsMax": 12, "restSeconds": 60, "progressionStep": 2.5 }
-      ] },
-      { "name": "Lower A", "notes": "", "exercises": [
-        { "exerciseId": 35, "sets": 4, "repsMin": 6, "repsMax": 8, "targetRpe": 8, "restSeconds": 180, "progressionStep": 5 },
-        { "exerciseId": 49, "sets": 3, "repsMin": 8, "repsMax": 10, "restSeconds": 120, "progressionStep": 5 },
-        { "exerciseId": 7, "sets": 3, "repsMin": 10, "repsMax": 12, "restSeconds": 90, "progressionStep": 10 },
-        { "exerciseId": 3, "sets": 3, "repsMin": 10, "repsMax": 12, "restSeconds": 60, "progressionStep": 2.5 },
-        { "exerciseId": 4, "sets": 3, "repsMin": 12, "repsMax": 15, "restSeconds": 60, "progressionStep": 5 }
-      ] },
-      { "name": "Upper B", "notes": "", "exercises": [
-        { "exerciseId": 60, "sets": 4, "repsMin": 8, "repsMax": 10, "restSeconds": 120, "progressionStep": 2 },
-        { "exerciseId": 65, "sets": 4, "repsMin": 6, "repsMax": 10, "restSeconds": 120, "progressionStep": 0 },
-        { "exerciseId": 69, "sets": 3, "repsMin": 12, "repsMax": 15, "restSeconds": 60, "progressionStep": 1 },
-        { "exerciseId": 14, "sets": 3, "repsMin": 10, "repsMax": 12, "restSeconds": 90, "progressionStep": 2.5 },
-        { "exerciseId": 71, "sets": 2, "repsMin": 15, "repsMax": 15, "restSeconds": 60, "progressionStep": 2.5 },
-        { "exerciseId": 43, "sets": 2, "repsMin": 10, "repsMax": 12, "restSeconds": 60, "progressionStep": 2 }
-      ] },
-      { "name": "Lower B", "notes": "", "exercises": [
-        { "exerciseId": 63, "sets": 3, "repsMin": 4, "repsMax": 6, "targetRpe": 8, "restSeconds": 180, "progressionStep": 5 },
-        { "exerciseId": 73, "sets": 3, "repsMin": 6, "repsMax": 8, "restSeconds": 150, "progressionStep": 5 },
-        { "exerciseId": 76, "sets": 3, "repsMin": 10, "repsMax": 12, "restSeconds": 90, "progressionStep": 2 },
-        { "exerciseId": 75, "sets": 3, "repsMin": 8, "repsMax": 10, "restSeconds": 90, "progressionStep": 5 },
-        { "exerciseId": 55, "sets": 3, "repsMin": 10, "repsMax": 15, "restSeconds": 60, "progressionStep": 0 }
-      ] }
+      {
+        "name": "Upper A",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 1,
+            "sets": 4,
+            "repsMin": 6,
+            "repsMax": 8,
+            "targetRpe": 8,
+            "restSeconds": 150,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 26,
+            "sets": 4,
+            "repsMin": 6,
+            "repsMax": 8,
+            "restSeconds": 120,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 40,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 10,
+            "restSeconds": 90,
+            "progressionStep": 2
+          },
+          {
+            "exerciseId": 44,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 22,
+            "sets": 2,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 8,
+            "sets": 2,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 2.5
+          }
+        ]
+      },
+      {
+        "name": "Lower A",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 35,
+            "sets": 4,
+            "repsMin": 6,
+            "repsMax": 8,
+            "targetRpe": 8,
+            "restSeconds": 180,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 49,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 10,
+            "restSeconds": 120,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 7,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 10
+          },
+          {
+            "exerciseId": 3,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 4,
+            "sets": 3,
+            "repsMin": 12,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 5
+          }
+        ]
+      },
+      {
+        "name": "Upper B",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 60,
+            "sets": 4,
+            "repsMin": 8,
+            "repsMax": 10,
+            "restSeconds": 120,
+            "progressionStep": 2
+          },
+          {
+            "exerciseId": 65,
+            "sets": 4,
+            "repsMin": 6,
+            "repsMax": 10,
+            "restSeconds": 120,
+            "progressionStep": 0
+          },
+          {
+            "exerciseId": 69,
+            "sets": 3,
+            "repsMin": 12,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 1
+          },
+          {
+            "exerciseId": 14,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 71,
+            "sets": 2,
+            "repsMin": 15,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 43,
+            "sets": 2,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 2
+          }
+        ]
+      },
+      {
+        "name": "Lower B",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 63,
+            "sets": 3,
+            "repsMin": 4,
+            "repsMax": 6,
+            "targetRpe": 8,
+            "restSeconds": 180,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 73,
+            "sets": 3,
+            "repsMin": 6,
+            "repsMax": 8,
+            "restSeconds": 150,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 76,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 2
+          },
+          {
+            "exerciseId": 75,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 10,
+            "restSeconds": 90,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 55,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 0
+          }
+        ]
+      }
     ]
   },
   {
     "key": "ppl-3x",
     "name": "Push / Pull / Legs",
     "description": "Three focused days per week. Run it once (3 days) or twice (6 days) per week.",
-    "goal": "Hypertrophy", "level": "Intermediate", "weeks": 8, "deloadEvery": 4,
+    "goal": "Hypertrophy",
+    "level": "Intermediate",
+    "weeks": 8,
+    "deloadEvery": 4,
     "days": [
-      { "name": "Push", "notes": "", "exercises": [
-        { "exerciseId": 1, "sets": 4, "repsMin": 6, "repsMax": 8, "targetRpe": 8, "restSeconds": 150, "progressionStep": 2.5 },
-        { "exerciseId": 68, "sets": 3, "repsMin": 6, "repsMax": 8, "restSeconds": 120, "progressionStep": 2.5 },
-        { "exerciseId": 60, "sets": 3, "repsMin": 8, "repsMax": 12, "restSeconds": 90, "progressionStep": 2 },
-        { "exerciseId": 69, "sets": 3, "repsMin": 12, "repsMax": 15, "restSeconds": 60, "progressionStep": 1 },
-        { "exerciseId": 8, "sets": 3, "repsMin": 10, "repsMax": 12, "restSeconds": 60, "progressionStep": 2.5 }
-      ] },
-      { "name": "Pull", "notes": "", "exercises": [
-        { "exerciseId": 63, "sets": 3, "repsMin": 5, "repsMax": 5, "targetRpe": 8, "restSeconds": 180, "progressionStep": 5 },
-        { "exerciseId": 17, "sets": 4, "repsMin": 6, "repsMax": 10, "restSeconds": 120, "progressionStep": 0 },
-        { "exerciseId": 26, "sets": 3, "repsMin": 8, "repsMax": 10, "restSeconds": 120, "progressionStep": 2.5 },
-        { "exerciseId": 71, "sets": 3, "repsMin": 15, "repsMax": 15, "restSeconds": 60, "progressionStep": 2.5 },
-        { "exerciseId": 9, "sets": 3, "repsMin": 8, "repsMax": 12, "restSeconds": 60, "progressionStep": 2.5 }
-      ] },
-      { "name": "Legs", "notes": "", "exercises": [
-        { "exerciseId": 35, "sets": 4, "repsMin": 6, "repsMax": 8, "targetRpe": 8, "restSeconds": 180, "progressionStep": 5 },
-        { "exerciseId": 49, "sets": 3, "repsMin": 8, "repsMax": 10, "restSeconds": 120, "progressionStep": 5 },
-        { "exerciseId": 7, "sets": 3, "repsMin": 10, "repsMax": 12, "restSeconds": 90, "progressionStep": 10 },
-        { "exerciseId": 3, "sets": 3, "repsMin": 10, "repsMax": 12, "restSeconds": 60, "progressionStep": 2.5 },
-        { "exerciseId": 4, "sets": 4, "repsMin": 12, "repsMax": 15, "restSeconds": 60, "progressionStep": 5 }
-      ] }
+      {
+        "name": "Push",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 1,
+            "sets": 4,
+            "repsMin": 6,
+            "repsMax": 8,
+            "targetRpe": 8,
+            "restSeconds": 150,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 68,
+            "sets": 3,
+            "repsMin": 6,
+            "repsMax": 8,
+            "restSeconds": 120,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 60,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 2
+          },
+          {
+            "exerciseId": 69,
+            "sets": 3,
+            "repsMin": 12,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 1
+          },
+          {
+            "exerciseId": 8,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 2.5
+          }
+        ]
+      },
+      {
+        "name": "Pull",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 63,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 5,
+            "targetRpe": 8,
+            "restSeconds": 180,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 17,
+            "sets": 4,
+            "repsMin": 6,
+            "repsMax": 10,
+            "restSeconds": 120,
+            "progressionStep": 0
+          },
+          {
+            "exerciseId": 26,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 10,
+            "restSeconds": 120,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 71,
+            "sets": 3,
+            "repsMin": 15,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 9,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 2.5
+          }
+        ]
+      },
+      {
+        "name": "Legs",
+        "notes": "",
+        "exercises": [
+          {
+            "exerciseId": 35,
+            "sets": 4,
+            "repsMin": 6,
+            "repsMax": 8,
+            "targetRpe": 8,
+            "restSeconds": 180,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 49,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 10,
+            "restSeconds": 120,
+            "progressionStep": 5
+          },
+          {
+            "exerciseId": 7,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 90,
+            "progressionStep": 10
+          },
+          {
+            "exerciseId": 3,
+            "sets": 3,
+            "repsMin": 10,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 4,
+            "sets": 4,
+            "repsMin": 12,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 5
+          }
+        ]
+      }
     ]
   },
   {
     "key": "bodyweight-rr",
     "name": "Bodyweight Routine",
     "description": "Full-body strength without a gym, after the Recommended Routine of r/bodyweightfitness: three pairs (pull/legs, push/hinge, row/push) and a core triplet.",
-    "goal": "General", "level": "Beginner", "weeks": 12, "sessionsPerWeek": 3,
+    "goal": "General",
+    "level": "Beginner",
+    "weeks": 12,
+    "sessionsPerWeek": 3,
     "sources": [
-      { "title": "Recommended Routine, r/bodyweightfitness", "url": "https://www.reddit.com/r/bodyweightfitness/wiki/kb/recommended_routine/" }
+      {
+        "title": "Recommended Routine, r/bodyweightfitness",
+        "url": "https://www.reddit.com/r/bodyweightfitness/wiki/kb/recommended_routine/"
+      }
     ],
     "days": [
-      { "name": "Full body", "notes": "Do each pair back to back, then rest 90 s. At 8 clean reps move to a harder variation.", "exercises": [
-        { "exerciseId": 17, "sets": 3, "repsMin": 5, "repsMax": 8, "restSeconds": 90, "progressionStep": 0, "note": "Pair 1" },
-        { "exerciseId": 33, "sets": 3, "repsMin": 5, "repsMax": 8, "restSeconds": 90, "progressionStep": 0, "note": "Pair 1 - per leg" },
-        { "exerciseId": 20, "sets": 3, "repsMin": 5, "repsMax": 8, "restSeconds": 90, "progressionStep": 0, "note": "Pair 2" },
-        { "exerciseId": 97, "sets": 3, "repsMin": 5, "repsMax": 8, "restSeconds": 90, "progressionStep": 0, "note": "Pair 2 - per leg" },
-        { "exerciseId": 94, "sets": 3, "repsMin": 5, "repsMax": 8, "restSeconds": 90, "progressionStep": 0, "note": "Pair 3" },
-        { "exerciseId": 46, "sets": 3, "repsMin": 5, "repsMax": 8, "restSeconds": 90, "progressionStep": 0, "note": "Pair 3" },
-        { "exerciseId": 80, "sets": 3, "repsMin": 8, "repsMax": 12, "restSeconds": 60, "progressionStep": 0, "note": "Core triplet" },
-        { "exerciseId": 96, "sets": 3, "repsMin": 8, "repsMax": 12, "restSeconds": 60, "progressionStep": 0, "note": "Core triplet - per side, with a band" },
-        { "exerciseId": 67, "sets": 3, "repsMin": 8, "repsMax": 12, "restSeconds": 60, "progressionStep": 0, "note": "Core triplet" }
-      ] }
+      {
+        "name": "Full body",
+        "notes": "Do each pair back to back, then rest 90 s. At 8 clean reps move to a harder variation.",
+        "exercises": [
+          {
+            "exerciseId": 17,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 8,
+            "restSeconds": 90,
+            "progressionStep": 0,
+            "note": "Pair 1"
+          },
+          {
+            "exerciseId": 33,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 8,
+            "restSeconds": 90,
+            "progressionStep": 0,
+            "note": "Pair 1 - per leg"
+          },
+          {
+            "exerciseId": 20,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 8,
+            "restSeconds": 90,
+            "progressionStep": 0,
+            "note": "Pair 2"
+          },
+          {
+            "exerciseId": 97,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 8,
+            "restSeconds": 90,
+            "progressionStep": 0,
+            "note": "Pair 2 - per leg"
+          },
+          {
+            "exerciseId": 94,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 8,
+            "restSeconds": 90,
+            "progressionStep": 0,
+            "note": "Pair 3"
+          },
+          {
+            "exerciseId": 46,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 8,
+            "restSeconds": 90,
+            "progressionStep": 0,
+            "note": "Pair 3"
+          },
+          {
+            "exerciseId": 80,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 0,
+            "note": "Core triplet"
+          },
+          {
+            "exerciseId": 96,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 0,
+            "note": "Core triplet - per side, with a band"
+          },
+          {
+            "exerciseId": 67,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 0,
+            "note": "Core triplet"
+          }
+        ]
+      }
     ]
   }
 ]

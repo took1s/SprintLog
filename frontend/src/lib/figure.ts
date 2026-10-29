@@ -574,6 +574,29 @@ export const MOTIONS: Record<string, Motion> = {
     ],
   },
 
+  // ---------- v6: Geräte ----------
+  seatedPress: {
+    label: 'Shoulder press machine', duration: 2400, anchor: 'hip', at: [CX - 14, G - 46], props: ['machineSeat'],
+    frames: [
+      { torso: 182, aN: 40, fN: 178, aF: 36, fF: 176, tN: 88, sN: -2, tF: 86, sF: -4 },
+      { torso: 182, aN: 176, fN: 178, aF: 172, fF: 174, tN: 88, sN: -2, tF: 86, sF: -4 },
+    ],
+  },
+  seatedChestPress: {
+    label: 'Chest press machine', duration: 2400, anchor: 'hip', at: [CX - 20, G - 46], props: ['machineSeat'],
+    frames: [
+      { torso: 182, aN: -32, fN: 88, aF: -36, fF: 84, tN: 88, sN: -2, tF: 86, sF: -4 },
+      { torso: 182, aN: 92, fN: 92, aF: 88, fF: 88, tN: 88, sN: -2, tF: 86, sF: -4 },
+    ],
+  },
+  kickback: {
+    label: 'Glute kickback', duration: 2000, anchor: 'ankleN', at: [CX + 10, GROUND - 3], props: [],
+    frames: [
+      pose({ torso: 150, aN: 70, fN: 80, aF: 66, fF: 76, tN: 12, sN: -6, tF: 30, sF: -20 }),
+      pose({ torso: 148, aN: 70, fN: 80, aF: 66, fF: 76, tN: 12, sN: -6, tF: -52, sF: -62, ftF: 0 }),
+    ],
+  },
+
   // ---------- v5: Prävention, Feld, Athletik ----------
   copenhagen: {
     // Seitstütz auf dem Unterarm, oberes Bein auf der Bank, unteres Bein kommt von unten an die Bank.
@@ -711,7 +734,7 @@ export const MOTIONS: Record<string, Motion> = {
 export const EXERCISE_MOTION: Record<number, string | null> = {
   1: 'bench', 2: 'legExtension', 3: 'legCurl', 4: 'calfRaise', 5: 'abduction', 6: 'adduction', 7: 'legPress',
   8: 'pushdown', 9: 'barbellCurl', 10: null, 11: null, 12: 'sprint', 13: 'curl', 14: 'cableRow', 15: 'curl',
-  16: 'skullCrusher', 17: 'pullup', 18: 'bench', 19: 'lateralRaise', 20: 'dip', 21: 'calfRaise', 22: 'barbellCurl',
+  16: 'skullCrusher', 17: 'pullup', 18: 'seatedChestPress', 19: 'lateralRaise', 20: 'dip', 21: 'calfRaise', 22: 'barbellCurl',
   23: 'pulldown', 24: 'pushdown', 25: 'overheadExt', 26: 'row', 27: 'rearDelt', 28: 'pulldown', 29: 'deadlift',
   30: 'dbBench', 31: 'row', 32: 'wallBall', 33: 'lunge', 34: 'broadJump', 35: 'squat', 36: 'dbRow', 37: 'gobletSquat',
   38: 'dbRow', 39: 'bridge', 40: 'dbPress', 41: 'lunge', 42: 'deadlift', 43: 'curl', 44: 'pulldown', 45: 'dbRow',
@@ -724,10 +747,15 @@ export const EXERCISE_MOTION: Record<number, string | null> = {
   85: 'copenhagen', 86: 'balance', 87: 'jog', 88: 'shuttle', 89: 'sprint', 90: 'jump', 91: 'lateralBound', 92: 'skip',
   93: 'jog', 94: 'invertedRow', 95: 'hollow', 96: 'pallof', 97: 'slRdl', 98: 'stepUp', 99: 'kbSwing', 100: 'clean',
   101: 'pushPress', 102: 'lunge', 103: 'lateralLunge', 104: 'deadBug', 105: 'airSquat', 106: 'jog',
+  107: 'squat', 108: 'bench', 109: 'seatedPress', 110: 'cableRow', 111: 'pullup', 112: 'dip', 113: 'legCurl', 114: 'kickback', 115: 'hipThrust', 116: 'squat', 117: 'barbellCurl', 118: 'cableCrunch',
+  119: 'twist', 120: 'seatedChestPress', 121: 'lateralRaise', 122: 'curl', 123: 'fly', 124: 'calfRaise', 125: 'airSquat', 126: 'kickback', 127: 'jog', 128: 'stepUp', 129: 'jog', 130: 'cycling',
 };
 
 /** Erkennung für eigene Übungen über den Namen (Reihenfolge = Priorität). */
 const KEYWORDS: [RegExp, string][] = [
+  [/chest press|brustpresse/i, 'seatedChestPress'], [/shoulder press machine|machine shoulder press/i, 'seatedPress'],
+  [/kickback/i, 'kickback'], [/treadmill|laufband|elliptical|crosstrainer/i, 'jog'], [/stair|stepper/i, 'stepUp'],
+  [/air ?bike|assault bike/i, 'cycling'],
   [/copenhagen|kopenhagen/i, 'copenhagen'], [/single[- ]leg (balance|stance)|einbeinstand|balance/i, 'balance'],
   [/single[- ]leg (rdl|romanian|deadlift)/i, 'slRdl'], [/inverted row|australian/i, 'invertedRow'], [/hollow/i, 'hollow'],
   [/pallof/i, 'pallof'], [/dead ?bug/i, 'deadBug'], [/step[- ]?up/i, 'stepUp'], [/kettlebell swing|kb swing|swing/i, 'kbSwing'],
@@ -838,6 +866,9 @@ export const TECHNIQUE: Record<string, Technique> = {
   adduction: { muscles: ['Adductors'], cues: ['Sit tall, back against the pad', 'Squeeze the knees together', 'Control the opening'] },
   twist: { muscles: ['Obliques', 'Abs'], cues: ['Lean back slightly, chest up', 'Rotate the shoulders, not only the arms', 'Feet on the floor for beginners'] },
   woodchop: { muscles: ['Obliques', 'Core', 'Shoulders'], cues: ['Arms almost straight', 'Rotate through the torso diagonally', 'Pivot on the back foot'] },
+  seatedPress: { muscles: ['Shoulders', 'Triceps'], cues: ['Handles at shoulder height, back against the pad', 'Press up without locking the elbows hard', 'Lower slowly to shoulder height'] },
+  seatedChestPress: { muscles: ['Chest', 'Triceps', 'Front delts'], cues: ['Seat so the handles are at mid-chest', 'Shoulder blades back against the pad', 'Press forward, return slowly until you feel a chest stretch'] },
+  kickback: { muscles: ['Glutes', 'Hamstrings'], cues: ['Hips stay square, slight lean forward', 'Push the heel back and up with the glute', 'No arching of the lower back - control the return'] },
   copenhagen: { muscles: ['Adductors', 'Core', 'Obliques'], cues: ['Forearm under the shoulder, top foot or knee on the bench', 'Lift the hips until the body is straight', 'Bring the bottom leg up to the bench', 'Lower slowly - stop if groin pain goes above 3/10'] },
   balance: { muscles: ['Ankle stability', 'Glute medius', 'Core'], cues: ['Standing knee slightly bent, hip level', 'Weight over the middle of the foot', 'Look ahead, keep the trunk still'] },
   jog: { muscles: ['Calves', 'Quads', 'Conditioning'], cues: ['Relaxed shoulders, arms swing forward and back', 'Short, quick steps under the body', 'Breathe steadily - pace by heart rate or talk test'] },
