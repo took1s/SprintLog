@@ -43,6 +43,8 @@ export const userKeys = (userId) => ({
   queue: `${PREFIX}:${userId}:queue`,
   session: `${PREFIX}:${userId}:session`,
   timer: `${PREFIX}:${userId}:timer`,
+  programs: `${PREFIX}:${userId}:programs`,
+  templates: `${PREFIX}:${userId}:templates`,
 });
 
 /** Liest Nutzer-ID und Name aus einem JWT (nur Anzeige/Zuordnung - geprüft wird der Token auf dem Server). */

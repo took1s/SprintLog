@@ -22,7 +22,51 @@ const seedSource = readFileSync(join(root, 'SprintLog.Api', 'Data', 'AppDbContex
 const seed = [...seedSource.matchAll(/Ex\((\d+), "([^"]+)", "([^"]+)", "([^"]+)"(?:, TrackingType\.(\w+))?\)/g)]
   .map(([, id, name, category, muscleGroup, trackingType]) => ({ id: Number(id), name, category, muscleGroup, trackingType: trackingType ?? 'WeightReps', userId: null }));
 
-const db = { users: [], exercises: [...seed], workouts: [], favorites: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1 };
+// Plan-Vorlagen aus SprintLog.Api/Services/ProgramTemplates.cs (W = Kraft, Run = Strecke, Hold = Dauer)
+const templateSource = readFileSync(join(root, 'SprintLog.Api', 'Services', 'ProgramTemplates.cs'), 'utf8');
+function parseItem(kind, args) {
+  const named = Object.fromEntries([...args.matchAll(/(\w+):\s*([\d.]+)/g)].map(([, k, v]) => [k, Number(v)]));
+  const nums = args.replace(/\w+:\s*[\d.]+/g, '').split(',').map((x) => x.trim()).filter(Boolean).map(Number);
+  if (kind === 'W') {
+    const [exerciseId, sets, repsMin, repsMax, restSeconds, targetRpe, step] = nums;
+    return { exerciseId, sets, repsMin, repsMax, restSeconds, targetRpe: named.rpe ?? targetRpe ?? null, progressionStep: named.step ?? step ?? 2.5, distance: null, time: null };
+  }
+  const [exerciseId, sets, value, restSeconds] = nums;
+  return { exerciseId, sets, restSeconds, distance: kind === 'Run' ? value : null, time: kind === 'Hold' ? value : null, repsMin: null, repsMax: null, targetRpe: null, progressionStep: null };
+}
+const templates = [...templateSource.matchAll(/new\("([\w-]+)", "([^"]+)",\s*"([^"]+)",\s*"(\w+)", "([^"]+)", (\d+), new\(\)\s*\{([\s\S]*?)\n\s*\}\),/g)]
+  .map(([, key, name, description, goal, level, weeks, body]) => ({
+    key, name, description, goal, level, weeks: Number(weeks),
+    days: [...body.matchAll(/Day\("([^"]+)", (null|"[^"]*"),([\s\S]*?)\)(?=,\s*\n\s*Day\(|,\s*$|\s*$)/g)].map(([, dayName, notes, items]) => ({
+      id: null, name: dayName, notes: notes === 'null' ? null : notes.slice(1, -1),
+      exercises: [...items.matchAll(/\b(W|Run|Hold)\(([^)]*)\)/g)].map(([, kind, args]) => parseItem(kind, args)),
+    })),
+  }));
+
+const db = { users: [], exercises: [...seed], workouts: [], favorites: [], programs: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
+
+function programResponse(p) {
+  return {
+    ...p,
+    days: p.days.map((d, i) => ({
+      ...d, position: i,
+      exercises: d.exercises.map((x, j) => {
+        const ex = db.exercises.find((e) => e.id === x.exerciseId);
+        return { ...x, position: j, exerciseName: ex?.name ?? '?', trackingType: ex?.trackingType ?? 'WeightReps', muscleGroup: ex?.muscleGroup ?? null };
+      }),
+    })),
+  };
+}
+function newProgram(user, input, templateKey, activate) {
+  if (activate) db.programs.filter((p) => p.userId === user.id).forEach((p) => { p.isActive = false; });
+  const p = {
+    id: db.nextProgramId++, userId: user.id, name: input.name, goal: input.goal, weeks: input.weeks, templateKey,
+    isActive: activate, startedAt: activate ? new Date().toISOString() : null, createdAt: new Date().toISOString(),
+    days: input.days.map((d) => ({ id: db.nextDayId++, name: d.name, notes: d.notes ?? null, exercises: d.exercises.map((x) => ({ ...x, id: db.nextPxId++ })) })),
+  };
+  db.programs.push(p);
+  return p;
+}
 
 // ---------- Helfer ----------
 const json = (res, status, body) => {
@@ -48,7 +92,7 @@ const exerciseDto = (e) => ({ id: e.id, name: e.name, category: e.category, musc
 function workoutResponse(w) {
   return {
     id: w.id, clientId: w.clientId, date: w.date, workoutType: w.workoutType, durationSeconds: w.durationSeconds,
-    sessionRpe: w.sessionRpe ?? null, notes: w.notes ?? null,
+    sessionRpe: w.sessionRpe ?? null, notes: w.notes ?? null, programDayId: w.programDayId ?? null,
     sets: w.sets.map((s, i) => {
       const ex = db.exercises.find((e) => e.id === s.exerciseId);
       return { exerciseId: s.exerciseId, exerciseName: ex?.name ?? '?', trackingType: ex?.trackingType ?? 'WeightReps', muscleGroup: ex?.muscleGroup ?? null, setNumber: i + 1, weight: s.weight ?? null, reps: s.reps ?? null, distance: s.distance ?? null, time: s.time ?? null, rpe: s.rpe ?? null, isWarmup: !!s.isWarmup };
@@ -95,7 +139,7 @@ function saveWorkout(user, body) {
     id: db.nextWorkoutId++, userId: user.id, clientId, workoutType: body.workoutType,
     date: body.date ? new Date(body.date).toISOString() : new Date().toISOString(),
     durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null,
-    notes: body.notes?.trim() ? body.notes.trim() : null, sets: body.sets,
+    notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets,
   };
   db.workouts.push(w);
   return { status: 201, body: { workoutId: w.id, duplicate: false, message: 'Workout saved.' } };
@@ -192,7 +236,7 @@ async function handleApi(req, res, url) {
     Object.assign(w, {
       workoutType: body.workoutType, date: body.date ? new Date(body.date).toISOString() : w.date,
       durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null,
-      notes: body.notes?.trim() ? body.notes.trim() : null, sets: body.sets,
+      notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets,
     });
     return json(res, 200, workoutResponse(w));
   }
@@ -200,6 +244,47 @@ async function handleApi(req, res, url) {
     const before = db.workouts.length;
     db.workouts = db.workouts.filter((w) => !(w.id === Number(m[1]) && w.userId === user.id));
     return db.workouts.length === before ? problem(res, 404, 'Not Found') : noContent(res);
+  }
+
+  // ---- Trainingspläne ----
+  if (method === 'GET' && path === '/api/programs/templates') return json(res, 200, templates);
+  if (method === 'GET' && path === '/api/programs') {
+    return json(res, 200, db.programs.filter((p) => p.userId === user.id).sort((a, b) => b.isActive - a.isActive || b.id - a.id).map(programResponse));
+  }
+  m = path.match(/^\/api\/programs\/templates\/([\w-]+)$/);
+  if (m && method === 'POST') {
+    const t = templates.find((x) => x.key === m[1]);
+    if (!t) return problem(res, 404, 'Not Found');
+    return json(res, 201, programResponse(newProgram(user, t, t.key, true)));
+  }
+  if (method === 'POST' && path === '/api/programs') {
+    const body = await readBody(req);
+    if (!body.name || body.name.trim().length < 2) return problem(res, 400, 'One or more validation errors occurred.', { name: ['Name must be 2-60 characters.'] });
+    const hasActive = db.programs.some((p) => p.userId === user.id && p.isActive);
+    return json(res, 201, programResponse(newProgram(user, { ...body, name: body.name.trim() }, null, !hasActive)));
+  }
+  m = path.match(/^\/api\/programs\/(\d+)(\/(activate|deactivate))?$/);
+  if (m) {
+    const p = db.programs.find((x) => x.id === Number(m[1]) && x.userId === user.id);
+    if (!p) return problem(res, 404, 'Not Found');
+    if (method === 'POST' && m[3] === 'activate') {
+      db.programs.filter((x) => x.userId === user.id).forEach((x) => { x.isActive = false; });
+      Object.assign(p, { isActive: true, startedAt: new Date().toISOString() });
+      return json(res, 200, programResponse(p));
+    }
+    if (method === 'POST' && m[3] === 'deactivate') { p.isActive = false; return noContent(res); }
+    if (method === 'PUT' && !m[3]) {
+      const body = await readBody(req);
+      Object.assign(p, { name: body.name, goal: body.goal, weeks: body.weeks });
+      p.days = body.days.map((d) => ({ id: d.id ?? db.nextDayId++, name: d.name, notes: d.notes ?? null, exercises: d.exercises.map((x) => ({ ...x, id: db.nextPxId++ })) }));
+      return json(res, 200, programResponse(p));
+    }
+    if (method === 'DELETE' && !m[3]) {
+      const dayIds = new Set(p.days.map((d) => d.id));
+      db.workouts.forEach((w) => { if (dayIds.has(w.programDayId)) w.programDayId = null; });
+      db.programs = db.programs.filter((x) => x !== p);
+      return noContent(res);
+    }
   }
 
   return problem(res, 404, 'Not Found');
@@ -263,4 +348,4 @@ createServer(async (req, res) => {
     console.error(e);
     return problem(res, 500, 'Internal Server Error');
   }
-}).listen(port, () => console.log(`SprintLog mock API on http://localhost:${port} (${seed.length} seed exercises)`));
+}).listen(port, () => console.log(`SprintLog mock API on http://localhost:${port} (${seed.length} seed exercises, ${templates.length} program templates)`));

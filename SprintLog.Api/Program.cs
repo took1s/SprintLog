@@ -173,6 +173,7 @@ app.MapAuthEndpoints();
 app.MapExerciseEndpoints();
 app.MapFavoriteEndpoints();
 app.MapWorkoutEndpoints();
+app.MapProgramEndpoints();
 
 app.Run();
 

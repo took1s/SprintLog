@@ -5,7 +5,7 @@
 // - /api/* wird nicht angefasst - Offline-Daten verwaltet die App selbst (localStorage + Sync-Queue).
 // Bei jeder Änderung an der App VERSION erhöhen, damit alte Caches entfernt werden.
 
-const VERSION = 'v3.2.0';
+const VERSION = 'v3.3.0';
 const CACHE = `sprintlog-${VERSION}`;
 
 const APP_SHELL = [
@@ -23,6 +23,7 @@ const APP_SHELL = [
   '/js/feedback.js',
   '/js/export.js',
   '/js/figure.js',
+  '/js/program.js',
   '/vendor/vue.esm-browser.prod.js',
   '/vendor/chart.umd.js',
   '/vendor/inter-latin-wght-normal.woff2',

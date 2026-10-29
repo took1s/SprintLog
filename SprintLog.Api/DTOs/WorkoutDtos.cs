@@ -12,7 +12,8 @@ public record CreateWorkoutRequest(
     DateTimeOffset? Date = null,
     int? DurationSeconds = null,
     int? SessionRpe = null,
-    string? Notes = null)
+    string? Notes = null,
+    int? ProgramDayId = null)
 {
     public const int MaxNotesLength = 500;
 
@@ -75,6 +76,7 @@ public record WorkoutResponse(
     int? DurationSeconds,
     int? SessionRpe,
     string? Notes,
+    int? ProgramDayId,
     List<WorkoutSetResponse> Sets);
 
 public record SaveWorkoutResponse(int WorkoutId, bool Duplicate, string Message);
