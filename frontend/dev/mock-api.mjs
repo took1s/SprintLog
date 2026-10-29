@@ -22,28 +22,15 @@ const seedSource = readFileSync(join(root, 'SprintLog.Api', 'Data', 'AppDbContex
 const seed = [...seedSource.matchAll(/Ex\((\d+), "([^"]+)", "([^"]+)", "([^"]+)"(?:, TrackingType\.(\w+))?\)/g)]
   .map(([, id, name, category, muscleGroup, trackingType]) => ({ id: Number(id), name, category, muscleGroup, trackingType: trackingType ?? 'WeightReps', userId: null }));
 
-// Plan-Vorlagen aus SprintLog.Api/Services/ProgramTemplates.cs (W = Kraft, Run = Strecke, Hold = Dauer)
-const templateSource = readFileSync(join(root, 'SprintLog.Api', 'Services', 'ProgramTemplates.cs'), 'utf8');
+// Plan-Vorlagen: dieselbe JSON-Datei wie die API (SprintLog.Api/Data/program-templates.json, eingebettete Ressource).
+const PX_DEFAULTS = { repsMin: null, repsMax: null, distance: null, time: null, targetRpe: null, restSeconds: null, progressionStep: null, percentOf1Rm: null, note: null, weekSteps: [] };
+const templates = JSON.parse(readFileSync(join(root, 'SprintLog.Api', 'Data', 'program-templates.json'), 'utf8')).map((t) => ({
+  sources: [], category: 'Gym', cycleWeeks: null, deloadEvery: null, sessionsPerWeek: null, ...t,
+  daysPerWeek: t.sessionsPerWeek ?? t.days.length,
+  days: t.days.map((d) => ({ id: null, notes: null, ...d, exercises: d.exercises.map((x) => ({ ...PX_DEFAULTS, ...x })) })),
+}));
 // Gleiche Content-Security-Policy wie die echte API -> E2E-Tests finden CSP-Verstöße (Konsolenfehler).
 const CSP = JSON.parse(readFileSync(join(root, 'SprintLog.Api', 'appsettings.json'), 'utf8')).Security.ContentSecurityPolicy;
-function parseItem(kind, args) {
-  const named = Object.fromEntries([...args.matchAll(/(\w+):\s*([\d.]+)/g)].map(([, k, v]) => [k, Number(v)]));
-  const nums = args.replace(/\w+:\s*[\d.]+/g, '').split(',').map((x) => x.trim()).filter(Boolean).map(Number);
-  if (kind === 'W') {
-    const [exerciseId, sets, repsMin, repsMax, restSeconds, targetRpe, step] = nums;
-    return { exerciseId, sets, repsMin, repsMax, restSeconds, targetRpe: named.rpe ?? targetRpe ?? null, progressionStep: named.step ?? step ?? 2.5, distance: null, time: null };
-  }
-  const [exerciseId, sets, value, restSeconds] = nums;
-  return { exerciseId, sets, restSeconds, distance: kind === 'Run' ? value : null, time: kind === 'Hold' ? value : null, repsMin: null, repsMax: null, targetRpe: null, progressionStep: null };
-}
-const templates = [...templateSource.matchAll(/new\("([\w-]+)", "([^"]+)",\s*"([^"]+)",\s*"(\w+)", "([^"]+)", (\d+), new\(\)\s*\{([\s\S]*?)\n\s*\}\),/g)]
-  .map(([, key, name, description, goal, level, weeks, body]) => ({
-    key, name, description, goal, level, weeks: Number(weeks),
-    days: [...body.matchAll(/Day\("([^"]+)", (null|"[^"]*"),([\s\S]*?)\)(?=,\s*\n\s*Day\(|,\s*$|\s*$)/g)].map(([, dayName, notes, items]) => ({
-      id: null, name: dayName, notes: notes === 'null' ? null : notes.slice(1, -1),
-      exercises: [...items.matchAll(/\b(W|Run|Hold)\(([^)]*)\)/g)].map(([, kind, args]) => parseItem(kind, args)),
-    })),
-  }));
 
 const db = { users: [], exercises: [...seed], workouts: [], deleted: [], favorites: [], programs: [], refresh: [], codes: [], links: [], outbox: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
 
@@ -63,6 +50,7 @@ function newProgram(user, input, templateKey, activate) {
   if (activate) db.programs.filter((p) => p.userId === user.id).forEach((p) => { p.isActive = false; });
   const p = {
     id: db.nextProgramId++, userId: user.id, name: input.name, goal: input.goal, weeks: input.weeks, templateKey,
+    cycleWeeks: input.cycleWeeks ?? null, deloadEvery: input.deloadEvery ?? null,
     isActive: activate, startedAt: activate ? new Date().toISOString() : null, createdAt: new Date().toISOString(),
     days: input.days.map((d) => ({ id: db.nextDayId++, name: d.name, notes: d.notes ?? null, exercises: d.exercises.map((x) => ({ ...x, id: db.nextPxId++ })) })),
   };
@@ -142,7 +130,7 @@ function workoutResponse(w) {
     sessionRpe: w.sessionRpe ?? null, notes: w.notes ?? null, programDayId: w.programDayId ?? null, updatedAt: w.updatedAt,
     sets: w.sets.map((s, i) => {
       const ex = db.exercises.find((e) => e.id === s.exerciseId);
-      return { exerciseId: s.exerciseId, exerciseName: ex?.name ?? '?', trackingType: ex?.trackingType ?? 'WeightReps', muscleGroup: ex?.muscleGroup ?? null, setNumber: i + 1, weight: s.weight ?? null, reps: s.reps ?? null, distance: s.distance ?? null, time: s.time ?? null, rpe: s.rpe ?? null, isWarmup: !!s.isWarmup };
+      return { exerciseId: s.exerciseId, exerciseName: ex?.name ?? '?', trackingType: ex?.trackingType ?? 'WeightReps', muscleGroup: ex?.muscleGroup ?? null, setNumber: i + 1, weight: s.weight ?? null, reps: s.reps ?? null, distance: s.distance ?? null, time: s.time ?? null, rpe: s.rpe ?? null, isWarmup: !!s.isWarmup, note: s.note?.trim() || null };
     }),
   };
 }
@@ -445,7 +433,7 @@ async function handleApi(req, res, url) {
     if (method === 'POST' && m[3] === 'deactivate') { p.isActive = false; return noContent(res); }
     if (method === 'PUT' && !m[3]) {
       const body = await readBody(req);
-      Object.assign(p, { name: body.name, goal: body.goal, weeks: body.weeks });
+      Object.assign(p, { name: body.name, goal: body.goal, weeks: body.weeks, cycleWeeks: body.cycleWeeks ?? null, deloadEvery: body.deloadEvery ?? null });
       p.days = body.days.map((d) => ({ id: d.id ?? db.nextDayId++, name: d.name, notes: d.notes ?? null, exercises: d.exercises.map((x) => ({ ...x, id: db.nextPxId++ })) }));
       return json(res, 200, programResponse(p));
     }

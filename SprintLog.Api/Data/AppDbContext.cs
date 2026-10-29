@@ -105,10 +105,14 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<TrainingProgram>(e =>
         {
-            e.ToTable("Programs");
             e.Property(p => p.Name).HasMaxLength(60);
             e.Property(p => p.Goal).HasMaxLength(20);
             e.Property(p => p.TemplateKey).HasMaxLength(40);
+            e.ToTable("Programs", t =>
+            {
+                t.HasCheckConstraint("CK_Programs_CycleWeeks", "\"CycleWeeks\" IS NULL OR \"CycleWeeks\" BETWEEN 1 AND 12");
+                t.HasCheckConstraint("CK_Programs_DeloadEvery", "\"DeloadEvery\" IS NULL OR \"DeloadEvery\" BETWEEN 2 AND 12");
+            });
             e.HasOne(p => p.User).WithMany(u => u.Programs).HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(p => new { p.UserId, p.IsActive });
         });
@@ -125,6 +129,13 @@ public class AppDbContext : DbContext
             e.HasOne(x => x.Day).WithMany(d => d.Exercises).HasForeignKey(x => x.DayId).OnDelete(DeleteBehavior.Cascade);
             // Übungen, die in einem Plan stehen, dürfen nicht gelöscht werden (gleiches Prinzip wie bei der Historie).
             e.HasOne(x => x.Exercise).WithMany().HasForeignKey(x => x.ExerciseId).OnDelete(DeleteBehavior.NoAction);
+            e.Property(x => x.Note).HasMaxLength(120);
+            // Wochen-Stufen als jsonb-Spalte: gehören fest zur Vorgabe, werden nie einzeln abgefragt.
+            e.OwnsMany(x => x.WeekSteps, b =>
+            {
+                b.ToJson();
+                b.Property(s => s.Note).HasMaxLength(80);
+            });
         });
 
         modelBuilder.Entity<WorkoutSet>(e =>
@@ -133,6 +144,7 @@ public class AppDbContext : DbContext
             // Eine Übung, die in der Historie verwendet wird, darf nicht gelöscht werden -
             // sonst würden die Sätze still mitgelöscht (vorher: Cascade).
             e.HasOne(s => s.Exercise).WithMany(x => x.Sets).HasForeignKey(s => s.ExerciseId).OnDelete(DeleteBehavior.NoAction);
+            e.Property(s => s.Note).HasMaxLength(200);
         });
     }
 
@@ -225,5 +237,30 @@ public class AppDbContext : DbContext
         Ex(81, "Crunches", "Gym", "Core"),
         Ex(82, "Jump Rope", "Gym", "Cardio", TrackingType.Duration),
         Ex(83, "Rowing Machine", "Gym", "Cardio", TrackingType.DistanceTime),
-        Ex(84, "Cycling (Stationary)", "Gym", "Cardio", TrackingType.DistanceTime),    };
+        Ex(84, "Cycling (Stationary)", "Gym", "Cardio", TrackingType.DistanceTime),
+
+        // v5: Verletzungsprävention (FIFA 11+, Copenhagen), Feld-Kondition, Athletik, Körpergewicht
+        Ex(85, "Copenhagen Adduction", "Football", "Legs"),
+        Ex(86, "Single-Leg Balance", "Football", "Legs", TrackingType.Duration),
+        Ex(87, "Interval Run", "Football", "Cardio", TrackingType.Duration),
+        Ex(88, "Repeated Shuttle Sprints", "Football", "Agility", TrackingType.DistanceTime),
+        Ex(89, "Flying Sprints", "Football", "Explosive", TrackingType.DistanceTime),
+        Ex(90, "Countermovement Jump", "Football", "Explosive"),
+        Ex(91, "Lateral Bounds", "Football", "Explosive"),
+        Ex(92, "A-Skips", "Football", "Agility", TrackingType.DistanceTime),
+        Ex(93, "Tempo Runs", "Football", "Cardio", TrackingType.DistanceTime),
+        Ex(94, "Inverted Row", "Gym", "Back"),
+        Ex(95, "Hollow Body Hold", "Gym", "Core", TrackingType.Duration),
+        Ex(96, "Pallof Press", "Gym", "Core"),
+        Ex(97, "Single-Leg Romanian Deadlift", "Gym", "Legs"),
+        Ex(98, "Step-ups", "Gym", "Legs"),
+        Ex(99, "Kettlebell Swing", "Gym", "Back/Legs"),
+        Ex(100, "Power Clean", "Gym", "Explosive"),
+        Ex(101, "Push Press", "Gym", "Shoulders"),
+        Ex(102, "Reverse Lunges", "Gym", "Legs"),
+        Ex(103, "Lateral Lunge", "Gym", "Legs"),
+        Ex(104, "Dead Bug", "Gym", "Core"),
+        Ex(105, "Bodyweight Squat", "Gym", "Legs"),
+        Ex(106, "Warm-up Jog", "Football", "Cardio", TrackingType.Duration),
+    };
 }

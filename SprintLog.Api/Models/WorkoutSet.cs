@@ -19,6 +19,9 @@ public class WorkoutSet
     /// <summary>Aufwärmsatz - zählt nicht für Rekorde und Volumen.</summary>
     public bool IsWarmup { get; set; }
 
+    /// <summary>Notiz zum Satz, z. B. "Knie schmerzt" oder "Griff breiter" (max. 200 Zeichen).</summary>
+    public string? Note { get; set; }
+
     public int WorkoutId { get; set; }
     public Workout Workout { get; set; } = null!;
 

@@ -1518,3 +1518,133 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029164910_V8PeriodizationAndCatalog') THEN
+    ALTER TABLE "WorkoutSets" ADD "Note" character varying(200);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029164910_V8PeriodizationAndCatalog') THEN
+    ALTER TABLE "Programs" ADD "CycleWeeks" integer;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029164910_V8PeriodizationAndCatalog') THEN
+    ALTER TABLE "Programs" ADD "DeloadEvery" integer;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029164910_V8PeriodizationAndCatalog') THEN
+    ALTER TABLE "ProgramExercises" ADD "Note" character varying(120);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029164910_V8PeriodizationAndCatalog') THEN
+    ALTER TABLE "ProgramExercises" ADD "PercentOf1Rm" integer;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029164910_V8PeriodizationAndCatalog') THEN
+    ALTER TABLE "ProgramExercises" ADD "WeekSteps" jsonb;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029164910_V8PeriodizationAndCatalog') THEN
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (85, 'Football', 'Legs', 'Copenhagen Adduction', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (86, 'Football', 'Legs', 'Single-Leg Balance', 'Duration', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (87, 'Football', 'Cardio', 'Interval Run', 'Duration', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (88, 'Football', 'Agility', 'Repeated Shuttle Sprints', 'DistanceTime', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (89, 'Football', 'Explosive', 'Flying Sprints', 'DistanceTime', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (90, 'Football', 'Explosive', 'Countermovement Jump', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (91, 'Football', 'Explosive', 'Lateral Bounds', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (92, 'Football', 'Agility', 'A-Skips', 'DistanceTime', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (93, 'Football', 'Cardio', 'Tempo Runs', 'DistanceTime', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (94, 'Gym', 'Back', 'Inverted Row', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (95, 'Gym', 'Core', 'Hollow Body Hold', 'Duration', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (96, 'Gym', 'Core', 'Pallof Press', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (97, 'Gym', 'Legs', 'Single-Leg Romanian Deadlift', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (98, 'Gym', 'Legs', 'Step-ups', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (99, 'Gym', 'Back/Legs', 'Kettlebell Swing', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (100, 'Gym', 'Explosive', 'Power Clean', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (101, 'Gym', 'Shoulders', 'Push Press', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (102, 'Gym', 'Legs', 'Reverse Lunges', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (103, 'Gym', 'Legs', 'Lateral Lunge', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (104, 'Gym', 'Core', 'Dead Bug', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (105, 'Gym', 'Legs', 'Bodyweight Squat', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (106, 'Football', 'Cardio', 'Warm-up Jog', 'Duration', NULL);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029164910_V8PeriodizationAndCatalog') THEN
+    ALTER TABLE "Programs" ADD CONSTRAINT "CK_Programs_CycleWeeks" CHECK ("CycleWeeks" IS NULL OR "CycleWeeks" BETWEEN 1 AND 12);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029164910_V8PeriodizationAndCatalog') THEN
+    ALTER TABLE "Programs" ADD CONSTRAINT "CK_Programs_DeloadEvery" CHECK ("DeloadEvery" IS NULL OR "DeloadEvery" BETWEEN 2 AND 12);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029164910_V8PeriodizationAndCatalog') THEN
+    PERFORM setval(
+        pg_get_serial_sequence('"Exercises"', 'Id'),
+        GREATEST(
+            (SELECT MAX("Id") FROM "Exercises") + 1,
+            nextval(pg_get_serial_sequence('"Exercises"', 'Id'))),
+        false);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261029164910_V8PeriodizationAndCatalog') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261029164910_V8PeriodizationAndCatalog', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

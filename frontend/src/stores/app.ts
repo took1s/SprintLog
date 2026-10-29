@@ -16,9 +16,9 @@ import {
 import { formatNumber, formatClock, formatDate, formatRelative, formatSeconds, describeSet, toLocalInput } from '../lib/format';
 import { unlockAudio, playRestAlarm, createWakeLock } from '../lib/feedback';
 import { exportCsv, exportJson } from '../lib/export';
-import { techniqueFor } from '../lib/figure';
+import { techniqueFor, BODYWEIGHT_EXERCISES } from '../lib/figure';
 import {
-  programStatus, suggestTarget, setsDone, loadStatus, ZONE_INFO,
+  programStatus, suggestTarget, setsDone, loadStatus, ZONE_INFO, effectivePrescription,
   emptyProgramDraft, emptyDraftRow, toDraft, draftToPayload,
   type ProgramDraft, type DraftDay, type TargetSuggestion, type DraftExercise,
 } from '../lib/program';
@@ -29,7 +29,7 @@ import type {
 } from '../types';
 import { useUiStore } from './ui';
 import { t, tn, tDynamic, intlLocale } from '../i18n';
-import { localizedTechnique, muscleName as trMuscleName, exerciseName as trExerciseName, dayName as trDayName, programName as trProgramName } from '../i18n/content';
+import { templateText, localizedTechnique, muscleName as trMuscleName, exerciseName as trExerciseName, dayName as trDayName, programName as trProgramName } from '../i18n/content';
 
 // ---------- Konstanten ----------
 
@@ -41,6 +41,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   vibration: true,
   wakeLock: true,
   showTechnique: true,
+  /** Anstrengung pro Satz als RIR (Wdh. in Reserve) statt RPE anzeigen/eingeben. Gespeichert wird immer RPE (RIR = 10 - RPE). */
+  useRir: false,
 });
 export type Settings = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: (typeof DEFAULT_SETTINGS)[K] extends boolean ? boolean : number };
 
@@ -121,11 +123,13 @@ interface SetModal {
   time: number;
   rpe: number | null;
   isWarmup: boolean;
+  note: string;
+  showNote: boolean;
 }
 
 interface Timer { endAt: number | null; duration: number }
 
-const closedSetModal = (): SetModal => ({ open: false, exercise: null, editIndex: null, weight: 0, reps: 0, distance: 0, time: 0, rpe: null, isWarmup: false });
+const closedSetModal = (): SetModal => ({ open: false, exercise: null, editIndex: null, weight: 0, reps: 0, distance: 0, time: 0, rpe: null, isWarmup: false, note: '', showNote: false });
 
 const wakeLock = createWakeLock();
 let reloadOnControllerChange = false;
@@ -249,6 +253,16 @@ export const useAppStore = defineStore('app', () => {
   const activeProgram = computed(() => programs.value.find((p) => p.isActive) ?? null);
   const otherPrograms = computed(() => programs.value.filter((p) => !p.isActive));
   const programInfo = computed(() => (activeProgram.value ? programStatus(activeProgram.value, allWorkouts.value, clockDate.value) : null));
+  /** Planwoche des aktiven Plans (über das Planende hinaus wird weitergezählt - Zyklen laufen weiter). */
+  const planWeek = computed(() => programInfo.value?.week ?? 1);
+  const isDeloadNow = computed(() => !!activeProgram.value && effectivePrescription({ exerciseId: 0, sets: 1 }, activeProgram.value, planWeek.value).deload);
+  /** Vorgabe einer Übung des aktiven Plans für die aktuelle Woche (Wochen-Stufen, Zyklus, Entlastung). */
+  function currentPrescription(px: ProgramExercise) {
+    return effectivePrescription(px, activeProgram.value, planWeek.value);
+  }
+  const templateFilter = ref<'all' | 'Football' | 'Gym'>('all');
+  const filteredTemplates = computed(() =>
+    templateFilter.value === 'all' ? templates.value : templates.value.filter((tpl) => (tpl.category ?? 'Gym') === templateFilter.value));
   const loadInfo = computed(() => loadStatus(allWorkouts.value, clockDate.value));
   const loadZone = computed(() => {
     const zone = loadInfo.value.zone;
@@ -778,12 +792,14 @@ export const useAppStore = defineStore('app', () => {
       open: true,
       exercise: ex,
       editIndex,
-      weight: source?.weight ?? (type === TrackingType.WeightReps ? DEFAULTS.weight : 0),
+      weight: source?.weight ?? (type === TrackingType.WeightReps && !(!ex.isCustom && BODYWEIGHT_EXERCISES.has(ex.id)) ? DEFAULTS.weight : 0),
       reps: source?.reps ?? (type === TrackingType.WeightReps ? DEFAULTS.reps : 0),
       distance: source?.distance ?? (type === TrackingType.DistanceTime ? DEFAULTS.distance : 0),
       time: source?.time ?? (type === TrackingType.Duration ? DEFAULTS.duration : type === TrackingType.DistanceTime ? DEFAULTS.time : 0),
       rpe: editIndex !== null ? source?.rpe ?? null : null,
       isWarmup: editIndex !== null ? !!source?.isWarmup : false,
+      note: editIndex !== null ? source?.note ?? '' : '',
+      showNote: editIndex !== null && !!source?.note,
     };
   }
 
@@ -821,6 +837,7 @@ export const useAppStore = defineStore('app', () => {
       weight: null, reps: null, distance: null, time: null,
       rpe: m.rpe ?? null,
       isWarmup: !!m.isWarmup,
+      note: m.note.trim().slice(0, 200) || null,
     };
     if (type === TrackingType.WeightReps) {
       set.weight = Math.max(0, num(m.weight));
@@ -1065,12 +1082,15 @@ export const useAppStore = defineStore('app', () => {
       const ok = await confirm({ title: t('plan.confirm.replaceTitle'), message: t('plan.confirm.replaceDay'), confirmText: t('plan.confirm.startDay') });
       if (!ok) return;
     }
-    const targets: PlanTarget[] = day.exercises.map((x) => ({
-      ...x,
-      name: x.exerciseName,
-      category: exercisesById.value.get(x.exerciseId)?.category ?? 'Gym',
-      suggestion: suggestTarget(x, allWorkouts.value),
-    }));
+    const targets: PlanTarget[] = day.exercises.map((x) => {
+      const px = currentPrescription(x);
+      return {
+        ...px,
+        name: x.exerciseName,
+        category: exercisesById.value.get(x.exerciseId)?.category ?? 'Gym',
+        suggestion: suggestTarget(px, allWorkouts.value, clockDate.value),
+      };
+    });
     stopTimer();
     session.value = {
       ...EMPTY_SESSION(),
@@ -1101,7 +1121,7 @@ export const useAppStore = defineStore('app', () => {
     try {
       await api().post(`/api/programs/templates/${encodeURIComponent(template.key)}`);
       await loadPrograms();
-      toast(`"${template.name}" started.`, 'success');
+      toast(t('plan.toast.started', { name: templateText(template.key, 'name', template.name) }), 'success');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
       toast(errorMessage(e), 'error');
@@ -1533,6 +1553,7 @@ export const useAppStore = defineStore('app', () => {
     // Abgeleitet
     isAuthenticated, keys, exercisesById, allWorkouts, records, prInfo, usage, clockDate,
     activeProgram, otherPrograms, programInfo, loadInfo, loadZone, planTargets, planProgress, exerciseGroups,
+    planWeek, isDeloadNow, currentPrescription, templateFilter, filteredTemplates,
     pendingCount, failedCount, syncState,
     categoryExercises, availableMuscleGroups, allMuscleGroups, filteredExercises, sortLabel,
     sessionActive, isEditing, finishLoad, sessionElapsed, sessionGroups, sessionSummary,
@@ -1565,7 +1586,11 @@ export function setLabel(sets: readonly WorkoutSet[], n: number): string {
   if (sets[n]?.isWarmup) return t('history.warmupShort');
   return t('history.setLabel', { n: sets.slice(0, n + 1).filter((x) => !x.isWarmup).length });
 }
-export const rpeText = (value: number | null | undefined) => (value ? `@${formatNumber(value, 1)}` : '');
+/** Anstrengung eines Satzes: "@8" (RPE) oder "RIR 2" - gespeichert wird immer RPE. */
+export const rpeText = (value: number | null | undefined, useRir = false) =>
+  value ? (useRir ? t('history.rir', { value: formatNumber(Math.max(0, 10 - value), 1) }) : `@${formatNumber(value, 1)}`) : '';
+/** RIR (Wdh. in Reserve) <-> RPE: RIR 2 = RPE 8. */
+export const rpeToRir = (rpe: number) => Math.max(0, 10 - rpe);
 export const sessionRpeLabel = (value: number | null | undefined) => (SESSION_RPE.some((r) => r.value === value) ? tDynamic(`rpe.${value}`, '') : '');
 export function zoneClass(tone: string): string {
   return ({

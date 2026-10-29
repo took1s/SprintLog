@@ -27,4 +27,9 @@
     <InternalsVisibleTo Include="SprintLog.Api.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Plan-Vorlagen: eine JSON-Datei für API, Mock-Backend (frontend/dev) und Tests -->
+    <EmbeddedResource Include="Data\program-templates.json" LogicalName="SprintLog.Api.Data.program-templates.json" />
+  </ItemGroup>
+
 </Project>

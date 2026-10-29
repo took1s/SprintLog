@@ -251,7 +251,8 @@ public static class WorkoutEndpoints
             Distance = s.Distance,
             Time = s.Time,
             Rpe = s.Rpe,
-            IsWarmup = s.IsWarmup
+            IsWarmup = s.IsWarmup,
+            Note = string.IsNullOrWhiteSpace(s.Note) ? null : s.Note.Trim()
         }).ToList();
 
     private static string? NormalizeNotes(string? notes) =>
@@ -306,7 +307,8 @@ public static class WorkoutEndpoints
                     s.Distance,
                     s.Time,
                     s.Rpe,
-                    s.IsWarmup))
+                    s.IsWarmup,
+                    s.Note))
                 .ToList(),
             w.UpdatedAt));
 }

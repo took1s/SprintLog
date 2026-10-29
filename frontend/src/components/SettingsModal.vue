@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { t, tn, locale, setLocale, SUPPORTED_LOCALES, LOCALE_NAMES } from '@/i18n';
 
-const TOGGLES = ['autoTimer', 'sound', 'vibration', 'wakeLock', 'showTechnique'] as const;
+const TOGGLES = ['autoTimer', 'sound', 'vibration', 'wakeLock', 'showTechnique', 'useRir'] as const;
 import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
 import AccountSecurity from '@/components/AccountSecurity.vue';

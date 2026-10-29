@@ -1,7 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import type { TrainingProgram } from '../src/types';
-import { currentWeek, programStatus, suggestTarget, prescriptionText, setsDone, loadStatus, draftToPayload, toDraft } from '../src/lib/program';
+import { currentWeek, programStatus, suggestTarget, prescriptionText, setsDone, loadStatus, draftToPayload, toDraft, cycleWeek, isDeloadWeek, effectivePrescription, bestRecentE1RM, newDraftStep } from '../src/lib/program';
 
 const program = {
   id: 1, weeks: 8, startedAt: '2026-10-01T08:00:00Z',
@@ -96,4 +96,69 @@ test('editor draft round-trip only sends fields that match the tracking type', (
   assert.deepEqual([a.repsMin, a.repsMax, a.distance, a.restSeconds], [5, 8, null, 120]);
   assert.deepEqual([b.distance, b.repsMin, b.progressionStep], [30, null, null]);
   assert.equal(toDraft({ id: 1, name: 'X', goal: 'General', weeks: 4, days: [{ id: 2, position: 0, name: 'D', notes: null, exercises: [] }] } as unknown as TrainingProgram).days[0].notes, '');
+});
+
+// ---------- Periodisierung ----------
+
+const nordic = {
+  exerciseId: 50, trackingType: 'WeightReps' as const, sets: 2, repsMin: 5, repsMax: 5, progressionStep: 0, note: 'Partner holds the heels',
+  weekSteps: [
+    { fromWeek: 2, sets: 2, repsMin: 6, repsMax: 6 },
+    { fromWeek: 3, sets: 3, repsMin: 6, repsMax: 8 },
+    { fromWeek: 5, sets: 3, repsMin: 8, repsMax: 12, note: 'Sets of 12, 10 and 8 reps' },
+  ],
+};
+
+test('week steps: the latest step up to this week applies, unset fields keep the base values', () => {
+  const w1 = effectivePrescription(nordic, null, 1);
+  assert.deepEqual([w1.sets, w1.repsMin, w1.repsMax, w1.note, w1.stepWeek], [2, 5, 5, 'Partner holds the heels', null]);
+  const w4 = effectivePrescription(nordic, null, 4);
+  assert.deepEqual([w4.sets, w4.repsMin, w4.repsMax, w4.note, w4.stepWeek], [3, 6, 8, 'Partner holds the heels', 3]);
+  const w9 = effectivePrescription(nordic, null, 9);
+  assert.deepEqual([w9.sets, w9.repsMax, w9.note], [3, 12, 'Sets of 12, 10 and 8 reps']);
+});
+
+test('cycles repeat the week steps (5/3/1 waves) and deload weeks reduce volume', () => {
+  assert.deepEqual([1, 4, 5, 8, 9].map((wk) => cycleWeek({ cycleWeeks: 4 }, wk)), [1, 4, 1, 4, 1]);
+  assert.equal(cycleWeek({ cycleWeeks: null }, 7), 7);
+  const main = { exerciseId: 68, trackingType: 'WeightReps' as const, sets: 3, repsMin: 5, repsMax: 5, percentOf1Rm: 77,
+    weekSteps: [{ fromWeek: 2, repsMin: 3, repsMax: 3, percentOf1Rm: 81 }, { fromWeek: 4, percentOf1Rm: 54 }] };
+  assert.deepEqual([1, 2, 3, 4, 5, 6].map((wk) => effectivePrescription(main, { cycleWeeks: 4 }, wk).percentOf1Rm), [77, 81, 81, 54, 77, 81]);
+
+  assert.deepEqual([3, 4, 8].map((wk) => isDeloadWeek({ deloadEvery: 4 }, wk)), [false, true, true]);
+  const bench = { exerciseId: 1, trackingType: 'WeightReps' as const, sets: 4, repsMin: 6, repsMax: 8, targetRpe: 8, progressionStep: 2.5 };
+  const deload = effectivePrescription(bench, { deloadEvery: 4 }, 4);
+  assert.deepEqual([deload.deload, deload.sets, deload.targetRpe], [true, 3, 6]);
+  assert.equal(effectivePrescription(bench, { deloadEvery: 4 }, 5).sets, 4);
+});
+
+test('percent-based targets use the best recent estimated 1RM, deload takes 10 % off', () => {
+  const now = new Date('2026-10-29T10:00:00Z');
+  const history = [w('2026-10-20T10:00:00Z', null, [set(68, 60, 5), set(68, 40, 12, { isWarmup: true })]), w('2026-01-01T10:00:00Z', null, [set(68, 100, 1)])];
+  assert.equal(bestRecentE1RM(68, history, now), 70, 'Epley 60 × 5 = 70; old and warm-up sets ignored');
+  const px = { exerciseId: 68, trackingType: 'WeightReps' as const, sets: 3, repsMin: 5, repsMax: 5, percentOf1Rm: 77 };
+  const target = suggestTarget(px, history, now);
+  assert.deepEqual([target.kind, target.weight, target.reps, target.noteKey], ['percent', 55, 5, 'percent']);
+  assert.equal(suggestTarget(px, [], now).noteKey, 'percentNoMax');
+
+  const dp = { exerciseId: 1, trackingType: 'WeightReps' as const, sets: 3, repsMin: 5, repsMax: 8, progressionStep: 2.5, deload: true };
+  const last = [w('2026-10-25T10:00:00Z', null, [set(1, 80, 6), set(1, 80, 6), set(1, 80, 6)])];
+  const easy = suggestTarget(dp, last, now);
+  assert.deepEqual([easy.kind, easy.weight], ['deload', 72.5]);
+  assert.ok(prescriptionText({ ...px, restSeconds: 180 }).includes('77 %'));
+});
+
+test('editor keeps week steps, percent and notes through a round-trip and drops empty steps', () => {
+  const program = {
+    id: 3, name: 'Waves', goal: 'Strength', weeks: 12, cycleWeeks: 4, deloadEvery: null, isActive: true, startedAt: null, createdAt: '', templateKey: null,
+    days: [{ id: 30, position: 0, name: 'Press', notes: null, exercises: [{ id: 1, position: 0, exerciseId: 68, sets: 3, repsMin: 5, repsMax: 5, percentOf1Rm: 77, note: 'AMRAP', weekSteps: [{ fromWeek: 2, percentOf1Rm: 81 }] }] }],
+  } as unknown as TrainingProgram;
+  const draft = toDraft(program);
+  const row = draft.days[0].exercises[0];
+  row.weekSteps!.push(newDraftStep(row, 4), { fromWeek: '' });
+  const payload = draftToPayload(draft, new Map([[68, { trackingType: 'WeightReps' }]]));
+  assert.equal(payload.cycleWeeks, 4);
+  const x = payload.days[0].exercises[0];
+  assert.deepEqual([x.percentOf1Rm, x.note, x.weekSteps!.map((st) => st.fromWeek)], [77, 'AMRAP', [2, 3]]);
+  assert.equal(x.weekSteps![0].percentOf1Rm, 81);
 });

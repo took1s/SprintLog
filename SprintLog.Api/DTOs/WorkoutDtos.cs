@@ -3,7 +3,7 @@ using SprintLog.Api.Models;
 
 namespace SprintLog.Api.DTOs;
 
-public record WorkoutSetDto(int ExerciseId, double? Weight, int? Reps, double? Distance, double? Time, double? Rpe = null, bool IsWarmup = false);
+public record WorkoutSetDto(int ExerciseId, double? Weight, int? Reps, double? Distance, double? Time, double? Rpe = null, bool IsWarmup = false, string? Note = null);
 
 public record CreateWorkoutRequest(
     string? WorkoutType,
@@ -16,6 +16,7 @@ public record CreateWorkoutRequest(
     int? ProgramDayId = null)
 {
     public const int MaxNotesLength = 500;
+    public const int MaxSetNoteLength = 200;
 
     public static readonly string[] AllowedTypes = { "Gym", "Football", "Hybrid" };
     public const int MaxSets = 200;
@@ -48,7 +49,8 @@ public record CreateWorkoutRequest(
                 .AddIf(s.Weight < 0 || s.Reps < 0 || s.Distance < 0 || s.Time < 0, key, "Metrics cannot be negative.")
                 .AddIf(s.Weight > MaxWeight || s.Reps > MaxReps || s.Distance > MaxDistance || s.Time > MaxTime, key, "Metric value is out of range.")
                 .AddIf(double.IsNaN(s.Weight ?? 0) || double.IsNaN(s.Distance ?? 0) || double.IsNaN(s.Time ?? 0), key, "Metric value is not a number.")
-                .AddIf(s.Rpe is < 1 or > 10 || (s.Rpe is { } rpe && Math.Abs(rpe * 2 - Math.Round(rpe * 2)) > 1e-9), key, "RPE must be between 1 and 10 in steps of 0.5.");
+                .AddIf(s.Rpe is < 1 or > 10 || (s.Rpe is { } rpe && Math.Abs(rpe * 2 - Math.Round(rpe * 2)) > 1e-9), key, "RPE must be between 1 and 10 in steps of 0.5.")
+                .AddIf(s.Note is { Length: > MaxSetNoteLength }, key, $"Set notes must not exceed {MaxSetNoteLength} characters.");
         }
 
         return errors;
@@ -66,7 +68,8 @@ public record WorkoutSetResponse(
     double? Distance,
     double? Time,
     double? Rpe,
-    bool IsWarmup);
+    bool IsWarmup,
+    string? Note = null);
 
 public record WorkoutResponse(
     int Id,

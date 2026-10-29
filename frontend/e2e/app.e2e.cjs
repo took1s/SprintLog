@@ -297,6 +297,45 @@ test('training program: start template, follow the plan day, next day rotates', 
   await context.close();
 });
 
+test('periodized template: week-1 prescription and notes, set note and RIR are saved', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `prev_${Date.now()}`);
+
+  // RIR statt RPE
+  await page.click('button[aria-label=Settings]');
+  await page.click('text=Effort as RIR (reps in reserve) instead of RPE');
+  await page.click('button[aria-label="Close"]');
+
+  await page.click('nav >> text=PLAN');
+  await page.click('button[role=radio]:text-is("Field & prevention")');
+  await page.waitForSelector('[data-template=fifa-11-plus]');
+  assert.equal(await page.locator('[data-template=gzclp]').count(), 0, 'gym templates are filtered out');
+  await page.click('[data-template=hamstring-groin-shield] >> button:text-is("Start")');
+  await page.waitForSelector('text=Active program');
+  await page.click('button:has-text("Start Prevention")');
+
+  // Woche 1 des Nordic-Protokolls: 2 × 5, mit Hinweis
+  await page.waitForSelector('text=Partner holds the heels, fall as slowly as possible');
+  await page.waitForSelector('text=2 × 5');
+  await page.click('button:has(div:text-is("Nordic Hamstring Curls"))');
+  await page.waitForSelector('text=reps in reserve');
+  await page.click('button[data-rpe="8"]');
+  assert.equal((await page.textContent('button[data-rpe="8"]')).trim(), '2', 'RPE 8 is shown as RIR 2');
+  await page.click('text=+ Note');
+  await page.fill('#in-set-note', 'Felt it in the left hamstring');
+  await page.click('button:has-text("Log set")');
+  await page.click('button[aria-label="Stop timer"]');
+
+  await finishWorkout(page);
+  await page.waitForSelector('[data-test=set-note]:text-is("Felt it in the left hamstring")');
+  await page.waitForSelector('text=RIR 2');
+  const [workout] = await api('GET', '/api/workouts/history', token);
+  assert.equal(workout.sets[0].note, 'Felt it in the left hamstring');
+  assert.equal(workout.sets[0].rpe, 8);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
 test('language: browser language is detected, switching in settings translates the app and persists', async () => {
   // Deutscher Browser -> Anmeldemaske auf Deutsch, ohne etwas einzustellen.
   const german = await newPage({ locale: 'de-DE' });

@@ -22,6 +22,15 @@ public class TrainingProgram
     /// <summary>Schlüssel der Vorlage, aus der der Plan erstellt wurde (null = eigener Plan).</summary>
     public string? TemplateKey { get; set; }
 
+    /// <summary>
+    /// Wochen-Zyklus: Die Wochen-Stufen der Übungen wiederholen sich alle N Wochen (z. B. 4 bei 5/3/1).
+    /// null = keine Wiederholung, die Stufen gelten ab ihrer Woche bis zum Ende.
+    /// </summary>
+    public int? CycleWeeks { get; set; }
+
+    /// <summary>Jede N-te Woche ist eine Entlastungswoche: ~60 % der Sätze, ~10 % weniger Gewicht, RPE -2. null = keine.</summary>
+    public int? DeloadEvery { get; set; }
+
     public List<ProgramDay> Days { get; set; } = new();
 }
 
@@ -68,4 +77,30 @@ public class ProgramExercise
 
     /// <summary>Gewichtssteigerung in kg, wenn alle Sätze RepsMax erreicht haben.</summary>
     public double? ProgressionStep { get; set; }
+
+    /// <summary>Prozent des geschätzten 1RM (30-100). Gesetzt = prozentbasiert statt Double Progression.</summary>
+    public int? PercentOf1Rm { get; set; }
+
+    /// <summary>Kurzer Hinweis, z. B. "letzter Satz so viele Wdh. wie möglich" oder "pro Seite".</summary>
+    public string? Note { get; set; }
+
+    /// <summary>Änderungen ab bestimmten Wochen (Periodisierung, Protokolle wie Nordic/Copenhagen). Als JSON gespeichert.</summary>
+    public List<WeekStep> WeekSteps { get; set; } = new();
+}
+
+/// <summary>
+/// Ab Woche <see cref="FromWeek"/> gelten diese Werte (bis zur nächsten Stufe). Nicht gesetzte Felder = Grundwert der Übung.
+/// Woche bezieht sich auf den Zyklus (<see cref="TrainingProgram.CycleWeeks"/>), falls gesetzt.
+/// </summary>
+public class WeekStep
+{
+    public int FromWeek { get; set; }
+    public int? Sets { get; set; }
+    public int? RepsMin { get; set; }
+    public int? RepsMax { get; set; }
+    public double? Distance { get; set; }
+    public double? Time { get; set; }
+    public int? PercentOf1Rm { get; set; }
+    public double? TargetRpe { get; set; }
+    public string? Note { get; set; }
 }

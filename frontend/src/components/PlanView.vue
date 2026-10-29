@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { t, tn } from '@/i18n';
-import { exerciseName, goalName, levelName, programName, dayName, dayNotes, templateText, templateDay } from '@/i18n/content';
+import { exerciseName, goalName, levelName, programName, dayName, dayNotes, noteText, templateText, templateDay } from '@/i18n/content';
 import { storeToRefs } from 'pinia';
 import { useAppStore, zoneClass } from '@/stores/app';
 import { formatRelative } from '@/lib/format';
-import { prescriptionText } from '@/lib/program';
+import { cycleWeek, prescriptionText } from '@/lib/program';
 
 const app = useAppStore();
-const { activeProgram, clockDate, expandedDay, loadInfo, loadZone, loadingPrograms, otherPrograms, programInfo, templates } = storeToRefs(app);
-const { activateProgram, dayLabel, openProgramEditor, startProgramDay, startTemplate, stopProgram } = app;
+const { activeProgram, clockDate, expandedDay, filteredTemplates, isDeloadNow, loadInfo, loadZone, loadingPrograms, otherPrograms, planWeek, programInfo, templateFilter, templates } = storeToRefs(app);
+const FILTERS = ['all', 'Football', 'Gym'] as const;
+const { activateProgram, currentPrescription, dayLabel, openProgramEditor, startProgramDay, startTemplate, stopProgram } = app;
 </script>
 
 <template>
@@ -27,7 +28,9 @@ const { activateProgram, dayLabel, openProgramEditor, startProgramDay, startTemp
                       <div class="mt-1 font-mono text-[10px] text-slate-400">
                           {{ t('plan.weekOf', { week: Math.min(programInfo.week, activeProgram.weeks), weeks: activeProgram.weeks }) }} · {{ tn('units.sessions', programInfo.sessions) }}
                           <template v-if="programInfo.lastDate"> · {{ t('plan.lastRelative', { when: formatRelative(programInfo.lastDate, clockDate) }) }}</template>
+                          <template v-if="activeProgram.cycleWeeks"> · {{ t('plan.cycleWeek', { week: cycleWeek(activeProgram, planWeek), cycle: activeProgram.cycleWeeks }) }}</template>
                       </div>
+                      <span v-if="isDeloadNow" class="mt-2 inline-block rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-300" data-test="deload-badge">{{ t('plan.deloadWeek') }}</span>
                   </div>
                   <div class="flex flex-shrink-0 gap-2">
                       <button @click="openProgramEditor(activeProgram)" class="cyber-outline-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest">{{ t('common.edit') }}</button>
@@ -49,9 +52,12 @@ const { activateProgram, dayLabel, openProgramEditor, startProgramDay, startTemp
                   </div>
                   <h3 class="mb-3 text-xl font-black text-white">{{ dayName(activeProgram, programInfo.next) }}</h3>
                   <ul class="mb-4 space-y-1">
-                      <li v-for="x in programInfo.next.exercises" :key="x.id" class="flex justify-between gap-3 text-xs">
-                          <span class="truncate text-slate-200">{{ exerciseName(x.exerciseId, x.exerciseName) }}</span>
-                          <span class="flex-shrink-0 font-mono text-[10px] text-slate-400">{{ prescriptionText(x) }}</span>
+                      <li v-for="x in programInfo.next.exercises" :key="x.id" class="text-xs">
+                          <div class="flex justify-between gap-3">
+                              <span class="truncate text-slate-200">{{ exerciseName(x.exerciseId, x.exerciseName) }}</span>
+                              <span class="flex-shrink-0 font-mono text-[10px] text-slate-400">{{ prescriptionText(currentPrescription(x)) }}</span>
+                          </div>
+                          <div v-if="currentPrescription(x).note" class="font-mono text-[9px] text-slate-500">{{ noteText(currentPrescription(x).note) }}</div>
                       </li>
                   </ul>
                   <p v-if="programInfo.next.notes" class="mb-3 font-mono text-[10px] text-slate-500">{{ dayNotes(activeProgram, programInfo.next) }}</p>
@@ -67,9 +73,12 @@ const { activateProgram, dayLabel, openProgramEditor, startProgramDay, startTemp
                       </button>
                       <div v-if="expandedDay === day.id" class="border-t border-white/5 px-4 py-3">
                           <ul class="mb-3 space-y-1">
-                              <li v-for="x in day.exercises" :key="x.id" class="flex justify-between gap-3 text-xs">
-                                  <span class="truncate text-slate-300">{{ exerciseName(x.exerciseId, x.exerciseName) }}</span>
-                                  <span class="flex-shrink-0 font-mono text-[10px] text-slate-500">{{ prescriptionText(x) }}</span>
+                              <li v-for="x in day.exercises" :key="x.id" class="text-xs">
+                                  <div class="flex justify-between gap-3">
+                                      <span class="truncate text-slate-300">{{ exerciseName(x.exerciseId, x.exerciseName) }}</span>
+                                      <span class="flex-shrink-0 font-mono text-[10px] text-slate-500">{{ prescriptionText(currentPrescription(x)) }}</span>
+                                  </div>
+                                  <div v-if="currentPrescription(x).note" class="font-mono text-[9px] text-slate-600">{{ noteText(currentPrescription(x).note) }}</div>
                               </li>
                           </ul>
                           <button @click="startProgramDay(day)" class="cyber-outline-btn w-full rounded-lg py-2 text-[10px] font-bold uppercase tracking-widest">{{ t('plan.startThisDay') }}</button>
@@ -99,16 +108,24 @@ const { activateProgram, dayLabel, openProgramEditor, startProgramDay, startTemp
                   <h3 class="font-black tracking-wide text-white">{{ activeProgram ? t('plan.otherPrograms') : t('plan.startProgram') }}</h3>
                   <button @click="openProgramEditor()" class="cyber-outline-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest">{{ t('plan.newCustom') }}</button>
               </div>
+              <div class="mb-3 flex gap-2" role="radiogroup">
+                  <button v-for="f in FILTERS" :key="f" type="button" role="radio" :aria-checked="templateFilter === f" @click="templateFilter = f"
+                          class="chip" :class="templateFilter === f ? 'chip-active' : 'chip-idle'">{{ t(`plan.filter.${f}`) }}</button>
+              </div>
               <div class="grid gap-3 sm:grid-cols-2">
-                  <div v-for="tpl in templates" :key="tpl.key" class="glass-panel flex flex-col rounded-2xl p-4">
+                  <div v-for="tpl in filteredTemplates" :key="tpl.key" class="glass-panel flex min-w-0 flex-col rounded-2xl p-4" :data-template="tpl.key">
                       <div class="mb-1 flex flex-wrap items-center gap-1.5">
                           <span class="rounded-md border border-accent/20 bg-accent/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-accent">{{ goalName(tpl.goal) }}</span>
                           <span class="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-slate-400">{{ levelName(tpl.level) }}</span>
-                          <span class="font-mono text-[9px] text-slate-500">{{ tn('units.days', tpl.days.length) }} · {{ tn('units.weeks', tpl.weeks) }}</span>
+                          <span class="font-mono text-[9px] text-slate-500">{{ t('plan.perWeek', { n: tpl.daysPerWeek ?? tpl.days.length }) }} · {{ tn('units.weeks', tpl.weeks) }}</span>
                       </div>
                       <h4 class="font-bold text-white">{{ templateText(tpl.key, 'name', tpl.name) }}</h4>
                       <p class="mb-2 mt-1 flex-1 text-xs text-slate-400">{{ templateText(tpl.key, 'description', tpl.description) }}</p>
-                      <p class="mb-3 font-mono text-[10px] text-slate-500">{{ tpl.days.map((d, i) => templateDay(tpl.key, i, 'name', d.name)).join(' · ') }}</p>
+                      <p class="mb-2 font-mono text-[10px] text-slate-500">{{ tpl.days.map((d, i) => templateDay(tpl.key, i, 'name', d.name)).join(' · ') }}</p>
+                      <div v-if="tpl.sources?.length" class="mb-3 space-y-0.5">
+                          <a v-for="src in tpl.sources" :key="src.url" :href="src.url" target="_blank" rel="noopener noreferrer"
+                             class="block truncate font-mono text-[9px] text-accent/70 underline decoration-dotted hover:text-accent">{{ t('plan.sources') }}: {{ src.title }}</a>
+                      </div>
                       <button @click="startTemplate(tpl)" :disabled="activeProgram?.templateKey === tpl.key" class="cyber-btn rounded-xl py-2 text-xs font-bold">{{ activeProgram?.templateKey === tpl.key ? t('plan.active') : t('common.start') }}</button>
                   </div>
               </div>

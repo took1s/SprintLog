@@ -6,6 +6,7 @@ public static class Seed
     public const int BenchPress = 1;
     public const int Sprints = 12;
     public const int Plank = 47;
+    public const int Nordic = 50;
 }
 
 public static class Payloads

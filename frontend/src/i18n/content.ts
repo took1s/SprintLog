@@ -2,6 +2,7 @@
 // Eigene Übungen und selbst benannte Pläne bleiben, wie der Nutzer sie geschrieben hat.
 
 import { locale, t, tDynamic, textIn } from '.';
+import { en } from './en';
 import { techniqueTranslations } from './technique';
 import type { Technique } from '../lib/figure';
 import type { ProgramDay, TrainingProgram } from '../types';
@@ -70,4 +71,22 @@ export function localizedTechnique(key: string | null | undefined, original: Tec
 export function motionLabel(key: string | null | undefined, original: string): string {
   if (!key || locale.value === 'en') return original;
   return techniqueTranslations[locale.value]?.[key]?.label ?? original;
+}
+
+// ---------- Hinweise aus Vorlagen ----------
+
+let noteKeys: Map<string, string> | null = null;
+
+/**
+ * Hinweise der Vorlagen kommen als englischer Text (program-templates.json). Bekannte Texte werden übersetzt,
+ * selbst geschriebene Hinweise bleiben, wie sie sind.
+ */
+export function noteText(note: string | null | undefined): string {
+  if (!note) return '';
+  if (!noteKeys) {
+    noteKeys = new Map();
+    for (const [key, text] of Object.entries(en.notes)) noteKeys.set(text, key);
+  }
+  const key = noteKeys.get(note);
+  return key ? tDynamic(`notes.${key}`, note) : note;
 }

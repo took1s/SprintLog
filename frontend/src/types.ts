@@ -30,6 +30,8 @@ export interface WorkoutSet {
   time?: number | null;
   rpe?: number | null;
   isWarmup?: boolean;
+  /** Notiz zum Satz (max. 200 Zeichen). */
+  note?: string | null;
 }
 
 export type QueueStatusValue = 'pending' | 'failed';
@@ -84,6 +86,23 @@ export interface ProgramExercise {
   targetRpe?: number | null;
   restSeconds?: number | null;
   progressionStep?: number | null;
+  /** Prozent des geschätzten 1RM (prozentbasiert statt Double Progression). */
+  percentOf1Rm?: number | null;
+  note?: string | null;
+  /** Änderungen ab bestimmten Wochen (Periodisierung). */
+  weekSteps?: WeekStep[];
+}
+
+export interface WeekStep {
+  fromWeek: number;
+  sets?: number | null;
+  repsMin?: number | null;
+  repsMax?: number | null;
+  distance?: number | null;
+  time?: number | null;
+  percentOf1Rm?: number | null;
+  targetRpe?: number | null;
+  note?: string | null;
 }
 
 export interface ProgramDay {
@@ -104,6 +123,10 @@ export interface TrainingProgram {
   createdAt: string;
   templateKey: string | null;
   days: ProgramDay[];
+  /** Wochen-Stufen wiederholen sich alle N Wochen (z. B. 4 bei 5/3/1). */
+  cycleWeeks?: number | null;
+  /** Jede N-te Woche Entlastung. */
+  deloadEvery?: number | null;
 }
 
 export interface ProgramTemplate {
@@ -114,6 +137,12 @@ export interface ProgramTemplate {
   level: string;
   weeks: number;
   days: { name: string; notes?: string | null; exercises: ProgramExercise[] }[];
+  daysPerWeek?: number;
+  sessionsPerWeek?: number | null;
+  cycleWeeks?: number | null;
+  deloadEvery?: number | null;
+  category?: 'Football' | 'Gym' | string;
+  sources?: { title: string; url: string }[];
 }
 
 export interface AuthUser {

@@ -21,7 +21,7 @@ public class ExerciseTests
 
         var exercises = await HttpAssert.JsonAsync<List<ExerciseDto>>(HttpStatusCode.OK, await user.Client.GetAsync("/api/exercises"));
 
-        Assert.True(exercises.Count(e => !e.IsCustom) >= 84);
+        Assert.True(exercises.Count(e => !e.IsCustom) >= 106);
         Assert.Equal(TrackingType.WeightReps, exercises.Single(e => e.Id == Seed.BenchPress).TrackingType);
         Assert.Equal(TrackingType.DistanceTime, exercises.Single(e => e.Id == Seed.Sprints).TrackingType);
         Assert.Equal(TrackingType.Duration, exercises.Single(e => e.Id == Seed.Plank).TrackingType);

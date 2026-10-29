@@ -10,6 +10,9 @@ public sealed class ValidationErrors
 
     public bool HasErrors => _errors.Count > 0;
 
+    /// <summary>Gesammelte Fehler je Feld (z. B. für Tests und Logs).</summary>
+    public IReadOnlyDictionary<string, List<string>> Errors => _errors;
+
     public ValidationErrors Add(string field, string message)
     {
         if (!_errors.TryGetValue(field, out var list))
