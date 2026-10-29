@@ -34,7 +34,7 @@ public static class AccountEndpoints
     }
 
     private static async Task<IResult> ChangePassword(ChangePasswordRequest req, HttpContext http, AppDbContext db,
-        AuthSessionService sessions, ITokenService tokens, CancellationToken ct)
+        AuthSessionService sessions, ITokenService tokens, ILoggerFactory logs, CancellationToken ct)
     {
         var errors = req.Validate();
         if (errors.HasErrors) return errors.ToResult();
@@ -44,7 +44,7 @@ public static class AccountEndpoints
         if (!BCrypt.Net.BCrypt.Verify(req.CurrentPassword, user.PasswordHash))
             return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Current password is incorrect.");
 
-        await SetPasswordAsync(user, req.NewPassword!, db, sessions, ct);
+        await SetPasswordAsync(user, req.NewPassword!, db, sessions, logs, ct);
         // Dieses Gerät bleibt angemeldet (neue Sitzung), alle anderen sind abgemeldet.
         return Results.Ok(await AuthEndpoints.SignInAsync(http, user, sessions, tokens, ct));
     }
@@ -62,7 +62,7 @@ public static class AccountEndpoints
 
     /// <summary>Passwort mit einem Wiederherstellungscode zurücksetzen (ohne E-Mail). Jeder Code funktioniert einmal.</summary>
     private static async Task<IResult> Recover(RecoverRequest req, HttpContext http, AppDbContext db, RecoveryCodeService recovery,
-        AuthSessionService sessions, ITokenService tokens, CancellationToken ct)
+        AuthSessionService sessions, ITokenService tokens, ILoggerFactory logs, CancellationToken ct)
     {
         var errors = req.Validate();
         if (errors.HasErrors) return errors.ToResult();
@@ -73,7 +73,7 @@ public static class AccountEndpoints
         if (user is null || !await recovery.TryConsumeAsync(user.Id, req.Code, ct))
             return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Username or recovery code is invalid.");
 
-        await SetPasswordAsync(user, req.NewPassword!, db, sessions, ct); // speichert auch den verbrauchten Code
+        await SetPasswordAsync(user, req.NewPassword!, db, sessions, logs, ct); // speichert auch den verbrauchten Code
         return Results.Ok(await AuthEndpoints.SignInAsync(http, user, sessions, tokens, ct));
     }
 
@@ -181,7 +181,7 @@ public static class AccountEndpoints
     }
 
     private static async Task<IResult> ResetPassword(ResetPasswordRequest req, HttpContext http, AppDbContext db, ISecretHasher hasher,
-        TimeProvider time, AuthSessionService sessions, ITokenService tokens, CancellationToken ct)
+        TimeProvider time, AuthSessionService sessions, ITokenService tokens, ILoggerFactory logs, CancellationToken ct)
     {
         var errors = req.Validate();
         if (errors.HasErrors) return errors.ToResult();
@@ -195,7 +195,7 @@ public static class AccountEndpoints
         // Alle anderen offenen Reset-Links verfallen ebenfalls.
         await db.AuthTokens.Where(t => t.UserId == user.Id && t.Purpose == AuthTokenPurpose.ResetPassword && t.UsedAt == null && t.Id != token.Id)
             .ExecuteDeleteAsync(ct);
-        await SetPasswordAsync(user, req.NewPassword!, db, sessions, ct);
+        await SetPasswordAsync(user, req.NewPassword!, db, sessions, logs, ct);
         return Results.Ok(await AuthEndpoints.SignInAsync(http, user, sessions, tokens, ct));
     }
 
@@ -208,8 +208,10 @@ public static class AccountEndpoints
     }
 
     /// <summary>Neues Passwort setzen und alle bestehenden Sitzungen/Tokens ungültig machen.</summary>
-    private static async Task SetPasswordAsync(User user, string newPassword, AppDbContext db, AuthSessionService sessions, CancellationToken ct)
+    private static async Task SetPasswordAsync(User user, string newPassword, AppDbContext db, AuthSessionService sessions, ILoggerFactory logs,
+        CancellationToken ct, [System.Runtime.CompilerServices.CallerMemberName] string via = "")
     {
+        logs.CreateLogger("SprintLog.Security").LogInformation("Security: password changed for user {UserId} via {Method}, all sessions revoked", user.Id, via);
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
         user.TokenVersion += 1;
         await db.SaveChangesAsync(ct);

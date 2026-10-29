@@ -27,7 +27,7 @@ export class ApiError extends Error {
 
 export const isApiError = (e: unknown): e is ApiError => e instanceof ApiError;
 
-export const CLIENT_HEADER = Object.freeze({ 'X-Requested-With': 'SprintLog' });
+export const CLIENT_HEADER = Object.freeze({ 'X-Requested-With': 'SprintLog', 'X-Client-Version': __APP_VERSION__ });
 
 async function parseError(response: Response): Promise<ApiError> {
   let message = `Request failed (${response.status})`;

@@ -289,6 +289,7 @@ async function handleApi(req, res, url) {
 
   if (!user) return problem(res, 401, 'Unauthorized');
 
+  if (method === 'GET' && path === '/api/config') return json(res, 200, { sentryDsn: null, environment: 'Mock', release: 'sprintlog@mock' });
   if (method === 'GET' && path === '/api/auth/me') {
     return json(res, 200, {
       id: user.id, username: user.username, createdAt: user.createdAt, workoutCount: db.workouts.filter((w) => w.userId === user.id).length, customExerciseCount: 0,
