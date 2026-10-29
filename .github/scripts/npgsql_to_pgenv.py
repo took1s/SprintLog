@@ -60,7 +60,11 @@ def parse(connection_string: str) -> dict:
 
 
 def main() -> int:
-    raw = os.environ.get("DB_CONNECTION_STRING", "")
+    raw = os.environ.get("DB_CONNECTION_STRING", "").strip().strip('"').strip("'")
+    # Häufiger Copy-Paste-Fehler: der Variablenname aus Render wurde mitkopiert
+    for prefix in ("ConnectionStrings__DefaultConnection=", "DB_CONNECTION_STRING="):
+        if raw.startswith(prefix):
+            raw = raw[len(prefix):]
     if not raw:
         print("DB_CONNECTION_STRING is empty", file=sys.stderr)
         return 1
@@ -72,7 +76,10 @@ def main() -> int:
             if "\n" in value:
                 raise ValueError(f"{key} contains a newline")
             f.write(f"{key}={value}\n")
-    print(f"host={env['PGHOST']} port={env['PGPORT']} db={env['PGDATABASE']} sslmode={env['PGSSLMODE']}")
+    summary = f"host={env['PGHOST']} port={env['PGPORT']} db={env['PGDATABASE']} sslmode={env['PGSSLMODE']} user_has_ref={'.' in env['PGUSER']}"
+    print(summary)
+    if os.environ.get("GITHUB_ACTIONS"):
+        print(f"::notice title=Backup target::{summary}")
     return 0
 
 
