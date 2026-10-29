@@ -17,6 +17,9 @@ public class AppDbContext : DbContext
     public DbSet<ProgramDay> ProgramDays => Set<ProgramDay>();
     public DbSet<ProgramExercise> ProgramExercises => Set<ProgramExercise>();
     public DbSet<DeletedWorkout> DeletedWorkouts => Set<DeletedWorkout>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<RecoveryCode> RecoveryCodes => Set<RecoveryCode>();
+    public DbSet<AuthToken> AuthTokens => Set<AuthToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -26,6 +29,8 @@ public class AppDbContext : DbContext
         {
             e.Property(u => u.Username).HasMaxLength(32);
             e.HasIndex(u => u.Username).IsUnique();
+            e.Property(u => u.Email).HasMaxLength(254);
+            e.HasIndex(u => u.Email).IsUnique(); // NULL-Werte sind in PostgreSQL nicht "gleich" -> beliebig viele ohne E-Mail
         });
 
         modelBuilder.Entity<Exercise>(e =>
@@ -65,6 +70,31 @@ public class AppDbContext : DbContext
             e.HasOne(w => w.ProgramDay).WithMany().HasForeignKey(w => w.ProgramDayId).OnDelete(DeleteBehavior.SetNull);
             // Idempotenz: dieselbe Client-ID kann pro Nutzer nur einmal gespeichert werden.
             e.HasIndex(w => new { w.UserId, w.ClientId }).IsUnique();
+        });
+
+        modelBuilder.Entity<RefreshToken>(e =>
+        {
+            e.Property(t => t.TokenHash).HasMaxLength(64);
+            e.HasIndex(t => t.TokenHash).IsUnique();
+            e.HasIndex(t => new { t.UserId, t.FamilyId });
+            e.HasOne<User>().WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RecoveryCode>(e =>
+        {
+            e.Property(c => c.CodeHash).HasMaxLength(64);
+            e.HasIndex(c => new { c.UserId, c.CodeHash }).IsUnique();
+            e.HasOne<User>().WithMany().HasForeignKey(c => c.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AuthToken>(e =>
+        {
+            e.Property(t => t.Purpose).HasMaxLength(20);
+            e.Property(t => t.TokenHash).HasMaxLength(64);
+            e.Property(t => t.Email).HasMaxLength(254);
+            e.HasIndex(t => t.TokenHash).IsUnique();
+            e.HasIndex(t => new { t.UserId, t.Purpose });
+            e.HasOne<User>().WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<DeletedWorkout>(e =>
