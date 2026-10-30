@@ -1,0 +1,126 @@
+name: iOS
+
+# iPhone-App (Capacitor) bauen.
+# - Jeder Push/PR mit Änderungen an der App: Simulator-Build ohne Signatur (prüft, dass alles kompiliert).
+# - main oder manuell ("Run workflow"): signierter Build und Upload nach TestFlight - sobald die Secrets gesetzt sind:
+#   APPLE_TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (Inhalt der .p8-Datei als Base64).
+#   Signiert wird automatisch über den App-Store-Connect-API-Key ("Cloud Signing") - kein Mac, keine Zertifikate nötig.
+
+on:
+  push:
+    branches: [main, "feature/**"]
+    paths: ["frontend/**", "ios/**", "capacitor.config.ts", "package.json", "package-lock.json", ".github/workflows/ios.yml"]
+  pull_request:
+    paths: ["frontend/**", "ios/**", "capacitor.config.ts", "package.json", "package-lock.json", ".github/workflows/ios.yml"]
+  workflow_dispatch:
+    inputs:
+      testflight:
+        description: "Nach TestFlight hochladen"
+        type: boolean
+        default: true
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    name: iOS app (build, TestFlight)
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      PROJECT: ios/App/App.xcodeproj
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build web app for iOS
+        run: npm run build:native
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      - name: Simulator build (no signing)
+        run: |
+          set -o pipefail
+          xcodebuild -project "$PROJECT" -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/dd-sim" CODE_SIGNING_ALLOWED=NO build | tail -n 40
+
+      - name: Decide on TestFlight upload
+        id: release
+        run: |
+          wanted=false
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then wanted=true; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.testflight }}" = "true" ]; then wanted=true; fi
+          if [ "$wanted" = "true" ] && { [ -z "$APPLE_TEAM_ID" ] || [ -z "$ASC_KEY_ID" ] || [ -z "$ASC_ISSUER_ID" ] || [ -z "$ASC_KEY_P8" ]; }; then
+            echo "::notice title=TestFlight::Secrets APPLE_TEAM_ID / ASC_KEY_ID / ASC_ISSUER_ID / ASC_KEY_P8 fehlen - nur Simulator-Build."
+            wanted=false
+          fi
+          echo "upload=$wanted" >> "$GITHUB_OUTPUT"
+
+      - name: Archive (cloud signing)
+        if: steps.release.outputs.upload == 'true'
+        run: |
+          set -o pipefail
+          echo "$ASC_KEY_P8" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          # Build-Nummer muss pro Upload steigen
+          BUILD_NUMBER=$((1000 + ${{ github.run_number }}))
+          echo "::notice title=Build::SprintLog build $BUILD_NUMBER"
+          xcodebuild -project "$PROJECT" -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -derivedDataPath "$RUNNER_TEMP/dd-release" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            archive | tail -n 60
+
+      - name: Upload to TestFlight
+        if: steps.release.outputs.upload == 'true'
+        run: |
+          set -o pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -n 60
+          echo "::notice title=TestFlight::Hochgeladen. Nach der Verarbeitung durch Apple (5-30 min) erscheint der Build in der TestFlight-App."
+
+      - name: Remove API key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"

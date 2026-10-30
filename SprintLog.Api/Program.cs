@@ -120,6 +120,17 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
     });
 builder.Services.AddAuthorization();
 
+// ---------- CORS nur für die native App ----------
+// Die iOS-App (Capacitor) lädt die Oberfläche aus dem App-Paket (Origin capacitor://localhost) und ruft die API
+// cross-origin auf. Sie authentifiziert sich per Bearer-Token, nicht per Cookie - daher ohne Credentials.
+// Fremde Webseiten bekommen weiterhin keine CORS-Freigabe (CSRF-Schutz der Browser-Cookies bleibt unberührt).
+const string NativeCorsPolicy = "native-app";
+builder.Services.AddCors(options => options.AddPolicy(NativeCorsPolicy, policy => policy
+    .WithOrigins(builder.Configuration.GetSection("Cors:NativeOrigins").Get<string[]>() ?? new[] { "capacitor://localhost", "ionic://localhost" })
+    .WithMethods("GET", "POST", "PUT", "DELETE")
+    .WithHeaders("Authorization", "Content-Type", AuthSessionService.NativeClientHeader, "X-Client-Version")
+    .SetPreflightMaxAge(TimeSpan.FromHours(1))));
+
 // ---------- Rate Limiting (Schutz vor Brute-Force auf Login/Registrierung) ----------
 builder.Services.AddRateLimiter(options =>
 {
@@ -233,6 +244,7 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseSprintLogRequestLogging();
 app.UseRouting();
+app.UseCors(NativeCorsPolicy);
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseSentryUser();

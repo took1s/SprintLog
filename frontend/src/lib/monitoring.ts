@@ -4,7 +4,8 @@
 // - Keine personenbezogenen Daten: nur die Nutzer-ID, URLs ohne Query (Reset-/Bestätigungs-Tokens!), keine Cookies.
 
 import { watch, type App } from 'vue';
-import { CLIENT_HEADER } from './api';
+import { clientHeaders } from './api';
+import { apiUrl } from './native';
 
 export interface ClientConfig { sentryDsn: string | null; environment: string; release: string }
 
@@ -14,7 +15,7 @@ export const TUNNEL = '/api/monitoring/tunnel';
 /** Laufzeit-Konfiguration vom Server; offline die zuletzt bekannte. */
 export async function loadClientConfig(fetcher: typeof fetch = fetch): Promise<ClientConfig | null> {
   try {
-    const response = await fetcher('/api/config', { headers: { Accept: 'application/json', ...CLIENT_HEADER } });
+    const response = await fetcher(apiUrl('/api/config'), { headers: { Accept: 'application/json', ...clientHeaders() } });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const config = (await response.json()) as ClientConfig;
     try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch { /* ignore */ }
@@ -69,7 +70,7 @@ export async function initMonitoring(app: App, userId: () => number | null | und
   Sentry.init({
     app,
     dsn: config.sentryDsn,
-    tunnel: TUNNEL,
+    tunnel: apiUrl(TUNNEL),
     release: config.release,
     environment: config.environment,
     // Nur Fehler: keine Sessions, kein Tracing, kein Replay (Datenschutz + Free-Kontingent).

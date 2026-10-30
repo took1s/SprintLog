@@ -408,6 +408,7 @@ export const en = {
     plus: 'Plus 15 seconds',
     stop: 'Stop timer',
     over: 'Rest is over - next set!',
+    notification: { title: 'Rest is over', body: 'Next set - let\'s go!' },
   },
   data: {
     tabs: { overview: 'Overview', history: 'History', progress: 'Progress', records: 'Records', calendar: 'Calendar' },

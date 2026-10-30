@@ -33,7 +33,11 @@ public record DeleteAccountRequest(string? Password);
 /// API-Clients ohne X-Requested-With-Header bekommen einen Bearer-Token.
 /// RecoveryCodes nur direkt nach der Registrierung (einmalig im Klartext).
 /// </summary>
-public record TokenResponse(string? Token, string Username, int UserId, string[]? RecoveryCodes = null);
+/// <param name="RefreshToken">Nur für die native App (Header X-SprintLog-Client) - Browser bekommen httpOnly-Cookies.</param>
+public record TokenResponse(string? Token, string Username, int UserId, string[]? RecoveryCodes = null, string? RefreshToken = null);
+
+/// <summary>Refresh/Logout der nativen App.</summary>
+public record NativeSessionRequest(string? RefreshToken);
 
 public record ChangePasswordRequest(string? CurrentPassword, string? NewPassword)
 {
