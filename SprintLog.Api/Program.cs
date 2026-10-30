@@ -124,7 +124,7 @@ builder.Services.AddAuthorization();
 // Die iOS-App (Capacitor) lädt die Oberfläche aus dem App-Paket (Origin capacitor://localhost) und ruft die API
 // cross-origin auf. Sie authentifiziert sich per Bearer-Token, nicht per Cookie - daher ohne Credentials.
 // Fremde Webseiten bekommen weiterhin keine CORS-Freigabe (CSRF-Schutz der Browser-Cookies bleibt unberührt).
-const NativeCorsPolicy = "native-app";
+const string NativeCorsPolicy = "native-app";
 builder.Services.AddCors(options => options.AddPolicy(NativeCorsPolicy, policy => policy
     .WithOrigins(builder.Configuration.GetSection("Cors:NativeOrigins").Get<string[]>() ?? new[] { "capacitor://localhost", "ionic://localhost" })
     .WithMethods("GET", "POST", "PUT", "DELETE")
