@@ -183,17 +183,17 @@ test('custom exercise, favorites, delete workout', async () => {
   const { page, errors, context } = await newPage();
   const token = await register(page, `custom_${Date.now()}`);
 
-  await page.fill('input[type=search]', 'Sled Push');
-  await page.click('text=Create "Sled Push"');
+  await page.fill('input[type=search]', 'Tire Flip');
+  await page.click('text=Create "Tire Flip"');
   await page.click('button:has-text("Distance + Time")');
   await page.click('button:has-text("Create & log")');
   await page.waitForSelector('text=Distance (m)');
   await page.click('button:has-text("Log set")');
   await finishWorkout(page);
-  await page.waitForSelector('article:has-text("Sled Push")');
+  await page.waitForSelector('article:has-text("Tire Flip")');
 
   const exercises = await api('GET', '/api/exercises', token);
-  const sled = exercises.find((e) => e.name === 'Sled Push');
+  const sled = exercises.find((e) => e.name === 'Tire Flip');
   assert.equal(sled.isCustom, true);
   assert.equal(sled.trackingType, 'DistanceTime');
 
@@ -519,6 +519,11 @@ test('one tap per set: add exercises, ghost rows are prefilled, repeat last work
   const token = await register(page, `tap_${Date.now()}`);
 
   await page.click('[data-test=start-empty]');
+  // Neue Katalog-Übungen (v7) über Slang/Marke findbar
+  await page.fill('[data-test=picker-search]', 'пуловер');
+  await page.waitForSelector('[role=option]:has-text("Pullover Machine")');
+  await page.fill('[data-test=picker-search]', 'hammer strength');
+  assert.ok(await page.locator('[role=option]:has-text("Hammer Strength")').count() >= 4, 'Hammer Strength machines');
   // Mehrsprachige Suche: deutscher Begriff findet die englische Übung, Synonym findet Kreuzheben.
   await page.fill('[data-test=picker-search]', 'bankdrücken');
   await page.click('[role=option]:has-text("Bench Press")');

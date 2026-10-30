@@ -7,7 +7,7 @@ const seedIds = [...readFileSync(new URL('../../SprintLog.Api/Data/AppDbContext.
   .matchAll(/Ex\((\d+), "/g)].map((m) => Number(m[1]));
 
 test('every seeded exercise has an entry in the motion map', () => {
-  assert.equal(seedIds.length, 130);
+  assert.equal(seedIds.length, 257);
   for (const id of seedIds) assert.ok(id in EXERCISE_MOTION, `exercise ${id} missing in EXERCISE_MOTION`);
 });
 
