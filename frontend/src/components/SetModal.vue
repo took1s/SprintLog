@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+import { techniqueFor } from '@/lib/figure';
+import { localizedTechnique } from '@/i18n/techniqueText';
 import { t, tDynamic } from '@/i18n';
 import { exerciseName, muscleName } from '@/i18n/content';
 import { storeToRefs } from 'pinia';
@@ -9,8 +12,14 @@ import { prescriptionText, suggestionNote } from '@/lib/program';
 import ExerciseFigure from '@/components/ExerciseFigure.vue';
 
 const app = useAppStore();
-const { clockDate, isEditing, modalE1RM, modalEx, modalIntensity, modalIsNewPR, modalPrevious, modalRecord, modalSessionSets, modalSpeed, modalSpeedVsBest, modalTarget, modalTechnique, modalType, modalZone, setModal, settings } = storeToRefs(app);
+const { clockDate, isEditing, modalE1RM, modalEx, modalIntensity, modalIsNewPR, modalPrevious, modalRecord, modalSessionSets, modalSpeed, modalSpeedVsBest, modalTarget, modalType, modalZone, setModal, settings } = storeToRefs(app);
 const { closeSetModal, copyPrevious, deleteCustomExercise, saveSet, setWeightByPercentage, step } = app;
+
+// Animation + Technik-Hinweise (figure.ts liegt mit diesem Dialog in einem eigenen Chunk)
+const modalTechnique = computed(() => {
+  const info = techniqueFor(modalEx.value);
+  return { ...info, technique: localizedTechnique(info.key, info.technique) };
+});
 </script>
 
 <template>

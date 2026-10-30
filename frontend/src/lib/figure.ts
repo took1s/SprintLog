@@ -786,8 +786,7 @@ const KEYWORDS: [RegExp, string][] = [
   [/sprint|run|lauf|jog/i, 'sprint'], [/cycl|bike|fahrrad|rad/i, 'cycling'],
 ];
 
-/** Standard-Übungen mit Körpergewicht: Startwert 0 kg statt Hantelgewicht. */
-export const BODYWEIGHT_EXERCISES: ReadonlySet<number> = new Set([17, 20, 34, 46, 50, 51, 52, 55, 65, 81, 85, 90, 91, 94, 104, 105, 139, 140, 149, 159, 168, 181, 188, 192, 197, 198, 201, 204, 205, 206, 207, 208, 209, 210, 212, 216, 220, 221, 224, 225, 226, 227]);
+export { BODYWEIGHT_EXERCISES } from './bodyweight';
 
 /** Übungen ohne Animation, aber mit Technik-Hinweisen. */
 const EXERCISE_TECHNIQUE_ONLY: Record<number, string> = {

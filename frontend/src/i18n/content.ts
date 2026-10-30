@@ -1,10 +1,8 @@
 // Übersetzung von Inhalten, die als Daten kommen: Standard-Übungen, Muskelgruppen, Vorlagen, Technik-Hinweise.
 // Eigene Übungen und selbst benannte Pläne bleiben, wie der Nutzer sie geschrieben hat.
 
-import { locale, t, tDynamic, textIn } from '.';
+import { t, tDynamic, textIn } from '.';
 import { en } from './en';
-import { techniqueTranslations } from './technique';
-import type { Technique } from '../lib/figure';
 import type { ProgramDay, TrainingProgram } from '../types';
 
 type ExerciseLike = { id?: number | null; name?: string | null; isCustom?: boolean | null };
@@ -57,20 +55,6 @@ export function dayNotes(program: Pick<TrainingProgram, 'templateKey'> | null | 
   const key = program?.templateKey;
   if (!day.notes) return '';
   return key && textIn('en', `templates.${key}.days.${day.position}.notes`) === day.notes ? templateDay(key, day.position, 'notes', day.notes) : day.notes;
-}
-
-// ---------- Technik ----------
-
-/** Technik-Hinweise in der aktuellen Sprache (Englisch = Original aus lib/figure.ts). */
-export function localizedTechnique(key: string | null | undefined, original: Technique | null): Technique | null {
-  if (!key || !original) return original;
-  const translated = locale.value === 'en' ? null : techniqueTranslations[locale.value]?.[key];
-  return translated ?? original;
-}
-
-export function motionLabel(key: string | null | undefined, original: string): string {
-  if (!key || locale.value === 'en') return original;
-  return techniqueTranslations[locale.value]?.[key]?.label ?? original;
 }
 
 // ---------- Hinweise aus Vorlagen ----------

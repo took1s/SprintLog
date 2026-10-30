@@ -10,6 +10,7 @@ import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/600.css';
 import './styles/app.css';
 import { initAppearance } from './lib/theme';
+import { ensureLocale, locale } from './i18n';
 import App from './App.vue';
 import { useAppStore } from './stores/app';
 import { initMonitoring } from './lib/monitoring';
@@ -19,8 +20,12 @@ initAppearance();
 
 const app = createApp(App);
 const pinia = createPinia();
-app.use(pinia).mount('#app');
+app.use(pinia);
 
-// Fehler-Monitoring erst nach dem ersten Rendern starten - verzögert den App-Start nicht.
-const store = useAppStore(pinia);
-void initMonitoring(app, () => store.user?.userId);
+// Texte der aktiven Sprache vor dem ersten Rendern laden (DE/RU sind eigene Chunks, Englisch ist immer da).
+void ensureLocale(locale.value).catch(() => { /* offline ohne Cache: Englisch als Rückfall */ }).finally(() => {
+  app.mount('#app');
+  // Fehler-Monitoring erst nach dem ersten Rendern starten - verzögert den App-Start nicht.
+  const store = useAppStore(pinia);
+  void initMonitoring(app, () => store.user?.userId);
+});

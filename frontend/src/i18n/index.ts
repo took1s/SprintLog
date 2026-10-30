@@ -3,8 +3,8 @@
 
 import { ref, watch } from 'vue';
 import { en } from './en';
-import { de } from './de';
-import { ru } from './ru';
+// DE/RU werden erst geladen, wenn sie gebraucht werden (eigene Chunks, offline per Service-Worker-Cache).
+import type { de as DeMessages } from './de';
 
 export const SUPPORTED_LOCALES = ['en', 'de', 'ru'] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -26,7 +26,33 @@ export type MessageKey = Paths<typeof en>;
 export type PluralKey = PluralPaths<typeof en>;
 export type Params = Record<string, string | number>;
 
-const catalogs: Record<Locale, Tree> = { en: en as unknown as Tree, de: de as unknown as Tree, ru: ru as unknown as Tree };
+const catalogs: Partial<Record<Locale, Tree>> = { en: en as unknown as Tree };
+const loaders: Record<Exclude<Locale, 'en'>, () => Promise<typeof DeMessages>> = {
+  de: () => import('./de').then((m) => m.de),
+  ru: () => import('./ru').then((m) => m.ru),
+};
+const pending = new Map<Locale, Promise<void>>();
+/** Zählt geladene Sprachen hoch - computed, die textIn() fremder Sprachen nutzen (Suche), rechnen dann neu. */
+export const catalogVersion = ref(0);
+
+/** Lädt die Texte einer Sprache (einmalig). */
+export function ensureLocale(lang: Locale): Promise<void> {
+  if (catalogs[lang]) return Promise.resolve();
+  let p = pending.get(lang);
+  if (!p) {
+    p = loaders[lang as Exclude<Locale, 'en'>]().then((messages) => {
+      catalogs[lang] = messages as unknown as Tree;
+      catalogVersion.value++;
+    }).finally(() => pending.delete(lang));
+    pending.set(lang, p);
+  }
+  return p;
+}
+
+/** Alle Sprachen laden (mehrsprachige Suche, Obsidian-Export in anderer Sprache). */
+export function loadAllLocales(): Promise<void> {
+  return Promise.all(SUPPORTED_LOCALES.map(ensureLocale)).then(() => undefined);
+}
 
 const LOCALE_KEY = 'sprintlog:locale';
 
@@ -49,8 +75,10 @@ function initialLocale(): Locale {
 /** Aktuelle Sprache (reaktiv - Templates und computed werden bei Wechsel neu berechnet). */
 export const locale = ref<Locale>(initialLocale());
 
-export function setLocale(next: Locale): void {
-  locale.value = next;
+/** Sprache wechseln. Ist sie schon geladen, sofort (synchron) - sonst nach dem Laden. */
+export function setLocale(next: Locale): Promise<void> {
+  if (catalogs[next]) { locale.value = next; return Promise.resolve(); }
+  return ensureLocale(next).then(() => { locale.value = next; });
 }
 
 watch(locale, (value) => {
@@ -111,6 +139,7 @@ export function tDynamic(key: string, fallback: string, params?: Params): string
 
 /** Text einer bestimmten Sprache (z. B. Englisch als Vergleich mit Daten vom Server) oder undefined. */
 export function textIn(lang: Locale, key: string): string | undefined {
+  void catalogVersion.value; // reaktiv: nach dem Nachladen einer Sprache neu auswerten
   const leaf = lookup(lang, key);
   return typeof leaf === 'string' ? leaf : undefined;
 }
