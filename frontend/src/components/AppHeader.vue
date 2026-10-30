@@ -6,12 +6,13 @@ import { useAppStore } from '@/stores/app';
 const app = useAppStore();
 const { online, pendingCount, syncState, syncing, tab } = storeToRefs(app);
 const { openSettings, syncNow } = app;
+import BrandMark from '@/components/BrandMark.vue';
 </script>
 
 <template>
   <header class="mb-6 flex items-center justify-between gap-3">
       <h1 class="flex min-w-0 items-center gap-2">
-          <span class="display flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-accent text-base text-on-accent" aria-hidden="true">S</span>
+          <BrandMark class="h-8 w-8" />
           <span class="display truncate text-xl text-white">SprintLog</span>
       </h1>
       <div class="flex flex-shrink-0 items-center gap-2">
