@@ -749,6 +749,8 @@ export const EXERCISE_MOTION: Record<number, string | null> = {
   101: 'pushPress', 102: 'lunge', 103: 'lateralLunge', 104: 'deadBug', 105: 'airSquat', 106: 'jog',
   107: 'squat', 108: 'bench', 109: 'seatedPress', 110: 'cableRow', 111: 'pullup', 112: 'dip', 113: 'legCurl', 114: 'kickback', 115: 'hipThrust', 116: 'squat', 117: 'barbellCurl', 118: 'cableCrunch',
   119: 'twist', 120: 'seatedChestPress', 121: 'lateralRaise', 122: 'curl', 123: 'fly', 124: 'calfRaise', 125: 'airSquat', 126: 'kickback', 127: 'jog', 128: 'stepUp', 129: 'jog', 130: 'cycling',
+  // v7
+  131: 'bench', 132: 'dbBench', 133: 'fly', 134: 'fly', 135: 'fly', 136: 'straightArm', 137: 'straightArm', 138: 'bench', 139: 'pushup', 140: 'pushup', 141: 'seatedChestPress', 142: 'seatedChestPress', 143: null, 144: 'dip', 145: 'cableRow', 146: 'pulldown', 147: 'pulldown', 148: 'pulldown', 149: 'pullup', 150: 'pullup', 151: 'row', 152: 'dbRow', 153: 'dbRow', 154: 'deadlift', 155: 'deadlift', 156: 'rdl', 157: 'kickback', 158: 'shrug', 159: null, 160: 'dbPress', 161: null, 162: 'rearDelt', 163: 'rearDelt', 164: 'frontRaise', 165: 'frontRaise', 166: 'lateralRaise', 167: 'ohp', 168: null, 169: 'curl', 170: 'curl', 171: 'curl', 172: 'curl', 173: 'barbellCurl', 174: 'curl', 175: 'barbellCurl', 176: 'pushdown', 177: 'overheadExt', 178: 'pushdown', 179: 'skullCrusher', 180: 'pushdown', 181: 'dip', 182: 'dip', 183: null, 184: 'gobletSquat', 185: 'squat', 186: 'squat', 187: 'squat', 188: 'airSquat', 189: 'legPress', 190: 'legCurl', 191: 'legExtension', 192: 'hipThrust', 193: 'rdl', 194: 'rdl', 195: 'rdl', 196: 'calfRaise', 197: null, 198: null, 199: null, 200: null, 201: 'calfRaise', 202: 'abduction', 203: 'lunge', 204: 'nordic', 205: 'crunch', 206: 'crunch', 207: 'crunch', 208: 'legRaise', 209: 'legRaise', 210: 'legRaise', 211: null, 212: null, 213: 'twist', 214: null, 215: 'clean', 216: 'jump', 217: 'jump', 218: 'wallBall', 219: 'wallBall', 220: 'jump', 221: 'jumpRope', 222: 'pushPress', 223: 'kbSwing', 224: null, 225: 'rearDelt', 226: null, 227: null, 228: 'sprint', 229: null, 230: 'sprint', 231: 'sprint', 232: 'shuttle', 233: 'sprint', 234: 'jog', 235: 'jog', 236: null, 237: null, 238: null, 239: 'shuttle', 240: null, 241: null, 242: null, 243: null, 244: null, 245: null, 246: null, 247: null, 248: null, 249: null, 250: null, 251: null, 252: null, 253: 'jog', 254: null, 255: null, 256: null, 257: 'jump',
 };
 
 /** Erkennung für eigene Übungen über den Namen (Reihenfolge = Priorität). */
@@ -785,10 +787,13 @@ const KEYWORDS: [RegExp, string][] = [
 ];
 
 /** Standard-Übungen mit Körpergewicht: Startwert 0 kg statt Hantelgewicht. */
-export const BODYWEIGHT_EXERCISES: ReadonlySet<number> = new Set([17, 20, 34, 46, 50, 51, 52, 55, 65, 81, 85, 90, 91, 94, 104, 105]);
+export const BODYWEIGHT_EXERCISES: ReadonlySet<number> = new Set([17, 20, 34, 46, 50, 51, 52, 55, 65, 81, 85, 90, 91, 94, 104, 105, 139, 140, 149, 159, 168, 181, 188, 192, 197, 198, 201, 204, 205, 206, 207, 208, 209, 210, 212, 216, 220, 221, 224, 225, 226, 227]);
 
 /** Übungen ohne Animation, aber mit Technik-Hinweisen. */
-const EXERCISE_TECHNIQUE_ONLY: Record<number, string> = { 10: 'wristCurl', 11: 'wristCurl' };
+const EXERCISE_TECHNIQUE_ONLY: Record<number, string> = {
+  10: 'wristCurl', 11: 'wristCurl',
+  143: 'landminePress', 159: 'superman', 161: 'uprightRow', 168: 'handstandPushup', 183: 'wristCurl', 197: 'tibialis', 198: 'reverseNordic', 199: 'spanishSquat', 200: 'wallSit', 211: 'mountainClimber', 212: 'birdDog', 214: 'getUp', 224: 'burpee', 226: 'externalRotation', 227: 'bandWalk', 229: 'sledPush', 236: 'footballDrill', 237: 'footballDrill', 238: 'footballDrill', 240: 'footballDrill', 241: 'footballDrill', 242: 'stretch', 243: 'stretch', 244: 'mobilityFlow', 245: 'stretch', 246: 'stretch', 247: 'stretch', 248: 'mobilityFlow', 249: 'mobilityFlow', 250: 'mobilityFlow', 251: 'mobilityFlow', 252: 'foamRoll', 254: 'skiErg', 255: 'battleRope', 256: 'swim',
+};
 
 type ExerciseLike = { id?: number; name?: Exercise['name']; isCustom?: boolean; trackingType?: TrackingType };
 
@@ -810,6 +815,29 @@ export function techniqueFor(exercise: ExerciseLike | null | undefined): { motio
 
 /** Technik-Hinweise und Zielmuskulatur pro Bewegungsmuster. */
 export const TECHNIQUE: Record<string, Technique> = {
+  // v7: nur Hinweise (keine eigene Animation)
+  landminePress: { muscles: ['Shoulders', 'Upper chest', 'Triceps', 'Core'], cues: ['Hold the end of the bar at shoulder height', 'Press up and forward along the arc of the bar', 'Ribs down, do not lean back'] },
+  superman: { muscles: ['Lower back', 'Glutes', 'Upper back'], cues: ['Lie face down, arms stretched forward', 'Lift arms, chest and legs a few centimetres', 'Hold 2 s, keep the neck long'] },
+  uprightRow: { muscles: ['Side delts', 'Traps'], cues: ['Grip a little wider than shoulder width', 'Lead with the elbows, pull to lower chest height', 'Stop when the elbows reach shoulder height'] },
+  handstandPushup: { muscles: ['Shoulders', 'Triceps', 'Core'], cues: ['Kick up against a wall, hands shoulder-width', 'Lower the head to a triangle in front of the hands', 'Press back up, body stays tight'] },
+  tibialis: { muscles: ['Shins', 'Ankle stability'], cues: ['Back against a wall, heels about a foot away', 'Pull the toes up as high as possible', 'Lower slowly - great for shin splints and knees'] },
+  reverseNordic: { muscles: ['Quads', 'Hip flexors'], cues: ['Kneel upright, feet anchored or free', 'Lean back as a straight line from knees to head', 'Go only as far as you can come back with control'] },
+  spanishSquat: { muscles: ['Quads', 'Patellar tendon'], cues: ['Loop a heavy band behind both knees, anchored in front', 'Sit back with vertical shins until thighs are near parallel', 'Hold 30-45 s - tendon-friendly quad loading'] },
+  wallSit: { muscles: ['Quads', 'Glutes'], cues: ['Back flat against the wall', 'Slide down until knees are at 90\u00b0', 'Knees over ankles, breathe and hold'] },
+  mountainClimber: { muscles: ['Core', 'Hip flexors', 'Conditioning'], cues: ['Strong plank, hands under shoulders', 'Drive the knees towards the chest one after another', 'Hips stay low and still'] },
+  birdDog: { muscles: ['Core', 'Lower back', 'Glutes'], cues: ['On all fours, back flat', 'Extend opposite arm and leg slowly', 'Pause 2 s, keep the hips level'] },
+  getUp: { muscles: ['Shoulders', 'Core', 'Glutes', 'Full body'], cues: ['Weight locked out over the shoulder, eyes on it', 'Elbow, hand, bridge, kneel, stand - step by step', 'Reverse the steps slowly on the way down'] },
+  burpee: { muscles: ['Full body', 'Conditioning'], cues: ['Squat down and place the hands', 'Jump back to a plank, chest to the floor', 'Jump the feet in and explode up'] },
+  externalRotation: { muscles: ['Rotator cuff', 'Rear delts'], cues: ['Elbow at 90\u00b0, pinned to your side (towel helps)', 'Rotate the forearm outward against the band', 'Slow return, no shrugging'] },
+  bandWalk: { muscles: ['Glute medius', 'Hip abductors'], cues: ['Band above the knees or at the ankles', 'Half squat, step sideways keeping tension', 'Knees stay out, toes forward'] },
+  sledPush: { muscles: ['Quads', 'Glutes', 'Calves', 'Conditioning'], cues: ['Arms locked, body at about 45\u00b0', 'Drive with short, powerful steps', 'Push through the balls of the feet'] },
+  footballDrill: { muscles: ['Coordination', 'Conditioning', 'Ball skills'], cues: ['Log total minutes of the drill', 'Rate the effort with session RPE afterwards', 'Use the note for format, e.g. \'4v4, 4 \u00d7 4 min\''] },
+  stretch: { muscles: ['Hip mobility', 'Hamstrings', 'Hip flexors'], cues: ['Ease into the stretch, no bouncing', 'Hold 30-60 s per side and breathe out slowly', 'Mild tension, never sharp pain'] },
+  mobilityFlow: { muscles: ['Hip mobility', 'Thoracic spine', 'Ankle stability'], cues: ['Controlled reps through the full range', '5-10 reps per side, slow and smooth', 'Ideal in the warm-up before training'] },
+  foamRoll: { muscles: ['Legs', 'Back'], cues: ['Roll slowly, about 2-3 cm per second', 'Pause 20-30 s on tender spots', 'Skip joints and the lower back'] },
+  skiErg: { muscles: ['Lats', 'Core', 'Triceps', 'Conditioning'], cues: ['Arms high, pull down with the lats', 'Hinge at the hips as the hands pass the knees', 'Stand tall again before the next pull'] },
+  battleRope: { muscles: ['Shoulders', 'Core', 'Conditioning'], cues: ['Athletic stance, slight squat', 'Fast alternating waves from the shoulders', 'Work 20-30 s, rest, repeat'] },
+  swim: { muscles: ['Full body', 'Conditioning'], cues: ['Log total minutes in the water', 'Add distance or stroke in the note', 'Good low-impact recovery session'] },
   wristCurl: { muscles: ['Forearms', 'Grip'], cues: ['Forearms rest on the thighs or a bench', 'Only the wrists move', 'Full range, slow and controlled'] },
   squat: { muscles: ['Quads', 'Glutes', 'Adductors', 'Core'], cues: ['Bar on upper back, feet shoulder-width', 'Brace your core before each rep', 'Knees track over toes, hips to knee height or lower', 'Drive up through the whole foot'] },
   gobletSquat: { muscles: ['Quads', 'Glutes', 'Core'], cues: ['Hold the weight at chest height', 'Sit down between your knees', 'Keep chest up and heels on the floor'] },
