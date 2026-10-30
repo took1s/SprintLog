@@ -3,6 +3,7 @@
 
 export const en = {
   common: {
+    sessionBusy: 'Session is being refreshed - please try again in a moment.',
     cancel: 'Cancel',
     close: 'Close',
     save: 'Save',
@@ -62,6 +63,7 @@ export const en = {
     'Legs/Back': 'Legs/Back', 'Back/Legs': 'Back/Legs', Explosive: 'Explosive', Agility: 'Agility', Other: 'Other',
   },
   sync: {
+    tapToSync: 'Tap to send now',
     offline: 'Offline',
     syncing: 'Syncing',
     synced: 'Synced',
@@ -410,6 +412,9 @@ export const en = {
     noRecords: 'Beat a previous best to see records here.',
   },
   history: {
+    unsent: { one: '{n} workout is only on this device and not on the server yet.', other: '{n} workouts are only on this device and not on the server yet.' },
+    unsentFailed: { one: '{n} workout was rejected by the server.', other: '{n} workouts were rejected by the server.' },
+    sendNow: 'Send now',
     syncFailed: 'Sync failed',
     editPending: 'Edit pending',
     pendingSync: 'Pending sync',

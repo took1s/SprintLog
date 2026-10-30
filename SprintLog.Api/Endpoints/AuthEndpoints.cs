@@ -119,9 +119,6 @@ public static class AuthEndpoints
             {
                 case AuthSessionService.RotateStatus.Ok:
                     return Results.Ok(new TokenResponse(null, rotated!.Username, rotated.Id));
-                case AuthSessionService.RotateStatus.Race:
-                    // Ein anderer Tab hat eben rotiert - die neuen Cookies sind schon im Browser. Client versucht es erneut.
-                    return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Session is being refreshed. Retry.");
                 default:
                     AuthSessionService.ClearCookies(http);
                     return Results.Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Session expired. Please log in again.");

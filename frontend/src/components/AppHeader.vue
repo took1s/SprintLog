@@ -4,23 +4,27 @@ import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
 
 const app = useAppStore();
-const { online, syncState, syncing, tab } = storeToRefs(app);
-const { openSettings } = app;
+const { online, pendingCount, syncState, syncing, tab } = storeToRefs(app);
+const { openSettings, syncNow } = app;
 </script>
 
 <template>
   <header class="mb-6 flex items-center justify-between">
       <div class="flex items-center gap-2">
-          <span class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest"
+          <!-- Offene Einheiten: Antippen sendet sofort (statt nur zu informieren). -->
+          <component :is="pendingCount ? 'button' : 'span'" :type="pendingCount ? 'button' : undefined"
+                @click="pendingCount && !syncing ? syncNow() : undefined"
+                class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest"
                 :class="{
                   'border-red-500/40 bg-red-500/10 text-red-400': syncState.tone === 'red',
                   'border-orange-400/40 bg-orange-400/10 text-orange-300': syncState.tone === 'orange',
                   'border-accent/40 bg-accent/10 text-accent': syncState.tone === 'blue',
                   'border-emerald-400/30 bg-emerald-400/10 text-emerald-400': syncState.tone === 'green'
-                }" :title="online ? t('sync.connected') : t('sync.disconnected')">
+                }" :title="pendingCount ? t('sync.tapToSync') : online ? t('sync.connected') : t('sync.disconnected')"
+                :aria-label="pendingCount ? `${syncState.label} - ${t('sync.tapToSync')}` : undefined">
               <span class="h-1.5 w-1.5 rounded-full bg-current" :class="{ 'animate-pulse': syncing || !online }"></span>
               {{ syncState.label }}
-          </span>
+          </component>
       </div>
       <h1 class="text-3xl font-black tracking-tighter text-white sm:text-4xl">Sprint<span class="text-accent">Log</span></h1>
       <button @click="openSettings" class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 transition-colors hover:text-white" :aria-label="t('nav.settings')">

@@ -23,7 +23,12 @@ public sealed class AuthSessionService
     public const string ClientHeaderValue = "SprintLog";
     private const string HashPurpose = "refresh";
 
-    /// <summary>Zwei Tabs refreshen gleichzeitig: Der zweite sieht einen eben rotierten Token. Kein Diebstahl -> nicht die Familie widerrufen.</summary>
+    /// <summary>
+    /// Gnadenfrist nach einer Rotation. Ein eben ersetzter Token kommt erneut an, wenn zwei Tabs gleichzeitig refreshen
+    /// ODER wenn die Antwort mit den neuen Cookies den Browser nie erreicht hat (Verbindung bricht ab, In-App-Browser wie
+    /// Telegram wird in den Hintergrund geschickt). Beides ist kein Diebstahl: Innerhalb der Frist bekommt der Client
+    /// einen neuen Token derselben Familie ("reuse interval" wie bei Auth0/Okta). Danach gilt Wiederverwendung als Diebstahl.
+    /// </summary>
     private static readonly TimeSpan RotationGrace = TimeSpan.FromSeconds(30);
 
     private readonly AppDbContext _db;
@@ -63,7 +68,7 @@ public sealed class AuthSessionService
         SetCookies(http, user, raw, now);
     }
 
-    public enum RotateStatus { Ok, Missing, Invalid, Race }
+    public enum RotateStatus { Ok, Missing, Invalid }
 
     /// <summary>Tauscht den Refresh-Token aus dem Cookie gegen einen neuen (Rotation) und setzt neue Cookies.</summary>
     public async Task<(RotateStatus Status, User? User)> RotateAsync(HttpContext http, CancellationToken ct)
@@ -78,7 +83,19 @@ public sealed class AuthSessionService
         var now = _time.GetUtcNow().UtcDateTime;
         if (token.RevokedAt is { } revokedAt)
         {
-            if (token.Rotated && now - revokedAt < RotationGrace) return (RotateStatus.Race, null);
+            var withinGrace = token.Rotated && now - revokedAt < RotationGrace;
+            // Nur solange die Sitzung selbst noch lebt (nicht abgemeldet / nicht als gestohlen widerrufen).
+            if (withinGrace && token.ExpiresAt > now
+                && await _db.RefreshTokens.AnyAsync(t => t.FamilyId == token.FamilyId && t.RevokedAt == null && t.ExpiresAt > now, ct))
+            {
+                var sameUser = await _db.Users.FirstOrDefaultAsync(u => u.Id == token.UserId, ct);
+                if (sameUser is null) return (RotateStatus.Invalid, null);
+                var reissued = Issue(sameUser.Id, token.FamilyId, now);
+                await _db.SaveChangesAsync(ct);
+                SetCookies(http, sameUser, reissued, now);
+                return (RotateStatus.Ok, sameUser);
+            }
+            if (withinGrace) return (RotateStatus.Invalid, null);
             // Ein alter, bereits ersetzter Token wird erneut benutzt -> vermutlich kopiert: ganze Sitzung beenden.
             _log.LogWarning("Security: reuse of a rotated refresh token for user {UserId} - session family revoked", token.UserId);
             await RevokeFamilyAsync(token.FamilyId, now, ct);

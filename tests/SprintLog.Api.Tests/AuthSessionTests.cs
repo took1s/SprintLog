@@ -95,16 +95,34 @@ public class AuthSessionTests
     [Fact]
     public async Task Reusing_a_rotated_refresh_token_within_the_grace_period_is_a_race_not_theft()
     {
-        var (browser, _) = await RegisterAsync(NewBrowser());
+        var (browser, registered) = await RegisterAsync(NewBrowser());
         var old = browser.Cookies["sl_rt"];
         await HttpAssert.StatusAsync(HttpStatusCode.OK, await browser.PostAsync("/api/auth/refresh"));
 
+        // Zweiter Tab - oder derselbe Browser, bei dem die Antwort mit den neuen Cookies verloren ging.
         var otherTab = NewBrowser();
         otherTab.Cookies["sl_rt"] = old;
-        await HttpAssert.StatusAsync(HttpStatusCode.Conflict, await otherTab.PostAsync("/api/auth/refresh"));
+        var reissued = await HttpAssert.JsonAsync<TokenResponse>(HttpStatusCode.OK, await otherTab.PostAsync("/api/auth/refresh"));
+        Assert.Equal(registered.UserId, reissued.UserId);
+        Assert.NotEqual(old, otherTab.Cookies["sl_rt"]);
+        await HttpAssert.StatusAsync(HttpStatusCode.OK, await otherTab.GetAsync("/api/auth/me"));
 
-        // Die echte Sitzung läuft weiter.
+        // Beide Sitzungen laufen weiter.
         await HttpAssert.StatusAsync(HttpStatusCode.OK, await browser.PostAsync("/api/auth/refresh"));
+        await HttpAssert.StatusAsync(HttpStatusCode.OK, await otherTab.PostAsync("/api/auth/refresh"));
+    }
+
+    [Fact]
+    public async Task Grace_period_does_not_revive_a_session_that_was_logged_out()
+    {
+        var (browser, _) = await RegisterAsync(NewBrowser());
+        var old = browser.Cookies["sl_rt"];
+        await HttpAssert.StatusAsync(HttpStatusCode.OK, await browser.PostAsync("/api/auth/refresh"));
+        await HttpAssert.StatusAsync(HttpStatusCode.NoContent, await browser.PostAsync("/api/auth/logout"));
+
+        var leftover = NewBrowser();
+        leftover.Cookies["sl_rt"] = old;
+        await HttpAssert.StatusAsync(HttpStatusCode.Unauthorized, await leftover.PostAsync("/api/auth/refresh"));
     }
 
     [Fact]

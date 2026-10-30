@@ -51,7 +51,7 @@ export interface Api {
   post<T = unknown>(path: string, body?: unknown): Promise<T>;
   put<T = unknown>(path: string, body?: unknown): Promise<T>;
   del<T = unknown>(path: string, body?: unknown): Promise<T>;
-  /** Access-Token per Refresh-Cookie erneuern (Rotation). false = Sitzung ungültig; wirft ApiError(0) ohne Verbindung. */
+  /** Access-Token per Refresh-Cookie erneuern (Rotation). false = Sitzung ungültig; wirft ApiError(0) ohne Verbindung, ApiError(503) bei anhaltendem Rotations-Konflikt. */
   refreshSession(): Promise<boolean>;
 }
 
@@ -67,6 +67,9 @@ export interface ApiOptions {
 /** Endpunkte, bei denen ein 401 eine echte Antwort ist (falsches Passwort usw.) und kein abgelaufener Access-Token. */
 const NO_REFRESH = /^\/api\/auth\/(login|register|refresh|logout|recover|reset-password|forgot-password|email\/verify|options)\b/;
 
+/** Wartezeiten zwischen erneuten Refresh-Versuchen nach 409. */
+export const REFRESH_RACE_DELAYS = [300, 800, 1500] as const;
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function createApi({ onUnauthorized, getLegacyToken, onLegacyTokenUsed, timeoutMs = 15000 }: ApiOptions = {}): Api {
@@ -76,13 +79,16 @@ export function createApi({ onUnauthorized, getLegacyToken, onLegacyTokenUsed, t
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      return await fetch(path, {
+      const response = await fetch(path, {
         method,
         headers,
         credentials: 'same-origin',
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: controller.signal,
       });
+      // Body noch INNERHALB des Timeouts lesen: Bricht die Verbindung mitten in der Antwort ab
+      // (Funkloch, iOS friert die WebView ein), hinge response.text() sonst ewig - und mit ihm die Sync-Queue.
+      return await buffered(response);
     } catch {
       throw new ApiError(0, t('common.noConnection'));
     } finally {
@@ -100,6 +106,18 @@ export function createApi({ onUnauthorized, getLegacyToken, onLegacyTokenUsed, t
   return createRefreshingApi(send, read, { onUnauthorized, getLegacyToken, onLegacyTokenUsed });
 }
 
+const NULL_BODY = new Set([101, 204, 205, 304]);
+
+/** Antwort vollständig lesen und als neue Response zurückgeben (der Body ist danach sofort verfügbar). */
+async function buffered(response: Response): Promise<Response> {
+  const text = await response.text();
+  return new Response(NULL_BODY.has(response.status) ? null : text, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
 type Send = (method: string, path: string, body?: unknown, headers?: Record<string, string>) => Promise<Response>;
 type Read = <T>(response: Response) => Promise<T>;
 
@@ -112,11 +130,14 @@ export function createRefreshingApi(send: Send, read: Read, { onUnauthorized, ge
     const legacy = getLegacyToken?.();
     const headers: Record<string, string> = legacy ? { Authorization: `Bearer ${legacy}` } : {};
     let response = await send('POST', '/api/auth/refresh', undefined, headers);
-    if (response.status === 409) {
-      // Anderer Tab hat gerade rotiert - dessen neue Cookies sind schon im Browser.
-      await sleep(300);
+    // 409 = ein anderer Tab rotiert gerade (ältere Server-Versionen). Kurz warten und erneut versuchen.
+    for (const delay of REFRESH_RACE_DELAYS) {
+      if (response.status !== 409) break;
+      await sleep(delay);
       response = await send('POST', '/api/auth/refresh');
     }
+    // Immer noch 409: Die Sitzung ist NICHT abgelaufen - nicht abmelden, sondern später erneut versuchen.
+    if (response.status === 409) throw new ApiError(503, t('common.sessionBusy'));
     if (response.ok && legacy) onLegacyTokenUsed?.();
     return response.ok;
   }

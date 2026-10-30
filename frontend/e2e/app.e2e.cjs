@@ -480,3 +480,25 @@ test('older app versions with a token in localStorage are moved to a cookie sess
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('flaky gym network: a failed send without any offline event is shown and can be sent with one tap', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `flaky_${Date.now()}`);
+
+  // Der Browser hält sich für online, aber der Request scheitert (Funkloch) - kein 'offline'/'online'-Event.
+  await page.route('**/api/workouts', (route) => route.abort('connectionreset'));
+  await logSet(page, 'Bench Press');
+  await finishWorkout(page);
+  await page.waitForSelector('[data-testid=unsent-banner]:has-text("only on this device")');
+  // Ehrliche Meldung: nicht "gespeichert", sondern "auf dem Gerät gespeichert, wird synchronisiert".
+  await page.waitForSelector('text=Workout saved offline - will sync automatically.');
+  if (process.env.SHOT_DIR) { await page.waitForTimeout(3500); await page.screenshot({ path: path.join(process.env.SHOT_DIR, "unsent-banner.png") }); }
+  assert.equal((await api('GET', '/api/workouts/history', token)).length, 0);
+
+  await page.unroute('**/api/workouts');
+  await page.click('[data-testid=unsent-banner] button:has-text("Send now")');
+  await page.waitForSelector('[data-testid=unsent-banner]', { state: 'detached', timeout: 10000 });
+  assert.equal((await api('GET', '/api/workouts/history', token)).length, 1, 'synced exactly once');
+  assert.deepEqual(errors.filter((e) => !e.includes('ERR_CONNECTION_RESET')), []);
+  await context.close();
+});

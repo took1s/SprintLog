@@ -56,7 +56,7 @@ const { confirmDeleteAccount, exportData, logout, syncNow } = app;
                   <button @click="exportData('csv')" class="cyber-outline-btn rounded-xl py-3 text-[10px] font-bold uppercase tracking-widest">{{ t('settings.exportCsv') }}</button>
                   <button @click="exportData('json')" class="cyber-outline-btn rounded-xl py-3 text-[10px] font-bold uppercase tracking-widest">{{ t('settings.exportJson') }}</button>
               </div>
-              <button @click="syncNow()" :disabled="!online || syncing || !pendingCount" class="cyber-outline-btn mb-6 w-full rounded-xl py-3 text-[10px] font-bold uppercase tracking-widest disabled:opacity-40">
+              <button @click="syncNow()" :disabled="syncing || !pendingCount" class="cyber-outline-btn mb-6 w-full rounded-xl py-3 text-[10px] font-bold uppercase tracking-widest disabled:opacity-40">
                   {{ syncing ? t('settings.syncing') : pendingCount ? tn('settings.syncNow', pendingCount) : t('settings.allSynced') }}
               </button>
 

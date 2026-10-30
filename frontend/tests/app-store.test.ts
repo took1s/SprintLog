@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { mount } from '@vue/test-utils';
-import { useAppStore } from '../src/stores/app';
+import { SYNC_LOCK_MS, useAppStore } from '../src/stores/app';
 import AuthView from '../src/components/AuthView.vue';
 import type { Exercise } from '../src/types';
 
@@ -93,6 +93,58 @@ describe('finishing a workout', () => {
     expect(app.session.sets).toHaveLength(0);
     expect(app.tab).toBe('Data');
     expect(localStorage.getItem('sprintlog:7:historyToken')).toBe('"2026-10-29T10:00:00Z"');
+  });
+
+  test('a sync stuck in a frozen request does not block the queue forever', async () => {
+    // iOS / Telegram-WebView: Request bleibt hängen, nicht einmal der Abbruch-Timer feuert sinnvoll.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
+      const app = signedIn();
+      app.openSetModal(bench);
+      app.saveSet();
+      app.finishSession();
+      void app.confirmFinish();
+      await Promise.resolve();
+      expect(app.syncing).toBe(true);
+      expect(app.queue).toHaveLength(1);
+
+      // Kurz danach: Sperre greift noch (keine parallelen Läufe).
+      const fetchOk = vi.fn(async (url: string) => (url === '/api/workouts'
+        ? json({ workoutId: 22, duplicate: false }, 201)
+        : json({ workouts: [], deletedIds: [], nextCursor: null, syncToken: 't' })));
+      vi.stubGlobal('fetch', fetchOk);
+      await app.syncNow();
+      expect(fetchOk).not.toHaveBeenCalled();
+
+      // Nach Ablauf der Sperre übernimmt ein neuer Lauf.
+      vi.setSystemTime(Date.now() + SYNC_LOCK_MS + 1000);
+      await app.syncNow();
+      expect(fetchOk).toHaveBeenCalledWith('/api/workouts', expect.objectContaining({ method: 'POST' }));
+      expect(app.queue).toHaveLength(0);
+      expect(app.syncing).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test('after one network error the queue is still sent once the connection works again', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Load failed'); }));
+    const app = signedIn();
+    app.openSetModal(bench);
+    app.saveSet();
+    app.finishSession();
+    await app.confirmFinish();
+    expect(app.online).toBe(false);
+    expect(app.syncState.label).toContain('1');
+
+    // Kein 'online'-Event (Browser hielt sich die ganze Zeit für online) - der nächste Anlass sendet trotzdem.
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => (url === '/api/workouts'
+      ? json({ workoutId: 23, duplicate: false }, 201)
+      : json({ workouts: [], deletedIds: [], nextCursor: null, syncToken: 't' }))));
+    await app.syncNow();
+    expect(app.queue).toHaveLength(0);
+    expect(app.online).toBe(true);
   });
 
   test('offline: the workout stays in the queue and is shown as pending', async () => {
