@@ -46,8 +46,8 @@ function download() {
 <template>
   <transition name="fade">
     <div v-if="recoveryCodes" class="fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-ink/90 p-4 backdrop-blur-md">
-      <div class="glass-panel modal-panel w-full max-w-sm rounded-[2rem] border border-yellow-400/30 p-6" role="dialog" aria-modal="true" aria-labelledby="codes-title">
-        <h3 id="codes-title" class="mb-1 text-2xl font-black text-white">{{ t('codes.title') }} <span class="text-yellow-400">{{ t('codes.titleAccent') }}</span></h3>
+      <div class="glass-panel modal-panel w-full max-w-sm rounded-3xl border border-yellow-400/30 p-6" role="dialog" aria-modal="true" aria-labelledby="codes-title">
+        <h3 id="codes-title" class="mb-1 text-2xl display text-white">{{ t('codes.title') }} <span class="text-yellow-400">{{ t('codes.titleAccent') }}</span></h3>
         <p class="mb-5 text-xs leading-relaxed text-slate-300">{{ t('codes.intro') }}</p>
         <ol class="mb-5 grid grid-cols-2 gap-2" data-test="recovery-codes">
           <li v-for="code in recoveryCodes" :key="code" class="rounded-lg border border-white/10 bg-black/40 px-2 py-2 text-center font-mono text-sm font-bold tracking-wider text-white">{{ code }}</li>
@@ -57,7 +57,7 @@ function download() {
           <button type="button" @click="download" class="cyber-outline-btn rounded-xl py-2.5 text-[10px] font-bold uppercase tracking-widest">{{ t('codes.download') }}</button>
         </div>
         <label class="mb-4 flex cursor-pointer items-center gap-3 rounded-xl border border-white/5 bg-black/20 p-3 text-xs text-slate-200">
-          <input v-model="saved" type="checkbox" class="h-5 w-5 accent-[#facc15]"> {{ t('codes.saved') }}
+          <input v-model="saved" type="checkbox" class="h-5 w-5"> {{ t('codes.saved') }}
         </label>
         <button type="button" :disabled="!saved" @click="dismissRecoveryCodes" class="cyber-btn w-full rounded-xl py-3 font-bold">{{ t('common.continue') }}</button>
       </div>

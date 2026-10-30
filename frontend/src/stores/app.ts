@@ -17,6 +17,8 @@ import { formatNumber, formatClock, formatDate, formatRelative, formatSeconds, d
 import { unlockAudio, playRestAlarm, createWakeLock } from '../lib/feedback';
 import { exportCsv, exportJson } from '../lib/export';
 import { techniqueFor, BODYWEIGHT_EXERCISES } from '../lib/figure';
+import { blockOrder, ghostFor, matchScore, normalize, previousSets, type GhostValues } from '../lib/workout';
+import { exerciseAliases } from '../i18n/aliases';
 import { localDay, readiness, readinessAdvice, readinessTrend, weeklyAverage, type WellnessEntry, type WellnessField } from '../lib/wellness';
 import {
   programStatus, suggestTarget, setsDone, loadStatus, ZONE_INFO, effectivePrescription, programProgress,
@@ -29,8 +31,8 @@ import type {
   TrackingType as TrackingTypeValue, TrainingProgram, Workout, WorkoutSet,
 } from '../types';
 import { useUiStore } from './ui';
-import { t, tn, tDynamic, intlLocale } from '../i18n';
-import { templateText, localizedTechnique, muscleName as trMuscleName, exerciseName as trExerciseName, dayName as trDayName, programName as trProgramName } from '../i18n/content';
+import { t, tn, tDynamic, intlLocale, textIn, SUPPORTED_LOCALES } from '../i18n';
+import { templateText, localizedTechnique, exerciseName as trExerciseName, dayName as trDayName, programName as trProgramName } from '../i18n/content';
 
 // ---------- Konstanten ----------
 
@@ -104,7 +106,23 @@ export interface Session {
   editing: Editing | null;
   meta: SessionMeta | null;
   plan: SessionPlan | null;
+  /** Reihenfolge der Übungs-Blöcke (auch Übungen ohne Satz - "hinzugefügt, kommt gleich"). */
+  order?: number[];
+  /** Geplante Sätze pro Übung (z. B. aus "Wiederholen") - belegen den n-ten Satz vor. */
+  templates?: Record<number, WorkoutSet[]>;
 }
+
+/** Ein Übungs-Block der laufenden Einheit (Anzeige). */
+export interface WorkoutBlock {
+  exercise: Exercise;
+  sets: (SessionSet & { index: number })[];
+  workingDone: number;
+  target: PlanTarget | null;
+  previous: WorkoutSet[];
+  ghost: GhostValues;
+}
+
+export type PickerFilter = 'recent' | 'favorites' | 'all';
 
 export const sortOptions: readonly { key: SortMode; label: string }[] = Object.freeze([
   { key: 'fav', label: 'Favorites' },
@@ -209,7 +227,7 @@ export const useAppStore = defineStore('app', () => {
   const setModal = ref<SetModal>(closedSetModal());
 
   // Eigene Übung
-  const customModal = ref({ open: false, name: '', category: 'Gym', muscleGroup: '', trackingType: TrackingType.WeightReps as TrackingTypeValue, busy: false, error: '' });
+  const customModal = ref({ open: false, name: '', category: 'Gym', muscleGroup: '', trackingType: TrackingType.WeightReps as TrackingTypeValue, busy: false, error: '', addToWorkout: false });
 
   // Einstellungen
   const settingsOpen = ref(false);
@@ -301,11 +319,35 @@ export const useAppStore = defineStore('app', () => {
   const availableMuscleGroups = computed(() => [...new Set(categoryExercises.value.map((e) => e.muscleGroup || 'Other'))].sort());
   const allMuscleGroups = computed(() => [...new Set(exercises.value.map((e) => e.muscleGroup).filter((m): m is string => !!m))].sort());
 
+  /**
+   * Suchindex: offizielle Namen in ALLEN Sprachen + Synonyme/Slang + Muskelgruppen (normalisiert).
+   * So findet "Bizepsmaschine", "становая" oder "latzug" die richtige Übung - egal, welche App-Sprache aktiv ist.
+   */
+  const searchIndex = computed(() => {
+    const index = new Map<number, string[]>();
+    for (const e of exercises.value) {
+      const names = [e.name, trExerciseName(e)];
+      if (!e.isCustom && e.id < 1000) for (const lang of SUPPORTED_LOCALES) names.push(textIn(lang, `exercises.${e.id}`) ?? '');
+      const muscles = e.muscleGroup ? SUPPORTED_LOCALES.map((lang) => textIn(lang, `muscles.${e.muscleGroup}`) ?? '') : [];
+      index.set(e.id, [...new Set([...names, ...(exerciseAliases[e.id] ?? []), e.muscleGroup ?? '', ...muscles].map(normalize).filter(Boolean))]);
+    }
+    return index;
+  });
+
+  /** Übungen nach Suchtreffer sortiert (bester zuerst). */
+  function searchExercises(query: string, list: readonly Exercise[]): Exercise[] {
+    if (!normalize(query)) return [...list];
+    return list
+      .map((e) => ({ e, score: matchScore(query, searchIndex.value.get(e.id) ?? [normalize(e.name)]) }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((x) => x.e);
+  }
+
   const filteredExercises = computed(() => {
-    const q = search.value.toLowerCase().trim();
+    const q = search.value.trim();
     let list = categoryExercises.value;
-    // Suche findet die Übung über den übersetzten und den englischen Namen sowie die Muskelgruppe.
-    if (q) list = list.filter((e) => [e.name, trExerciseName(e), e.muscleGroup ?? '', trMuscleName(e.muscleGroup)].some((v) => v.toLowerCase().includes(q)));
+    if (q) list = searchExercises(q, list);
     if (muscleFilters.value.length) list = list.filter((e) => muscleFilters.value.includes(e.muscleGroup || 'Other'));
 
     const fav = (e: Exercise) => (favorites.value.includes(e.id) ? 1 : 0);
@@ -319,13 +361,15 @@ export const useAppStore = defineStore('app', () => {
       az: byName,
       za: (a, b) => byName(b, a),
     };
-    return [...list].sort(sorters[sortMode.value] ?? byName);
+    return q ? list : [...list].sort(sorters[sortMode.value] ?? byName);
   });
 
   const sortLabel = computed(() => tDynamic(`catalog.sort.${sortMode.value}`, sortOptions.find((o) => o.key === sortMode.value)?.label ?? ''));
 
   // ---------- Laufende Einheit ----------
-  const sessionActive = computed(() => session.value.sets.length > 0);
+  /** Eine Einheit läuft, sobald ein Satz geloggt ODER eine Übung hinzugefügt wurde. */
+  const sessionActive = computed(() => session.value.sets.length > 0 || (session.value.order?.length ?? 0) > 0 || !!session.value.plan);
+  const hasSets = computed(() => session.value.sets.length > 0);
   const isEditing = computed(() => !!session.value.editing);
   const finishLoad = computed(() => {
     const f = finishModal.value;
@@ -700,7 +744,7 @@ export const useAppStore = defineStore('app', () => {
   function persistQueue() { if (keys.value) writeJson(keys.value.queue, queue.value); }
   function persistSession() {
     const s = session.value;
-    if (keys.value) writeJson(keys.value.session, s.sets.length || s.plan || s.editing ? s : null);
+    if (keys.value) writeJson(keys.value.session, s.sets.length || s.order?.length || s.plan || s.editing ? s : null);
   }
   function persistTimer() { if (keys.value) writeJson(keys.value.timer, timer.value.endAt ? timer.value : null); }
 
@@ -932,8 +976,214 @@ export const useAppStore = defineStore('app', () => {
   function removeSessionSet(index: number) {
     const s = session.value;
     s.sets.splice(index, 1);
-    if (!s.sets.length && !isEditing.value) { s.startedAt = null; showReview.value = false; }
+    if (!s.sets.length && !s.order?.length && !s.plan && !isEditing.value) { s.startedAt = null; showReview.value = false; }
     persistSession();
+  }
+
+  // =====================================================================
+  // Laufende Einheit als Blöcke (ein Tipp pro Satz)
+  // =====================================================================
+  /** Übung aus dem Katalog - oder aus Satz-/Plan-Daten rekonstruiert (gelöschte eigene Übung, Katalog noch nicht geladen). */
+  function exerciseFor(id: number): Exercise {
+    const known = exercisesById.value.get(id);
+    if (known) return known;
+    const set = session.value.sets.find((x) => x.exerciseId === id);
+    const target = session.value.plan?.targets.find((x) => x.exerciseId === id);
+    return {
+      id,
+      name: set?.exerciseName ?? target?.exerciseName ?? '?',
+      category: set?.category ?? target?.category ?? 'Gym',
+      muscleGroup: set?.muscleGroup ?? target?.muscleGroup ?? null,
+      trackingType: set?.trackingType ?? (target?.trackingType as TrackingTypeValue | undefined) ?? TrackingType.WeightReps,
+    };
+  }
+
+  const editingExclude = computed(() => {
+    const e = session.value.editing;
+    return e ? (e.kind === 'server' ? { id: e.id, clientId: e.clientId } : { clientId: e.clientId }) : null;
+  });
+
+  /** Eingaben im Geister-Satz pro Übung, bevor ✓ gedrückt wird. */
+  const ghostDraft = ref<Record<number, Partial<Pick<GhostValues, 'weight' | 'reps' | 'distance' | 'time' | 'isWarmup'>>>>({});
+
+  const workoutBlocks = computed<WorkoutBlock[]>(() => {
+    const s = session.value;
+    const ids = blockOrder(s.order, (s.plan?.targets ?? []).map((x) => x.exerciseId), s.sets.map((x) => x.exerciseId));
+    return ids.map((id) => {
+      const exercise = exerciseFor(id);
+      const sets = s.sets.map((x, index) => ({ ...x, index })).filter((x) => x.exerciseId === id);
+      const target = planTargetFor(id);
+      const previous = previousSets(allWorkouts.value, id, editingExclude.value);
+      const ghost = ghostFor({
+        trackingType: exercise.trackingType ?? TrackingType.WeightReps,
+        bodyweight: !exercise.isCustom && BODYWEIGHT_EXERCISES.has(id),
+        index: sets.length,
+        sessionSets: sets,
+        template: s.templates?.[id] ?? null,
+        plan: target?.suggestion ?? null,
+        previous,
+      });
+      return { exercise, sets, workingDone: sets.filter((x) => !x.isWarmup).length, target, previous, ghost: { ...ghost, ...ghostDraft.value[id] } };
+    });
+  });
+
+  function ensureStarted() {
+    if (!session.value.startedAt) session.value.startedAt = new Date().toISOString();
+  }
+
+  /** Übungen als Blöcke hinzufügen (ohne Satz). Startet die Einheit. */
+  function addExercises(ids: readonly number[]) {
+    const s = session.value;
+    const order = blockOrder(s.order, (s.plan?.targets ?? []).map((x) => x.exerciseId), s.sets.map((x) => x.exerciseId));
+    for (const id of ids) if (!order.includes(id)) order.push(id);
+    s.order = order;
+    ensureStarted();
+    persistSession();
+  }
+
+  async function removeBlock(id: number) {
+    const s = session.value;
+    if (s.sets.some((x) => x.exerciseId === id)) {
+      const ok = await confirm({ title: t('workout.confirm.removeTitle'), message: t('workout.confirm.removeMessage', { name: trExerciseName(exerciseFor(id)) }), confirmText: t('common.remove'), danger: true });
+      if (!ok) return;
+    }
+    s.sets = s.sets.filter((x) => x.exerciseId !== id);
+    s.order = (s.order ?? []).filter((x) => x !== id);
+    if (s.plan) s.plan = { ...s.plan, targets: s.plan.targets.filter((x) => x.exerciseId !== id) };
+    if (s.templates) delete s.templates[id];
+    delete ghostDraft.value[id];
+    if (!s.sets.length && !s.order.length && !s.plan && !isEditing.value) s.startedAt = null;
+    persistSession();
+  }
+
+  function moveBlock(id: number, delta: -1 | 1) {
+    const order = workoutBlocks.value.map((b) => b.exercise.id);
+    const i = order.indexOf(id);
+    const j = i + delta;
+    if (i < 0 || j < 0 || j >= order.length) return;
+    [order[i], order[j]] = [order[j], order[i]];
+    session.value.order = order;
+    persistSession();
+  }
+
+  function setGhostValue(id: number, field: 'weight' | 'reps' | 'distance' | 'time', value: unknown) {
+    const num = Number(String(value).replace(',', '.'));
+    ghostDraft.value = { ...ghostDraft.value, [id]: { ...ghostDraft.value[id], [field]: Number.isFinite(num) ? Math.max(0, num) : 0 } };
+  }
+
+  function stepGhost(id: number, field: 'weight' | 'reps' | 'distance' | 'time', delta: number) {
+    const block = workoutBlocks.value.find((b) => b.exercise.id === id);
+    if (!block) return;
+    const value = Math.max(0, Math.round((Number(block.ghost[field]) + delta) * 100) / 100);
+    setGhostValue(id, field, value);
+  }
+
+  function toggleGhostWarmup(id: number) {
+    const block = workoutBlocks.value.find((b) => b.exercise.id === id);
+    if (!block) return;
+    ghostDraft.value = { ...ghostDraft.value, [id]: { ...ghostDraft.value[id], isWarmup: !block.ghost.isWarmup } };
+  }
+
+  /** Prüft Werte eines Satzes; gibt eine Fehlermeldung zurück oder null. */
+  function validateSet(set: SessionSet): string | null {
+    if (set.trackingType === TrackingType.WeightReps) {
+      if ((set.reps ?? 0) < 1) return t('set.errors.reps');
+      if ((set.weight ?? 0) > 1000) return t('set.errors.weight');
+    } else if (set.trackingType === TrackingType.DistanceTime) {
+      if (!((set.distance ?? 0) > 0) && !((set.time ?? 0) > 0)) return t('set.errors.distanceTime');
+    } else if (!((set.time ?? 0) > 0)) return t('set.errors.duration');
+    return null;
+  }
+
+  function isNewRecord(set: SessionSet): boolean {
+    const r = records.value.get(`id:${set.exerciseId}`);
+    if (!r || set.isWarmup) return false;
+    if (set.trackingType === TrackingType.WeightReps) return (r.maxWeight?.value ?? 0) > 0 && (set.weight ?? 0) > r.maxWeight!.value;
+    if (set.trackingType === TrackingType.DistanceTime) {
+      const speed = setSpeed({ distance: set.distance ?? 0, time: set.time ?? 0 });
+      return (r.topSpeed?.value ?? 0) > 0 && speed > r.topSpeed!.value;
+    }
+    return (r.longest?.value ?? 0) > 0 && (set.time ?? 0) > r.longest!.value;
+  }
+
+  /** ✓ im Geister-Satz: Satz mit den angezeigten Werten loggen. */
+  function quickLog(id: number) {
+    unlockAudio();
+    const block = workoutBlocks.value.find((b) => b.exercise.id === id);
+    if (!block) return;
+    const ex = block.exercise;
+    const type = ex.trackingType ?? TrackingType.WeightReps;
+    const g = block.ghost;
+    const set: SessionSet = {
+      exerciseId: ex.id,
+      exerciseName: ex.name,
+      trackingType: type,
+      muscleGroup: ex.muscleGroup,
+      category: ex.category,
+      weight: type === TrackingType.WeightReps ? g.weight : null,
+      reps: type === TrackingType.WeightReps ? Math.round(g.reps) : null,
+      distance: type === TrackingType.DistanceTime ? g.distance : null,
+      time: type === TrackingType.WeightReps ? null : g.time,
+      rpe: null,
+      isWarmup: !!g.isWarmup,
+      note: null,
+    };
+    const error = validateSet(set);
+    if (error) { toast(error, 'error'); return; }
+    const wasPR = isNewRecord(set);
+    ensureStarted();
+    session.value.sets.push(set);
+    const { [id]: _done, ...rest } = ghostDraft.value;
+    ghostDraft.value = rest;
+    const planRest = block.target?.restSeconds;
+    if (settings.value.autoTimer && !isEditing.value && !set.isWarmup) startTimer(planRest || (set.category === 'Football' ? settings.value.restField : settings.value.restGym));
+    if (navigator.vibrate && settings.value.vibration) navigator.vibrate(15);
+    persistSession();
+    if (wasPR) toast(t('set.toast.record', { name: trExerciseName(set.exerciseId, set.exerciseName) }), 'gold');
+  }
+
+  // ---------- Übungsauswahl ----------
+  const picker = ref({ open: false, query: '', filter: 'recent' as PickerFilter, category: 'Gym' as 'Gym' | 'Football', muscle: null as string | null, selected: [] as number[] });
+
+  function openPicker() {
+    picker.value = { open: true, query: '', filter: records.value.size ? 'recent' : 'all', category: tab.value === 'Football' ? 'Football' : 'Gym', muscle: null, selected: [] };
+  }
+  function togglePicked(id: number) {
+    const sel = picker.value.selected;
+    picker.value.selected = sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id];
+  }
+  function confirmPicker() {
+    const ids = picker.value.selected;
+    picker.value.open = false;
+    if (ids.length) addExercises(ids);
+  }
+
+  const pickerMuscles = computed(() => [...new Set(exercises.value.filter((e) => e.category === picker.value.category).map((e) => e.muscleGroup || 'Other'))].sort());
+
+  const pickerResults = computed(() => {
+    const p = picker.value;
+    const inWorkout = new Set(workoutBlocks.value.map((b) => b.exercise.id));
+    // Mit Suchbegriff: alle Kategorien durchsuchen (man weiß nicht immer, wo eine Übung einsortiert ist).
+    if (normalize(p.query)) return searchExercises(p.query, exercises.value).slice(0, 60).map((e) => ({ e, inWorkout: inWorkout.has(e.id) }));
+    let list = exercises.value.filter((e) => e.category === p.category);
+    if (p.muscle) list = list.filter((e) => (e.muscleGroup || 'Other') === p.muscle);
+    const last = (e: Exercise) => String(records.value.get(`id:${e.id}`)?.lastDate ?? '');
+    if (p.filter === 'recent') list = list.filter((e) => last(e)).sort((a, b) => last(b).localeCompare(last(a)));
+    else if (p.filter === 'favorites') list = list.filter((e) => favorites.value.includes(e.id));
+    if (p.filter !== 'recent') list = [...list].sort((a, b) => trExerciseName(a).localeCompare(trExerciseName(b), intlLocale()));
+    return list.map((e) => ({ e, inWorkout: inWorkout.has(e.id) }));
+  });
+
+  /** "+" im Katalog: Übung als Block in die Einheit (startet sie bei Bedarf). */
+  function addFromCatalog(ex: Exercise) {
+    addExercises([ex.id]);
+    toast(t('workout.toast.added', { name: trExerciseName(ex) }), 'success');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /** Leere Einheit starten: Übungsauswahl öffnen. */
+  async function startWorkout() {
+    openPicker();
   }
 
   /** Ergänzt Kategorie/Typ für Sätze aus Altdaten, sobald der Übungskatalog geladen ist. */
@@ -952,6 +1202,7 @@ export const useAppStore = defineStore('app', () => {
       : { title: t('session.confirm.discardSessionTitle'), message: t('session.confirm.discardSessionMessage'), confirmText: t('session.discard'), danger: true });
     if (!ok) return;
     session.value = EMPTY_SESSION();
+    ghostDraft.value = {};
     persistSession();
     stopTimer();
     showReview.value = false;
@@ -1015,6 +1266,7 @@ export const useAppStore = defineStore('app', () => {
     persistQueue();
 
     session.value = EMPTY_SESSION();
+    ghostDraft.value = {};
     persistSession();
     stopTimer();
     finishModal.value.open = false;
@@ -1047,10 +1299,15 @@ export const useAppStore = defineStore('app', () => {
       const ok = await confirm({ title: t('session.confirm.replaceTitle'), message: t('session.confirm.replaceRepeat'), confirmText: t('session.confirm.replace') });
       if (!ok) return;
     }
-    session.value = { ...EMPTY_SESSION(), startedAt: new Date().toISOString(), sets: toSessionSets(workout.sets, { keepDetails: false }) };
+    // Als Vorlage laden: gleiche Übungen in gleicher Reihenfolge, jeder Satz steht vorausgefüllt bereit (✓ = erledigt).
+    const planned = toSessionSets(workout.sets, { keepDetails: false });
+    const templatesById: Record<number, WorkoutSet[]> = {};
+    for (const x of planned) (templatesById[x.exerciseId] ??= []).push({ weight: x.weight, reps: x.reps, distance: x.distance, time: x.time, isWarmup: x.isWarmup });
+    session.value = { ...EMPTY_SESSION(), startedAt: new Date().toISOString(), order: [...new Set(planned.map((x) => x.exerciseId))], templates: templatesById };
+    ghostDraft.value = {};
+    stopTimer();
     persistSession();
-    tab.value = session.value.sets.some((s) => s.category === 'Gym') ? 'Gym' : 'Football';
-    showReview.value = true;
+    tab.value = planned.some((x) => x.category === 'Gym') ? 'Gym' : 'Football';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -1073,7 +1330,8 @@ export const useAppStore = defineStore('app', () => {
     persistSession();
     const sets = session.value.sets;
     tab.value = sets.some((s) => s.category === 'Football') && !sets.some((s) => s.category === 'Gym') ? 'Football' : 'Gym';
-    showReview.value = true;
+    // Bearbeiten passiert direkt in den Übungs-Blöcken (WorkoutView) - kein extra Dialog.
+    showReview.value = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -1389,11 +1647,14 @@ export const useAppStore = defineStore('app', () => {
   // =====================================================================
   // Eigene Übungen
   // =====================================================================
-  function openCustomModal() {
+  /** @param name vorbelegter Name; mit Name aus der Übungsauswahl wird die neue Übung direkt zur Einheit hinzugefügt. */
+  function openCustomModal(name?: string) {
     if (!online.value) { toast(t('custom.toast.needsConnection'), 'error'); return; }
+    const fromPicker = typeof name === 'string';
     customModal.value = {
       open: true,
-      name: search.value.trim(),
+      addToWorkout: fromPicker,
+      name: fromPicker ? name : search.value.trim(),
       category: tab.value === 'Football' ? 'Football' : 'Gym',
       muscleGroup: muscleFilters.value[0] ?? '',
       trackingType: tab.value === 'Football' ? TrackingType.DistanceTime : TrackingType.WeightReps,
@@ -1416,8 +1677,9 @@ export const useAppStore = defineStore('app', () => {
       m.open = false;
       search.value = '';
       tab.value = created.category as Tab;
-      toast(`"${created.name}" created.`, 'success');
-      openSetModal(created);
+      toast(t('custom.toast.created', { name: created.name }), 'success');
+      if (m.addToWorkout) addExercises([created.id]);
+      else openSetModal(created);
     } catch (e) {
       m.error = errorMessage(e);
     } finally {
@@ -1740,7 +2002,9 @@ export const useAppStore = defineStore('app', () => {
     loadWellness, openCheckIn, setWellnessValue, saveCheckIn, progressInPlan,
     pendingCount, failedCount, syncState,
     categoryExercises, availableMuscleGroups, allMuscleGroups, filteredExercises, sortLabel,
-    sessionActive, isEditing, finishLoad, sessionElapsed, sessionGroups, sessionSummary,
+    sessionActive, hasSets, isEditing, finishLoad, sessionElapsed, sessionGroups, sessionSummary,
+    workoutBlocks, ghostDraft, picker, pickerResults, pickerMuscles, searchExercises,
+    addExercises, removeBlock, moveBlock, setGhostValue, stepGhost, toggleGhostWarmup, quickLog, openPicker, togglePicked, addFromCatalog, confirmPicker, startWorkout, exerciseFor,
     modalEx, modalType, modalKey, modalRecord, modalPrevious, modalSessionSets, modalTechnique, modalTarget, modalE1RM, modalIntensity,
     modalZone, modalSpeed, modalSpeedVsBest, modalIsNewPR,
     timerActive, timerLeft, timerProgress,

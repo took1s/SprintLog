@@ -10,6 +10,7 @@ import { formatCompact, formatRelative } from '@/lib/format';
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue';
 import type { Chart } from 'chart.js';
 import { renderWeeklyChart } from '@/lib/charts';
+import { appearance, activeScheme } from '@/lib/theme';
 
 const app = useAppStore();
 const { activeDaysLast30, clockDate, kpis, muscleSplit, recentPRs, weeklyMetric, weekly } = storeToRefs(app);
@@ -26,7 +27,7 @@ function render() {
   chart = renderWeeklyChart(canvas.value, weekly.value, { metric: weeklyMetric.value, unit: unit ? t(unit) : '' });
 }
 onMounted(render);
-watch([weekly, weeklyMetric, locale], render);
+watch([weekly, weeklyMetric, locale, appearance, activeScheme], render); // Theme-Wechsel: neu zeichnen
 onBeforeUnmount(() => chart?.destroy());
 </script>
 
@@ -58,19 +59,19 @@ onBeforeUnmount(() => chart?.destroy());
       </div>
 
       <div class="glass-panel rounded-3xl p-5">
-          <div class="mb-4 flex items-center justify-between">
-              <h3 class="font-black tracking-wide text-white">{{ t('data.last12') }}</h3>
-              <div class="flex gap-1">
+          <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h3 class="display text-white">{{ t('data.last12') }}</h3>
+              <div class="flex flex-wrap gap-1">
                   <button v-for="m in WEEKLY" :key="m" @click="weeklyMetric = m"
-                          class="rounded-lg px-2 py-1 text-[9px] font-bold uppercase tracking-widest" :class="weeklyMetric === m ? 'bg-accent/20 text-accent' : 'text-slate-500 hover:text-white'">{{ t(`data.weeklyMetric.${m}`) }}</button>
+                          class="rounded-lg px-2.5 py-2 text-[11px] font-bold uppercase tracking-label" :class="weeklyMetric === m ? 'bg-accent/20 text-accent' : 'text-slate-500 hover:text-white'">{{ t(`data.weeklyMetric.${m}`) }}</button>
               </div>
           </div>
           <div class="relative h-48"><canvas ref="weeklyCanvas" :aria-label="t('data.weeklyChart')"></canvas></div>
       </div>
 
-      <div class="grid gap-6 sm:grid-cols-2">
-          <div class="glass-panel rounded-3xl p-5">
-              <h3 class="mb-1 font-black tracking-wide text-white">{{ t('data.muscleSplit') }}</h3>
+      <div class="grid grid-cols-[minmax(0,1fr)] gap-6 sm:grid-cols-2">
+          <div class="glass-panel min-w-0 rounded-3xl p-5">
+              <h3 class="mb-1 display text-white">{{ t('data.muscleSplit') }}</h3>
               <p class="mb-4 font-mono text-[10px] text-slate-500">{{ t('data.muscleInfo', { days: activeDaysLast30 }) }}</p>
               <div v-if="!muscleSplit.length" class="font-mono text-xs text-slate-500">{{ t('data.noSets30') }}</div>
               <div v-for="m in muscleSplit" :key="m.group" class="mb-3">
@@ -84,7 +85,7 @@ onBeforeUnmount(() => chart?.destroy());
           </div>
 
           <div class="glass-panel rounded-3xl p-5">
-              <h3 class="mb-4 font-black tracking-wide text-white">{{ t('data.recentRecords') }}</h3>
+              <h3 class="mb-4 display text-white">{{ t('data.recentRecords') }}</h3>
               <div v-if="!recentPRs.length" class="font-mono text-xs text-slate-500">{{ t('data.noRecords') }}</div>
               <button v-for="(pr, i) in recentPRs" :key="i" @click="openProgress(pr.key)"
                       class="mb-2 flex w-full items-center justify-between rounded-xl border border-white/5 bg-black/20 p-3 text-left transition-colors hover:border-accent/30">

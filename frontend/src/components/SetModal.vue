@@ -16,10 +16,10 @@ const { closeSetModal, copyPrevious, deleteCustomExercise, saveSet, setWeightByP
 <template>
   <transition name="fade">
       <div v-if="setModal.open && modalEx" class="fixed inset-0 z-40 flex items-end justify-center bg-ink/60 backdrop-blur-sm sm:items-center" @click.self="closeSetModal">
-          <div class="glass-panel modal-panel relative max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-[2rem] p-6 sm:rounded-[2rem] sm:p-8" role="dialog" aria-modal="true" :aria-label="exerciseName(modalEx)">
+          <div class="glass-panel modal-panel relative max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 sm:rounded-3xl sm:p-8" role="dialog" aria-modal="true" :aria-label="exerciseName(modalEx)">
               <div class="mb-6 flex items-start justify-between gap-3">
                   <div class="min-w-0">
-                      <h3 class="text-2xl font-black text-white">{{ exerciseName(modalEx) }}</h3>
+                      <h3 class="text-2xl display text-white">{{ exerciseName(modalEx) }}</h3>
                       <p class="mt-1 text-xs font-bold uppercase tracking-widest text-accent">{{ muscleName(modalEx.muscleGroup) }} · {{ t(`tracking.${modalType}`) }}</p>
                   </div>
                   <button @click="closeSetModal" class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>
@@ -40,7 +40,7 @@ const { closeSetModal, copyPrevious, deleteCustomExercise, saveSet, setWeightByP
                       <span class="font-mono text-[10px] text-slate-500">{{ settings.showTechnique ? t('common.hide') : t('common.show') }}</span>
                   </button>
                   <div v-if="settings.showTechnique" class="flex gap-3 border-t border-white/5 p-3">
-                      <ExerciseFigure v-if="modalTechnique.motion" :motion="modalTechnique.motion" class="block h-44 w-[46%] max-w-[220px] flex-shrink-0 rounded-xl bg-[#060a12]" />
+                      <ExerciseFigure v-if="modalTechnique.motion" :motion="modalTechnique.motion" class="block h-44 w-[46%] max-w-[220px] flex-shrink-0 rounded-xl fx-stage" />
                       <div v-if="modalTechnique.technique" class="min-w-0 flex-1">
                           <div class="mb-2 flex flex-wrap gap-1">
                               <span v-for="m in modalTechnique.technique.muscles" :key="m" class="rounded-md border border-accent/20 bg-accent/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-accent">{{ m }}</span>
@@ -174,7 +174,7 @@ const { closeSetModal, copyPrevious, deleteCustomExercise, saveSet, setWeightByP
                   <div class="mb-2 flex items-center justify-between">
                       <span class="label-xs">{{ settings.useRir ? t('set.rir') : t('set.rpe') }} <span class="normal-case tracking-normal text-slate-500">{{ settings.useRir ? t('set.rirHint') : t('set.rpeHint') }}</span></span>
                       <label class="flex cursor-pointer items-center gap-2 text-[10px] font-bold uppercase tracking-widest" :class="setModal.isWarmup ? 'text-orange-300' : 'text-slate-500'">
-                          <input v-model="setModal.isWarmup" type="checkbox" class="h-4 w-4 accent-[#fb923c]"> {{ t('set.warmup') }}
+                          <input v-model="setModal.isWarmup" type="checkbox" class="h-4 w-4"> {{ t('set.warmup') }}
                       </label>
                   </div>
                   <div class="flex gap-1.5">

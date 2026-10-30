@@ -86,6 +86,15 @@ async function finishWorkout(page) {
   await page.click('button:has-text("Save workout")');
 }
 
+/** Übung über die Auswahl in die laufende Einheit holen (Katalog ist dann ausgeblendet). */
+async function addViaPicker(page, exercise, query = exercise) {
+  await page.click('[data-test=add-exercise]');
+  await page.fill('[data-test=picker-search]', query);
+  await page.click(`[role=option]:has-text("${exercise}")`);
+  await page.click('[data-test=picker-add]');
+  await page.waitForSelector(`[data-block] h3:text-is("${exercise}")`);
+}
+
 async function logSet(page, exercise) {
   await page.click(`h3:text-is("${exercise}")`);
   await page.waitForSelector('button:has-text("Log set")');
@@ -98,8 +107,10 @@ test('register, log gym + field sets, finish -> stored on server with client dat
   const token = await register(page, `e2e_${Date.now()}`);
 
   await logSet(page, 'Bench Press');
+  await page.waitForSelector('[data-test=workout]'); // ab dem ersten Satz: Einheit als Blöcke
   await page.click('nav >> text=FIELD');
-  await page.click('h3:text-is("Running / Sprints")');
+  await addViaPicker(page, 'Running / Sprints', 'sprint');
+  await page.click('[data-block] h3:text-is("Running / Sprints")');
   await page.fill('#in-distance', '40');
   await page.fill('#in-time', '5.1');
   await page.click('button:has-text("Log set")');
@@ -223,8 +234,8 @@ test('RPE, warm-up, session RPE and notes are saved; editing a workout updates i
 
   // Bearbeiten: Gewicht des Arbeitssatzes ändern
   await page.click('article >> button:text-is("Edit")');
-  await page.waitForSelector('text=Edit workout');
-  await page.click('[aria-label="Session review" i] button[aria-label="Edit set"] >> nth=1');
+  await page.waitForSelector('text=Editing workout'); // Bearbeiten direkt in den Übungs-Blöcken
+  await page.click('[data-block] button[aria-label^="Edit set"] >> nth=1');
   await page.fill('#in-weight', '82.5');
   await page.click('button:has-text("Update set")');
   await page.click('button:text-is("Save")');
@@ -251,7 +262,7 @@ test('editing offline queues the change and syncs it with PUT once online', asyn
 
   await context.setOffline(true);
   await page.click('article >> button:text-is("Edit")');
-  await page.click('[aria-label="Session review" i] button[aria-label="Edit set"]');
+  await page.click('[data-block] button[aria-label^="Edit set"]');
   await page.fill('#in-reps', '3');
   await page.click('button:has-text("Update set")');
   await page.click('button:text-is("Save")');
@@ -279,7 +290,7 @@ test('training program: start template, follow the plan day, next day rotates', 
 
   await page.click('button:has-text("Start Full body A")');
   await page.waitForSelector('text=0/12');
-  await page.click('button:has(div:text-is("Barbell Squat"))');
+  await page.click('[data-block] h3:text-is("Barbell Squat")');
   await page.waitForSelector('text=Pick a weight for 10 reps');
   await page.fill('#in-weight', '60');
   await page.click('button:has-text("Log set")');
@@ -317,7 +328,7 @@ test('periodized template: week-1 prescription and notes, set note and RIR are s
   // Woche 1 des Nordic-Protokolls: 2 × 5, mit Hinweis
   await page.waitForSelector('text=Partner holds the heels, fall as slowly as possible');
   await page.waitForSelector('text=2 × 5');
-  await page.click('button:has(div:text-is("Nordic Hamstring Curls"))');
+  await page.click('[data-block] h3:text-is("Nordic Hamstring Curls")');
   await page.waitForSelector('text=reps in reserve');
   await page.click('button[data-rpe="8"]');
   assert.equal((await page.textContent('button[data-rpe="8"]')).trim(), '2', 'RPE 8 is shown as RIR 2');
@@ -500,5 +511,51 @@ test('flaky gym network: a failed send without any offline event is shown and ca
   await page.waitForSelector('[data-testid=unsent-banner]', { state: 'detached', timeout: 10000 });
   assert.equal((await api('GET', '/api/workouts/history', token)).length, 1, 'synced exactly once');
   assert.deepEqual(errors.filter((e) => !e.includes('ERR_CONNECTION_RESET')), []);
+  await context.close();
+});
+
+test('one tap per set: add exercises, ghost rows are prefilled, repeat last workout reuses every set', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `tap_${Date.now()}`);
+
+  await page.click('[data-test=start-empty]');
+  // Mehrsprachige Suche: deutscher Begriff findet die englische Übung, Synonym findet Kreuzheben.
+  await page.fill('[data-test=picker-search]', 'bankdrücken');
+  await page.click('[role=option]:has-text("Bench Press")');
+  await page.fill('[data-test=picker-search]', 'kreuzheben');
+  await page.click('[role=option]:has-text("Deadlift (Conventional)")');
+  await page.click('[data-test=picker-add]:has-text("Add 2 exercises")');
+
+  const bench = page.locator('[data-block="1"]');
+  await bench.locator('[data-test=ghost-weight]').fill('80');
+  await bench.locator('[data-test=ghost-reps]').fill('5');
+  await bench.locator('[data-test=log-ghost]').click();
+  await page.click('button[aria-label="Stop timer"]');
+  // Nächster Satz übernimmt die Werte -> ein Tipp
+  assert.equal(await bench.locator('[data-test=ghost-weight]').inputValue(), '80');
+  await bench.locator('[data-test=log-ghost]').click();
+  await page.click('button[aria-label="Stop timer"]');
+
+  const dead = page.locator('[data-block="63"]');
+  await dead.locator('[data-test=ghost-weight]').fill('120');
+  await dead.locator('[data-test=ghost-reps]').fill('3');
+  await dead.locator('[data-test=log-ghost]').click();
+  await page.click('button[aria-label="Stop timer"]');
+
+  await page.click('[data-test=finish-workout]');
+  await page.click('button:has-text("Save workout")');
+  await page.waitForSelector('text=Workout saved.');
+  let history = await api('GET', '/api/workouts/history', token);
+  assert.equal(history.length, 1);
+  assert.deepEqual(history[0].sets.map((s) => [s.exerciseId, s.weight, s.reps]), [[1, 80, 5], [1, 80, 5], [63, 120, 3]]);
+
+  // Wiederholen: gleiche Übungen, jeder Satz vorausgefüllt, nichts ist schon geloggt
+  await page.click('nav >> text=GYM');
+  await page.click('[data-test=start-repeat]');
+  await page.waitForSelector('[data-block="1"] [data-test=ghost-row]');
+  assert.equal(await page.locator('[data-block="1"] [data-test=ghost-weight]').inputValue(), '80');
+  assert.equal(await page.locator('[data-block="63"] [data-test=ghost-weight]').inputValue(), '120');
+  assert.equal(await page.locator('[data-test=finish-workout]').isDisabled(), true, 'nothing logged yet');
+  assert.deepEqual(errors, []);
   await context.close();
 });

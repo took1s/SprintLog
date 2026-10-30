@@ -166,8 +166,9 @@ describe('AuthView', () => {
     const wrapper = mount(AuthView, { global: { plugins: [createPinia()] } });
     expect(wrapper.text()).toContain('Sign in');
 
-    await wrapper.get('button[type=button]').trigger('click');
-    expect(wrapper.text()).toContain('Create new identity');
+    await wrapper.get('[data-test=to-register]').trigger('click');
+    expect(wrapper.text()).toContain('Train with a plan');
+    expect(wrapper.text()).toContain('3-32 characters');
 
     await wrapper.get('#auth-user').setValue('athlete');
     await wrapper.get('#auth-pass').setValue('short');

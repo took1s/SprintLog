@@ -7,6 +7,7 @@ import { useAppStore, recordHeadline } from '@/stores/app';
 import { nextTick, onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue';
 import type { Chart } from 'chart.js';
 import { renderProgressChart } from '@/lib/charts';
+import { appearance, activeScheme } from '@/lib/theme';
 
 const app = useAppStore();
 const { progress, progressDelta, progressMetric, progressMetrics, progressOptions, progressRecord, progressSeries } = storeToRefs(app);
@@ -27,7 +28,7 @@ async function render() {
   });
 }
 onMounted(render);
-watch([progressSeries, progressMetric, locale], render);
+watch([progressSeries, progressMetric, locale, appearance, activeScheme], render); // Theme-Wechsel: neu zeichnen
 onBeforeUnmount(() => chart?.destroy());
 </script>
 

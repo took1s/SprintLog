@@ -28,7 +28,7 @@ const { activateProgram, currentPrescription, dayLabel, openProgramEditor, start
               <div class="mb-4 flex items-start justify-between gap-3">
                   <div class="min-w-0">
                       <div class="text-[10px] font-bold uppercase tracking-widest text-accent">{{ t('plan.activeProgram', { goal: goalName(activeProgram.goal) }) }}</div>
-                      <h2 class="break-words text-2xl font-black leading-tight text-white">{{ programName(activeProgram) }}</h2>
+                      <h2 class="break-words text-2xl display leading-tight text-white">{{ programName(activeProgram) }}</h2>
                       <div class="mt-1 font-mono text-[10px] text-slate-400">
                           {{ t('plan.weekOf', { week: Math.min(programInfo.week, activeProgram.weeks), weeks: activeProgram.weeks }) }} · {{ tn('units.sessions', programInfo.sessions) }}
                           <template v-if="programInfo.lastDate"> · {{ t('plan.lastRelative', { when: formatRelative(programInfo.lastDate, clockDate) }) }}</template>
@@ -54,7 +54,7 @@ const { activateProgram, currentPrescription, dayLabel, openProgramEditor, start
                       <span class="text-[10px] font-bold uppercase tracking-widest text-accent">{{ t('plan.nextUp') }}</span>
                       <span class="font-mono text-[10px] text-slate-500">{{ dayLabel(programInfo.next) }}</span>
                   </div>
-                  <h3 class="mb-3 text-xl font-black text-white">{{ dayName(activeProgram, programInfo.next) }}</h3>
+                  <h3 class="mb-3 text-xl display text-white">{{ dayName(activeProgram, programInfo.next) }}</h3>
                   <ul class="mb-4 space-y-1">
                       <li v-for="x in programInfo.next.exercises" :key="x.id" class="text-xs">
                           <div class="flex justify-between gap-3">
@@ -111,7 +111,7 @@ const { activateProgram, currentPrescription, dayLabel, openProgramEditor, start
           <!-- Belastung -->
           <div class="glass-panel rounded-3xl p-5">
               <div class="mb-3 flex items-center justify-between">
-                  <h3 class="font-black tracking-wide text-white">{{ t('plan.trainingLoad') }}</h3>
+                  <h3 class="display text-white">{{ t('plan.trainingLoad') }}</h3>
                   <span class="rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest" :class="zoneClass(loadZone.tone)">{{ loadZone.label }}</span>
               </div>
               <div class="mb-3 grid grid-cols-3 gap-3 text-center">
@@ -126,7 +126,7 @@ const { activateProgram, currentPrescription, dayLabel, openProgramEditor, start
           <!-- Vorlagen -->
           <div>
               <div class="mb-3 flex items-end justify-between">
-                  <h3 class="font-black tracking-wide text-white">{{ activeProgram ? t('plan.otherPrograms') : t('plan.startProgram') }}</h3>
+                  <h3 class="display text-white">{{ activeProgram ? t('plan.otherPrograms') : t('plan.startProgram') }}</h3>
                   <button @click="openProgramEditor()" class="cyber-outline-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest">{{ t('plan.newCustom') }}</button>
               </div>
               <div class="mb-3 flex gap-2" role="radiogroup">
@@ -155,7 +155,7 @@ const { activateProgram, currentPrescription, dayLabel, openProgramEditor, start
 
           <!-- Eigene / pausierte Pläne -->
           <div v-if="otherPrograms.length">
-              <h3 class="mb-3 font-black tracking-wide text-white">{{ t('plan.myPrograms') }}</h3>
+              <h3 class="mb-3 display text-white">{{ t('plan.myPrograms') }}</h3>
               <div class="space-y-2">
                   <div v-for="p in otherPrograms" :key="p.id" class="glass-panel flex items-center justify-between gap-3 rounded-2xl p-4">
                       <div class="min-w-0">

@@ -1,0 +1,371 @@
+/*
+ * SprintLog - Design-Tokens für alle Themes.
+ *
+ * Aufbau: <html data-theme="pitch|clean|midnight|mono" data-scheme="light|dark">
+ *   - data-theme bestimmt den Charakter (Schriften, Radien, Effekte),
+ *   - data-scheme die Farben (hell/dunkel; "auto" wird in lib/theme.ts aufgelöst).
+ *
+ * Farben sind RGB-Tripel ("r g b"), damit Tailwind Transparenz anhängen kann: rgb(var(--c-fg) / 0.5).
+ * Komponenten benutzen NIE Hex-Werte, sondern Tailwind-Klassen, die auf diese Tokens zeigen (tailwind.config.cjs).
+ *
+ * Bedeutung:
+ *   bg          Seitenhintergrund            surface / surface-2  Karten / Dialoge
+ *   fg, fg-2    Text stark / normal          muted, subtle, faint Text abgestuft (>= 4.5:1 bis muted)
+ *   well        "Mulde" (Vertiefungen, bg-black/20 ...) - im Dunkeln Schwarz, im Hellen ein heller Ton nahe am Hintergrund
+ *   accent      Akzentfläche (Buttons)       accent-text          Akzentfarbe für Text auf surface (>= 4.5:1)
+ *   on-accent   Text auf Akzentfläche
+ *   danger/success/warn/gold/gym  Statusfarben (Fläche) + *-text (Text)
+ */
+
+/* ============================== Charakter pro Theme ============================== */
+
+:root,
+[data-theme='pitch'] {
+  --font-body: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Oswald Variable', 'Arial Narrow', 'Inter Variable', sans-serif;
+  --font-num: 'Oswald Variable', 'Inter Variable', sans-serif;
+  --display-weight: 650;
+  --display-case: uppercase;
+  --display-tracking: 0.01em;
+  --label-tracking: 0.14em;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+  --border-w: 1px;
+  --panel-blur: 0px;
+  --orbs: 0;
+  --glow: none;
+  --btn-case: uppercase;
+  --btn-tracking: 0.08em;
+  --accent-ring: var(--c-accent);
+}
+
+[data-theme='clean'] {
+  --font-body: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Inter Variable', Inter, system-ui, sans-serif;
+  --font-num: 'Inter Variable', Inter, system-ui, sans-serif;
+  --display-weight: 800;
+  --display-case: none;
+  --display-tracking: -0.025em;
+  --label-tracking: 0.08em;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 26px;
+  --r-pill: 999px;
+  --border-w: 1px;
+  --panel-blur: 0px;
+  --orbs: 0;
+  --glow: 0 0 0 transparent;
+  --btn-case: none;
+  --btn-tracking: 0;
+}
+
+[data-theme='midnight'] {
+  --font-body: 'Manrope Variable', Manrope, system-ui, -apple-system, sans-serif;
+  --font-display: 'Manrope Variable', Manrope, system-ui, sans-serif;
+  --font-num: 'Manrope Variable', Manrope, system-ui, sans-serif;
+  --display-weight: 800;
+  --display-case: none;
+  --display-tracking: -0.02em;
+  --label-tracking: 0.12em;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+  --border-w: 1px;
+  --panel-blur: 20px;
+  --orbs: 1;
+  --btn-case: none;
+  --btn-tracking: 0.01em;
+}
+
+[data-theme='mono'] {
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-num: 'IBM Plex Mono', ui-monospace, monospace;
+  --display-weight: 700;
+  --display-case: uppercase;
+  --display-tracking: -0.01em;
+  --label-tracking: 0.12em;
+  --r-sm: 2px;
+  --r-md: 4px;
+  --r-lg: 6px;
+  --r-xl: 8px;
+  --r-pill: 4px;
+  --border-w: 1.5px;
+  --panel-blur: 0px;
+  --orbs: 0;
+  --glow: 0 0 0 transparent;
+  --btn-case: uppercase;
+  --btn-tracking: 0.1em;
+}
+
+[data-theme] { --accent-ring: var(--c-accent); }
+
+/* ============================== Farben ============================== */
+
+/* A · Pitch Night - Graphit, Rasen-Lime, Anzeigetafel */
+:root:not([data-scheme]),
+[data-theme='pitch'][data-scheme='dark'] {
+  color-scheme: dark;
+  --c-bg: 14 19 17;
+  --c-surface: 22 29 26;
+  --c-surface-2: 28 37 33;
+  --c-fg: 242 245 240;
+  --c-fg-2: 214 222 216;
+  --c-muted: 160 172 165;
+  --c-subtle: 134 146 139;
+  --c-faint: 88 100 94;
+  --c-well: 0 0 0;
+  --c-accent: 198 255 61;
+  --c-accent-text: 198 255 61;
+  --c-on-accent: 14 19 17;
+  --c-danger: 255 107 107;
+  --c-danger-text: 255 128 128;
+  --c-success: 52 211 153;
+  --c-success-text: 74 222 170;
+  --c-warn: 255 166 77;
+  --c-warn-text: 255 179 102;
+  --c-gold: 250 204 21;
+  --c-gold-text: 253 214 74;
+  --c-gym: 167 139 250;
+  --c-gym-text: 186 166 255;
+  --panel-bg: rgb(var(--c-surface));
+  --panel-border: rgb(var(--c-fg) / 0.07);
+  --panel-shadow: 0 1px 0 rgb(var(--c-fg) / 0.03) inset;
+  --modal-bg: rgb(var(--c-surface-2));
+  --backdrop: rgb(4 6 5 / 0.72);
+  --glow: none;
+}
+
+[data-theme='pitch'][data-scheme='light'] {
+  color-scheme: light;
+  --c-bg: 241 244 237;
+  --c-surface: 255 255 255;
+  --c-surface-2: 255 255 255;
+  --c-fg: 14 19 17;
+  --c-fg-2: 36 46 41;
+  --c-muted: 82 94 88;
+  --c-subtle: 104 116 110;
+  --c-faint: 160 170 164;
+  --c-well: 196 212 184;
+  --c-accent: 198 255 61;
+  --c-accent-text: 52 110 0;
+  --c-on-accent: 14 19 17;
+  --c-danger: 214 40 40;
+  --c-danger-text: 185 28 28;
+  --c-success: 16 150 90;
+  --c-success-text: 4 120 87;
+  --c-warn: 217 119 6;
+  --c-warn-text: 180 83 9;
+  --c-gold: 176 116 4;
+  --c-gold-text: 161 98 7;
+  --c-gym: 124 58 237;
+  --c-gym-text: 109 40 217;
+  --panel-bg: rgb(var(--c-surface));
+  --panel-border: rgb(var(--c-fg) / 0.09);
+  --panel-shadow: 0 1px 2px rgb(14 19 17 / 0.05);
+  --modal-bg: rgb(var(--c-surface));
+  --backdrop: rgb(14 19 17 / 0.45);
+  --glow: none;
+  --accent-ring: 52 110 0;
+}
+
+/* B · Clean Pro - hell, Orange, wie eine gute Lauf-App */
+[data-theme='clean'][data-scheme='light'] {
+  color-scheme: light;
+  --c-bg: 246 245 242;
+  --c-surface: 255 255 255;
+  --c-surface-2: 255 255 255;
+  --c-fg: 21 20 15;
+  --c-fg-2: 44 42 37;
+  --c-muted: 99 95 88;
+  --c-subtle: 117 113 106;
+  --c-faint: 170 166 158;
+  --c-well: 214 209 198;
+  --c-accent: 204 58 8;
+  --c-accent-text: 196 58 8;
+  --c-on-accent: 255 255 255;
+  --c-danger: 210 34 45;
+  --c-danger-text: 185 28 28;
+  --c-success: 22 140 80;
+  --c-success-text: 21 115 65;
+  --c-warn: 217 119 6;
+  --c-warn-text: 168 78 10;
+  --c-gold: 176 116 4;
+  --c-gold-text: 150 92 6;
+  --c-gym: 109 40 217;
+  --c-gym-text: 95 35 190;
+  --panel-bg: rgb(var(--c-surface));
+  --panel-border: rgb(var(--c-fg) / 0.08);
+  --panel-shadow: 0 1px 2px rgb(21 20 15 / 0.04), 0 4px 16px rgb(21 20 15 / 0.04);
+  --modal-bg: rgb(var(--c-surface));
+  --backdrop: rgb(21 20 15 / 0.4);
+  --glow: none;
+}
+
+[data-theme='clean'][data-scheme='dark'] {
+  color-scheme: dark;
+  --c-bg: 17 17 15;
+  --c-surface: 28 27 24;
+  --c-surface-2: 36 35 31;
+  --c-fg: 245 243 238;
+  --c-fg-2: 220 217 210;
+  --c-muted: 166 161 152;
+  --c-subtle: 140 135 127;
+  --c-faint: 92 88 82;
+  --c-well: 0 0 0;
+  --c-accent: 255 106 51;
+  --c-accent-text: 255 138 92;
+  --c-on-accent: 20 12 8;
+  --c-danger: 248 113 113;
+  --c-danger-text: 252 140 140;
+  --c-success: 52 199 120;
+  --c-success-text: 90 214 145;
+  --c-warn: 251 160 60;
+  --c-warn-text: 253 178 92;
+  --c-gold: 250 204 21;
+  --c-gold-text: 252 214 70;
+  --c-gym: 167 139 250;
+  --c-gym-text: 190 170 255;
+  --panel-bg: rgb(var(--c-surface));
+  --panel-border: rgb(var(--c-fg) / 0.07);
+  --panel-shadow: none;
+  --modal-bg: rgb(var(--c-surface-2));
+  --backdrop: rgb(0 0 0 / 0.6);
+  --glow: none;
+}
+
+/* C · Midnight Pro - tiefes Nachtblau, weiches Indigo, Glas */
+[data-theme='midnight'][data-scheme='dark'] {
+  color-scheme: dark;
+  --c-bg: 9 11 20;
+  --c-surface: 19 23 39;
+  --c-surface-2: 25 30 51;
+  --c-fg: 238 240 255;
+  --c-fg-2: 206 210 236;
+  --c-muted: 150 156 192;
+  --c-subtle: 124 130 166;
+  --c-faint: 76 82 114;
+  --c-well: 0 0 0;
+  --c-accent: 124 140 255;
+  --c-accent-text: 156 168 255;
+  --c-on-accent: 9 11 20;
+  --c-danger: 255 115 130;
+  --c-danger-text: 255 140 152;
+  --c-success: 64 214 170;
+  --c-success-text: 94 226 186;
+  --c-warn: 255 176 92;
+  --c-warn-text: 255 190 120;
+  --c-gold: 250 210 80;
+  --c-gold-text: 252 220 110;
+  --c-gym: 196 150 255;
+  --c-gym-text: 210 174 255;
+  --panel-bg: linear-gradient(160deg, rgb(var(--c-surface) / 0.82), rgb(var(--c-surface) / 0.6));
+  --panel-border: rgb(var(--c-fg) / 0.07);
+  --panel-shadow: 0 1px 0 rgb(var(--c-fg) / 0.06) inset, 0 18px 40px rgb(0 0 0 / 0.35);
+  --modal-bg: rgb(var(--c-surface-2));
+  --backdrop: rgb(4 5 12 / 0.7);
+  --glow: 0 8px 28px rgb(var(--c-accent) / 0.28);
+}
+
+[data-theme='midnight'][data-scheme='light'] {
+  color-scheme: light;
+  --c-bg: 243 244 251;
+  --c-surface: 255 255 255;
+  --c-surface-2: 255 255 255;
+  --c-fg: 16 19 40;
+  --c-fg-2: 40 44 70;
+  --c-muted: 88 94 128;
+  --c-subtle: 108 114 148;
+  --c-faint: 165 170 198;
+  --c-well: 196 202 232;
+  --c-accent: 79 70 229;
+  --c-accent-text: 67 56 202;
+  --c-on-accent: 255 255 255;
+  --c-danger: 220 38 70;
+  --c-danger-text: 190 24 60;
+  --c-success: 13 148 110;
+  --c-success-text: 4 120 90;
+  --c-warn: 217 119 6;
+  --c-warn-text: 175 80 10;
+  --c-gold: 176 116 4;
+  --c-gold-text: 150 92 6;
+  --c-gym: 147 51 234;
+  --c-gym-text: 126 34 206;
+  --panel-bg: rgb(var(--c-surface) / 0.9);
+  --panel-border: rgb(var(--c-fg) / 0.08);
+  --panel-shadow: 0 1px 2px rgb(16 19 40 / 0.05), 0 10px 30px rgb(16 19 40 / 0.06);
+  --modal-bg: rgb(var(--c-surface));
+  --backdrop: rgb(16 19 40 / 0.4);
+  --glow: 0 6px 20px rgb(var(--c-accent) / 0.25);
+}
+
+/* D · Mono Athlete - Schwarz/Weiß, harte Linien, ein Rot */
+[data-theme='mono'][data-scheme='light'] {
+  color-scheme: light;
+  --c-bg: 242 242 240;
+  --c-surface: 255 255 255;
+  --c-surface-2: 255 255 255;
+  --c-fg: 10 10 10;
+  --c-fg-2: 30 30 30;
+  --c-muted: 82 82 82;
+  --c-subtle: 100 100 100;
+  --c-faint: 160 160 160;
+  --c-well: 196 196 192;
+  --c-accent: 214 6 0;
+  --c-accent-text: 196 6 0;
+  --c-on-accent: 255 255 255;
+  --c-danger: 196 6 0;
+  --c-danger-text: 176 6 0;
+  --c-success: 10 120 60;
+  --c-success-text: 8 105 52;
+  --c-warn: 180 90 0;
+  --c-warn-text: 150 75 0;
+  --c-gold: 150 110 0;
+  --c-gold-text: 130 95 0;
+  --c-gym: 10 10 10;
+  --c-gym-text: 10 10 10;
+  --panel-bg: rgb(var(--c-surface));
+  --panel-border: rgb(var(--c-fg) / 0.9);
+  --panel-shadow: none;
+  --modal-bg: rgb(var(--c-surface));
+  --backdrop: rgb(10 10 10 / 0.55);
+  --glow: none;
+}
+
+[data-theme='mono'][data-scheme='dark'] {
+  color-scheme: dark;
+  --c-bg: 8 8 8;
+  --c-surface: 18 18 18;
+  --c-surface-2: 24 24 24;
+  --c-fg: 245 245 240;
+  --c-fg-2: 222 222 218;
+  --c-muted: 168 168 164;
+  --c-subtle: 140 140 136;
+  --c-faint: 90 90 88;
+  --c-well: 0 0 0;
+  --c-accent: 255 51 40;
+  --c-accent-text: 255 92 82;
+  --c-on-accent: 8 8 8;
+  --c-danger: 255 92 82;
+  --c-danger-text: 255 110 100;
+  --c-success: 80 220 140;
+  --c-success-text: 100 228 155;
+  --c-warn: 255 170 60;
+  --c-warn-text: 255 185 90;
+  --c-gold: 255 214 60;
+  --c-gold-text: 255 222 90;
+  --c-gym: 245 245 240;
+  --c-gym-text: 245 245 240;
+  --panel-bg: rgb(var(--c-surface));
+  --panel-border: rgb(var(--c-fg) / 0.85);
+  --panel-shadow: none;
+  --modal-bg: rgb(var(--c-surface));
+  --backdrop: rgb(0 0 0 / 0.7);
+  --glow: none;
+}

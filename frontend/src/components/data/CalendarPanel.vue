@@ -19,7 +19,7 @@ onMounted(() => { if (scroller.value) scroller.value.scrollLeft = scroller.value
   <div class="glass-panel rounded-3xl p-5">
       <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
           <div>
-              <h3 class="font-black tracking-wide text-white">{{ t('calendar.title') }}</h3>
+              <h3 class="display text-white">{{ t('calendar.title') }}</h3>
               <p class="font-mono text-[10px] text-slate-500">{{ t('calendar.info') }}</p>
           </div>
           <div class="flex items-center gap-1 font-mono text-[9px] text-slate-500">
@@ -32,7 +32,7 @@ onMounted(() => { if (scroller.value) scroller.value.scrollLeft = scroller.value
                   <span v-for="m in heatmap.months" :key="m.index" class="absolute" :style="{ left: (m.index * 16) + 'px' }">{{ m.label }}</span>
               </div>
               <div class="flex gap-1">
-                  <div class="sticky left-0 z-10 mr-1 flex w-7 flex-col gap-1 bg-[#0c111c] font-mono text-[9px] text-slate-500">
+                  <div class="sticky left-0 z-10 mr-1 flex w-7 flex-col gap-1 bg-surface font-mono text-[9px] text-slate-500">
                       <span class="h-3 leading-3">{{ t('calendar.weekdays.mo') }}</span><span class="h-3"></span><span class="h-3 leading-3">{{ t('calendar.weekdays.we') }}</span><span class="h-3"></span><span class="h-3 leading-3">{{ t('calendar.weekdays.fr') }}</span><span class="h-3"></span><span class="h-3 leading-3">{{ t('calendar.weekdays.su') }}</span>
                   </div>
                   <div v-for="(col, c) in heatmap.columns" :key="c" class="flex flex-col gap-1">

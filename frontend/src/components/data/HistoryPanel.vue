@@ -70,7 +70,7 @@ const { deleteWorkout, editWorkout, programNameForDay, repeatWorkout, retryEntry
                       <template v-for="(set, n) in group.sets" :key="set.index">
                       <div class="flex items-center justify-between rounded-lg px-2 py-2 text-sm transition-colors hover:bg-white/5">
                           <div class="flex items-center gap-3">
-                              <span class="w-10 font-mono text-[10px] font-bold" :class="set.isWarmup ? 'text-slate-600' : 'text-slate-500'">{{ setLabel(group.sets, n) }}</span>
+                              <span class="min-w-[4.5rem] whitespace-nowrap font-mono text-[10px] font-bold" :class="set.isWarmup ? 'text-slate-600' : 'text-slate-500'">{{ setLabel(group.sets, n) }}</span>
                               <span v-for="b in setBadges(w, set.index).slice(0, 2)" :key="b.field" class="rounded border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest" :class="badgeClass(b.tone)">{{ b.icon }} {{ t(`records.badges.${b.field}`) }}</span>
                           </div>
                           <span class="font-mono text-xs font-bold" :class="set.isWarmup ? 'text-slate-500' : 'text-white'">{{ describeSet(set, group.trackingType) }}<span v-if="set.rpe" class="ml-1.5 text-[10px] text-orange-300">{{ rpeText(set.rpe, settings.useRir) }}</span></span>

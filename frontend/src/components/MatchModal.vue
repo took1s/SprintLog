@@ -14,17 +14,17 @@ const load = computed(() => (matchModal.value.rpe && Number(matchModal.value.min
 <template>
   <transition name="fade">
       <div v-if="matchModal.open" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/80 backdrop-blur-sm sm:items-center" @click.self="matchModal.open = false">
-          <form @submit.prevent="saveMatch" class="glass-panel modal-panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-[2rem] p-6 sm:rounded-[2rem] sm:p-8"
+          <form @submit.prevent="saveMatch" class="glass-panel modal-panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 sm:rounded-3xl sm:p-8"
                 role="dialog" aria-modal="true" :aria-label="`${matchModal.editing ? t('match.editTitle') : t('match.title')} ${t('match.titleAccent')}`">
               <div class="mb-5 flex items-start justify-between">
                   <div>
-                      <h3 class="text-2xl font-black text-white">{{ matchModal.editing ? t('match.editTitle') : t('match.title') }} <span class="text-accent">{{ t('match.titleAccent') }}</span></h3>
+                      <h3 class="text-2xl display text-white">{{ matchModal.editing ? t('match.editTitle') : t('match.title') }} <span class="text-accent">{{ t('match.titleAccent') }}</span></h3>
                       <p class="mt-1 font-mono text-[10px] text-slate-400">{{ t('match.info') }}</p>
                   </div>
                   <button type="button" @click="matchModal.open = false" class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>
               </div>
 
-              <div class="mb-4 grid grid-cols-2 gap-3">
+              <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label class="block">
                       <span class="label-xs mb-2">{{ t('finish.date') }}</span>
                       <input v-model="matchModal.date" type="datetime-local" class="cyber-input w-full rounded-xl p-3 text-sm">
