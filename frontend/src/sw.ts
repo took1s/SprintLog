@@ -1,7 +1,8 @@
 /// <reference lib="webworker" />
 // SprintLog Service Worker
 // - App-Shell wird beim Installieren vorgeladen -> App startet komplett offline.
-// - Navigation: Network-first (max. 3 s), danach Cache.
+// - Navigation: App-Shell sofort aus dem Cache (kein Warten auf den Server - Render Free schläft nach 15 min ein).
+//   Neue Versionen kommen über einen neuen sw.js; die App zeigt dann "Neue Version verfügbar".
 // - Statische Dateien: Stale-while-revalidate (sofort aus dem Cache, im Hintergrund aktualisieren).
 // - /api/* wird nicht angefasst - Offline-Daten verwaltet die App selbst (localStorage + Sync-Queue).
 //
@@ -33,18 +34,18 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-function timeout(ms: number): Promise<never> {
-  return new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms));
-}
-
-async function networkFirst(request: Request): Promise<Response> {
+/**
+ * App-Shell zuerst: index.html dieser Version kommt aus dem Precache, damit Shell und gehashte Assets immer
+ * zusammenpassen. Netzwerk nur, wenn (noch) nichts im Cache liegt - z. B. beim allerersten Aufruf.
+ */
+async function appShell(request: Request): Promise<Response> {
   const cache = await caches.open(CACHE);
+  const cached = (await cache.match('/')) || (await cache.match('/index.html'));
+  if (cached) return cached;
   try {
-    const response = await Promise.race([fetch(request), timeout(3000)]);
-    if (response.ok) void cache.put('/index.html', response.clone());
-    return response;
+    return await fetch(request);
   } catch {
-    return (await cache.match('/index.html')) || (await cache.match('/')) || Response.error();
+    return Response.error();
   }
 }
 
@@ -73,7 +74,7 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/swagger') || url.pathname === '/health') return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(networkFirst(request));
+    event.respondWith(appShell(request));
     return;
   }
 
