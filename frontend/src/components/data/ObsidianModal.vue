@@ -2,7 +2,7 @@
 // Einheit (oder ganzen Tag) als Dataview-Zeilen für die Daily Note kopieren.
 import { computed, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import { t, locale, textIn, SUPPORTED_LOCALES, type Locale } from '@/i18n';
+import { t, locale, loadAllLocales, textIn, SUPPORTED_LOCALES, type Locale } from '@/i18n';
 import { useAppStore } from '@/stores/app';
 import { useUiStore } from '@/stores/ui';
 import { dateKey, trackingOf } from '@/lib/analytics';
@@ -54,7 +54,7 @@ const sesOf = (w: Workout): SessionCode => sesOverride.value[keyOf(w)] ?? inferS
 const text = computed(() => obsidianText(workouts.value, { ...options.value, sesFor: sesOf }));
 const missingMinutes = computed(() => workouts.value.some((w) => !w.durationSeconds));
 
-watch(obsidianWorkout, () => { sesOverride.value = {}; copied.value = false; });
+watch(obsidianWorkout, (w) => { sesOverride.value = {}; copied.value = false; if (w) void loadAllLocales(); });
 
 async function copy() {
   try {

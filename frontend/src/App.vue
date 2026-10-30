@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineAsyncComponent, onMounted } from 'vue';
+import { defineAsyncComponent, onMounted, reactive, watchEffect } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
 import ToastStack from '@/components/ToastStack.vue';
@@ -12,23 +12,35 @@ import WorkoutView from '@/components/workout/WorkoutView.vue';
 import StartPanel from '@/components/workout/StartPanel.vue';
 import ExercisePicker from '@/components/workout/ExercisePicker.vue';
 import ExerciseCatalog from '@/components/ExerciseCatalog.vue';
-import PlanView from '@/components/PlanView.vue';
 import SessionBar from '@/components/SessionBar.vue';
-import SetModal from '@/components/SetModal.vue';
-import CustomExerciseModal from '@/components/CustomExerciseModal.vue';
-import SettingsModal from '@/components/SettingsModal.vue';
-import ProgramEditor from '@/components/ProgramEditor.vue';
 import FinishModal from '@/components/FinishModal.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
-import RecoveryCodesModal from '@/components/RecoveryCodesModal.vue';
-import MatchModal from '@/components/MatchModal.vue';
 import { t } from '@/i18n';
 
-// Auswertungen inkl. Chart.js erst laden, wenn DATA geöffnet wird (kleineres Start-Bundle; offline per Precache verfügbar).
+// Seltener gebrauchte Teile als eigene Chunks (kleineres Start-Bundle; offline per Service-Worker-Cache verfügbar):
+// Auswertungen inkl. Chart.js, Plan, Satz-Dialog mit Animationen, Einstellungen, Editoren.
 const DataView = defineAsyncComponent(() => import('@/components/data/DataView.vue'));
+const PlanView = defineAsyncComponent(() => import('@/components/PlanView.vue'));
+const SetModal = defineAsyncComponent(() => import('@/components/SetModal.vue'));
+const CustomExerciseModal = defineAsyncComponent(() => import('@/components/CustomExerciseModal.vue'));
+const SettingsModal = defineAsyncComponent(() => import('@/components/SettingsModal.vue'));
+const ProgramEditor = defineAsyncComponent(() => import('@/components/ProgramEditor.vue'));
+const MatchModal = defineAsyncComponent(() => import('@/components/MatchModal.vue'));
+const RecoveryCodesModal = defineAsyncComponent(() => import('@/components/RecoveryCodesModal.vue'));
 
 const app = useAppStore();
 const { booting, isAuthenticated, tab, authMode, sessionActive } = storeToRefs(app);
+
+/** Dialog-Chunks erst beim ersten Öffnen laden - danach bleiben sie gemountet (Schließen-Animation bleibt erhalten). */
+const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false });
+watchEffect(() => {
+  if (app.setModal.open) used.set = true;
+  if (app.customModal.open) used.custom = true;
+  if (app.settingsOpen) used.settings = true;
+  if (app.programEditor.open) used.editor = true;
+  if (app.matchModal.open) used.match = true;
+  if (app.recoveryCodes) used.codes = true;
+});
 
 onMounted(() => { void app.init(); });
 </script>
@@ -67,15 +79,15 @@ onMounted(() => { void app.init(); });
 
       <SessionBar />
       <ExercisePicker />
-      <SetModal />
-      <CustomExerciseModal />
-      <SettingsModal />
-      <ProgramEditor />
+      <SetModal v-if="used.set" />
+      <CustomExerciseModal v-if="used.custom" />
+      <SettingsModal v-if="used.settings" />
+      <ProgramEditor v-if="used.editor" />
       <FinishModal />
-      <MatchModal />
+      <MatchModal v-if="used.match" />
     </template>
 
-    <RecoveryCodesModal />
+    <RecoveryCodesModal v-if="used.codes" />
     <ConfirmDialog />
   </div>
 </template>

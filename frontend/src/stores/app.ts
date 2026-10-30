@@ -11,12 +11,12 @@ import {
   TrackingType, trackingOf, epley1RM, setSpeed, msToKmh, trainingZone, roundTo, exerciseKey,
   computeRecords, detectPRs, workoutKey, summarizeWorkout, groupSetsByExercise, metricsFor,
   exerciseSeries, weeklyTotals, weekStreak, muscleDistribution, activityHeatmap, lastSetFor,
-  usageCounts, inferWorkoutType, percentChange, dateKey, type ExerciseRecord, type MetricOption,
+  usageCounts, lastSetsByKey, inferWorkoutType, percentChange, dateKey, type ExerciseRecord, type MetricOption,
 } from '../lib/analytics';
 import { formatNumber, formatClock, formatDate, formatRelative, formatSeconds, describeSet, toLocalInput } from '../lib/format';
 import { unlockAudio, playRestAlarm, createWakeLock } from '../lib/feedback';
 import { exportCsv, exportJson } from '../lib/export';
-import { techniqueFor, BODYWEIGHT_EXERCISES } from '../lib/figure';
+import { BODYWEIGHT_EXERCISES } from '../lib/bodyweight';
 import { blockOrder, ghostFor, matchScore, normalize, previousSets, type GhostValues } from '../lib/workout';
 import { exerciseAliases } from '../i18n/aliases';
 import { localDay, readiness, readinessAdvice, readinessTrend, weeklyAverage, type WellnessEntry, type WellnessField } from '../lib/wellness';
@@ -31,8 +31,8 @@ import type {
   TrackingType as TrackingTypeValue, TrainingProgram, Workout, WorkoutSet,
 } from '../types';
 import { useUiStore } from './ui';
-import { t, tn, tDynamic, intlLocale, textIn, SUPPORTED_LOCALES } from '../i18n';
-import { templateText, localizedTechnique, exerciseName as trExerciseName, dayName as trDayName, programName as trProgramName } from '../i18n/content';
+import { t, tn, tDynamic, intlLocale, textIn, loadAllLocales, SUPPORTED_LOCALES } from '../i18n';
+import { templateText, exerciseName as trExerciseName, dayName as trDayName, programName as trProgramName } from '../i18n/content';
 
 // ---------- Konstanten ----------
 
@@ -387,10 +387,6 @@ export const useAppStore = defineStore('app', () => {
   const modalRecord = computed<ExerciseRecord | null>(() => (modalEx.value ? records.value.get(modalKey.value) ?? null : null));
   const modalPrevious = computed(() => (modalEx.value ? lastSetFor(allWorkouts.value, modalKey.value) : null));
   const modalSessionSets = computed(() => session.value.sets.filter((s) => s.exerciseId === modalEx.value?.id));
-  const modalTechnique = computed(() => {
-    const info = techniqueFor(modalEx.value);
-    return { ...info, technique: localizedTechnique(info.key, info.technique) };
-  });
   const modalTarget = computed(() => planTargetFor(modalEx.value?.id));
   const modalE1RM = computed(() => epley1RM(setModal.value.weight, setModal.value.reps));
   const modalIntensity = computed(() => {
@@ -852,8 +848,10 @@ export const useAppStore = defineStore('app', () => {
 
   function selectSort(mode: SortMode) { sortMode.value = mode; sortOpen.value = false; }
 
+  /** Letzter Satz je Übung, einmal pro Änderung der Historie berechnet (Katalog mit 250+ Karten). */
+  const lastSets = computed(() => lastSetsByKey(allWorkouts.value));
   function lastSetLabel(ex: Exercise): string {
-    const last = lastSetFor(allWorkouts.value, `id:${ex.id}`);
+    const last = lastSets.value.get(`id:${ex.id}`);
     return last ? `${describeSet(last, ex.trackingType)} · ${formatRelative(last.date, clockDate.value)}` : '';
   }
 
@@ -1007,14 +1005,21 @@ export const useAppStore = defineStore('app', () => {
   /** Eingaben im Geister-Satz pro Übung, bevor ✓ gedrückt wird. */
   const ghostDraft = ref<Record<number, Partial<Pick<GhostValues, 'weight' | 'reps' | 'distance' | 'time' | 'isWarmup'>>>>({});
 
+  /** Ids der Blöcke - ändern sich nicht beim Tippen in den Geister-Satz. */
+  const blockIds = computed(() => {
+    const s = session.value;
+    return blockOrder(s.order, (s.plan?.targets ?? []).map((x) => x.exerciseId), s.sets.map((x) => x.exerciseId));
+  });
+  /** Sätze der letzten Einheit je Übung (nur neu, wenn Historie oder Blöcke sich ändern). */
+  const previousById = computed(() => new Map(blockIds.value.map((id) => [id, previousSets(allWorkouts.value, id, editingExclude.value)])));
+
   const workoutBlocks = computed<WorkoutBlock[]>(() => {
     const s = session.value;
-    const ids = blockOrder(s.order, (s.plan?.targets ?? []).map((x) => x.exerciseId), s.sets.map((x) => x.exerciseId));
-    return ids.map((id) => {
+    return blockIds.value.map((id) => {
       const exercise = exerciseFor(id);
       const sets = s.sets.map((x, index) => ({ ...x, index })).filter((x) => x.exerciseId === id);
       const target = planTargetFor(id);
-      const previous = previousSets(allWorkouts.value, id, editingExclude.value);
+      const previous = previousById.value.get(id) ?? [];
       const ghost = ghostFor({
         trackingType: exercise.trackingType ?? TrackingType.WeightReps,
         bodyweight: !exercise.isCustom && BODYWEIGHT_EXERCISES.has(id),
@@ -1147,6 +1152,7 @@ export const useAppStore = defineStore('app', () => {
   const picker = ref({ open: false, query: '', filter: 'recent' as PickerFilter, category: 'Gym' as 'Gym' | 'Football', muscle: null as string | null, selected: [] as number[] });
 
   function openPicker() {
+    void loadAllLocales(); // mehrsprachige Suche
     picker.value = { open: true, query: '', filter: records.value.size ? 'recent' : 'all', category: tab.value === 'Football' ? 'Football' : 'Gym', muscle: null, selected: [] };
   }
   function togglePicked(id: number) {
@@ -1858,6 +1864,8 @@ export const useAppStore = defineStore('app', () => {
   // =====================================================================
   watch(settings, (value) => { writeJson(Keys.settings, value); updateWakeLock(); }, { deep: true });
   watch(sessionActive, updateWakeLock);
+  // Suche im Katalog: Namen aller Sprachen nachladen (Suchindex rechnet danach neu)
+  watch(search, (q) => { if (q.trim()) void loadAllLocales(); });
   watch(dataTab, (value) => { if (value === 'progress' && !progress.value.key) selectDefaultProgress(); });
   watch(tab, (value) => {
     muscleFilters.value = [];
@@ -2016,7 +2024,7 @@ export const useAppStore = defineStore('app', () => {
     sessionActive, hasSets, isEditing, finishLoad, sessionElapsed, sessionGroups, sessionSummary,
     workoutBlocks, ghostDraft, picker, obsidianWorkout, openObsidian, pickerResults, pickerMuscles, searchExercises,
     addExercises, removeBlock, moveBlock, setGhostValue, stepGhost, toggleGhostWarmup, quickLog, openPicker, togglePicked, addFromCatalog, confirmPicker, startWorkout, exerciseFor,
-    modalEx, modalType, modalKey, modalRecord, modalPrevious, modalSessionSets, modalTechnique, modalTarget, modalE1RM, modalIntensity,
+    modalEx, modalType, modalKey, modalRecord, modalPrevious, modalSessionSets, modalTarget, modalE1RM, modalIntensity,
     modalZone, modalSpeed, modalSpeedVsBest, modalIsNewPR,
     timerActive, timerLeft, timerProgress,
     weekly, kpis, muscleSplit, recentPRs, filteredHistory, visibleHistory,

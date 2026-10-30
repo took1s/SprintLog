@@ -1,14 +1,15 @@
-import { afterEach, test } from 'vitest';
+import { afterEach, beforeAll, test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { en } from '../src/i18n/en';
 import { de } from '../src/i18n/de';
 import { ru } from '../src/i18n/ru';
-import { detectLocale, locale, setLocale, t, tn } from '../src/i18n';
+import { detectLocale, loadAllLocales, locale, setLocale, t, tn } from '../src/i18n';
 import { exerciseName, programName } from '../src/i18n/content';
 import { missingTechnique } from '../src/i18n/technique';
 import { formatNumber } from '../src/lib/format';
 
+beforeAll(() => loadAllLocales());
 afterEach(() => setLocale('en'));
 
 type Node = string | { [key: string]: Node };

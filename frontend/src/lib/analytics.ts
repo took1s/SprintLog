@@ -473,6 +473,29 @@ export function lastSetFor(workouts: readonly Workout[] | null | undefined, key:
   return null;
 }
 
+/**
+ * Letzter (Arbeits-)Satz pro Übung in EINEM Durchlauf - für Listen mit vielen Übungen (Katalog, Auswahl).
+ * Gleiches Ergebnis wie lastSetFor() je Übung, aber O(Sätze) statt O(Übungen × Sätze).
+ */
+export function lastSetsByKey(workouts: readonly Workout[] | null | undefined): Map<string, DatedSet> {
+  const result = new Map<string, DatedSet>();
+  for (const w of chronological(workouts)) {
+    const seenInWorkout = new Map<string, { last: WorkoutSet; working: WorkoutSet | null }>();
+    for (const s of w.sets ?? []) {
+      const key = exerciseKey(s);
+      const entry = seenInWorkout.get(key) ?? { last: s, working: null };
+      entry.last = s;
+      if (isWorkingSet(s)) entry.working = s;
+      seenInWorkout.set(key, entry);
+    }
+    // Spätere Einheiten überschreiben frühere; Arbeitssätze haben Vorrang vor Aufwärmsätzen derselben Einheit.
+    for (const [key, entry] of seenInWorkout) {
+      result.set(key, { ...(entry.working ?? entry.last), date: w.date });
+    }
+  }
+  return result;
+}
+
 /** Wie oft wurde jede Übung insgesamt geloggt (Sätze)? */
 export function usageCounts(workouts: readonly Workout[] | null | undefined): Map<string, number> {
   const counts = new Map<string, number>();

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   epley1RM, trackingOf, computeRecords, detectPRs, weeklyTotals, weekStreak, startOfWeek, dateKey,
   exerciseSeries, ChartMetric, muscleDistribution, inferWorkoutType, activityHeatmap, summarizeWorkout,
-  groupSetsByExercise, percentChange, roundTo, lastSetFor,
+  groupSetsByExercise, percentChange, roundTo, lastSetFor, lastSetsByKey,
 } from '../src/lib/analytics';
 
 const bench = (weight, reps) => ({ exerciseId: 1, exerciseName: 'Bench Press', trackingType: 'WeightReps' as const, muscleGroup: 'Chest', weight, reps });
@@ -135,4 +135,17 @@ test('warm-up sets are ignored for records, PRs, volume and series', async () =>
   assert.deepEqual(exerciseSeries(history, 'id:1', ChartMetric.MaxWeight).map((p) => p.value), [60, 65]);
   assert.equal(sessionLoad({ sessionRpe: 7, durationSeconds: 3600 }), 420);
   assert.equal(sessionLoad({ sessionRpe: null, durationSeconds: 3600 }), 0);
+});
+
+test('lastSetsByKey matches lastSetFor for every exercise (one pass instead of one per exercise)', () => {
+  const workouts = [
+    workout(1, '2026-10-01T10:00:00Z', [bench(60, 10), sprint(30, 4.4)]),
+    workout(3, '2026-10-20T10:00:00Z', [{ ...bench(40, 10), isWarmup: true }, bench(80, 5), bench(82.5, 3)]),
+    workout(2, '2026-10-10T10:00:00Z', [sprint(40, 5.2), { ...bench(30, 10), isWarmup: true }]),
+    workout(4, '2026-10-25T10:00:00Z', [{ ...sprint(20, 3), isWarmup: true }]),
+  ];
+  const map = lastSetsByKey(workouts);
+  for (const key of ['id:1', 'id:12']) assert.deepEqual(map.get(key), lastSetFor(workouts, key), key);
+  assert.equal(map.get('id:1')?.weight, 82.5);
+  assert.equal(map.get('id:12')?.distance, 20, 'only warm-ups in the latest workout -> that warm-up');
 });
