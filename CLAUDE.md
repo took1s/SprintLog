@@ -11,6 +11,7 @@ PWA zum Loggen von Gym- und Feldtraining (Fußball). Offline-first, ein Nutzer =
 - `npm run typecheck` · `npm test` (Vitest) · `npm run build`
 - `npm run test:e2e` (Playwright gegen `frontend/dev/mock-api.mjs`; lokal `CHROMIUM_PATH=/opt/pw-browsers/chromium-*/chrome-linux*/chrome`)
 - `npm run mock:demo` startet das Mock-Backend mit Demodaten (Screenshots).
+- iOS-App (Capacitor, `ios/`): `npm run build:native` (nach `frontend/native-dist`), `npm run ios:sync`; Build + TestFlight nur in CI (`.github/workflows/ios.yml`, macOS).
 - Backend baut/testet nur in CI (NuGet lokal blockiert). Migration erzeugen: Commit-Message mit `[gen-migration:Name]`.
 
 ## Konventionen

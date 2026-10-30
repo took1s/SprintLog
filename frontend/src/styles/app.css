@@ -27,7 +27,15 @@
     -webkit-tap-highlight-color: transparent;
     overflow-x: hidden;
     font-feature-settings: 'cv11', 'ss01';
+    /* iPhone-App und Home-Bildschirm: Inhalt nicht unter Notch/Dynamic Island und abgerundete Ecken legen.
+       Im normalen Browser sind die Werte 0. */
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
+
+  /* Bottom-Sheets (fixed inset-0 items-end) wachsen nicht unter die Notch. */
+  .fixed.inset-0.items-end { padding-top: env(safe-area-inset-top); }
 
   /* Zahlen immer gleich breit (Gewichte, Zeiten untereinander) */
   .font-mono { font-variant-numeric: tabular-nums; }

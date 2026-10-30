@@ -435,3 +435,4 @@ node_modules/
 
 # Frontend-Build (npm run build -> Vite). Wird in CI und im Docker-Build erzeugt, nicht eingecheckt.
 SprintLog.Api/wwwroot/
+frontend/native-dist/

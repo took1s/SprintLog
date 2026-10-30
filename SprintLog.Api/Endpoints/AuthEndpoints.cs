@@ -41,6 +41,11 @@ public static class AuthEndpoints
     internal static async Task<TokenResponse> SignInAsync(HttpContext http, User user, AuthSessionService sessions, ITokenService tokens,
         CancellationToken ct, string[]? recoveryCodes = null)
     {
+        if (AuthSessionService.IsNativeClient(http.Request))
+        {
+            var native = await sessions.StartNativeAsync(user, ct);
+            return new TokenResponse(native.AccessToken, user.Username, user.Id, recoveryCodes, native.RefreshToken);
+        }
         if (AuthSessionService.IsBrowserClient(http.Request))
         {
             await sessions.StartAsync(http, user, ct);
@@ -110,6 +115,16 @@ public static class AuthEndpoints
     /// </summary>
     private static async Task<IResult> Refresh(HttpContext http, AppDbContext db, AuthSessionService sessions, ITokenService tokens, CancellationToken ct)
     {
+        // Native App: Refresh-Token im Body, neue Tokens in der Antwort.
+        if (AuthSessionService.IsNativeClient(http.Request))
+        {
+            var body = await ReadNativeBodyAsync(http, ct);
+            var (nativeStatus, nativeUser, issued) = await sessions.RotateNativeAsync(body?.RefreshToken, ct);
+            return nativeStatus == AuthSessionService.RotateStatus.Ok
+                ? Results.Ok(new TokenResponse(issued!.AccessToken, nativeUser!.Username, nativeUser.Id, null, issued.RefreshToken))
+                : Results.Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Session expired. Please log in again.");
+        }
+
         var browser = AuthSessionService.IsBrowserClient(http.Request);
 
         if (browser && http.Request.Cookies.ContainsKey(AuthSessionService.RefreshCookie))
@@ -138,8 +153,19 @@ public static class AuthEndpoints
 
     private static async Task<IResult> Logout(HttpContext http, AuthSessionService sessions, CancellationToken ct)
     {
-        await sessions.EndAsync(http, ct);
+        if (AuthSessionService.IsNativeClient(http.Request))
+            await sessions.EndNativeAsync((await ReadNativeBodyAsync(http, ct))?.RefreshToken, ct);
+        else
+            await sessions.EndAsync(http, ct);
         return Results.NoContent();
+    }
+
+    /// <summary>Body der nativen App lesen - leer oder kein JSON ist erlaubt (dann null).</summary>
+    private static async Task<NativeSessionRequest?> ReadNativeBodyAsync(HttpContext http, CancellationToken ct)
+    {
+        if (http.Request.ContentLength is 0 || !(http.Request.HasJsonContentType())) return null;
+        try { return await http.Request.ReadFromJsonAsync<NativeSessionRequest>(ct); }
+        catch (System.Text.Json.JsonException) { return null; }
     }
 
     /// <summary>Alle Geräte abmelden: Token-Version erhöhen (alle JWTs ungültig) und alle Refresh-Tokens widerrufen.</summary>

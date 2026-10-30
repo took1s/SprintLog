@@ -415,6 +415,7 @@ export const ru: Messages = {
     plus: 'Плюс 15 секунд',
     stop: 'Остановить таймер',
     over: 'Отдых окончен - следующий подход!',
+    notification: { title: 'Отдых окончен', body: 'Следующий подход - вперёд!' },
   },
   data: {
     tabs: { overview: 'Обзор', history: 'История', progress: 'Прогресс', records: 'Рекорды', calendar: 'Календарь' },

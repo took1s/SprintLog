@@ -409,6 +409,7 @@ export const de: Messages = {
     plus: 'Plus 15 Sekunden',
     stop: 'Timer stoppen',
     over: 'Pause vorbei - nächster Satz!',
+    notification: { title: 'Pause vorbei', body: 'Nächster Satz - los geht\'s!' },
   },
   data: {
     tabs: { overview: 'Überblick', history: 'Verlauf', progress: 'Fortschritt', records: 'Rekorde', calendar: 'Kalender' },

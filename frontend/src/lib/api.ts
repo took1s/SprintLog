@@ -3,8 +3,11 @@
 // Die Sitzung liegt in httpOnly-Cookies (Access-Token 15 min, Refresh-Token 30 Tage) - JavaScript sieht keine Tokens.
 // Jeder Request trägt "X-Requested-With: SprintLog": Daran erkennt die API die Browser-App, und schreibende
 // Requests mit Cookie werden nur mit diesem Header akzeptiert (CSRF-Schutz).
+//
+// iPhone-App (Capacitor): eigener Origin -> absolute URLs, Bearer-Token, Refresh-Token im Body (siehe lib/native.ts).
 
 import { t } from '../i18n';
+import { apiUrl, isNative, nativePlatform, nativeSession } from './native';
 
 export type FieldErrors = Record<string, string[]>;
 
@@ -28,6 +31,14 @@ export class ApiError extends Error {
 export const isApiError = (e: unknown): e is ApiError => e instanceof ApiError;
 
 export const CLIENT_HEADER = Object.freeze({ 'X-Requested-With': 'SprintLog', 'X-Client-Version': __APP_VERSION__ });
+
+/** Header je nach Umgebung: Browser-App (Cookie-Sitzung) oder native App (Bearer-Token). */
+export function clientHeaders(): Record<string, string> {
+  if (!isNative()) return { ...CLIENT_HEADER };
+  const headers: Record<string, string> = { 'X-SprintLog-Client': nativePlatform(), 'X-Client-Version': __APP_VERSION__ };
+  if (nativeSession.accessToken) headers.Authorization = `Bearer ${nativeSession.accessToken}`;
+  return headers;
+}
 
 async function parseError(response: Response): Promise<ApiError> {
   let message = `Request failed (${response.status})`;
@@ -62,6 +73,25 @@ export interface ApiOptions {
   getLegacyToken?: () => string | null;
   onLegacyTokenUsed?: () => void;
   timeoutMs?: number;
+  /** Native App: Tokens im Body statt Cookies (Standard: automatisch erkannt). */
+  native?: NativeTokens;
+}
+
+/** Token-Speicher der nativen App (in Tests ersetzbar). */
+export interface NativeTokens {
+  readonly refreshToken: string | null;
+  save(access: string, refresh: string): Promise<void>;
+}
+
+type TokenBody = { token?: string | null; refreshToken?: string | null };
+
+/** Antworten von Login/Registrierung/Refresh enthalten in der App neue Tokens -> sofort speichern. */
+async function captureTokens(native: NativeTokens | undefined, response: Response): Promise<void> {
+  if (!native || !response.ok || response.status === 204) return;
+  try {
+    const body = JSON.parse(await response.clone().text()) as TokenBody | null;
+    if (body?.token && body.refreshToken) await native.save(body.token, body.refreshToken);
+  } catch { /* kein JSON */ }
 }
 
 /** Endpunkte, bei denen ein 401 eine echte Antwort ist (falsches Passwort usw.) und kein abgelaufener Access-Token. */
@@ -72,17 +102,18 @@ export const REFRESH_RACE_DELAYS = [300, 800, 1500] as const;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export function createApi({ onUnauthorized, getLegacyToken, onLegacyTokenUsed, timeoutMs = 15000 }: ApiOptions = {}): Api {
+export function createApi({ onUnauthorized, getLegacyToken, onLegacyTokenUsed, timeoutMs = 15000, native = isNative() ? nativeSession : undefined }: ApiOptions = {}): Api {
   async function send(method: string, path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<Response> {
-    const headers: Record<string, string> = { Accept: 'application/json', ...CLIENT_HEADER, ...extraHeaders };
+    const headers: Record<string, string> = { Accept: 'application/json', ...clientHeaders(), ...extraHeaders };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetch(path, {
+      const response = await fetch(apiUrl(path), {
         method,
         headers,
-        credentials: 'same-origin',
+        // App: keine Cookies (Bearer-Token); Browser: Cookies nur für den eigenen Origin
+        credentials: native ? 'omit' : 'same-origin',
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: controller.signal,
       });
@@ -103,7 +134,7 @@ export function createApi({ onUnauthorized, getLegacyToken, onLegacyTokenUsed, t
     return (text ? JSON.parse(text) : null) as T;
   }
 
-  return createRefreshingApi(send, read, { onUnauthorized, getLegacyToken, onLegacyTokenUsed });
+  return createRefreshingApi(send, read, { onUnauthorized, getLegacyToken, onLegacyTokenUsed, native });
 }
 
 const NULL_BODY = new Set([101, 204, 205, 304]);
@@ -122,11 +153,18 @@ type Send = (method: string, path: string, body?: unknown, headers?: Record<stri
 type Read = <T>(response: Response) => Promise<T>;
 
 /** Refresh-Logik getrennt vom Transport -> mit gefälschtem fetch unit-testbar. */
-export function createRefreshingApi(send: Send, read: Read, { onUnauthorized, getLegacyToken, onLegacyTokenUsed }: ApiOptions): Api {
+export function createRefreshingApi(send: Send, read: Read, { onUnauthorized, getLegacyToken, onLegacyTokenUsed, native }: ApiOptions): Api {
   // Mehrere gleichzeitige 401 lösen genau einen Refresh aus.
   let refreshing: Promise<boolean> | null = null;
 
   async function refreshOnce(): Promise<boolean> {
+    if (native) {
+      // App: Refresh-Token aus dem App-Speicher im Body schicken, neue Tokens aus der Antwort übernehmen.
+      if (!native.refreshToken) return false;
+      const response = await send('POST', '/api/auth/refresh', { refreshToken: native.refreshToken });
+      await captureTokens(native, response);
+      return response.ok;
+    }
     const legacy = getLegacyToken?.();
     const headers: Record<string, string> = legacy ? { Authorization: `Bearer ${legacy}` } : {};
     let response = await send('POST', '/api/auth/refresh', undefined, headers);
@@ -153,6 +191,8 @@ export function createRefreshingApi(send: Send, read: Read, { onUnauthorized, ge
       if (await refresh()) response = await send(method, path, body);
       if (response.status === 401) onUnauthorized?.();
     }
+    // App: Login, Registrierung, Passwort-Reset usw. liefern neue Tokens -> übernehmen
+    if (native && path.startsWith('/api/auth/')) await captureTokens(native, response);
     return read<T>(response);
   }
 

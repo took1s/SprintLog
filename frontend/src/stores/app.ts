@@ -15,6 +15,7 @@ import {
 } from '../lib/analytics';
 import { formatNumber, formatClock, formatDate, formatRelative, formatSeconds, describeSet, toLocalInput } from '../lib/format';
 import { unlockAudio, playRestAlarm, createWakeLock } from '../lib/feedback';
+import { alarmHaptic, isNative, loadNativeSession, nativeSession, scheduleRestNotification, setKeepAwake, tap } from '../lib/native';
 import { exportCsv, exportJson } from '../lib/export';
 import { BODYWEIGHT_EXERCISES } from '../lib/bodyweight';
 import { blockOrder, ghostFor, matchScore, normalize, previousSets, type GhostValues } from '../lib/workout';
@@ -584,7 +585,9 @@ export const useAppStore = defineStore('app', () => {
       if (!ok) return;
     }
     settingsOpen.value = false;
-    try { await api().post('/api/auth/logout'); } catch { /* offline: Cookies laufen ab, Server-Sitzung bleibt bis dahin */ }
+    // App: Refresh-Token im Body (keine Cookies)
+    const body = isNative() ? { refreshToken: nativeSession.refreshToken } : undefined;
+    try { await api().post('/api/auth/logout', body); } catch { /* offline: Cookies laufen ab, Server-Sitzung bleibt bis dahin */ }
     clearAuth();
   }
 
@@ -600,6 +603,7 @@ export const useAppStore = defineStore('app', () => {
       remove(k.wellness);
     }
     removeLegacyToken();
+    void nativeSession.clear();
     remove(Keys.user);
     user.value = null;
     recoveryCodes.value = null;
@@ -743,7 +747,11 @@ export const useAppStore = defineStore('app', () => {
     const s = session.value;
     if (keys.value) writeJson(keys.value.session, s.sets.length || s.order?.length || s.plan || s.editing ? s : null);
   }
-  function persistTimer() { if (keys.value) writeJson(keys.value.timer, timer.value.endAt ? timer.value : null); }
+  function persistTimer() {
+    if (keys.value) writeJson(keys.value.timer, timer.value.endAt ? timer.value : null);
+    // App: Mitteilung zum Pausenende (kommt auch bei gesperrtem iPhone)
+    void scheduleRestNotification(timer.value.endAt, { title: t('timer.notification.title'), body: t('timer.notification.body') });
+  }
 
   // =====================================================================
   // Synchronisation
@@ -955,7 +963,7 @@ export const useAppStore = defineStore('app', () => {
       s.sets.push(set);
       const planRest = planTargetFor(set.exerciseId)?.restSeconds;
       if (settings.value.autoTimer && !isEditing.value) startTimer(planRest || (set.category === 'Football' ? settings.value.restField : settings.value.restGym));
-      if (navigator.vibrate && settings.value.vibration) navigator.vibrate(15);
+      if (settings.value.vibration) tap();
     }
     persistSession();
     closeSetModal();
@@ -1143,7 +1151,7 @@ export const useAppStore = defineStore('app', () => {
     ghostDraft.value = rest;
     const planRest = block.target?.restSeconds;
     if (settings.value.autoTimer && !isEditing.value && !set.isWarmup) startTimer(planRest || (set.category === 'Football' ? settings.value.restField : settings.value.restGym));
-    if (navigator.vibrate && settings.value.vibration) navigator.vibrate(15);
+    if (settings.value.vibration) tap();
     persistSession();
     if (wasPR) toast(t('set.toast.record', { name: trExerciseName(set.exerciseId, set.exerciseName) }), 'gold');
   }
@@ -1742,12 +1750,15 @@ export const useAppStore = defineStore('app', () => {
     // Alarm nur, wenn das Ende "live" erlebt wurde (nicht nach Stunden im Hintergrund).
     if (lateBy < 60_000) {
       playRestAlarm({ sound: settings.value.sound, vibration: settings.value.vibration });
+      if (settings.value.vibration) alarmHaptic();
       toast(t('timer.over'), 'success');
     }
   }
 
   function updateWakeLock() {
-    void wakeLock.set(settings.value.wakeLock && sessionActive.value);
+    const keepOn = settings.value.wakeLock && sessionActive.value;
+    void wakeLock.set(keepOn);
+    void setKeepAwake(keepOn);
   }
 
   // =====================================================================
@@ -1807,7 +1818,8 @@ export const useAppStore = defineStore('app', () => {
   // Service Worker (Offline + Update-Hinweis)
   // =====================================================================
   function registerServiceWorker() {
-    if (!('serviceWorker' in navigator) || import.meta.env.DEV) return;
+    // App: Dateien kommen aus dem App-Paket, Updates über TestFlight/App Store - kein Service Worker.
+    if (!('serviceWorker' in navigator) || import.meta.env.DEV || isNative()) return;
     // Nur neu laden, wenn der Nutzer das Update bestätigt hat (nicht bei der allerersten Installation).
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (reloadOnControllerChange) window.location.reload();
@@ -1903,6 +1915,9 @@ export const useAppStore = defineStore('app', () => {
     registerServiceWorker();
 
     handleLinkParams();
+
+    // App: Tokens aus dem App-Speicher lesen, bevor der erste Request rausgeht.
+    await loadNativeSession();
 
     // Angemeldet ist, wer einen gespeicherten Nutzer hat (Cookies sind für JS unsichtbar).
     // Ältere App-Versionen: Nutzer aus dem alten Token lesen - der Token wird beim Refresh gegen Cookies getauscht.

@@ -5,6 +5,7 @@
 
 import { ref, watch } from 'vue';
 import { readJson, writeJson } from './storage';
+import { syncStatusBar } from './native';
 
 export const THEMES = ['pitch', 'clean', 'midnight', 'mono'] as const;
 export type ThemeName = (typeof THEMES)[number];
@@ -47,6 +48,7 @@ export const activeScheme = ref<'light' | 'dark'>(resolveScheme(appearance.value
 export function applyAppearance(next: Appearance = appearance.value, root: HTMLElement | null = typeof document === 'undefined' ? null : document.documentElement): void {
   const scheme = resolveScheme(next.scheme);
   activeScheme.value = scheme;
+  void syncStatusBar(scheme);
   if (!root) return;
   root.dataset.theme = next.theme;
   root.dataset.scheme = scheme;

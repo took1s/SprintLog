@@ -118,3 +118,46 @@ describe('transport timeout', () => {
     }
   });
 });
+
+describe('native app session (iOS)', () => {
+  function nativeStore(refreshToken: string | null) {
+    const store = {
+      refreshToken,
+      saved: [] as [string, string][],
+      async save(access: string, refresh: string) { store.saved.push([access, refresh]); store.refreshToken = refresh; },
+    };
+    return store;
+  }
+
+  test('refresh sends the stored refresh token in the body and keeps the rotated tokens', async () => {
+    const bodies: unknown[] = [];
+    const send = vi.fn(async (_method: string, path: string, body?: unknown) => {
+      bodies.push(body);
+      if (path === '/api/auth/refresh') return res(200, { token: 'access-2', refreshToken: 'refresh-2', username: 'a', userId: 1 });
+      return res(bodies.length === 1 ? 401 : 200, { ok: true });
+    });
+    const native = nativeStore('refresh-1');
+    const api = createRefreshingApi(send, read, { native });
+
+    await expect(api.get('/api/workouts')).resolves.toEqual({ ok: true });
+    expect(bodies[1]).toEqual({ refreshToken: 'refresh-1' });
+    expect(native.saved).toEqual([['access-2', 'refresh-2']]);
+  });
+
+  test('without a stored refresh token there is no refresh request', async () => {
+    const { send, calls } = server({ 'GET /api/workouts': [401] });
+    const onUnauthorized = vi.fn();
+    const api = createRefreshingApi(send, read, { native: nativeStore(null), onUnauthorized });
+    await expect(api.get('/api/workouts')).rejects.toMatchObject({ status: 401 });
+    expect(calls.map((c) => c.key)).toEqual(['GET /api/workouts']);
+    expect(onUnauthorized).toHaveBeenCalledOnce();
+  });
+
+  test('login response tokens are captured', async () => {
+    const send = vi.fn(async () => res(200, { token: 'a1', refreshToken: 'r1', username: 'max', userId: 7 }));
+    const native = nativeStore(null);
+    const api = createRefreshingApi(send, read, { native });
+    await expect(api.post('/api/auth/login', { username: 'max' })).resolves.toMatchObject({ userId: 7 });
+    expect(native.saved).toEqual([['a1', 'r1']]);
+  });
+});

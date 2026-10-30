@@ -36,6 +36,7 @@ Live-Demo: https://sprintlog-api.onrender.com/
 - [Lokal starten](#lokal-starten)
 - [Tests und CI](#tests-und-ci)
 - [Datenbank und Migrationen](#datenbank-und-migrationen)
+- [iPhone-App (TestFlight)](#iphone-app-testflight)
 - [Betrieb und Automatisierung](#betrieb-und-automatisierung)
 - [API](#api)
 - [Projektstruktur](#projektstruktur)
@@ -260,6 +261,26 @@ dotnet tool restore
 dotnet ef migrations add <Name>
 dotnet ef migrations script --idempotent -o ../database/migrate.sql
 ```
+
+## iPhone-App (TestFlight)
+
+Dieselbe Vue-App, verpackt mit [Capacitor](https://capacitorjs.com) (`ios/`, `capacitor.config.ts`).
+
+- Die Oberfläche liegt im App-Paket: Start ohne Netz und ohne Wartezeit, auch wenn der Render-Server schläft.
+- Daten über die API auf Render. Die App nutzt Bearer-Tokens (Header `X-SprintLog-Client: ios`): Access-Token 15 min, Refresh-Token mit derselben Rotation und Diebstahl-Erkennung wie die Cookie-Sitzung, gespeichert in `@capacitor/preferences`.
+- CORS nur für `capacitor://localhost`, ohne Credentials. Die Cookie-Sitzung der Web-App bleibt unverändert.
+- Native Extras: Mitteilung am Ende der Satzpause (auch bei gesperrtem iPhone), Haptik, Display bleibt während der Einheit an, Statusleiste passend zum Theme.
+
+Build ohne Mac: `.github/workflows/ios.yml` baut auf einem macOS-Runner.
+
+| Ereignis | Ergebnis |
+|---|---|
+| Push/PR mit App-Änderungen | Simulator-Build ohne Signatur |
+| Push auf `main` oder "Run workflow" | signierter Build, Upload nach TestFlight |
+
+Secrets für TestFlight: `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (Inhalt der `.p8` als Base64). Signiert wird per App-Store-Connect-API-Key (Cloud Signing, Rolle Admin).
+
+Lokal (mit Mac): `npm run ios:sync`, dann `npx cap open ios`.
 
 ## Betrieb und Automatisierung
 
