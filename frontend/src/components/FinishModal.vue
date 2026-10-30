@@ -11,10 +11,10 @@ const { confirmFinish } = app;
 <template>
   <transition name="fade">
       <div v-if="finishModal.open" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/80 backdrop-blur-sm sm:items-center" @click.self="finishModal.open = false">
-          <form @submit.prevent="confirmFinish" class="glass-panel modal-panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-[2rem] p-6 sm:rounded-[2rem] sm:p-8" role="dialog" aria-modal="true" :aria-label="isEditing ? `${t('finish.titleSave')} ${t('finish.titleSaveAccent')}` : `${t('finish.titleFinish')} ${t('finish.titleAccent')}`">
+          <form @submit.prevent="confirmFinish" class="glass-panel modal-panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 sm:rounded-3xl sm:p-8" role="dialog" aria-modal="true" :aria-label="isEditing ? `${t('finish.titleSave')} ${t('finish.titleSaveAccent')}` : `${t('finish.titleFinish')} ${t('finish.titleAccent')}`">
               <div class="mb-5 flex items-start justify-between">
                   <div>
-                      <h3 class="text-2xl font-black text-white">{{ isEditing ? t('finish.titleSave') : t('finish.titleFinish') }} <span class="text-accent">{{ isEditing ? t('finish.titleSaveAccent') : t('finish.titleAccent') }}</span></h3>
+                      <h3 class="text-2xl display text-white">{{ isEditing ? t('finish.titleSave') : t('finish.titleFinish') }} <span class="text-accent">{{ isEditing ? t('finish.titleSaveAccent') : t('finish.titleAccent') }}</span></h3>
                       <p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-slate-400">{{ t('finish.summary', { sets: tn('units.sets', session.sets.length), exercises: tn('units.exercises', sessionSummary.exercises) }) }}</p>
                   </div>
                   <button type="button" @click="finishModal.open = false" class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>
@@ -31,7 +31,7 @@ const { confirmFinish } = app;
                   <template v-else>{{ t('finish.rpeOptional') }}</template>
               </p>
 
-              <div class="mb-4 grid grid-cols-2 gap-3">
+              <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label class="block">
                       <span class="label-xs mb-2">{{ t('finish.date') }}</span>
                       <input v-model="finishModal.date" type="datetime-local" class="cyber-input w-full rounded-xl p-3 text-sm">

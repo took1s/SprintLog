@@ -8,11 +8,12 @@ import RestTimer from '@/components/RestTimer.vue';
 import Spinner from '@/components/Spinner.vue';
 import AuthView from '@/components/AuthView.vue';
 import AppHeader from '@/components/AppHeader.vue';
-import PlanChecklist from '@/components/PlanChecklist.vue';
+import WorkoutView from '@/components/workout/WorkoutView.vue';
+import StartPanel from '@/components/workout/StartPanel.vue';
+import ExercisePicker from '@/components/workout/ExercisePicker.vue';
 import ExerciseCatalog from '@/components/ExerciseCatalog.vue';
 import PlanView from '@/components/PlanView.vue';
 import SessionBar from '@/components/SessionBar.vue';
-import SessionReview from '@/components/SessionReview.vue';
 import SetModal from '@/components/SetModal.vue';
 import CustomExerciseModal from '@/components/CustomExerciseModal.vue';
 import SettingsModal from '@/components/SettingsModal.vue';
@@ -27,13 +28,13 @@ import { t } from '@/i18n';
 const DataView = defineAsyncComponent(() => import('@/components/data/DataView.vue'));
 
 const app = useAppStore();
-const { booting, isAuthenticated, tab, authMode } = storeToRefs(app);
+const { booting, isAuthenticated, tab, authMode, sessionActive } = storeToRefs(app);
 
 onMounted(() => { void app.init(); });
 </script>
 
 <template>
-  <div class="relative mx-auto w-full max-w-3xl px-4 pb-40 pt-4 sm:px-8 sm:pt-8">
+  <div class="relative mx-auto w-full px-4 pt-4 sm:px-8 sm:pt-8" :class="isAuthenticated ? 'max-w-3xl pb-40' : 'max-w-5xl pb-8'">
     <div class="bg-orb-1"></div>
     <div class="bg-orb-2"></div>
 
@@ -48,19 +49,24 @@ onMounted(() => { void app.init(); });
       <AppHeader />
 
       <section v-if="tab === 'Gym' || tab === 'Football'">
-        <PlanChecklist />
-        <button v-if="tab === 'Football'" type="button" @click="app.openMatchModal()" data-test="log-match"
-                class="glass-panel mb-5 flex w-full items-center justify-between rounded-2xl border border-accent/30 px-5 py-4 text-left transition-colors hover:border-accent/60">
-          <span class="font-black text-white">{{ t('match.log') }}</span>
-          <span class="font-mono text-[10px] text-slate-400">{{ t('match.info') }}</span>
-        </button>
-        <ExerciseCatalog />
+        <!-- Läuft eine Einheit: Blöcke mit Sätzen. Sonst: Einstieg + Katalog zum Stöbern. -->
+        <WorkoutView v-if="sessionActive" />
+        <template v-else>
+          <StartPanel />
+          <button v-if="tab === 'Football'" type="button" @click="app.openMatchModal()" data-test="log-match"
+                  class="glass-panel mb-6 flex w-full items-center justify-between rounded-2xl px-5 py-4 text-left transition-colors hover:border-accent/60">
+            <span class="display text-lg text-white">{{ t('match.log') }}</span>
+            <span class="font-mono text-[10px] text-slate-400">{{ t('match.info') }}</span>
+          </button>
+          <h2 class="label-xs mb-3">{{ t('catalog.title') }}</h2>
+          <ExerciseCatalog />
+        </template>
       </section>
-      <PlanView v-else-if="tab === 'Plan'" />
+      <PlanView v-else-if="tab === 'Plan'" :class="{ 'pb-28': app.sessionActive }" />
       <DataView v-else-if="tab === 'Data'" />
 
       <SessionBar />
-      <SessionReview />
+      <ExercisePicker />
       <SetModal />
       <CustomExerciseModal />
       <SettingsModal />

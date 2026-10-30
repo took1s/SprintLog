@@ -11,10 +11,10 @@ const { saveCustomExercise } = app;
 <template>
   <transition name="fade">
       <div v-if="customModal.open" class="fixed inset-0 z-40 flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="customModal.open = false">
-          <form @submit.prevent="saveCustomExercise" class="glass-panel modal-panel w-full max-w-md rounded-t-[2rem] p-6 sm:rounded-[2rem] sm:p-8" role="dialog" aria-modal="true" :aria-label="t('catalog.customExercise')">
+          <form @submit.prevent="saveCustomExercise" class="glass-panel modal-panel w-full max-w-md rounded-t-3xl p-6 sm:rounded-3xl sm:p-8" role="dialog" aria-modal="true" :aria-label="t('catalog.customExercise')">
               <div class="mb-6 flex items-start justify-between">
                   <div>
-                      <h3 class="text-2xl font-black text-white">{{ t('custom.title') }} <span class="text-accent">{{ t('custom.titleAccent') }}</span></h3>
+                      <h3 class="text-2xl display text-white">{{ t('custom.title') }} <span class="text-accent">{{ t('custom.titleAccent') }}</span></h3>
                       <p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-slate-400">{{ t('custom.onlyYou') }}</p>
                   </div>
                   <button type="button" @click="customModal.open = false" class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>

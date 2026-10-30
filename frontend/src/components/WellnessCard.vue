@@ -10,14 +10,14 @@ const { checkIn, readinessDays, readinessHint, readinessToday, readinessWeek, to
 const { openCheckIn, saveCheckIn, setWellnessValue } = app;
 
 const tone = (value: number | null) => ({ good: 'text-emerald-300', ok: 'text-yellow-300', low: 'text-red-300' } as const)[readinessLevel(value) ?? 'ok'];
-const bar = (value: number | null) => ({ good: 'bg-emerald-400/70', ok: 'bg-yellow-400/70', low: 'bg-red-400/70' } as const)[readinessLevel(value) ?? 'ok'];
+const bar = (value: number | null) => ({ good: 'bg-emerald-400', ok: 'bg-yellow-400', low: 'bg-red-400' } as const)[readinessLevel(value) ?? 'ok'];
 </script>
 
 <template>
   <div class="glass-panel rounded-3xl p-5" data-test="wellness-card">
       <div class="mb-3 flex items-start justify-between gap-3">
           <div>
-              <h3 class="font-black tracking-wide text-white">{{ t('wellness.title') }}</h3>
+              <h3 class="display text-white">{{ t('wellness.title') }}</h3>
               <p class="font-mono text-[10px] text-slate-500">{{ t('wellness.subtitle') }}</p>
           </div>
           <div v-if="readinessToday != null" class="text-right">
