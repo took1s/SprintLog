@@ -1166,6 +1166,1022 @@ namespace SprintLog.Api.Migrations
                             MuscleGroup = "Cardio",
                             Name = "Air Bike",
                             TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 131,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Decline Bench Press",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 132,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Decline Dumbbell Press",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 133,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Dumbbell Fly",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 134,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Incline Dumbbell Fly",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 135,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "High-to-Low Cable Fly",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 136,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Dumbbell Pullover",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 137,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Pullover Machine",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 138,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Floor Press",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 139,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Decline Push-ups",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 140,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Diamond Push-ups",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 141,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Hammer Strength Chest Press",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 142,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Hammer Strength Incline Press",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 143,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Landmine Press",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 144,
+                            Category = "Gym",
+                            MuscleGroup = "Chest",
+                            Name = "Weighted Dips",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 145,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Hammer Strength Iso-Row",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 146,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Hammer Strength High Row",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 147,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Hammer Strength Pulldown",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 148,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Single-Arm Lat Pulldown",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 149,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Neutral-Grip Pull-ups",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 150,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Weighted Pull-ups",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 151,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Pendlay Row",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 152,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Seal Row",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 153,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Meadows Row",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 154,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Rack Pull",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 155,
+                            Category = "Gym",
+                            MuscleGroup = "Legs/Back",
+                            Name = "Sumo Deadlift",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 156,
+                            Category = "Gym",
+                            MuscleGroup = "Legs/Back",
+                            Name = "Good Morning",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 157,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Reverse Hyperextension",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 158,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Barbell Shrugs",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 159,
+                            Category = "Gym",
+                            MuscleGroup = "Back",
+                            Name = "Superman",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 160,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Arnold Press",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 161,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Upright Row",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 162,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Reverse Pec Deck",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 163,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Cable Rear Delt Fly",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 164,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Cable Front Raise",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 165,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Plate Front Raise",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 166,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Y-Raise",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 167,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Smith Machine Shoulder Press",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 168,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Handstand Push-ups",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 169,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Concentration Curl",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 170,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Incline Dumbbell Curl",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 171,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Spider Curl",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 172,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Rope Hammer Curl",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 173,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Reverse Curl",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 174,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Bayesian Cable Curl",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 175,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Preacher Curl Machine",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 176,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Rope Pushdown",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 177,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Overhead Cable Extension",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 178,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Single-Arm Cable Pushdown",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 179,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "EZ-Bar Skull Crusher",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 180,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Dumbbell Kickback",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 181,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Bench Dips",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 182,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Seated Dip Machine",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 183,
+                            Category = "Gym",
+                            MuscleGroup = "Arms",
+                            Name = "Wrist Roller",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 184,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Goblet Squat",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 185,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Box Squat",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 186,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Pause Squat",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 187,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Safety Bar Squat",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 188,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Sissy Squat",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 189,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Single-Leg Leg Press",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 190,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Seated Leg Curl",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 191,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Single-Leg Leg Extension",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 192,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Single-Leg Hip Thrust",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 193,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Cable Pull-Through",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 194,
+                            Category = "Gym",
+                            MuscleGroup = "Legs/Back",
+                            Name = "Stiff-Leg Deadlift",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 195,
+                            Category = "Gym",
+                            MuscleGroup = "Legs/Back",
+                            Name = "Dumbbell Romanian Deadlift",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 196,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Leg Press Calf Raise",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 197,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Tibialis Raise",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 198,
+                            Category = "Football",
+                            MuscleGroup = "Legs",
+                            Name = "Reverse Nordic",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 199,
+                            Category = "Football",
+                            MuscleGroup = "Legs",
+                            Name = "Spanish Squat",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 200,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Wall Sit",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 201,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Single-Leg Calf Raise",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 202,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Cable Hip Abduction",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 203,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Smith Machine Split Squat",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 204,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Glute Ham Raise",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 205,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Decline Sit-ups",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 206,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Bicycle Crunch",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 207,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "V-Ups",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 208,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Toes-to-Bar",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 209,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Captain's Chair Knee Raise",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 210,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Lying Leg Raise",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 211,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Mountain Climbers",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 212,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Bird Dog",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 213,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Landmine Rotation",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 214,
+                            Category = "Gym",
+                            MuscleGroup = "Core",
+                            Name = "Turkish Get-up",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 215,
+                            Category = "Gym",
+                            MuscleGroup = "Explosive",
+                            Name = "Hang Power Clean",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 216,
+                            Category = "Gym",
+                            MuscleGroup = "Explosive",
+                            Name = "Jump Squat",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 217,
+                            Category = "Gym",
+                            MuscleGroup = "Explosive",
+                            Name = "Trap Bar Jump",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 218,
+                            Category = "Gym",
+                            MuscleGroup = "Explosive",
+                            Name = "Med Ball Slam",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 219,
+                            Category = "Gym",
+                            MuscleGroup = "Explosive",
+                            Name = "Rotational Med Ball Throw",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 220,
+                            Category = "Football",
+                            MuscleGroup = "Explosive",
+                            Name = "Hurdle Hops",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 221,
+                            Category = "Football",
+                            MuscleGroup = "Explosive",
+                            Name = "Pogo Jumps",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 222,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Kettlebell Clean & Press",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 223,
+                            Category = "Gym",
+                            MuscleGroup = "Explosive",
+                            Name = "Kettlebell Snatch",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 224,
+                            Category = "Gym",
+                            MuscleGroup = "Cardio",
+                            Name = "Burpees",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 225,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Band Pull-Apart",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 226,
+                            Category = "Gym",
+                            MuscleGroup = "Shoulders",
+                            Name = "Band External Rotation",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 227,
+                            Category = "Football",
+                            MuscleGroup = "Legs",
+                            Name = "Banded Lateral Walk",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 228,
+                            Category = "Football",
+                            MuscleGroup = "Explosive",
+                            Name = "Hill Sprints",
+                            TrackingType = "DistanceTime"
+                        },
+                        new
+                        {
+                            Id = 229,
+                            Category = "Football",
+                            MuscleGroup = "Explosive",
+                            Name = "Sled Push",
+                            TrackingType = "DistanceTime"
+                        },
+                        new
+                        {
+                            Id = 230,
+                            Category = "Football",
+                            MuscleGroup = "Explosive",
+                            Name = "Resisted Sprints",
+                            TrackingType = "DistanceTime"
+                        },
+                        new
+                        {
+                            Id = 231,
+                            Category = "Football",
+                            MuscleGroup = "Explosive",
+                            Name = "Acceleration Sprints",
+                            TrackingType = "DistanceTime"
+                        },
+                        new
+                        {
+                            Id = 232,
+                            Category = "Football",
+                            MuscleGroup = "Cardio",
+                            Name = "Yo-Yo Intermittent Recovery Test",
+                            TrackingType = "DistanceTime"
+                        },
+                        new
+                        {
+                            Id = 233,
+                            Category = "Football",
+                            MuscleGroup = "Cardio",
+                            Name = "Box-to-Box Runs",
+                            TrackingType = "DistanceTime"
+                        },
+                        new
+                        {
+                            Id = 234,
+                            Category = "Football",
+                            MuscleGroup = "Cardio",
+                            Name = "Fartlek",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 235,
+                            Category = "Football",
+                            MuscleGroup = "Cardio",
+                            Name = "Easy Run (Zone 2)",
+                            TrackingType = "DistanceTime"
+                        },
+                        new
+                        {
+                            Id = 236,
+                            Category = "Football",
+                            MuscleGroup = "Agility",
+                            Name = "Small-Sided Game",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 237,
+                            Category = "Football",
+                            MuscleGroup = "Agility",
+                            Name = "Rondo",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 238,
+                            Category = "Football",
+                            MuscleGroup = "Agility",
+                            Name = "Passing Drill",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 239,
+                            Category = "Football",
+                            MuscleGroup = "Agility",
+                            Name = "Dribbling Drill",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 240,
+                            Category = "Football",
+                            MuscleGroup = "Agility",
+                            Name = "Finishing (Shooting)",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 241,
+                            Category = "Football",
+                            MuscleGroup = "Agility",
+                            Name = "Ball Juggling",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 242,
+                            Category = "Football",
+                            MuscleGroup = "Mobility",
+                            Name = "Hip 90/90 Stretch",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 243,
+                            Category = "Football",
+                            MuscleGroup = "Mobility",
+                            Name = "Couch Stretch",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 244,
+                            Category = "Football",
+                            MuscleGroup = "Mobility",
+                            Name = "World's Greatest Stretch",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 245,
+                            Category = "Football",
+                            MuscleGroup = "Mobility",
+                            Name = "Hamstring Stretch",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 246,
+                            Category = "Football",
+                            MuscleGroup = "Mobility",
+                            Name = "Hip Flexor Stretch",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 247,
+                            Category = "Football",
+                            MuscleGroup = "Mobility",
+                            Name = "Adductor Stretch",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 248,
+                            Category = "Football",
+                            MuscleGroup = "Mobility",
+                            Name = "Ankle Mobility",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 249,
+                            Category = "Football",
+                            MuscleGroup = "Mobility",
+                            Name = "Thoracic Rotation",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 250,
+                            Category = "Football",
+                            MuscleGroup = "Mobility",
+                            Name = "Cat-Cow",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 251,
+                            Category = "Football",
+                            MuscleGroup = "Mobility",
+                            Name = "Leg Swings",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 252,
+                            Category = "Football",
+                            MuscleGroup = "Mobility",
+                            Name = "Foam Rolling",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 253,
+                            Category = "Gym",
+                            MuscleGroup = "Cardio",
+                            Name = "Incline Treadmill Walk",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 254,
+                            Category = "Gym",
+                            MuscleGroup = "Cardio",
+                            Name = "SkiErg",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 255,
+                            Category = "Gym",
+                            MuscleGroup = "Cardio",
+                            Name = "Battle Ropes",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 256,
+                            Category = "Gym",
+                            MuscleGroup = "Cardio",
+                            Name = "Swimming",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 257,
+                            Category = "Gym",
+                            MuscleGroup = "Cardio",
+                            Name = "Jumping Jacks",
+                            TrackingType = "Duration"
                         });
                 });
 
