@@ -14,7 +14,8 @@ public record CreateWorkoutRequest(
     int? SessionRpe = null,
     string? Notes = null,
     int? ProgramDayId = null,
-    MatchDetails? Match = null)
+    MatchDetails? Match = null,
+    int? Quality = null)
 {
     public const string MatchType = "Match";
     public bool IsMatch => WorkoutType == MatchType;
@@ -47,6 +48,7 @@ public record CreateWorkoutRequest(
             .AddIf(Date is { } d2 && d2 < now.AddYears(-5), "date", "Workout date is too far in the past.")
             .AddIf(DurationSeconds is < 0 or > 86_400, "durationSeconds", "Duration must be between 0 and 24 hours.")
             .AddIf(SessionRpe is < 1 or > 10, "sessionRpe", "Session RPE must be between 1 and 10.")
+            .AddIf(Quality is < 1 or > 10, "quality", "Quality must be between 1 and 10.")
             .AddIf(Notes is { Length: > MaxNotesLength }, "notes", $"Notes must not exceed {MaxNotesLength} characters.");
 
         if (Sets is null || Sets.Count == 0) return errors;
@@ -92,7 +94,8 @@ public record WorkoutResponse(
     int? ProgramDayId,
     List<WorkoutSetResponse> Sets,
     DateTime UpdatedAt,
-    MatchDetails? Match = null);
+    MatchDetails? Match = null,
+    int? Quality = null);
 
 /// <summary>Spiel-Details (nur bei WorkoutType "Match").</summary>
 public record MatchDetails(int? Goals, int? Assists, string? Opponent);

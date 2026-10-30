@@ -43,6 +43,8 @@ export interface Workout {
   workoutType: WorkoutType | string;
   durationSeconds?: number | null;
   sessionRpe?: number | null;
+  /** Qualität der Einheit 1-10 (wie gut lief es, unabhängig von der Anstrengung). */
+  quality?: number | null;
   notes?: string | null;
   programDayId?: number | null;
   updatedAt?: string;
@@ -67,6 +69,8 @@ export interface QueueEntry {
   workoutType: WorkoutType | string;
   durationSeconds?: number | null;
   sessionRpe?: number | null;
+  /** Qualität der Einheit 1-10 (wie gut lief es, unabhängig von der Anstrengung). */
+  quality?: number | null;
   notes?: string | null;
   programDayId?: number | null;
   sets: WorkoutSet[];

@@ -45,6 +45,14 @@ const load = computed(() => (matchModal.value.rpe && Number(matchModal.value.min
                   <template v-if="matchModal.rpe">{{ sessionRpeLabel(matchModal.rpe) }}<template v-if="load"> · {{ t('finish.loadValue', { load }) }}</template></template>
               </p>
 
+              <label class="label-xs mb-2">{{ t('quality.label') }} <span class="normal-case tracking-normal text-slate-500">{{ t('quality.optional') }}</span></label>
+              <div class="mb-2 grid grid-cols-5 gap-1.5" role="radiogroup" :aria-label="t('quality.label')">
+                  <button type="button" v-for="q in 10" :key="q" role="radio" :aria-checked="matchModal.quality === q" @click="matchModal.quality = matchModal.quality === q ? null : q" :data-quality="q"
+                          class="rounded-lg border py-2 font-mono text-sm font-bold transition-all"
+                          :class="matchModal.quality === q ? 'border-emerald-400/70 bg-emerald-400/15 text-emerald-400' : 'border-white/5 bg-white/5 text-slate-400 hover:text-white'">{{ q }}</button>
+              </div>
+              <p class="mb-5 min-h-[1rem] font-mono text-[10px] text-slate-500">{{ t('quality.hint') }}</p>
+
               <div class="mb-4 grid grid-cols-3 gap-3">
                   <label class="block"><span class="label-xs mb-2">{{ t('match.goals') }}</span>
                       <input v-model.number="matchModal.goals" type="number" min="0" max="20" inputmode="numeric" class="cyber-input w-full rounded-xl p-3 text-sm" placeholder="0"></label>

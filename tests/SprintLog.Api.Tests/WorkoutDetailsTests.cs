@@ -18,6 +18,7 @@ public class WorkoutDetailsTests
         date = new DateTimeOffset(2026, 10, 20, 18, 0, 0, TimeSpan.Zero),
         durationSeconds = 3000,
         sessionRpe = 7,
+        quality = 8,
         notes = "  Felt strong today  ",
         sets = new object[]
         {
@@ -35,6 +36,7 @@ public class WorkoutDetailsTests
         var history = await HttpAssert.JsonAsync<List<WorkoutResponse>>(HttpStatusCode.OK, await user.Client.GetAsync("/api/workouts/history"));
         var w = Assert.Single(history);
         Assert.Equal(7, w.SessionRpe);
+        Assert.Equal(8, w.Quality);
         Assert.Equal("Felt strong today", w.Notes);
         Assert.True(w.Sets[0].IsWarmup);
         Assert.Null(w.Sets[0].Rpe);
@@ -106,6 +108,8 @@ public class WorkoutDetailsTests
     public static TheoryData<object, string> InvalidDetails => new()
     {
         { new { workoutType = "Gym", sessionRpe = 11, sets = new[] { new { exerciseId = Seed.BenchPress, weight = 10.0, reps = 1 } } }, "sessionRpe" },
+        { new { workoutType = "Gym", quality = 0, sets = new[] { new { exerciseId = Seed.BenchPress, weight = 10.0, reps = 1 } } }, "quality" },
+        { new { workoutType = "Gym", quality = 11, sets = new[] { new { exerciseId = Seed.BenchPress, weight = 10.0, reps = 1 } } }, "quality" },
         { new { workoutType = "Gym", notes = new string('x', 501), sets = new[] { new { exerciseId = Seed.BenchPress, weight = 10.0, reps = 1 } } }, "notes" },
         { new { workoutType = "Gym", sets = new[] { new { exerciseId = Seed.BenchPress, weight = 10.0, reps = 1, rpe = 7.3 } } }, "sets[0]" },
         { new { workoutType = "Gym", sets = new[] { new { exerciseId = Seed.BenchPress, weight = 10.0, reps = 1, rpe = 0.5 } } }, "sets[0]" },

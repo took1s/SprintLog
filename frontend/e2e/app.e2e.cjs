@@ -564,3 +564,39 @@ test('one tap per set: add exercises, ghost rows are prefilled, repeat last work
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('obsidian export: quality is saved, lines match the vault format and are copied', async () => {
+  const { page, errors, context } = await newPage();
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: BASE });
+  const token = await register(page, `obs_${Date.now()}`);
+
+  await page.click('[data-test=start-empty]');
+  await page.fill('[data-test=picker-search]', 'bench press');
+  await page.click('[role=option]:has-text("Bench Press") >> nth=0');
+  await page.click('[data-test=picker-add]');
+  const bench = page.locator('[data-block="1"]');
+  await bench.locator('[data-test=ghost-weight]').fill('80');
+  await bench.locator('[data-test=ghost-reps]').fill('5');
+  await bench.locator('[data-test=log-ghost]').click();
+  await page.click('button[aria-label="Stop timer"]');
+  await bench.locator('[data-test=log-ghost]').click();
+  await page.click('button[aria-label="Stop timer"]');
+
+  await page.click('[data-test=finish-workout]');
+  await page.click('[aria-label="Finish workout"] button:text-is("8")');
+  await page.click('[data-quality="7"]');
+  await page.fill('[aria-label="Finish workout"] input[type=number]', '60');
+  await page.click('button:has-text("Save workout")');
+  await page.waitForSelector('text=Quality 7/10');
+  const [w] = await api('GET', '/api/workouts/history', token);
+  assert.equal(w.quality, 7);
+
+  await page.click('[data-test=obsidian-open]');
+  const text = await page.inputValue('[data-test=obsidian-text]');
+  assert.equal(text, '- [ses:: gym] [min:: 60] [rpe:: 8] [qual:: 7] [part:: push]\n- [lift:: Bench Press] [kg:: 80] [reps:: 5] [sets:: 2] [rir:: ]');
+  await page.click('[data-test=obsidian-copy]');
+  await page.waitForSelector('text=Copied');
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), text);
+  assert.deepEqual(errors, []);
+  await context.close();
+});

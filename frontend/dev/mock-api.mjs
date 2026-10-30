@@ -127,7 +127,7 @@ const exerciseDto = (e) => ({ id: e.id, name: e.name, category: e.category, musc
 function workoutResponse(w) {
   return {
     id: w.id, clientId: w.clientId, date: w.date, workoutType: w.workoutType, durationSeconds: w.durationSeconds,
-    sessionRpe: w.sessionRpe ?? null, notes: w.notes ?? null, programDayId: w.programDayId ?? null, updatedAt: w.updatedAt,
+    sessionRpe: w.sessionRpe ?? null, quality: w.quality ?? null, notes: w.notes ?? null, programDayId: w.programDayId ?? null, updatedAt: w.updatedAt,
     match: w.workoutType === 'Match' ? { goals: w.match?.goals ?? null, assists: w.match?.assists ?? null, opponent: w.match?.opponent?.trim() || null } : null,
     sets: (w.sets ?? []).map((s, i) => {
       const ex = db.exercises.find((e) => e.id === s.exerciseId);
@@ -163,6 +163,7 @@ function validateWorkout(user, body) {
   const unknown = (body.sets ?? []).map((s) => s.exerciseId).filter((id) => !ids.includes(id));
   if (unknown.length) errors.sets = [`Unknown exercise id(s): ${unknown.join(', ')}.`];
   if (body.sessionRpe != null && (body.sessionRpe < 1 || body.sessionRpe > 10)) errors.sessionRpe = ['Session RPE must be between 1 and 10.'];
+  if (body.quality != null && (body.quality < 1 || body.quality > 10)) errors.quality = ['Quality must be between 1 and 10.'];
   return Object.keys(errors).length ? errors : null;
 }
 
@@ -177,7 +178,7 @@ function saveWorkout(user, body) {
   const w = {
     id: db.nextWorkoutId++, userId: user.id, clientId, workoutType: body.workoutType,
     date: body.date ? new Date(body.date).toISOString() : new Date().toISOString(),
-    durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null,
+    durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null, quality: body.quality ?? null,
     notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets ?? [], match: body.match ?? null,
     updatedAt: new Date().toISOString(),
   };
@@ -414,7 +415,7 @@ async function handleApi(req, res, url) {
     if (errors) return problem(res, 400, 'One or more validation errors occurred.', errors);
     Object.assign(w, {
       workoutType: body.workoutType, date: body.date ? new Date(body.date).toISOString() : w.date,
-      durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null,
+      durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null, quality: body.quality ?? null,
       notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets ?? [], match: body.match ?? null,
       updatedAt: new Date().toISOString(),
     });
@@ -511,7 +512,7 @@ function seedDemo() {
         if (s[0] === 'd') return { exerciseId: s[1], time: Math.round(s[2] * (1 + progress)) };
         return { exerciseId: s[0], weight: Math.round((s[1] * (1 + progress)) / 2.5) * 2.5, reps: s[2] };
       });
-      saveWorkout(user, { workoutType: session.type, clientId: randomUUID(), date: date.toISOString(), durationSeconds: 3600 + i * 300, sessionRpe: 5 + ((week + i) % 4), sets });
+      saveWorkout(user, { workoutType: session.type, clientId: randomUUID(), date: date.toISOString(), durationSeconds: 3600 + i * 300, sessionRpe: 5 + ((week + i) % 4), quality: 5 + ((week * 3 + i) % 5), sets });
       day++;
     }
   }

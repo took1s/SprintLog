@@ -96,6 +96,7 @@ export interface SessionMeta {
   date: string;
   durationSeconds?: number | null;
   sessionRpe?: number | null;
+  quality?: number | null;
   notes?: string | null;
   programDayId?: number | null;
 }
@@ -221,7 +222,7 @@ export const useAppStore = defineStore('app', () => {
   // Laufende Einheit
   const session = ref<Session>(EMPTY_SESSION());
   const showReview = ref(false);
-  const finishModal = ref({ open: false, sessionRpe: null as number | null, notes: '', date: '', durationMin: null as number | null, error: '' });
+  const finishModal = ref({ open: false, sessionRpe: null as number | null, quality: null as number | null, notes: '', date: '', durationMin: null as number | null, error: '' });
 
   // Satz-Dialog
   const setModal = ref<SetModal>(closedSetModal());
@@ -1217,6 +1218,7 @@ export const useAppStore = defineStore('app', () => {
     finishModal.value = {
       open: true,
       sessionRpe: meta?.sessionRpe ?? null,
+      quality: meta?.quality ?? null,
       notes: meta?.notes ?? '',
       date: toLocalInput(meta?.date ?? startedAt),
       durationMin: meta
@@ -1239,6 +1241,7 @@ export const useAppStore = defineStore('app', () => {
       date: date.toISOString(),
       durationSeconds: minutes > 0 && minutes <= 1440 ? Math.round(minutes * 60) : null,
       sessionRpe: f.sessionRpe ?? null,
+      quality: f.quality ?? null,
       notes: f.notes?.trim() ? f.notes.trim().slice(0, 500) : null,
       programDayId: s.plan?.dayId ?? s.meta?.programDayId ?? null,
       workoutType: inferWorkoutType(s.sets),
@@ -1324,7 +1327,7 @@ export const useAppStore = defineStore('app', () => {
       startedAt: workout.date,
       sets: toSessionSets(workout.sets, { keepDetails: true }),
       editing: workout.pending ? { kind: 'pending', clientId: workout.clientId! } : { kind: 'server', id: workout.id!, clientId: workout.clientId },
-      meta: { date: workout.date, durationSeconds: workout.durationSeconds, sessionRpe: workout.sessionRpe, notes: workout.notes, programDayId: workout.programDayId ?? null },
+      meta: { date: workout.date, durationSeconds: workout.durationSeconds, sessionRpe: workout.sessionRpe, quality: workout.quality ?? null, notes: workout.notes, programDayId: workout.programDayId ?? null },
       plan: null,
     };
     persistSession();
@@ -1367,10 +1370,16 @@ export const useAppStore = defineStore('app', () => {
   // Trainingspläne
   // =====================================================================
   // =====================================================================
+  // Export nach Obsidian (Dialog in ObsidianModal.vue)
+  // =====================================================================
+  const obsidianWorkout = ref<Workout | null>(null);
+  function openObsidian(workout: Workout) { obsidianWorkout.value = workout; }
+
+  // =====================================================================
   // Spiele (Match): ohne Sätze, Last = Minuten × Session-RPE
   // =====================================================================
   const matchModal = ref({
-    open: false, editing: null as Editing | null, date: '', minutes: 90 as number | null, rpe: null as number | null,
+    open: false, editing: null as Editing | null, date: '', minutes: 90 as number | null, rpe: null as number | null, quality: null as number | null,
     goals: null as number | null, assists: null as number | null, opponent: '', notes: '', error: '',
   });
 
@@ -1380,10 +1389,10 @@ export const useAppStore = defineStore('app', () => {
           open: true,
           editing: workout.pending ? { kind: 'pending', clientId: workout.clientId! } : { kind: 'server', id: workout.id!, clientId: workout.clientId },
           date: toLocalInput(workout.date), minutes: workout.durationSeconds ? Math.round(workout.durationSeconds / 60) : 90,
-          rpe: workout.sessionRpe ?? null, goals: workout.match?.goals ?? null, assists: workout.match?.assists ?? null,
+          rpe: workout.sessionRpe ?? null, quality: workout.quality ?? null, goals: workout.match?.goals ?? null, assists: workout.match?.assists ?? null,
           opponent: workout.match?.opponent ?? '', notes: workout.notes ?? '', error: '',
         }
-      : { open: true, editing: null, date: toLocalInput(new Date()), minutes: 90, rpe: null, goals: null, assists: null, opponent: '', notes: '', error: '' };
+      : { open: true, editing: null, date: toLocalInput(new Date()), minutes: 90, rpe: null, quality: null, goals: null, assists: null, opponent: '', notes: '', error: '' };
   }
 
   async function saveMatch() {
@@ -1399,6 +1408,7 @@ export const useAppStore = defineStore('app', () => {
       date: date.toISOString(),
       durationSeconds: Math.round(minutes * 60),
       sessionRpe: m.rpe,
+      quality: m.quality ?? null,
       notes: m.notes.trim() ? m.notes.trim().slice(0, 500) : null,
       programDayId: null,
       workoutType: MATCH,
@@ -1826,6 +1836,7 @@ export const useAppStore = defineStore('app', () => {
     if (programEditor.value.open) { programEditor.value.open = false; return; }
     if (setModal.value.open) return closeSetModal();
     if (customModal.value.open) { customModal.value.open = false; return; }
+    if (obsidianWorkout.value) { obsidianWorkout.value = null; return; }
     if (showReview.value) { showReview.value = false; return; }
     if (settingsOpen.value) { settingsOpen.value = false; return; }
     if (sortOpen.value) sortOpen.value = false;
@@ -2003,7 +2014,7 @@ export const useAppStore = defineStore('app', () => {
     pendingCount, failedCount, syncState,
     categoryExercises, availableMuscleGroups, allMuscleGroups, filteredExercises, sortLabel,
     sessionActive, hasSets, isEditing, finishLoad, sessionElapsed, sessionGroups, sessionSummary,
-    workoutBlocks, ghostDraft, picker, pickerResults, pickerMuscles, searchExercises,
+    workoutBlocks, ghostDraft, picker, obsidianWorkout, openObsidian, pickerResults, pickerMuscles, searchExercises,
     addExercises, removeBlock, moveBlock, setGhostValue, stepGhost, toggleGhostWarmup, quickLog, openPicker, togglePicked, addFromCatalog, confirmPicker, startWorkout, exerciseFor,
     modalEx, modalType, modalKey, modalRecord, modalPrevious, modalSessionSets, modalTechnique, modalTarget, modalE1RM, modalIntensity,
     modalZone, modalSpeed, modalSpeedVsBest, modalIsNewPR,
