@@ -8,24 +8,23 @@ Live-Demo: https://sprintlog-api.onrender.com/
 
 > Projekt im 1. Ausbildungsjahr - Fachinformatiker für Anwendungsentwicklung.
 
-| Übungen | Satz + Technik (Kraft) | Satz + Technik (Feld) | Einheit prüfen |
+| Anmelden | Start | Übungen hinzufügen | Training (ein Tipp pro Satz) |
 | --- | --- | --- | --- |
-| ![Übungen](docs/screenshots/gym.webp) | ![Kraft](docs/screenshots/set-gym.webp) | ![Feld](docs/screenshots/set-field.webp) | ![Session](docs/screenshots/session.webp) |
+| ![Anmelden](docs/screenshots/auth.webp) | ![Start](docs/screenshots/start.webp) | ![Auswahl](docs/screenshots/picker.webp) | ![Training](docs/screenshots/workout.webp) |
 
-| Spiel eintragen | Täglicher Check-in | Trainingsplan | Vorlagen mit Quellen |
+| Satz + Technik | Abschluss (RPE + Qualität) | Historie | Export für Obsidian |
 | --- | --- | --- | --- |
-| ![Spiel](docs/screenshots/match.webp) | ![Check-in](docs/screenshots/checkin.webp) | ![Plan](docs/screenshots/plan.webp) | ![Vorlagen](docs/screenshots/templates.webp) |
+| ![Satz](docs/screenshots/set-gym.webp) | ![Abschluss](docs/screenshots/finish.webp) | ![Historie](docs/screenshots/history.webp) | ![Obsidian](docs/screenshots/obsidian.webp) |
 
-| Überblick | Historie | Fortschritt | Kalender |
+| Überblick | Fortschritt | Kalender | Plan + Check-in |
 | --- | --- | --- | --- |
-| ![Überblick](docs/screenshots/overview.webp) | ![Historie](docs/screenshots/history.webp) | ![Fortschritt](docs/screenshots/progress.webp) | ![Kalender](docs/screenshots/calendar.webp) |
+| ![Überblick](docs/screenshots/overview.webp) | ![Fortschritt](docs/screenshots/progress.webp) | ![Kalender](docs/screenshots/calendar.webp) | ![Plan](docs/screenshots/plan.webp) |
 
---- | --- | --- | --- |
-| ![Übungen](docs/screenshots/gym.webp) | ![Kraft](docs/screenshots/set-gym.webp) | ![Feld](docs/screenshots/set-field.webp) | ![Überblick](docs/screenshots/overview.webp) |
+**Vier Stile, jeweils hell und dunkel** (Einstellungen -> Darstellung, "Auto" folgt dem System):
 
-| Historie | Fortschritt | Kalender | Einheit prüfen |
+| Pitch Night | Clean Pro (hell) | Midnight Pro | Mono Athlete (hell) |
 | --- | --- | --- | --- |
-| ![Historie](docs/screenshots/history.webp) | ![Fortschritt](docs/screenshots/progress.webp) | ![Kalender](docs/screenshots/calendar.webp) | ![Session](docs/screenshots/session.webp) |
+| ![Pitch Night](docs/screenshots/theme-pitch.webp) | ![Clean Pro](docs/screenshots/theme-clean.webp) | ![Midnight Pro](docs/screenshots/theme-midnight.webp) | ![Mono Athlete](docs/screenshots/theme-mono.webp) |
 
 ---
 
@@ -46,15 +45,18 @@ Live-Demo: https://sprintlog-api.onrender.com/
 ## Features
 
 **Training erfassen**
+- Laufende Einheit als Übungs-Blöcke: Der nächste Satz steht schon vorausgefüllt da (geplanter Satz aus "Wiederholen", letzter Satz der Einheit, Plan-Vorschlag oder derselbe Satz vom letzten Mal) - **ein Tipp auf ✓ loggt ihn**. Erledigte Sätze antippen = bearbeiten.
+- Start mit einem Tipp: leere Einheit, nächster Plan-Tag oder "Letzte wiederholen" (gleiche Übungen, jeder Satz vorausgefüllt).
+- Übungsauswahl mit Zuletzt / Favoriten / Alle, Mehrfachauswahl und mehrsprachiger Suche: offizielle Namen in EN/DE/RU plus Gym-Slang und Gerätenamen, tolerant gegenüber Umlauten, ё und einem Tippfehler ("Bizepsmaschine", "становая", "latzug").
 - Drei Erfassungsarten pro Übung: *Gewicht × Wiederholungen*, *Distanz + Zeit* (Sprints, Shuttles) und *Dauer* (Plank, Seilspringen).
 - Live-Telemetrie beim Kraftsatz: geschätztes 1RM (Epley), Intensität in % vom Rekord, Trainingszone; Schnellwahl 70/80/90 % vom Rekord.
 - Live-Telemetrie beim Sprint: km/h, m/s und Vergleich mit der eigenen Bestgeschwindigkeit.
 - Vorbelegung mit dem letzten Satz, Pausentimer mit Ton und Vibration (läuft auch nach Neuladen korrekt weiter), Bildschirm bleibt während der Einheit an.
 - Eigene Übungen (nur für den eigenen Account sichtbar), Favoriten, Suche, Filter und Sortierung.
 - Pro Satz RPE (6-10 in halben Schritten) oder wahlweise RIR (Wdh. in Reserve, gespeichert als RPE), Aufwärmsätze und eine Notiz (z. B. "Knie ok") - Aufwärmsätze zählen nicht für Rekorde, Volumen und Verläufe.
-- Abschluss-Dialog mit Session-RPE (Borg CR-10), Notiz, Datum und Dauer -> Trainingslast nach Foster (sRPE × Minuten) im Wochendiagramm.
+- Abschluss-Dialog mit Session-RPE (Borg CR-10), Qualität (1-10, wie gut lief es - getrennt von der Anstrengung), Notiz, Datum und Dauer -> Trainingslast nach Foster (sRPE × Minuten) im Wochendiagramm.
 - Einheiten nachträglich bearbeiten (auch offline - die Änderung wird per `PUT` synchronisiert).
-- Technik-Ansicht pro Übung: animierte Figur (eigene SVG-Skelettanimation, offline, ~65 Bewegungsmuster für alle 130 Standardübungen, eigene Übungen werden über den Namen erkannt), Zielmuskulatur und 3-4 Technik-Hinweise.
+- Technik-Ansicht pro Übung: animierte Figur (eigene SVG-Skelettanimation, offline, ~70 Bewegungsmuster, eigene Übungen werden über den Namen erkannt), Zielmuskulatur und 3-4 Technik-Hinweise; Übungen ohne passende Animation (z. B. Dehnungen, Fußball-Spielformen) haben eigene Hinweise.
 
 **Fußball**
 - Spiele eintragen (Minuten, Session-RPE, Tore, Vorlagen, Gegner) - ohne Sätze, aber mit Trainingslast (Minuten × RPE), sodass Spiele in die Belastungssteuerung eingehen.
@@ -70,13 +72,21 @@ Live-Demo: https://sprintlog-api.onrender.com/
 - "Next up": der nächste Tag rotiert automatisch; Start eines Tages lädt die Vorgaben der aktuellen Woche (Sätze, Wdh., Pause, Ziel-RPE, Hinweise) als Checkliste. Eigener Editor inkl. Wochen-Stufen.
 - Belastungssteuerung: Acute:Chronic Workload Ratio (7 Tage vs. 28-Tage-Schnitt) mit Zonen (Sweet Spot 0.8-1.3, Spike > 1.5), Spiele eingeschlossen.
 - Fortschritt im Plan: geschätztes 1RM der Kraftübungen zu Beginn vs. letzte 3 Wochen.
-- 130 Standard-Übungen (inkl. Maschinen, Multipresse, Kabelzug und Cardio-Geräte), alle mit animierter Technik-Figur (SVG, eigene Skelett-Animation) und Technik-Hinweisen in drei Sprachen.
+- 257 Standard-Übungen: freie Gewichte, Maschinen (inkl. Hammer Strength, Pullover-Maschine, Multipresse), Kabelzug, Kettlebell, Bänder, Prävention (Nordic, Copenhagen, Tibialis Raise, Reverse Nordic, Spanish Squat), Feld (Sprints, Schlitten, Yo-Yo-Test, Rondo, Spielformen), Mobilität und Cardio-Geräte - jede mit Animation oder Technik-Hinweisen in drei Sprachen.
 
 **Auswertungen**
 - Überblick: Einheiten und Volumen dieser Woche (mit Vergleich zur Vorwoche), Wochen-Serie, 12-Wochen-Diagramm, Muskelgruppen-Verteilung, letzte Rekorde.
 - Fortschritt pro Übung: Max-Gewicht, geschätztes 1RM, Volumen bzw. Top-Speed, Bestzeit, Distanz.
 - Historische Rekorde: ein Satz bekommt ein Badge, wenn er zum Zeitpunkt des Trainings den bisherigen Bestwert übertroffen hat.
 - Aktivitäts-Heatmap (26 Wochen) und Rekordliste.
+
+**Obsidian**
+- Einheit (oder ganzer Tag) als Dataview-Zeilen für die Daily Note kopieren bzw. teilen: `- [ses:: gym] [min:: 75] [rpe:: 8] [qual:: 7] [part:: push]` und `- [lift:: Жим лёжа] [kg:: 80] [reps:: 5] [sets:: 3] [rir:: 2]`.
+- Werte immer in den Klammern, Punkt als Dezimaltrenner, gleiche Arbeitssätze zu `sets:: N` zusammengefasst, RIR aus dem Satz-RPE, Aufwärmen zählt zu den Minuten; Session-Code (gym/speed/tech/cardio/recov/match) und Körperteil werden erkannt und lassen sich ändern. Logik in [`frontend/src/lib/obsidian.ts`](frontend/src/lib/obsidian.ts).
+
+**Darstellung**
+- Vier Stile (Pitch Night, Clean Pro, Midnight Pro, Mono Athlete), jeweils hell und dunkel, "Auto" folgt dem System. Alle Farben, Schriften und Radien sind Design-Tokens ([`frontend/src/styles/themes.css`](frontend/src/styles/themes.css)); die Tailwind-Palette ist auf diese Tokens umgebogen, sodass jede Komponente themenfähig ist. Kontraste nach WCAG AA geprüft.
+- Schriften selbst gehostet (Inter, Oswald, Manrope, IBM Plex - alle mit Kyrillisch), geladen nur, wenn ein Stil sie nutzt.
 
 **Offline-first und Daten**
 - Die App startet ohne Netz (Service Worker). Einheiten werden immer zuerst lokal gespeichert und automatisch synchronisiert.
@@ -85,6 +95,10 @@ Live-Demo: https://sprintlog-api.onrender.com/
 - Keine externen CDNs: Vue, Chart.js, Tailwind-CSS und die Schrift werden mitgebaut und selbst ausgeliefert (offline-fähig, keine Datenübertragung an Dritte).
 - Oberfläche auf Englisch, Deutsch und Russisch: Sprache wird aus dem Browser erkannt und lässt sich in den Einstellungen wechseln. Standard-Übungen, Vorlagen und Technik-Hinweise sind übersetzt, Zahlen und Datum folgen der Sprache (z. B. `1,5 kg`). Russische Pluralformen über `Intl.PluralRules`.
 - Strikte Content-Security-Policy (`script-src 'self'`, kein `unsafe-eval`, kein `unsafe-inline`): Templates werden zur Build-Zeit kompiliert.
+- Schlankes Start-Bundle (~97 kB gzip): Deutsch/Russisch, Auswertungen mit Chart.js, Satz-Dialog mit Animationen, Plan und Editoren sind eigene Chunks und werden bei Bedarf geladen (offline trotzdem verfügbar, alles im Service-Worker-Cache).
+
+**Für die Weiterentwicklung mit Claude**
+- [`CLAUDE.md`](CLAUDE.md) mit Projektwissen und drei Subagents in [`.claude/agents`](.claude/agents): `designer` (UI/UX, Themes, visuelle Reviews mit Screenshots), `creative-director` (Konzepte, Texte in RU/DE/EN) und `agent-architect` (neue Agenten entwerfen und prüfen).
 
 ## Tech-Stack
 
@@ -212,7 +226,7 @@ Sentry einrichten (kostenlos, 5.000 Fehler pro Monat): Konto auf sentry.io anleg
 ```bash
 dotnet test                 # Integrationstests gegen echtes PostgreSQL (Docker muss laufen)
 npm run build               # Typprüfung (TypeScript strict, auch die Vue-Templates) + Build
-npm test                    # Unit-Tests (Vitest): Kennzahlen, Rekorde, Sync-Queue, Delta-Sync, Pläne, CSV-Export
+npm test                    # Unit-Tests (Vitest): Kennzahlen, Rekorde, Sync-Queue, Delta-Sync, Pläne, Vorbelegung, Suche, Obsidian-Export
 npm run test:e2e            # Browser-Tests (Playwright) inkl. Offline-Modus und CSP-Prüfung
 ```
 
@@ -344,10 +358,14 @@ SprintLog/
 - **Keine strikte CSP möglich.** Vue kompilierte die Templates im Browser (`new Function`), das verlangt `unsafe-eval`. Lösung: Umstieg auf Vite + Single-File Components; die Templates werden beim Build kompiliert und die API sendet `script-src 'self'` ohne Ausnahmen. Die E2E-Tests laufen mit derselben Policy und schlagen bei jedem Verstoß fehl.
 - **Übersetzungen ohne Laufzeit-Compiler.** Übliche i18n-Bibliotheken kompilieren Nachrichten zur Laufzeit, was mit der strikten CSP kollidiert. Lösung: eigenes, kleines i18n-Modul; die Schlüssel sind TypeScript-Typen aus den englischen Texten, sodass ein fehlender oder falsch geschriebener Schlüssel in DE/RU schon beim Build auffällt. Ein Test prüft zusätzlich, dass alle Sprachen dieselben Platzhalter haben und jede Übung und Vorlage des Servers übersetzt ist.
 - **Feldübungen hatten keine Eingabefelder.** Für Distanz/Zeit gab es im Dialog keine Felder, außerdem waren Kraftübungen in der Kategorie "Football" (z. B. Trap Bar Deadlift) falsch als Zeitübung behandelt. Lösung: `TrackingType` pro Übung in der Datenbank.
+- **Training im Gym blieb auf dem Handy hängen.** In einem In-App-Browser riss die Verbindung mitten in der Antwort ab; das Lesen des Bodys hatte keinen Timeout, die Sync-Sperre blieb für immer gesetzt. Lösung: Timeout über die ganze Anfrage, Sperre mit Ablaufzeit, Sync bei jeder Gelegenheit (sichtbar, Fokus, minütlich) statt nur nach einem `online`-Event, deutlicher Hinweis "nur auf diesem Gerät" mit "Jetzt senden".
+- **Ein Theme-Wechsel hätte jede Komponente betroffen.** Die Oberfläche nutzte feste Tailwind-Farben (`text-white`, `bg-slate-*`). Lösung: Tailwind-Palette auf CSS-Variablen umgebogen (Text- und Flächenfarbe getrennt für AA-Kontrast), danach nur noch gezielte Anpassungen; ein Design-Review per Subagent hat die verbliebenen Kontrast- und Layoutfehler gefunden.
+- **Das Start-Bundle wuchs mit jeder Sprache.** Lösung: DE/RU, Animationen und selten genutzte Dialoge als eigene Chunks; die mehrsprachige Suche lädt fehlende Sprachen nach (-43 %).
 
 ## Ausblick
 
-- Körpergewicht und Wellness-Daten (Schlaf, Müdigkeit) für eine Belastungssteuerung
+- Körpergewicht im Verlauf und Gewichtsziele
+- Wochen-Export für Obsidian und Import von Session-Zeilen aus dem Vault
 - Teilen von Rekorden und Mannschafts-Ansicht für das Team
 
 ---
