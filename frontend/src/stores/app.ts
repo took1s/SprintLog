@@ -1925,6 +1925,17 @@ export const useAppStore = defineStore('app', () => {
   /** Links aus E-Mails: ?reset=<token> (neues Passwort) und ?verify=<token> (Adresse bestätigen). */
   function handleLinkParams() {
     const params = new URLSearchParams(window.location.search);
+    // App-Verknüpfung "Training starten" (manifest.json shortcuts, Android: lange auf das Icon drücken)
+    if (params.get('start') === 'workout') {
+      window.history.replaceState(null, '', window.location.pathname);
+      let done = false;
+      const stop = watch(isAuthenticated, (signedIn) => {
+        if (!signedIn || done) return;
+        done = true;
+        queueMicrotask(() => stop());
+        if (!sessionActive.value) openPicker();
+      }, { immediate: true });
+    }
     const reset = params.get('reset');
     const verify = params.get('verify');
     if (!reset && !verify) return;

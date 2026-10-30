@@ -14,6 +14,13 @@
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
 
+  /*
+   * Kein Doppeltipp-Zoom (iOS Safari zoomt sonst, wenn man im Gym schnell mehrmals tippt, z. B. auf ✓ oder Stepper).
+   * "manipulation" erlaubt weiterhin Scrollen und Zwei-Finger-Zoom (Barrierefreiheit) und nimmt die 300-ms-Verzögerung.
+   * touch-action wird nicht vererbt - deshalb für alle Elemente.
+   */
+  *, *::before, *::after { touch-action: manipulation; }
+
   body {
     @apply font-sans text-slate-200 antialiased;
     background-color: rgb(var(--c-bg));

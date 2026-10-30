@@ -36,6 +36,7 @@ const strength = computed(() => {
 
 function onKey(e: KeyboardEvent) { capsLock.value = e.getModifierState?.('CapsLock') ?? false; }
 function toggleScheme() { setScheme(activeScheme.value === 'dark' ? 'light' : 'dark'); }
+import BrandMark from '@/components/BrandMark.vue';
 </script>
 
 <template>
@@ -43,7 +44,7 @@ function toggleScheme() { setScheme(activeScheme.value === 'dark' ? 'light' : 'd
     <!-- Kopf: Marke, Sprache, Hell/Dunkel -->
     <header class="flex items-center justify-between py-2">
       <div class="flex items-center gap-2.5">
-        <span class="display flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-lg text-on-accent" aria-hidden="true">S</span>
+        <BrandMark class="h-9 w-9 rounded-xl" />
         <span class="display text-xl text-white">SprintLog</span>
       </div>
       <div class="flex items-center gap-1">

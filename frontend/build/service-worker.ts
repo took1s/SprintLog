@@ -7,7 +7,7 @@ import type { Plugin } from 'vite';
 /** Schriftschnitte, die offline sofort verfügbar sein sollen (andere werden bei Bedarf nachgeladen und gecacht). */
 const FONT_SUBSETS = /inter-(latin|latin-ext|cyrillic|cyrillic-ext)-wght-normal-[\w-]+\.woff2$/;
 
-export function serviceWorker({ publicFiles = ['manifest.json', 'icon-192.png', 'icon-512.png'] } = {}): Plugin {
+export function serviceWorker({ publicFiles = ['manifest.json', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'favicon.svg'] } = {}): Plugin {
   return {
     name: 'sprintlog-service-worker',
     apply: 'build',
