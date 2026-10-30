@@ -63,6 +63,7 @@ public class AppDbContext : DbContext
             e.Property(w => w.WorkoutType).HasMaxLength(20);
             e.Property(w => w.Notes).HasMaxLength(CreateWorkoutRequest.MaxNotesLength);
             e.Property(w => w.Opponent).HasMaxLength(60);
+            e.ToTable(t => t.HasCheckConstraint("CK_Workouts_Quality", "\"Quality\" IS NULL OR \"Quality\" BETWEEN 1 AND 10"));
             e.HasOne(w => w.User).WithMany(u => u.Workouts).HasForeignKey(w => w.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(w => new { w.UserId, w.Date });
             // Delta-Sync: "alles seit X" pro Nutzer, stabil sortiert nach (UpdatedAt, Id).

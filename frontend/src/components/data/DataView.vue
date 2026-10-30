@@ -8,6 +8,7 @@ import HistoryPanel from './HistoryPanel.vue';
 import ProgressPanel from './ProgressPanel.vue';
 import RecordsPanel from './RecordsPanel.vue';
 import CalendarPanel from './CalendarPanel.vue';
+import ObsidianModal from './ObsidianModal.vue';
 
 const app = useAppStore();
 const { dataTab, loadingHistory, allWorkouts, tab } = storeToRefs(app);
@@ -36,5 +37,6 @@ const TABS: DataTab[] = ['overview', 'history', 'progress', 'records', 'calendar
       <RecordsPanel v-else-if="dataTab === 'records'" />
       <CalendarPanel v-else-if="dataTab === 'calendar'" />
     </template>
+    <ObsidianModal />
   </section>
 </template>

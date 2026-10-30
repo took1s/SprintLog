@@ -31,6 +31,14 @@ const { confirmFinish } = app;
                   <template v-else>{{ t('finish.rpeOptional') }}</template>
               </p>
 
+              <label class="label-xs mb-2">{{ t('quality.label') }} <span class="normal-case tracking-normal text-slate-500">{{ t('quality.optional') }}</span></label>
+              <div class="mb-2 grid grid-cols-5 gap-1.5" role="radiogroup" :aria-label="t('quality.label')">
+                  <button type="button" v-for="q in 10" :key="q" role="radio" :aria-checked="finishModal.quality === q" @click="finishModal.quality = finishModal.quality === q ? null : q" :data-quality="q"
+                          class="rounded-lg border py-2 font-mono text-sm font-bold transition-all"
+                          :class="finishModal.quality === q ? 'border-emerald-400/70 bg-emerald-400/15 text-emerald-400' : 'border-white/5 bg-white/5 text-slate-400 hover:text-white'">{{ q }}</button>
+              </div>
+              <p class="mb-5 min-h-[1rem] font-mono text-[10px] text-slate-500">{{ t('quality.hint') }}</p>
+
               <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label class="block">
                       <span class="label-xs mb-2">{{ t('finish.date') }}</span>

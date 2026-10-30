@@ -2550,6 +2550,9 @@ namespace SprintLog.Api.Migrations
                     b.Property<int?>("ProgramDayId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("Quality")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("SessionRpe")
                         .HasColumnType("integer");
 
@@ -2577,7 +2580,10 @@ namespace SprintLog.Api.Migrations
 
                     b.HasIndex("UserId", "UpdatedAt", "Id");
 
-                    b.ToTable("Workouts");
+                    b.ToTable("Workouts", t =>
+                        {
+                            t.HasCheckConstraint("CK_Workouts_Quality", "\"Quality\" IS NULL OR \"Quality\" BETWEEN 1 AND 10");
+                        });
                 });
 
             modelBuilder.Entity("SprintLog.Api.Models.WorkoutSet", b =>

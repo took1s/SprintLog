@@ -10,7 +10,7 @@ import { groupSetsByExercise, workoutKey } from '@/lib/analytics';
 
 const app = useAppStore();
 const { failedCount, filteredHistory, historyFilter, historyLimit, pendingCount, settings, syncing, visibleHistory } = storeToRefs(app);
-const { deleteWorkout, editWorkout, programNameForDay, repeatWorkout, retryEntry, setBadges, syncNow } = app;
+const { deleteWorkout, editWorkout, openObsidian, programNameForDay, repeatWorkout, retryEntry, setBadges, syncNow } = app;
 </script>
 
 <template>
@@ -44,6 +44,7 @@ const { deleteWorkout, editWorkout, programNameForDay, repeatWorkout, retryEntry
                   <div class="mt-1 font-mono text-[10px] text-slate-500">{{ workoutStats(w) }}</div>
                   <div v-if="w.programDayId && programNameForDay(w.programDayId)" class="mt-1 font-mono text-[10px] text-accent">📋 {{ programNameForDay(w.programDayId) }}</div>
                   <div v-if="w.sessionRpe" class="mt-1 font-mono text-[10px] text-orange-300">{{ t('history.srpe', { value: w.sessionRpe, label: sessionRpeLabel(w.sessionRpe) }) }}</div>
+                  <div v-if="w.quality" class="mt-1 font-mono text-[10px] text-emerald-400">{{ t('history.quality', { value: w.quality }) }}</div>
               </div>
               <div class="flex flex-col items-end gap-2">
                   <span class="rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest"
@@ -88,6 +89,7 @@ const { deleteWorkout, editWorkout, programNameForDay, repeatWorkout, retryEntry
               <button v-if="w.pending && w.status === 'failed'" @click="retryEntry(w)" class="cyber-outline-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest">{{ t('common.retry') }}</button>
               <button @click="editWorkout(w)" class="cyber-outline-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest">{{ t('common.edit') }}</button>
               <button @click="repeatWorkout(w)" class="cyber-outline-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest">{{ t('history.performAgain') }}</button>
+              <button @click="openObsidian(w)" data-test="obsidian-open" class="cyber-outline-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest" :aria-label="t('obsidian.open')">Obsidian</button>
               <button @click="deleteWorkout(w)" class="danger-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest" :aria-label="t('history.deleteWorkout')">{{ t('common.delete') }}</button>
           </div>
       </article>

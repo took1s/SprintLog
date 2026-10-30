@@ -125,6 +125,8 @@
   }
 
   .tracking-label { letter-spacing: var(--label-tracking); }
+  /* Echter Monospace für Code/Export (Theme-Zahlenschrift wäre z. B. Oswald) */
+  .code-text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   .label-xs { @apply block text-[10px] font-bold uppercase text-slate-400; letter-spacing: var(--label-tracking); }
   .chip { @apply rounded-full border px-4 py-2 text-[10px] font-bold uppercase transition-all; letter-spacing: var(--label-tracking); }
   .chip-active { background: rgb(var(--c-accent)); border-color: rgb(var(--accent-ring)); color: rgb(var(--c-on-accent)); }

@@ -51,6 +51,7 @@ public static class WorkoutEndpoints
             Date = (req.Date ?? now).UtcDateTime,
             DurationSeconds = req.DurationSeconds,
             SessionRpe = req.SessionRpe,
+            Quality = req.Quality,
             Goals = req.Match?.Goals,
             Assists = req.Match?.Assists,
             Opponent = string.IsNullOrWhiteSpace(req.Match?.Opponent) ? null : req.Match.Opponent.Trim(),
@@ -124,6 +125,7 @@ public static class WorkoutEndpoints
         if (req.Date is { } date) workout.Date = date.UtcDateTime;
         workout.DurationSeconds = req.DurationSeconds;
         workout.SessionRpe = req.SessionRpe;
+        workout.Quality = req.Quality;
         workout.Goals = req.Match?.Goals;
         workout.Assists = req.Match?.Assists;
         workout.Opponent = string.IsNullOrWhiteSpace(req.Match?.Opponent) ? null : req.Match.Opponent.Trim();
@@ -318,5 +320,6 @@ public static class WorkoutEndpoints
                     s.Note))
                 .ToList(),
             w.UpdatedAt,
-            w.WorkoutType == CreateWorkoutRequest.MatchType ? new MatchDetails(w.Goals, w.Assists, w.Opponent) : null));
+            w.WorkoutType == CreateWorkoutRequest.MatchType ? new MatchDetails(w.Goals, w.Assists, w.Opponent) : null,
+            w.Quality));
 }

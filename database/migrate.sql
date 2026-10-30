@@ -2074,3 +2074,29 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261030010524_V12WorkoutQuality') THEN
+    ALTER TABLE "Workouts" ADD "Quality" integer;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261030010524_V12WorkoutQuality') THEN
+    ALTER TABLE "Workouts" ADD CONSTRAINT "CK_Workouts_Quality" CHECK ("Quality" IS NULL OR "Quality" BETWEEN 1 AND 10);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261030010524_V12WorkoutQuality') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261030010524_V12WorkoutQuality', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

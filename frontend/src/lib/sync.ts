@@ -19,6 +19,7 @@ export interface WorkoutPayload {
   date: string;
   durationSeconds: number | null;
   sessionRpe: number | null;
+  quality?: number | null;
   notes: string | null;
   programDayId: number | null;
   match?: { goals?: number | null; assists?: number | null; opponent?: string | null } | null;
@@ -42,6 +43,7 @@ export function toPayload(entry: QueueEntry): WorkoutPayload {
     date: entry.date,
     durationSeconds: entry.durationSeconds ?? null,
     sessionRpe: entry.sessionRpe ?? null,
+    quality: entry.quality ?? null,
     notes: entry.notes ?? null,
     programDayId: entry.programDayId ?? null,
     match: entry.match ?? null,
@@ -133,6 +135,7 @@ export function queueAsWorkouts(queue: readonly QueueEntry[] | null | undefined)
     workoutType: e.workoutType,
     durationSeconds: e.durationSeconds ?? null,
     sessionRpe: e.sessionRpe ?? null,
+    quality: e.quality ?? null,
     notes: e.notes ?? null,
     op: e.op ?? 'create',
     programDayId: e.programDayId ?? null,

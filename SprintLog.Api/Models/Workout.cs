@@ -16,6 +16,9 @@ public class Workout
     /// <summary>Session-RPE (1-10, Borg CR-10). Mit der Dauer ergibt sich die Trainingslast (sRPE × Minuten).</summary>
     public int? SessionRpe { get; set; }
 
+    /// <summary>Subjektive Qualität der Einheit (1-10): Wie gut lief es technisch/taktisch? Unabhängig von der Anstrengung (RPE).</summary>
+    public int? Quality { get; set; }
+
     /// <summary>Freitext-Notiz zur Einheit (max. 500 Zeichen).</summary>
     public string? Notes { get; set; }
 
