@@ -49,6 +49,7 @@ export const userKeys = (userId: number) => ({
   programs: `${PREFIX}:${userId}:programs`,
   templates: `${PREFIX}:${userId}:templates`,
   wellness: `${PREFIX}:${userId}:wellness`,
+  goals: `${PREFIX}:${userId}:goals`,
 });
 export type UserKeys = ReturnType<typeof userKeys>;
 

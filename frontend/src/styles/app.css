@@ -34,6 +34,9 @@
     padding-right: env(safe-area-inset-right);
   }
 
+  /* Wischbare Zeilen: vertikal scrollen erlaubt, horizontal gehört die Geste der Zeile. */
+  .swipe-row { touch-action: pan-y; }
+
   /* Bottom-Sheets (fixed inset-0 items-end) wachsen nicht unter die Notch. */
   .fixed.inset-0.items-end { padding-top: env(safe-area-inset-top); }
 
@@ -118,6 +121,14 @@
     @apply rounded-xl border border-white/10 bg-white/5 text-slate-200 transition-colors;
   }
   .btn-ghost:hover { @apply bg-white/10 text-white; }
+
+  .btn-ghost:disabled { @apply cursor-not-allowed opacity-40; }
+
+  /* Einträge in Aktions-Sheets (groß genug für den Daumen) */
+  .sheet-item {
+    @apply flex min-h-[3.25rem] w-full flex-col items-start justify-center rounded-xl px-4 py-2 text-left text-[15px] font-bold text-slate-100 transition-colors hover:bg-white/5;
+  }
+  .sheet-hint { @apply block text-xs font-normal text-slate-500; }
 
   .danger-btn {
     @apply border border-red-500/30 bg-red-500/10 text-red-400 transition-colors;

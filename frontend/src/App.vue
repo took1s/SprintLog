@@ -16,6 +16,7 @@ import SessionBar from '@/components/SessionBar.vue';
 import FinishModal from '@/components/FinishModal.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { t } from '@/i18n';
+import { useGoalsStore } from '@/stores/goals';
 
 // Seltener gebrauchte Teile als eigene Chunks (kleineres Start-Bundle; offline per Service-Worker-Cache verfügbar):
 // Auswertungen inkl. Chart.js, Plan, Satz-Dialog mit Animationen, Einstellungen, Editoren.
@@ -27,12 +28,15 @@ const SettingsModal = defineAsyncComponent(() => import('@/components/SettingsMo
 const ProgramEditor = defineAsyncComponent(() => import('@/components/ProgramEditor.vue'));
 const MatchModal = defineAsyncComponent(() => import('@/components/MatchModal.vue'));
 const RecoveryCodesModal = defineAsyncComponent(() => import('@/components/RecoveryCodesModal.vue'));
+const ExerciseInfoSheet = defineAsyncComponent(() => import('@/components/ExerciseInfoSheet.vue'));
+const GoalSheet = defineAsyncComponent(() => import('@/components/GoalSheet.vue'));
 
 const app = useAppStore();
+const goals = useGoalsStore();
 const { booting, isAuthenticated, tab, authMode, sessionActive } = storeToRefs(app);
 
 /** Dialog-Chunks erst beim ersten Öffnen laden - danach bleiben sie gemountet (Schließen-Animation bleibt erhalten). */
-const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false });
+const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false });
 watchEffect(() => {
   if (app.setModal.open) used.set = true;
   if (app.customModal.open) used.custom = true;
@@ -40,6 +44,8 @@ watchEffect(() => {
   if (app.programEditor.open) used.editor = true;
   if (app.matchModal.open) used.match = true;
   if (app.recoveryCodes) used.codes = true;
+  if (app.exerciseInfo) used.info = true;
+  if (goals.draft.open) used.goal = true;
 });
 
 onMounted(() => { void app.init(); });
@@ -85,6 +91,8 @@ onMounted(() => { void app.init(); });
       <ProgramEditor v-if="used.editor" />
       <FinishModal />
       <MatchModal v-if="used.match" />
+      <ExerciseInfoSheet v-if="used.info" />
+      <GoalSheet v-if="used.goal" />
     </template>
 
     <RecoveryCodesModal v-if="used.codes" />

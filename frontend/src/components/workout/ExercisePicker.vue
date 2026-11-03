@@ -8,7 +8,7 @@ import { useAppStore, type PickerFilter } from '@/stores/app';
 
 const app = useAppStore();
 const { picker, pickerMuscles, pickerResults } = storeToRefs(app);
-const { confirmPicker, lastSetLabel, openCustomModal, togglePicked } = app;
+const { confirmPicker, lastSetLabel, openCustomModal, openExerciseInfo, togglePicked } = app;
 
 const FILTERS: PickerFilter[] = ['recent', 'favorites', 'all'];
 const searchInput = ref<HTMLInputElement | null>(null);
@@ -60,9 +60,9 @@ function createCustom() {
               </div>
 
               <ul class="mt-2 flex-1 overflow-y-auto px-3 pb-4" role="listbox" aria-multiselectable="true" :aria-label="t('picker.title')">
-                  <li v-for="{ e, inWorkout } in pickerResults" :key="e.id">
+                  <li v-for="{ e, inWorkout } in pickerResults" :key="e.id" class="flex items-center gap-1">
                       <button type="button" role="option" :aria-selected="picker.selected.includes(e.id)" :disabled="inWorkout" @click="togglePicked(e.id)"
-                              class="flex w-full items-center gap-3 rounded-xl px-2 py-3 text-left transition-colors hover:bg-white/5 disabled:opacity-50" :data-pick="e.id">
+                              class="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-3 text-left transition-colors hover:bg-white/5 disabled:opacity-50" :data-pick="e.id">
                           <span class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors"
                                 :class="picker.selected.includes(e.id) || inWorkout ? 'border-accent bg-accent text-on-accent' : 'border-white/45'" aria-hidden="true">
                               <svg v-if="picker.selected.includes(e.id) || inWorkout" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
@@ -73,6 +73,11 @@ function createCustom() {
                                   {{ muscleName(e.muscleGroup) }}<template v-if="inWorkout"> · {{ t('picker.inWorkout') }}</template><template v-else-if="lastSetLabel(e)"> · {{ lastSetLabel(e) }}</template>
                               </span>
                           </span>
+                      </button>
+                      <!-- Was macht die Übung? Info-Seite mit Animation und Technik -->
+                      <button type="button" @click="openExerciseInfo(e.id, 'picker')" class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-white/5 hover:text-accent"
+                              :aria-label="t('picker.info', { name: exerciseName(e) })" :data-info="e.id">
+                          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 11v5"/><circle cx="12" cy="7.75" r="0.6" fill="currentColor"/></svg>
                       </button>
                   </li>
                   <li v-if="!pickerResults.length" class="px-4 py-10 text-center text-sm text-slate-500">

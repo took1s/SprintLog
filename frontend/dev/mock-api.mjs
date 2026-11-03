@@ -32,7 +32,7 @@ const templates = JSON.parse(readFileSync(join(root, 'SprintLog.Api', 'Data', 'p
 // Gleiche Content-Security-Policy wie die echte API -> E2E-Tests finden CSP-Verstöße (Konsolenfehler).
 const CSP = JSON.parse(readFileSync(join(root, 'SprintLog.Api', 'appsettings.json'), 'utf8')).Security.ContentSecurityPolicy;
 
-const db = { users: [], wellness: [], exercises: [...seed], workouts: [], deleted: [], favorites: [], programs: [], refresh: [], codes: [], links: [], outbox: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
+const db = { users: [], wellness: [], goals: [], exercises: [...seed], workouts: [], deleted: [], favorites: [], programs: [], refresh: [], codes: [], links: [], outbox: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
 
 function programResponse(p) {
   return {
@@ -376,6 +376,30 @@ async function handleApi(req, res, url) {
     return before === db.wellness.length ? problem(res, 404, 'Not Found') : noContent(res);
   }
 
+  // ---- Kraft-Ziele (pro Übung)
+  if (method === 'GET' && path === '/api/goals') return json(res, 200, db.goals.filter((g) => g.userId === user.id).map(({ userId, ...rest }) => rest));
+  m = path.match(/^\/api\/goals\/(\d+)$/);
+  if (m && method === 'PUT') {
+    const body = await readBody(req);
+    const errors = {};
+    if (!(body.targetWeight > 0 && body.targetWeight <= 1000)) errors.targetWeight = ['Target weight must be between 0 and 1000 kg.'];
+    if (!(body.targetReps >= 1 && body.targetReps <= 12)) errors.targetReps = ['Target reps must be between 1 and 12.'];
+    if (body.increment != null && !(body.increment >= 0.25 && body.increment <= 20)) errors.increment = ['Increment must be between 0.25 and 20 kg.'];
+    if (Object.keys(errors).length) return problem(res, 400, 'One or more validation errors occurred.', errors);
+    const exerciseId = Number(m[1]);
+    if (!db.exercises.some((e) => e.id === exerciseId)) return problem(res, 404, 'Not Found');
+    const now = new Date().toISOString();
+    const old = db.goals.find((g) => g.userId === user.id && g.exerciseId === exerciseId);
+    const goal = { userId: user.id, exerciseId, targetWeight: body.targetWeight, targetReps: body.targetReps, increment: body.increment ?? 2.5, startE1RM: body.startE1RM ?? null, targetDate: body.targetDate ?? null, createdAt: old?.createdAt ?? now, updatedAt: now, achievedAt: body.achievedAt ?? null };
+    db.goals = [...db.goals.filter((g) => g !== old), goal];
+    const { userId, ...rest } = goal;
+    return json(res, 200, rest);
+  }
+  if (m && method === 'DELETE') {
+    db.goals = db.goals.filter((g) => !(g.userId === user.id && g.exerciseId === Number(m[1])));
+    return noContent(res);
+  }
+
   if (method === 'GET' && path === '/api/favorites') return json(res, 200, db.favorites.filter((f) => f.userId === user.id).map((f) => f.exerciseId));
   m = path.match(/^\/api\/favorites\/(\d+)$/);
   if (m && method === 'POST') {
@@ -531,6 +555,12 @@ function seedDemo() {
     db.wellness.push({ userId: user.id, date: key, sleep: v(1), energy: v(2), soreness: v(3), mood: v(0), sleepHours: 6 + (d % 3), note: null, updatedAt: day.toISOString() });
   }
   db.favorites.push({ userId: user.id, exerciseId: 1 }, { userId: user.id, exerciseId: 35 }, { userId: user.id, exerciseId: 12 });
+  // Kraft-Ziele für Screenshots: Bankdrücken 100 kg 1RM, Kniebeuge 120 kg × 3
+  const created = new Date(Date.now() - 70 * 86400_000).toISOString();
+  db.goals.push(
+    { userId: user.id, exerciseId: 1, targetWeight: 100, targetReps: 1, increment: 2.5, startE1RM: 82, targetDate: null, createdAt: created, updatedAt: created, achievedAt: null },
+    { userId: user.id, exerciseId: 35, targetWeight: 120, targetReps: 3, increment: 2.5, startE1RM: null, targetDate: null, createdAt: created, updatedAt: created, achievedAt: null },
+  );
   console.log(`demo: user "demo" / "demo-password" with ${db.workouts.length} workouts`);
 }
 if (demo) seedDemo();

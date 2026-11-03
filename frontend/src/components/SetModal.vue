@@ -13,7 +13,14 @@ import ExerciseFigure from '@/components/ExerciseFigure.vue';
 
 const app = useAppStore();
 const { clockDate, isEditing, modalE1RM, modalEx, modalIntensity, modalIsNewPR, modalPrevious, modalRecord, modalSessionSets, modalSpeed, modalSpeedVsBest, modalTarget, modalType, modalZone, setModal, settings } = storeToRefs(app);
-const { closeSetModal, copyPrevious, deleteCustomExercise, saveSet, setWeightByPercentage, step } = app;
+const { closeSetModal, copyPrevious, deleteCustomExercise, deleteSessionSet, saveSet, setWeightByPercentage, step } = app;
+
+function deleteEditedSet() {
+  const index = setModal.value.editIndex;
+  if (index === null) return;
+  closeSetModal();
+  deleteSessionSet(index);
+}
 
 // Animation + Technik-Hinweise (figure.ts liegt mit diesem Dialog in einem eigenen Chunk)
 const modalTechnique = computed(() => {
@@ -204,6 +211,7 @@ const modalTechnique = computed(() => {
               <p v-if="modalIsNewPR" class="mb-3 text-center text-[10px] font-black uppercase tracking-widest text-yellow-400">{{ t('set.newRecord') }}</p>
 
               <button @click="saveSet" class="cyber-btn w-full rounded-xl py-4 text-lg font-bold">{{ setModal.editIndex !== null ? t('set.update') : t('set.log') }}</button>
+              <button v-if="setModal.editIndex !== null" type="button" @click="deleteEditedSet" class="danger-btn mt-3 w-full rounded-xl py-3.5 text-sm font-bold" data-test="delete-set">{{ t('set.delete') }}</button>
               <p v-if="settings.autoTimer && setModal.editIndex === null && !isEditing" class="mt-3 text-center font-mono text-[10px] text-slate-500">{{ t('set.autoTimer', { seconds: modalTarget?.restSeconds || (modalEx.category === 'Football' ? settings.restField : settings.restGym) }) }}</p>
 
               <div v-if="modalEx.isCustom" class="mt-6 border-t border-white/5 pt-4 text-center">

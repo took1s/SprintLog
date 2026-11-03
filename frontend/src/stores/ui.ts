@@ -3,7 +3,8 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
 export type ToastTone = 'info' | 'success' | 'error' | 'gold';
-export interface Toast { id: number; message: string; tone: ToastTone }
+export interface ToastAction { label: string; run: () => void }
+export interface Toast { id: number; message: string; tone: ToastTone; action?: ToastAction }
 
 export interface ConfirmOptions { title: string; message: string; confirmText?: string; danger?: boolean }
 interface DialogState extends Required<ConfirmOptions> { open: boolean; resolve: ((ok: boolean) => void) | null }
@@ -14,10 +15,19 @@ export const useUiStore = defineStore('ui', () => {
   const toasts = ref<Toast[]>([]);
   const dialog = ref<DialogState>(closedDialog());
 
-  function toast(message: string, tone: ToastTone = 'info') {
+  function dismiss(id: number) { toasts.value = toasts.value.filter((t) => t.id !== id); }
+
+  /** Kurze Meldung; mit `action` (z. B. Rückgängig) bleibt sie länger stehen. */
+  function toast(message: string, tone: ToastTone = 'info', action?: ToastAction) {
     const id = Date.now() + Math.random();
-    toasts.value = [...toasts.value.slice(-2), { id, message, tone }];
-    setTimeout(() => { toasts.value = toasts.value.filter((t) => t.id !== id); }, tone === 'error' ? 5000 : 3000);
+    toasts.value = [...toasts.value.slice(-2), { id, message, tone, action }];
+    setTimeout(() => dismiss(id), action ? 6000 : tone === 'error' ? 5000 : 3000);
+  }
+
+  function runAction(id: number) {
+    const entry = toasts.value.find((t) => t.id === id);
+    dismiss(id);
+    entry?.action?.run();
   }
 
   /** Promise-basierter Bestätigungsdialog: `if (!(await confirm({...}))) return;` */
@@ -34,5 +44,5 @@ export const useUiStore = defineStore('ui', () => {
     resolve?.(result);
   }
 
-  return { toasts, dialog, toast, confirm, resolveDialog };
+  return { toasts, dialog, toast, dismiss, runAction, confirm, resolveDialog };
 });
