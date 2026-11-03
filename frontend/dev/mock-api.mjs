@@ -555,10 +555,10 @@ function seedDemo() {
     db.wellness.push({ userId: user.id, date: key, sleep: v(1), energy: v(2), soreness: v(3), mood: v(0), sleepHours: 6 + (d % 3), note: null, updatedAt: day.toISOString() });
   }
   db.favorites.push({ userId: user.id, exerciseId: 1 }, { userId: user.id, exerciseId: 35 }, { userId: user.id, exerciseId: 12 });
-  // Kraft-Ziele für Screenshots: Bankdrücken 100 kg 1RM, Kniebeuge 120 kg × 3
+  // Kraft-Ziele für Screenshots: Bankdrücken 125 kg 1RM, Kniebeuge 120 kg × 3
   const created = new Date(Date.now() - 70 * 86400_000).toISOString();
   db.goals.push(
-    { userId: user.id, exerciseId: 1, targetWeight: 100, targetReps: 1, increment: 2.5, startE1RM: 82, targetDate: null, createdAt: created, updatedAt: created, achievedAt: null },
+    { userId: user.id, exerciseId: 1, targetWeight: 125, targetReps: 1, increment: 2.5, startE1RM: 100, targetDate: null, createdAt: created, updatedAt: created, achievedAt: null },
     { userId: user.id, exerciseId: 35, targetWeight: 120, targetReps: 3, increment: 2.5, startE1RM: null, targetDate: null, createdAt: created, updatedAt: created, achievedAt: null },
   );
   console.log(`demo: user "demo" / "demo-password" with ${db.workouts.length} workouts`);

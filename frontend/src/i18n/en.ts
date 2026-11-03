@@ -530,6 +530,8 @@ export const en = {
     labelOneRm: '{weight} kg 1RM',
     labelReps: '{weight} kg × {reps}',
     reached: 'Reached - time for a new goal',
+    ready: 'Strong enough - confirm it on test day',
+    e1rmRange: 'Est. 1RM {current} → {target} kg',
     noEta: 'Log 3 sessions for a forecast',
     eta: 'Forecast: {date}',
     etaPlan: 'Approx. {date} (estimate)',

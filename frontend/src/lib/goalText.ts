@@ -19,10 +19,15 @@ export const goalTargetLabel = (goal: Pick<LiftGoal, 'targetWeight' | 'targetRep
 /** Prognose als Satz (Datum aus Trend oder geplanter Steigerung). */
 export function etaLabel(progress: GoalProgress): string {
   if (progress.achieved) return t('goals.reached');
+  if (progress.current > 0 && progress.current >= progress.target) return t('goals.ready');
   if (!progress.eta) return t('goals.noEta');
   const date = formatDate(progress.eta, { day: '2-digit', month: 'short', year: 'numeric' });
   return progress.etaSource === 'trend' ? t('goals.eta', { date }) : t('goals.etaPlan', { date });
 }
+
+/** "Gesch. 1RM 119,6 → 132 kg" */
+export const e1rmLabel = (progress: GoalProgress): string =>
+  progress.current > 0 ? t('goals.e1rmRange', { current: formatNumber(progress.current, 1), target: formatNumber(progress.target, 1) }) : '';
 
 /** Tempo: "+1,2 kg/Woche" bzw. benötigt bei Wunschdatum. */
 export function paceLabel(progress: GoalProgress): string {

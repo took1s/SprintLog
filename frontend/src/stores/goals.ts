@@ -86,7 +86,8 @@ export const useGoalsStore = defineStore('goals', () => {
   /** Vorgabe für den Geister-Satz (nur wenn es kein Plan-Ziel gibt). */
   function suggestionFor(exerciseId: number): { weight: number; reps: number } | null {
     const v = viewFor(exerciseId);
-    if (!v || v.next.kind === 'achieved' || v.next.weight == null) return null;
+    // Testtag nicht vorbelegen: erst aufwärmen, das Zielgewicht trägt man bewusst selbst ein
+    if (!v || v.next.kind === 'achieved' || v.next.kind === 'test' || v.next.weight == null) return null;
     return { weight: v.next.weight, reps: v.next.reps };
   }
 

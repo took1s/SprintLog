@@ -531,6 +531,8 @@ export const de: Messages = {
     labelOneRm: '{weight} kg 1RM',
     labelReps: '{weight} kg × {reps}',
     reached: 'Erreicht - Zeit für ein neues Ziel',
+    ready: 'Stark genug - am Testtag bestätigen',
+    e1rmRange: 'Gesch. 1RM {current} → {target} kg',
     noEta: 'Prognose nach 3 Einheiten',
     eta: 'Prognose: {date}',
     etaPlan: 'Ca. {date} (Schätzung)',

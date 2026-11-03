@@ -180,7 +180,8 @@ export function goalProgress(goal: LiftGoal, sessions: readonly GoalSession[], n
   const achieved = !!goal.achievedAt || sessions.some((s) => s.date >= goal.createdAt.slice(0, 10) && s.sets.some((x) => reachesGoal(x, goal)));
 
   const span = target - start;
-  const percent = achieved ? 100 : span > 0 ? Math.max(0, Math.min(99, Math.round(((current - start) / span) * 100))) : current >= target ? 100 : 0;
+  // 100 % = rechnerisch stark genug (bestätigt wird es am Testtag); ohne Spanne zählt nur, ob das Ziel erreicht ist
+  const percent = achieved ? 100 : span > 0 ? Math.max(0, Math.min(100, Math.round(((current - start) / span) * 100))) : current >= target ? 100 : 0;
 
   // Trend: letzte 10 Wochen
   const from = now.getTime() - 70 * DAY;

@@ -5,8 +5,7 @@ import { t } from '@/i18n';
 import { exerciseName } from '@/i18n/content';
 import { useAppStore } from '@/stores/app';
 import { useGoalsStore } from '@/stores/goals';
-import { formatNumber } from '@/lib/format';
-import { etaLabel, goalTargetLabel, paceLabel, prescriptionLabel } from '@/lib/goalText';
+import { e1rmLabel, etaLabel, goalTargetLabel, paceLabel, prescriptionLabel } from '@/lib/goalText';
 
 const app = useAppStore();
 const goals = useGoalsStore();
@@ -35,10 +34,7 @@ const { exerciseFor } = app;
                           <div class="truncate font-bold text-white">{{ exerciseName(v.exercise ?? exerciseFor(v.goal.exerciseId)) }}</div>
                           <div class="font-mono text-[11px] text-slate-400">{{ goalTargetLabel(v.goal) }}<template v-if="v.goal.pending"> · {{ t('goals.pendingSync') }}</template></div>
                       </div>
-                      <div class="flex-shrink-0 text-right">
-                          <div class="display text-2xl leading-none" :class="v.progress.achieved ? 'text-yellow-400' : 'text-accent'">{{ v.progress.percent }}%</div>
-                          <div v-if="v.progress.current" class="mt-1 font-mono text-[10px] text-slate-500">{{ formatNumber(v.progress.current, 1) }} / {{ formatNumber(v.progress.target, 1) }} {{ t('units.kg') }}</div>
-                      </div>
+                      <div class="display flex-shrink-0 text-2xl leading-none" :class="v.progress.achieved ? 'text-yellow-400' : 'text-accent'">{{ v.progress.percent }}%</div>
                   </div>
                   <div class="mt-3 h-2 overflow-hidden rounded-full bg-white/10" role="progressbar" :aria-valuenow="v.progress.percent" aria-valuemin="0" aria-valuemax="100">
                       <div class="h-full rounded-full transition-all" :class="v.progress.achieved ? 'bg-yellow-400' : 'bg-accent'" :style="{ width: Math.max(3, v.progress.percent) + '%' }"></div>
@@ -48,7 +44,9 @@ const { exerciseFor } = app;
                       <span v-if="v.progress.onTrack != null && !v.progress.achieved" class="flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-label"
                             :class="v.progress.onTrack ? 'bg-emerald-400/15 text-emerald-400' : 'bg-orange-400/15 text-orange-300'">{{ v.progress.onTrack ? t('goals.onTrack') : t('goals.behind') }}</span>
                   </div>
-                  <div class="mt-1 truncate font-mono text-[11px] text-slate-500">{{ etaLabel(v.progress) }}<template v-if="paceLabel(v.progress)"> · {{ paceLabel(v.progress) }}</template></div>
+                  <div class="mt-1 font-mono text-[11px] leading-relaxed text-slate-500">
+                      <template v-if="e1rmLabel(v.progress)">{{ e1rmLabel(v.progress) }} · </template>{{ etaLabel(v.progress) }}<template v-if="paceLabel(v.progress)"> · {{ paceLabel(v.progress) }}</template>
+                  </div>
               </button>
           </li>
       </ul>

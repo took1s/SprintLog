@@ -537,6 +537,8 @@ export const ru: Messages = {
     labelOneRm: '{weight} кг 1ПМ',
     labelReps: '{weight} кг × {reps}',
     reached: 'Достигнуто - пора ставить новую цель',
+    ready: 'Сил уже хватает - подтверди в тестовый день',
+    e1rmRange: 'Расч. 1ПМ {current} → {target} кг',
     noEta: 'Прогноз после 3 тренировок',
     eta: 'Прогноз: {date}',
     etaPlan: 'Примерно {date} (оценка)',

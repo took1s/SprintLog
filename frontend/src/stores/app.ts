@@ -1200,10 +1200,13 @@ export const useAppStore = defineStore('app', () => {
     const s = session.value;
     const list = (s.done ?? []).filter((x) => x !== id);
     s.done = done ? [...list, id] : list;
-    if (done && rpePrompt.value?.exerciseId === id && !settings.value.rpePrompt) rpePrompt.value = null;
     persistSession();
   }
-  function completeBlock(id: number) { markDone(id, true); }
+  /** Von Hand abgeschlossen: offene RPE-Frage dieser Übung schließen (automatisch abgeschlossen bleibt sie stehen). */
+  function completeBlock(id: number) {
+    if (rpePrompt.value?.exerciseId === id) rpePrompt.value = null;
+    markDone(id, true);
+  }
   function reopenBlock(id: number) { markDone(id, false); }
 
   function setSetRpe(index: number, rpe: number | null) {

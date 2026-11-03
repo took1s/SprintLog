@@ -77,11 +77,11 @@ function click() {
 <template>
   <div ref="root" class="relative overflow-hidden rounded-lg">
       <!-- Löschen-Fläche hinter der Zeile -->
-      <button type="button" tabindex="-1" @click="remove" class="absolute inset-y-0 right-0 flex items-center justify-end bg-red-500 pr-5 text-[11px] font-black uppercase text-bg tracking-label"
+      <button v-show="offset < 0" type="button" tabindex="-1" @click="remove" class="absolute inset-y-0 right-0 flex items-center justify-end bg-red-500 pr-5 text-[11px] font-black uppercase text-bg tracking-label"
               :style="{ width: Math.max(ACTION, -offset) + 'px' }" :aria-hidden="!open" data-test="swipe-delete">
           {{ actionLabel }}
       </button>
-      <div class="swipe-row relative bg-surface" :class="dragging ? '' : 'transition-transform duration-200 ease-out'" :style="style"
+      <div class="swipe-row relative" :class="[dragging ? '' : 'transition-transform duration-200 ease-out', offset !== 0 ? 'bg-surface' : '']" :style="style"
            @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @click="click">
           <slot :open="open" :close="close" />
       </div>

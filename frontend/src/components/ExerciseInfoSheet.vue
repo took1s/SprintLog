@@ -8,13 +8,13 @@ import { useAppStore } from '@/stores/app';
 import { useGoalsStore } from '@/stores/goals';
 import { techniqueFor } from '@/lib/figure';
 import { localizedTechnique } from '@/i18n/techniqueText';
-import { formatNumber, formatRelative } from '@/lib/format';
+import { formatNumber } from '@/lib/format';
 import { etaLabel, goalTargetLabel, prescriptionLabel } from '@/lib/goalText';
 import ExerciseFigure from '@/components/ExerciseFigure.vue';
 
 const app = useAppStore();
 const goals = useGoalsStore();
-const { clockDate, exerciseInfo, picker, records, workoutBlocks } = storeToRefs(app);
+const { exerciseInfo, picker, records, workoutBlocks } = storeToRefs(app);
 const { closeExerciseInfo, exerciseFor, lastSetLabel, togglePicked } = app;
 
 const ex = computed(() => (exerciseInfo.value ? exerciseFor(exerciseInfo.value.id) : null));
@@ -80,7 +80,7 @@ function goal() {
                       </div>
                       <div class="rounded-xl bg-white/5 p-3">
                           <div class="text-[10px] font-bold uppercase text-slate-500 tracking-label">{{ t('info.sessions') }}</div>
-                          <div class="mt-1 font-mono text-sm font-bold text-white">{{ record.sessions }}<span v-if="record.lastDate" class="ml-1 text-[11px] font-normal text-slate-500">· {{ formatRelative(record.lastDate, clockDate) }}</span></div>
+                          <div class="mt-1 font-mono text-sm font-bold text-white">{{ record.sessions }}</div>
                       </div>
                       <template v-if="isWeight">
                           <div class="rounded-xl bg-white/5 p-3">

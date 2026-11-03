@@ -60,6 +60,9 @@ const inputValue = (v: number) => String(Math.round(v * 100) / 100).replace('.',
 
 function selectAll(e: FocusEvent) { (e.target as HTMLInputElement | null)?.select(); }
 
+/** Schnellwahl unter dem Satz: RPE 7-10 (alles darunter ist kein Arbeitssatz - dafür gibt es den Dialog). */
+const QUICK_RPE = SET_RPE.filter((r) => r >= 7);
+
 /** RPE-Auswahl als RIR anzeigen, falls eingestellt (gespeichert wird immer RPE). */
 const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).replace('.', decimalSep.value) : String(r).replace('.', decimalSep.value));
 </script>
@@ -164,9 +167,9 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                   <transition name="fade">
                       <div v-if="rpePrompt?.index === set.index" class="my-1 flex items-center gap-1 rounded-xl bg-white/[0.04] py-1 pl-2 pr-1" role="group" :aria-label="settings.useRir ? t('workout.rirAsk') : t('workout.rpeAsk')" data-test="rpe-strip">
                           <span class="mr-1 flex-shrink-0 text-[10px] font-bold uppercase text-slate-400 tracking-label">{{ settings.useRir ? t('set.rir') : t('set.rpe') }}</span>
-                          <div class="flex min-w-0 flex-1 gap-1 overflow-x-auto">
-                              <button v-for="r in SET_RPE" :key="r" type="button" @click="setSetRpe(set.index, r)" :data-rpe="r"
-                                      class="h-10 min-w-[2.5rem] flex-1 rounded-lg font-mono text-sm font-bold text-slate-200 transition-colors hover:bg-orange-400/15 hover:text-orange-300 active:scale-95">
+                          <div class="grid min-w-0 flex-1 grid-cols-7 gap-0.5">
+                              <button v-for="r in QUICK_RPE" :key="r" type="button" @click="setSetRpe(set.index, r)" :data-rpe="r"
+                                      class="h-10 min-w-0 rounded-lg font-mono text-[13px] font-bold text-slate-200 transition-colors hover:bg-orange-400/15 hover:text-orange-300 active:scale-95">
                                   {{ effortLabel(r) }}
                               </button>
                           </div>
