@@ -2209,6 +2209,59 @@ namespace SprintLog.Api.Migrations
                     b.ToTable("Favorites");
                 });
 
+            modelBuilder.Entity("SprintLog.Api.Models.LiftGoal", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("AchievedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ExerciseId")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("Increment")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("StartE1RM")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateOnly?>("TargetDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("TargetReps")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("TargetWeight")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExerciseId");
+
+                    b.HasIndex("UserId", "ExerciseId")
+                        .IsUnique();
+
+                    b.ToTable("Goals", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Goals_TargetReps", "\"TargetReps\" BETWEEN 1 AND 12");
+
+                            t.HasCheckConstraint("CK_Goals_TargetWeight", "\"TargetWeight\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("SprintLog.Api.Models.ProgramDay", b =>
                 {
                     b.Property<int>("Id")
@@ -2679,6 +2732,23 @@ namespace SprintLog.Api.Migrations
                     b.Navigation("Exercise");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SprintLog.Api.Models.LiftGoal", b =>
+                {
+                    b.HasOne("SprintLog.Api.Models.Exercise", "Exercise")
+                        .WithMany()
+                        .HasForeignKey("ExerciseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SprintLog.Api.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exercise");
                 });
 
             modelBuilder.Entity("SprintLog.Api.Models.ProgramDay", b =>
