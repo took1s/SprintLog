@@ -890,3 +890,28 @@ test('coach + plan for me: 4 answers start a program with a week plan around the
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('app icon: Halloween icon for the home screen and tab, remembered per device', async () => {
+  const { page, errors, context } = await newPage();
+  await register(page, `icon_${Date.now()}`);
+  const touch = () => page.getAttribute('link[rel="apple-touch-icon"]', 'href');
+  await page.click('button[aria-label=Settings]');
+  await page.click('[data-icon-option=halloween]');
+  await page.waitForFunction(() => document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute('href')?.includes('halloween'));
+  assert.equal(await page.getAttribute('link[rel="icon"][type="image/svg+xml"]', 'href'), '/brand/icon-halloween.svg');
+  assert.match(await page.innerText('[data-test=icon-hint]'), /Add to Home Screen/);
+  // Vorschaubilder laden wirklich (SVG mit richtigem Content-Type)
+  await page.waitForFunction(() => [...document.querySelectorAll('[data-icon-option] img')].every((i) => i.complete && i.naturalWidth > 0));
+  // Die Datei gibt es wirklich (sonst nähme iOS ein leeres Symbol)
+  const res = await page.request.get(new URL(await touch(), page.url()).href);
+  assert.equal(res.status(), 200);
+  assert.equal(res.headers()['content-type'], 'image/png');
+  await page.reload();
+  await page.waitForSelector('[data-test=start-panel]');
+  assert.equal(await touch(), '/brand/apple-touch-icon-halloween.png');
+  await page.click('button[aria-label=Settings]');
+  await page.click('[data-icon-option=default]');
+  await page.waitForFunction(() => document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute('href') === '/apple-touch-icon.png');
+  assert.deepEqual(errors, []);
+  await context.close();
+});

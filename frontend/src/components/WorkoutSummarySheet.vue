@@ -8,7 +8,7 @@ import { formatDate, formatNumber, formatTime } from '@/lib/format';
 import { REGIONS } from '@/lib/recovery';
 
 const app = useAppStore();
-const { summary, todayPlan, clockDate } = storeToRefs(app);
+const { summary, todayPlan } = storeToRefs(app);
 const { closeSummary } = app;
 
 const H = 3_600_000;
@@ -34,9 +34,7 @@ const next = computed(() => {
   if (!p) return [];
   const day = (d: Date) => formatDate(d.toISOString(), { weekday: 'long' });
   const out: string[] = [];
-  // Heute ist schon trainiert - der nächste Trainingstag liegt nach heute
-  const today = clockDate.value.toDateString();
-  if (p.nextTraining && p.nextTraining.toDateString() !== today) out.push(t('summary.nextTraining', { day: day(p.nextTraining) }));
+  if (p.nextTrainingAfterToday) out.push(t('summary.nextTraining', { day: day(p.nextTrainingAfterToday) }));
   if (p.nextMatch) out.push(t('summary.nextMatch', { day: day(p.nextMatch) }));
   return out;
 });

@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'vitest';
-import { dailyLine, isMilestone, MOTIVATION, startTrigger } from '../src/lib/motivation';
+import { dailyLine, isMilestone, startTrigger } from '../src/lib/motivation';
+import { motivationEn } from '../src/i18n/motivation.en';
+import { motivationDe } from '../src/i18n/motivation.de';
+import { motivationRu } from '../src/i18n/motivation.ru';
+import { ensureLocale } from '../src/i18n';
+
+const MOTIVATION = { en: motivationEn, de: motivationDe, ru: motivationRu };
 
 const base = { now: new Date('2026-11-04T08:00:00'), name: 'luffy', trainedToday: false, daysSinceLast: 1, streak: 0, weekCount: 1 };
 
@@ -30,7 +36,8 @@ describe('motivation', () => {
     expect(startTrigger({ ...base, trainedToday: true })).toBeNull();
   });
 
-  test('line is stable for a day, changes the next day; unusable names are skipped', () => {
+  test('line is stable for a day, changes the next day; unusable names are skipped', async () => {
+    await ensureLocale('de'); // DE-Zeilen kommen mit dem deutschen Sprach-Chunk
     const d1 = new Date('2026-11-04T08:00:00');
     expect(dailyLine('startMorning', { name: 'luffy' }, d1, 'en')).toBe(dailyLine('startMorning', { name: 'luffy' }, new Date('2026-11-04T10:00:00'), 'en'));
     expect(dailyLine('startMorning', { name: 'luffy' }, d1, 'en')).not.toBe(dailyLine('startMorning', { name: 'luffy' }, new Date('2026-11-05T08:00:00'), 'en'));

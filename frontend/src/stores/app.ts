@@ -404,6 +404,13 @@ export const useAppStore = defineStore('app', () => {
     const f = finishModal.value;
     return (f.sessionRpe ?? 0) > 0 && (f.durationMin ?? 0) > 0 ? Math.round(f.sessionRpe! * f.durationMin!) : 0;
   });
+  /** Kalendertage zwischen zwei Zeitpunkten (Mo 23 Uhr -> Di 7 Uhr = 1 Tag), unabhängig von Sommerzeit. */
+  const calendarDaysBetween = (from: number, to: Date) => {
+    const a = new Date(from);
+    return Math.round((Date.UTC(to.getFullYear(), to.getMonth(), to.getDate()) - Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) / 86_400_000);
+  };
+  /** Offene Änderung behalten (Netz weg, Server kurz down 5xx/408/429) statt sie zu verwerfen? */
+  const keepPending = (e: unknown) => isNetworkError(e) || (isApiError(e) && e.isRetryable);
   // ---------- Wochenplan + Erholung ----------
   /** Wochenplan offline ändern: lokal sofort, Server beim nächsten Sync (PUT ist idempotent). */
   const schedulePendingKey = () => (user.value ? `sprintlog:${user.value.userId}:schedulePending` : null);
@@ -414,11 +421,12 @@ export const useAppStore = defineStore('app', () => {
     return list.map((x) => (p[x.id] ? { ...x, ...p[x.id] } : x));
   }
   async function pushPendingSchedules() {
-    const p = pendingSchedules();
-    for (const [id, sch] of Object.entries(p)) {
-      try { await api().put(`/api/programs/${id}/schedule`, sch); delete p[Number(id)]; } catch (e) { if (isNetworkError(e)) break; delete p[Number(id)]; }
+    for (const [id, sch] of Object.entries(pendingSchedules())) {
+      try { await api().put(`/api/programs/${id}/schedule`, sch); } catch (e) { if (keepPending(e)) break; }
+      // Erst nach der Antwort neu lesen: eine neuere Änderung in der Zwischenzeit nicht überschreiben
+      const now = pendingSchedules();
+      if (JSON.stringify(now[Number(id)]) === JSON.stringify(sch)) { delete now[Number(id)]; savePendingSchedules(now); }
     }
-    savePendingSchedules(p);
   }
   async function setSchedule(program: TrainingProgram, schedule: Schedule) {
     programs.value = programs.value.map((x) => (x.id === program.id ? { ...x, ...schedule } : x));
@@ -434,7 +442,7 @@ export const useAppStore = defineStore('app', () => {
     const today = clockDate.value;
     const kind = kindOf(p, weekdayOf(today));
     const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-    return { kind, nextTraining: kind === 'training' ? today : nextDayOf(p, 'training', tomorrow), nextMatch: nextDayOf(p, 'match', today) };
+    return { kind, nextTraining: kind === 'training' ? today : nextDayOf(p, 'training', tomorrow), nextTrainingAfterToday: nextDayOf(p, 'training', tomorrow), nextMatch: nextDayOf(p, 'match', today) };
   });
 
   /** Tage der Reha-Programme (Einheiten daraus belasten wenig). */
@@ -469,7 +477,7 @@ export const useAppStore = defineStore('app', () => {
     const weekCount = allWorkouts.value.filter((w) => new Date(String(w.date)) >= monday).length;
     const trig = startTrigger({
       now, name: user.value?.username, trainedToday: days.has(dayKey(now)),
-      daysSinceLast: last ? Math.floor((now.getTime() - last) / 86_400_000) : null,
+      daysSinceLast: last ? calendarDaysBetween(last, now) : null,
       streak, weekCount, todayKind: todayPlan.value?.kind ?? null, rehabActive: p?.goal === 'Rehab',
     });
     return trig ? dailyLine(trig.key, trig.params, now) : '';
@@ -491,7 +499,7 @@ export const useAppStore = defineStore('app', () => {
       loadZone: loadInfo.value.zone,
       readiness: readinessToday.value,
       recovery: recovery.value,
-      daysSinceLast: last ? Math.floor((now.getTime() - last) / 86_400_000) : null,
+      daysSinceLast: last ? calendarDaysBetween(last, now) : null,
       trainedToday: days.has(dayKey(now)),
       rehab: p?.goal === 'Rehab',
       nextDay: p && next ? trDayName(p, next) : null,
@@ -510,7 +518,8 @@ export const useAppStore = defineStore('app', () => {
     const b = planBuilder.value;
     b.busy = true;
     try {
-      await startTemplate(template);
+      // Abgebrochen/offline: Dialog offen lassen und den Wochenplan des bisherigen Programms nicht anfassen
+      if (!(await startTemplate(template))) return;
       const p = activeProgram.value;
       if (p && p.templateKey === template.key) await setSchedule(p, scheduleFor(b.answers));
       b.open = false;
@@ -529,7 +538,8 @@ export const useAppStore = defineStore('app', () => {
   const summary = ref<{ line: string; recovery: RecoveryEstimate; at: string; sets: number; volume: number; minutes: number | null; rpe: number | null } | null>(null);
   function closeSummary() { summary.value = null; }
 
-  const sessionElapsed = computed(() => (session.value.startedAt ? Math.max(0, (now.value - new Date(session.value.startedAt).getTime()) / 1000) : 0));
+  // Ganze Sekunden: der 500-ms-Takt ändert den Wert nur einmal pro Sekunde (weniger Re-Renders)
+  const sessionElapsed = computed(() => (session.value.startedAt ? Math.max(0, Math.floor((now.value - new Date(session.value.startedAt).getTime()) / 1000)) : 0));
   const sessionGroups = computed(() => groupSetsByExercise(session.value.sets));
   const sessionSummary = computed(() => summarizeWorkout({ sets: session.value.sets }));
 
@@ -817,8 +827,10 @@ export const useAppStore = defineStore('app', () => {
     if (!isAuthenticated.value) return;
     if (refresh) await refreshSession();
     if (!isAuthenticated.value) return;
-    await Promise.allSettled([loadExercises(), loadFavorites(), loadPrograms(), loadTemplates(), loadWellness(), goalsStore.load()]);
-    await pushLocalExercises();
+    // Offline angelegte Übungen zuerst zum Server - Favoriten und Ziele können sonst noch auf lokale IDs zeigen
+    const exercisesReady = (async () => { await loadExercises(); await pushLocalExercises(); })();
+    await Promise.allSettled([exercisesReady, loadPrograms(), loadTemplates(), loadWellness()]);
+    await Promise.allSettled([loadFavorites(), goalsStore.load()]);
     await syncNow({ reload: false });
     await loadHistory();
   }
@@ -968,6 +980,18 @@ export const useAppStore = defineStore('app', () => {
     ghostDraft.value = remapKeys(ghostDraft.value, m) ?? {};
     queue.value = remapQueue(queue.value, m);
     favorites.value = remapIds(favorites.value, m) ?? [];
+    const fav = pendingFavorites();
+    if (Object.keys(fav).some((k) => m.has(Number(k)))) setPendingFavorites(Object.fromEntries(Object.entries(fav).map(([k, v]) => [String(m.get(Number(k)) ?? k), v])));
+    goalsStore.remapExercises(m);
+    // Offene Dialoge/Timer, die noch die lokale ID halten (sonst würde z. B. "Speichern" mit der alten ID senden)
+    const mapId = (id: number) => m.get(id) ?? id;
+    const sm = setModal.value;
+    if (sm.exercise && m.has(sm.exercise.id)) sm.exercise = exercisesById.value.get(mapId(sm.exercise.id)) ?? { ...sm.exercise, id: mapId(sm.exercise.id) };
+    if (holdTimer.value) holdTimer.value = { ...holdTimer.value, exerciseId: mapId(holdTimer.value.exerciseId) };
+    if (rpePrompt.value) rpePrompt.value = { ...rpePrompt.value, exerciseId: mapId(rpePrompt.value.exerciseId) };
+    if (exerciseInfo.value) exerciseInfo.value = { ...exerciseInfo.value, id: mapId(exerciseInfo.value.id) };
+    picker.value.selected = picker.value.selected.map(mapId);
+    if (picker.value.replaceFor != null) picker.value.replaceFor = mapId(picker.value.replaceFor);
     if (keys.value) {
       writeJson(keys.value.exercises, exercises.value);
       writeJson(keys.value.favorites, favorites.value);
@@ -987,15 +1011,23 @@ export const useAppStore = defineStore('app', () => {
     const before = queue.value;
     try {
       const client = api();
-      const result = await syncQueue(before, (payload, entry) => (isUpdate(entry)
-        ? client.put(`/api/workouts/${entry.workoutId}`, payload)
-        : client.post('/api/workouts', payload)));
+      const result = await syncQueue(before, async (payload, entry) => {
+        if (isUpdate(entry)) return client.put(`/api/workouts/${entry.workoutId}`, payload);
+        const res = await client.post<{ workoutId: number; duplicate: boolean }>('/api/workouts', payload);
+        // Schon gespeichert (erster Versuch kam an, die Antwort nicht) - inzwischen offline bearbeitet?
+        // Dann den aktuellen Stand nachschieben, sonst ginge die Änderung verloren (PUT ist idempotent).
+        if (res?.duplicate && res.workoutId) await client.put(`/api/workouts/${res.workoutId}`, payload);
+        return res;
+      });
       if (run !== syncRun || !isAuthenticated.value) return;
-      // Einträge, die während des Syncs neu hinzugekommen sind, nicht verlieren.
-      const added = queue.value.filter((q) => !before.includes(q));
-      const syncedEntries = before.filter((q) => !result.queue.some((r) => r.clientId === q.clientId));
-      queue.value = [...result.queue, ...added];
+      // Zusammenführen nach clientId gegen den AKTUELLEN Stand: während des Syncs verworfene Einträge bleiben weg,
+      // neu hinzugekommene oder ersetzte (bearbeitet, "erneut versuchen") bleiben in ihrer neuen Fassung.
+      const resultById = new Map(result.queue.map((q) => [q.clientId, q]));
+      const syncedEntries = before.filter((q) => !resultById.has(q.clientId));
+      const changedDuringSync = queue.value.filter((q) => !before.includes(q));
+      queue.value = queue.value.flatMap((q) => (before.includes(q) ? (resultById.has(q.clientId) ? [resultById.get(q.clientId)!] : []) : [q]));
       persistQueue();
+      if (changedDuringSync.some((q) => q.status === QueueStatus.Pending)) queueMicrotask(() => { void syncNow({ reload }); });
 
       if (result.synced > 0) online.value = true;
       if (result.stoppedBy === 'network') online.value = false;
@@ -1059,19 +1091,17 @@ export const useAppStore = defineStore('app', () => {
   function setPendingFavorites(v: Record<number, 'add' | 'remove'>) { const k = favoritesPendingKey(); if (k) writeJson(k, v); }
 
   async function pushPendingFavorites() {
-    const pending = pendingFavorites();
-    for (const [id, op] of Object.entries(pending)) {
+    for (const [id, op] of Object.entries(pendingFavorites())) {
       if (isLocalExerciseId(Number(id))) continue;
       try {
         if (op === 'remove') await api().del(`/api/favorites/${id}`);
         else await api().post(`/api/favorites/${id}`);
-        delete pending[Number(id)];
       } catch (e) {
-        if (isNetworkError(e)) break;
-        delete pending[Number(id)];
+        if (keepPending(e)) break;
       }
+      const now = pendingFavorites();
+      if (now[Number(id)] === op) { delete now[Number(id)]; setPendingFavorites(now); }
     }
-    setPendingFavorites(pending);
   }
 
   async function toggleFavorite(ex: Exercise) {
@@ -1528,7 +1558,11 @@ export const useAppStore = defineStore('app', () => {
       const target = s.plan.targets.find((x) => x.exerciseId === fromId);
       if (target && !s.plan.targets.some((x) => x.exerciseId === toId)) {
         const copy: PlanTarget = { ...target, exerciseId: toId, exerciseName: to?.name ?? target.exerciseName, replacedFrom: target.exerciseName, suggestion: { kind: 'new' } as TargetSuggestion };
-        s.plan.targets = hasSets ? [...s.plan.targets, copy] : s.plan.targets.map((x) => (x.exerciseId === fromId ? copy : x));
+        // Teilweise erledigt: das Original zählt nur, was geschafft ist - der Ersatz bekommt den Rest
+        const done = s.sets.filter((x) => x.exerciseId === fromId && !x.isWarmup).length;
+        s.plan.targets = hasSets
+          ? [...s.plan.targets.map((x) => (x.exerciseId === fromId ? { ...x, sets: Math.min(x.sets, Math.max(1, done)) } : x)), { ...copy, sets: Math.max(1, target.sets - done) }]
+          : s.plan.targets.map((x) => (x.exerciseId === fromId ? copy : x));
       }
     }
     if (hasSets) {
@@ -1682,7 +1716,8 @@ export const useAppStore = defineStore('app', () => {
 
     // Zusammenfassung (nur für neue Einheiten): Erholung aus den Sätzen, bevor die Session geleert wird
     if (!editing) {
-      const total = allWorkouts.value.length + 1;
+      // Die neue Einheit liegt schon in der Warteschlange und zählt damit in allWorkouts mit
+      const total = allWorkouts.value.length;
       const rpe = base.sessionRpe;
       const key = isMilestone(total) ? 'milestone' : (rpe ?? 0) >= 8.5 ? 'finishHard' : 'finish';
       summary.value = {
@@ -1991,19 +2026,22 @@ export const useAppStore = defineStore('app', () => {
     openSetModal(ex);
   }
 
-  async function startTemplate(template: ProgramTemplate) {
-    if (!online.value) { toast(t('plan.toast.needsConnection'), 'error'); return; }
+  /** Vorlage als Programm starten. true = gestartet (false: offline, abgebrochen oder Fehler). */
+  async function startTemplate(template: ProgramTemplate): Promise<boolean> {
+    if (!online.value) { toast(t('plan.toast.needsConnection'), 'error'); return false; }
     if (activeProgram.value) {
       const ok = await confirm({ title: t('plan.confirm.switchTitle'), message: t('plan.confirm.switchMessage', { name: trProgramName(activeProgram.value) }), confirmText: t('common.start') });
-      if (!ok) return;
+      if (!ok) return false;
     }
     try {
       await api().post(`/api/programs/templates/${encodeURIComponent(template.key)}`);
       await loadPrograms();
       toast(t('plan.toast.started', { name: templateText(template.key, 'name', template.name) }), 'success');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      return true;
     } catch (e) {
       toast(errorMessage(e), 'error');
+      return false;
     }
   }
 
@@ -2140,6 +2178,10 @@ export const useAppStore = defineStore('app', () => {
   }
 
   async function deleteCustomExercise(ex: Exercise) {
+    // Noch nicht synchronisierte Sätze (laufende Einheit oder Warteschlange) brauchen die Übung - sonst lehnt der
+    // Server die ganze Einheit ab.
+    const usedUnsynced = session.value.sets.some((x) => x.exerciseId === ex.id) || queue.value.some((q) => q.sets.some((x) => x.exerciseId === ex.id));
+    if (usedUnsynced) { toast(t('custom.toast.inUse', { name: ex.name }), 'error'); return; }
     const ok = await confirm({ title: t('custom.confirm.title'), message: t('custom.confirm.message', { name: ex.name }), confirmText: t('common.delete'), danger: true });
     if (!ok) return;
     try {

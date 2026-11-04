@@ -10,6 +10,7 @@ import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/600.css';
 import './styles/app.css';
 import { initAppearance } from './lib/theme';
+import { initAppIcon } from './lib/appIcon';
 import { ensureLocale, locale } from './i18n';
 import App from './App.vue';
 import { useAppStore } from './stores/app';
@@ -28,4 +29,6 @@ void ensureLocale(locale.value).catch(() => { /* offline ohne Cache: Englisch al
   // Fehler-Monitoring erst nach dem ersten Rendern starten - verzögert den App-Start nicht.
   const store = useAppStore(pinia);
   void initMonitoring(app, () => store.user?.userId);
+  // Saison-Symbol prüfen (Home-Bildschirm-Icon in der iOS-App, Favicon im Browser)
+  initAppIcon();
 });

@@ -23,7 +23,8 @@ const focused = ref(false);
 const text = ref(format(props.modelValue));
 // Von außen geänderte Werte (z. B. +/- Knopf, neuer Satz) übernehmen - aber nicht mitten im Tippen.
 watch(() => props.modelValue, (v) => {
-  if (!focused.value || parseDecimal(text.value) !== v) text.value = format(v);
+  // Leeres Feld = 0 beim Elternteil: nicht mitten im Tippen "0" hineinschreiben
+  if (!focused.value || (parseDecimal(text.value) ?? 0) !== (v ?? 0)) text.value = format(v);
 });
 
 function onInput(e: Event) {

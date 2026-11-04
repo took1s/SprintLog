@@ -1,11 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- Saison-Variante: Kürbis-S in violetter Nacht, Sichelmond -->
+  <!-- Saison-Variante: Kürbis-S (gleiche Silhouette wie icon.svg) in violetter Nacht, Vollmond mit Fledermaus -->
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22163a"/><stop offset="1" stop-color="#0c0814"/></linearGradient>
-    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ff7a1a" stop-opacity="0.24"/><stop offset="1" stop-color="#ff7a1a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2c1b4e"/><stop offset="0.55" stop-color="#170f2a"/><stop offset="1" stop-color="#0b0713"/></linearGradient>
+    <radialGradient id="halo" cx="250" cy="250" r="300" gradientUnits="userSpaceOnUse"><stop offset="0.3" stop-color="#ffe9c2" stop-opacity="0.22"/><stop offset="1" stop-color="#ffe9c2" stop-opacity="0"/></radialGradient>
+    <radialGradient id="moon" cx="0.38" cy="0.35" r="0.7"><stop offset="0" stop-color="#fff6e2"/><stop offset="1" stop-color="#ecd3a4"/></radialGradient>
+    <radialGradient id="glow" cx="530" cy="520" r="430" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ff7a1a" stop-opacity="0.34"/><stop offset="1" stop-color="#ff7a1a" stop-opacity="0"/></radialGradient>
+    <filter id="rib" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter>
+    <mask id="smask" maskUnits="userSpaceOnUse" x="-400" y="-400" width="800" height="900"><use href="#s" fill="none" stroke="#fff" stroke-width="160"/></mask>
+    <path id="s" d="M230 -200H-40A120 120 0 0 0 -40 40H40A120 120 0 0 1 40 280H-260"/>
   </defs>
   <rect width="1024" height="1024" fill="url(#bg)"/>
-  <circle cx="512" cy="512" r="440" fill="url(#glow)"/>
-  <path d="M316.5 260.6A100.0 100.0 0 1 1 220.1 128.0A82.0 82.0 0 0 0 316.5 260.6Z" fill="#f3e4cf"/>
-  <path transform="translate(534.5 476) scale(0.9) skewX(-14)" d="M230 -200H-40A120 120 0 0 0 -40 40H40A120 120 0 0 1 40 280H-260" fill="none" stroke="#ff7a1a" stroke-width="160"/>
+  <!-- Mittelkreis + Mittellinie wie im Standard-Icon: Fußball-Kontext, nur in groß sichtbar -->
+  <g fill="none" stroke="#ff7a1a" stroke-opacity="0.06" stroke-width="28"><circle cx="512" cy="512" r="330"/><path d="M0 512H1024"/></g>
+  <circle cx="530" cy="520" r="430" fill="url(#glow)"/>
+  <!-- Sterne -->
+  <g fill="#f3e4ff">
+    <path d="M846 168l9 25 25 9-25 9-9 25-9-25-25-9 25-9z" opacity="0.9"/>
+    <circle cx="776" cy="128" r="7" opacity="0.7"/>
+    <path d="M168 598l7 19 19 7-19 7-7 19-7-19-19-7 19-7z" opacity="0.75"/>
+    <circle cx="866" cy="772" r="8" opacity="0.6"/>
+  </g>
+  <!-- Mond mit Halo, Fledermaus als Silhouette davor -->
+  <circle cx="250" cy="250" r="300" fill="url(#halo)"/>
+  <circle cx="250" cy="250" r="112" fill="url(#moon)"/>
+  <g fill="#c9a874" opacity="0.22"><circle cx="292" cy="300" r="22"/><circle cx="206" cy="212" r="14"/><circle cx="300" cy="206" r="10"/></g>
+  <path transform="translate(244 262) scale(0.86)" fill="#160c26" d="M0-8L9-30 14-12C34-18 64-44 104-34 90-20 86-2 90 12 76 2 62 4 56 18 46 6 34 6 26 20 18 12 8 14 0 32-8 14-18 12-26 20-34 6-46 6-56 18-62 4-76 2-90 12-86-2-90-20-104-34-64-44-34-18-14-12L-9-30Z"/>
+  <!-- Kürbis-S: dunkler Rand, zwei gewölbte Segmente mit Rille in der Mitte (Kürbisrippen) -->
+  <g transform="translate(534.5 476) scale(0.9) skewX(-14)" fill="none">
+    <!-- Stiel oben auf dem Querbalken -->
+    <path d="M40-262C36-300 34-338 58-374 72-382 92-378 104-366 88-338 88-300 98-262Z" fill="#4c8f2b"/>
+    <path d="M58-374C72-382 92-378 104-366 100-360 96-352 94-344 82-354 70-362 58-374Z" fill="#6cb53d"/>
+    <use href="#s" stroke="#d9560b" stroke-width="160"/>
+    <use href="#s" stroke="#f26a10" stroke-width="146"/>
+    <g mask="url(#smask)">
+      <use href="#s" stroke="#ff9842" stroke-width="118" filter="url(#rib)"/>
+      <use href="#s" stroke="#f47318" stroke-width="22" filter="url(#rib)"/>
+    </g>
+    <use href="#s" stroke="#c44a08" stroke-width="6" stroke-opacity="0.4"/>
+  </g>
 </svg>
