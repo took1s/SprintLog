@@ -62,6 +62,13 @@ jobs:
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/dd-sim" CODE_SIGNING_ALLOWED=NO build | tail -n 40
 
+      - name: Verify alternate app icons
+        run: |
+          # Das Saison-Symbol muss im App-Paket stecken, sonst schlägt setAlternateIconName auf dem Gerät fehl
+          plist="$RUNNER_TEMP/dd-sim/Build/Products/Debug-iphonesimulator/App.app/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIcons:CFBundleAlternateIcons" "$plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIcons:CFBundleAlternateIcons:AppIcon-Halloween" "$plist" >/dev/null
+
       - name: Decide on TestFlight upload
         id: release
         run: |
