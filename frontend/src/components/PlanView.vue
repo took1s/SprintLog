@@ -4,6 +4,7 @@ import { exerciseName, goalName, levelName, programName, dayName, dayNotes, note
 import { storeToRefs } from 'pinia';
 import { useAppStore, zoneClass } from '@/stores/app';
 import WellnessCard from '@/components/WellnessCard.vue';
+import GoalsPanel from '@/components/GoalsPanel.vue';
 import { formatNumber } from '@/lib/format';
 import { formatRelative } from '@/lib/format';
 import { cycleWeek, prescriptionText } from '@/lib/program';
@@ -22,6 +23,7 @@ const { activateProgram, currentPrescription, dayLabel, openProgramEditor, start
 
       <template v-else>
           <WellnessCard />
+          <GoalsPanel />
 
           <!-- Aktiver Plan -->
           <div v-if="activeProgram && programInfo" class="glass-panel rounded-3xl border border-accent/30 p-5">

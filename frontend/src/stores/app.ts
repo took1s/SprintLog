@@ -32,6 +32,7 @@ import type {
   TrackingType as TrackingTypeValue, TrainingProgram, Workout, WorkoutSet,
 } from '../types';
 import { useUiStore } from './ui';
+import { useGoalsStore, type GoalView } from './goals';
 import { t, tn, tDynamic, intlLocale, textIn, loadAllLocales, SUPPORTED_LOCALES } from '../i18n';
 import { templateText, exerciseName as trExerciseName, dayName as trDayName, programName as trProgramName } from '../i18n/content';
 
@@ -47,6 +48,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   showTechnique: true,
   /** Anstrengung pro Satz als RIR (Wdh. in Reserve) statt RPE anzeigen/eingeben. Gespeichert wird immer RPE (RIR = 10 - RPE). */
   useRir: false,
+  /** Nach jedem Satz kurz RPE/RIR abfragen (eine Zeile unter dem Satz, ohne Dialog). */
+  rpePrompt: true,
 });
 export type Settings = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: (typeof DEFAULT_SETTINGS)[K] extends boolean ? boolean : number };
 
@@ -112,6 +115,8 @@ export interface Session {
   order?: number[];
   /** Geplante Sätze pro Übung (z. B. aus "Wiederholen") - belegen den n-ten Satz vor. */
   templates?: Record<number, WorkoutSet[]>;
+  /** Abgeschlossene Übungen: kein vorausgefüllter nächster Satz mehr (bis "+ Satz"). */
+  done?: number[];
 }
 
 /** Ein Übungs-Block der laufenden Einheit (Anzeige). */
@@ -122,6 +127,10 @@ export interface WorkoutBlock {
   target: PlanTarget | null;
   previous: WorkoutSet[];
   ghost: GhostValues;
+  /** Übung abgeschlossen (Geister-Satz ausgeblendet). */
+  done: boolean;
+  /** Kraft-Ziel dieser Übung mit Vorgabe für heute. */
+  goal: GoalView | null;
 }
 
 export type PickerFilter = 'recent' | 'favorites' | 'all';
@@ -173,6 +182,7 @@ export const SYNC_LOCK_MS = 60_000;
 export const useAppStore = defineStore('app', () => {
   const ui = useUiStore();
   const { toast, confirm } = ui;
+  const goalsStore = useGoalsStore();
 
   // =====================================================================
   // Zustand
@@ -273,6 +283,11 @@ export const useAppStore = defineStore('app', () => {
   const prInfo = computed(() => detectPRs(allWorkouts.value));
   const usage = computed(() => usageCounts(allWorkouts.value));
   const clockDate = computed(() => new Date(clock.value));
+  // Kraft-Ziele lesen Historie, Katalog und API über diese Quelle (kein Store-Import im Ziel-Store -> kein Typ-Zirkel)
+  goalsStore.connect(() => ({
+    userId: user.value?.userId ?? null, online: online.value, allWorkouts: allWorkouts.value,
+    exercisesById: exercisesById.value, clockDate: clockDate.value, api: () => client,
+  }));
 
   // ---------- Trainingspläne ----------
   const activeProgram = computed(() => programs.value.find((p) => p.isActive) ?? null);
@@ -601,7 +616,9 @@ export const useAppStore = defineStore('app', () => {
       remove(k.favorites);
       remove(k.programs);
       remove(k.wellness);
+      remove(k.goals);
     }
+    goalsStore.clear();
     removeLegacyToken();
     void nativeSession.clear();
     remove(Keys.user);
@@ -663,7 +680,7 @@ export const useAppStore = defineStore('app', () => {
     if (!isAuthenticated.value) return;
     if (refresh) await refreshSession();
     if (!isAuthenticated.value) return;
-    await Promise.allSettled([loadExercises(), loadFavorites(), loadPrograms(), loadTemplates(), loadWellness()]);
+    await Promise.allSettled([loadExercises(), loadFavorites(), loadPrograms(), loadTemplates(), loadWellness(), goalsStore.load()]);
     await syncNow({ reload: false });
     await loadHistory();
   }
@@ -968,6 +985,7 @@ export const useAppStore = defineStore('app', () => {
     persistSession();
     closeSetModal();
     if (wasPR) toast(t('set.toast.record', { name: trExerciseName(set.exerciseId, set.exerciseName) }), 'gold');
+    void goalsStore.checkAchieved(set);
   }
 
   function editSessionSet(index: number) {
@@ -1028,16 +1046,23 @@ export const useAppStore = defineStore('app', () => {
       const sets = s.sets.map((x, index) => ({ ...x, index })).filter((x) => x.exerciseId === id);
       const target = planTargetFor(id);
       const previous = previousById.value.get(id) ?? [];
+      const goal = goalsStore.viewFor(id);
       const ghost = ghostFor({
         trackingType: exercise.trackingType ?? TrackingType.WeightReps,
         bodyweight: !exercise.isCustom && BODYWEIGHT_EXERCISES.has(id),
         index: sets.length,
         sessionSets: sets,
         template: s.templates?.[id] ?? null,
-        plan: target?.suggestion ?? null,
+        // Plan geht vor; sonst führt das Kraft-Ziel (Gewicht der nächsten Stufe)
+        plan: target?.suggestion ?? (isEditing.value ? null : goalsStore.suggestionFor(id)),
         previous,
       });
-      return { exercise, sets, workingDone: sets.filter((x) => !x.isWarmup).length, target, previous, ghost: { ...ghost, ...ghostDraft.value[id] } };
+      return {
+        exercise, sets, workingDone: sets.filter((x) => !x.isWarmup).length, target, previous,
+        ghost: { ...ghost, ...ghostDraft.value[id] },
+        done: !!s.done?.includes(id),
+        goal,
+      };
     });
   });
 
@@ -1065,6 +1090,7 @@ export const useAppStore = defineStore('app', () => {
     s.order = (s.order ?? []).filter((x) => x !== id);
     if (s.plan) s.plan = { ...s.plan, targets: s.plan.targets.filter((x) => x.exerciseId !== id) };
     if (s.templates) delete s.templates[id];
+    if (s.done) s.done = s.done.filter((x) => x !== id);
     delete ghostDraft.value[id];
     if (!s.sets.length && !s.order.length && !s.plan && !isEditing.value) s.startedAt = null;
     persistSession();
@@ -1152,8 +1178,69 @@ export const useAppStore = defineStore('app', () => {
     const planRest = block.target?.restSeconds;
     if (settings.value.autoTimer && !isEditing.value && !set.isWarmup) startTimer(planRest || (set.category === 'Football' ? settings.value.restField : settings.value.restGym));
     if (settings.value.vibration) tap();
+    // Plan-Ziel erfüllt -> Übung automatisch abschließen (kein "hängender" nächster Satz)
+    if (block.target?.sets && !set.isWarmup && block.workingDone + 1 >= block.target.sets) markDone(id, true);
+    rpePrompt.value = settings.value.rpePrompt && !set.isWarmup && type === TrackingType.WeightReps ? { index: session.value.sets.length - 1, exerciseId: id } : null;
     persistSession();
     if (wasPR) toast(t('set.toast.record', { name: trExerciseName(set.exerciseId, set.exerciseName) }), 'gold');
+    void goalsStore.checkAchieved(set);
+  }
+
+  // ---------- Übungs-Info (Technik, eigene Werte, Ziel) ----------
+  /** Geöffnete Info-Seite einer Übung; `source` = von wo (im Picker gibt es "Auswählen"). */
+  const exerciseInfo = ref<{ id: number; source: 'picker' | 'workout' | 'catalog' } | null>(null);
+  function openExerciseInfo(id: number, source: 'picker' | 'workout' | 'catalog' = 'workout') { exerciseInfo.value = { id, source }; }
+  function closeExerciseInfo() { exerciseInfo.value = null; }
+
+  // ---------- Übung abschließen / Satz löschen / RPE nachtragen ----------
+  /** Satz, dessen RPE direkt unter der Zeile abgefragt wird (verschwindet nach Auswahl oder beim nächsten Satz). */
+  const rpePrompt = ref<{ index: number; exerciseId: number } | null>(null);
+
+  function markDone(id: number, done: boolean) {
+    const s = session.value;
+    const list = (s.done ?? []).filter((x) => x !== id);
+    s.done = done ? [...list, id] : list;
+    persistSession();
+  }
+  /** Von Hand abgeschlossen: offene RPE-Frage dieser Übung schließen (automatisch abgeschlossen bleibt sie stehen). */
+  function completeBlock(id: number) {
+    if (rpePrompt.value?.exerciseId === id) rpePrompt.value = null;
+    markDone(id, true);
+  }
+  function reopenBlock(id: number) { markDone(id, false); }
+
+  function setSetRpe(index: number, rpe: number | null) {
+    const set = session.value.sets[index];
+    if (!set) return;
+    session.value.sets.splice(index, 1, { ...set, rpe });
+    if (rpePrompt.value?.index === index) rpePrompt.value = null;
+    if (settings.value.vibration) tap();
+    persistSession();
+  }
+  function dismissRpePrompt() { rpePrompt.value = null; }
+
+  /** Satz löschen - mit "Rückgängig" im Toast (Wischen ist schnell, ein Versehen soll nichts kosten). */
+  function deleteSessionSet(index: number) {
+    const s = session.value;
+    const set = s.sets[index];
+    if (!set) return;
+    const wasDone = !!s.done?.includes(set.exerciseId);
+    s.sets.splice(index, 1);
+    rpePrompt.value = null;
+    // Gelöschter Satz unter dem Plan-Ziel -> Übung wieder öffnen
+    const target = planTargetFor(set.exerciseId);
+    if (wasDone && target?.sets && s.sets.filter((x) => x.exerciseId === set.exerciseId && !x.isWarmup).length < target.sets) markDone(set.exerciseId, false);
+    persistSession();
+    toast(t('workout.toast.setDeleted'), 'info', {
+      label: t('common.undo'),
+      run: () => {
+        const at = Math.min(index, session.value.sets.length);
+        session.value.sets.splice(at, 0, set);
+        if (wasDone) markDone(set.exerciseId, true);
+        ensureStarted();
+        persistSession();
+      },
+    });
   }
 
   // ---------- Übungsauswahl ----------
@@ -1850,6 +1937,8 @@ export const useAppStore = defineStore('app', () => {
   // =====================================================================
   function closeTopLayer() {
     if (ui.dialog.open) return ui.resolveDialog(false);
+    if (goalsStore.draft.open) return goalsStore.closeGoal();
+    if (exerciseInfo.value) { exerciseInfo.value = null; return; }
     if (finishModal.value.open) { finishModal.value.open = false; return; }
     if (programEditor.value.open) { programEditor.value.open = false; return; }
     if (setModal.value.open) return closeSetModal();
@@ -1862,6 +1951,8 @@ export const useAppStore = defineStore('app', () => {
 
   function closeAllLayers() {
     if (ui.dialog.open) ui.resolveDialog(false);
+    goalsStore.closeGoal();
+    exerciseInfo.value = null;
     setModal.value.open = false;
     customModal.value.open = false;
     finishModal.value.open = false;
@@ -2049,6 +2140,8 @@ export const useAppStore = defineStore('app', () => {
     categoryExercises, availableMuscleGroups, allMuscleGroups, filteredExercises, sortLabel,
     sessionActive, hasSets, isEditing, finishLoad, sessionElapsed, sessionGroups, sessionSummary,
     workoutBlocks, ghostDraft, picker, obsidianWorkout, openObsidian, pickerResults, pickerMuscles, searchExercises,
+    exerciseInfo, openExerciseInfo, closeExerciseInfo,
+    rpePrompt, completeBlock, reopenBlock, setSetRpe, dismissRpePrompt, deleteSessionSet,
     addExercises, removeBlock, moveBlock, setGhostValue, stepGhost, toggleGhostWarmup, quickLog, openPicker, togglePicked, addFromCatalog, confirmPicker, startWorkout, exerciseFor,
     modalEx, modalType, modalKey, modalRecord, modalPrevious, modalSessionSets, modalTarget, modalE1RM, modalIntensity,
     modalZone, modalSpeed, modalSpeedVsBest, modalIsNewPR,

@@ -600,3 +600,102 @@ test('obsidian export: quality is saved, lines match the vault format and are co
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('workout UX: exercise info in picker, RPE right after the set, swipe delete + undo, done, action sheet', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `ux_${Date.now()}`);
+
+  await page.click('[data-test=start-empty]');
+  // Info-Seite aus dem Picker: Technik + "Auswählen"
+  await page.fill('[data-test=picker-search]', 'bench press');
+  await page.click('[data-info="1"]');
+  await page.waitForSelector('[data-test=exercise-info] >> text=Your numbers');
+  await page.click('[data-test=info-pick]');
+  await page.waitForSelector('[data-test=exercise-info]', { state: 'detached' });
+  await page.fill('[data-test=picker-search]', 'kreuzheben');
+  await page.click('[role=option]:has-text("Deadlift (Conventional)")');
+  await page.fill('[data-test=picker-search]', 'barbell squat');
+  await page.click('[role=option]:has-text("Barbell Squat")');
+  await page.click('[data-test=picker-add]:has-text("Add 3 exercises")');
+
+  const bench = page.locator('[data-block="1"]');
+  await bench.locator('[data-test=ghost-weight]').fill('80');
+  await bench.locator('[data-test=ghost-reps]').fill('5');
+  await bench.locator('[data-test=log-ghost]').click();
+  await page.click('button[aria-label="Stop timer"]');
+  // RPE direkt unter dem Satz - ein Tipp, kein Dialog
+  await bench.locator('[data-test=rpe-strip] [data-rpe="8"]').click();
+  await bench.locator('[data-test=rpe-strip]').waitFor({ state: 'detached' });
+  await bench.locator('[data-test=set-row]:has-text("@8")').waitFor();
+
+  await bench.locator('[data-test=log-ghost]').click();
+  await page.click('button[aria-label="Stop timer"]');
+  assert.equal(await bench.locator('[data-test=set-row]').count(), 2);
+
+  // Nach links wischen = löschen, Rückgängig stellt ihn wieder her
+  const row = bench.locator('[data-test=set-row]').nth(1);
+  const box = await row.boundingBox();
+  await page.mouse.move(box.x + box.width - 10, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 10, box.y + box.height / 2, { steps: 12 });
+  await page.mouse.up();
+  await page.waitForSelector('text=Set deleted.');
+  await bench.locator('[data-test=set-row]').nth(1).waitFor({ state: 'detached' });
+  await page.click('[data-test=toast-action]');
+  await bench.locator('[data-test=set-row]').nth(1).waitFor();
+
+  // Löschen auch im Bearbeiten-Dialog
+  await bench.locator('[data-test=set-row]').nth(1).click();
+  await page.click('[data-test=delete-set]');
+  await bench.locator('[data-test=set-row]').nth(1).waitFor({ state: 'detached' });
+
+  // Fertig: kein hängender nächster Satz mehr; "+ Set" öffnet wieder
+  await bench.locator('[data-test=complete-block]').click();
+  await bench.locator('[data-test=ghost-row]').waitFor({ state: 'detached' });
+  await bench.locator('[data-test=reopen-block]').click();
+  await bench.locator('[data-test=ghost-row]').waitFor();
+
+  // Menü der mittleren Übung liegt über allen Blöcken
+  await page.click('[data-block="63"] button[aria-label="Exercise options"]');
+  await page.click('[data-test=sheet-remove]');
+  await page.waitForSelector('[data-block="63"]', { state: 'detached' });
+  assert.equal(await page.locator('[data-block]').count(), 2);
+
+  await page.click('[data-test=finish-workout]');
+  await page.click('button:has-text("Save workout")');
+  await page.waitForSelector('text=Workout saved.');
+  const [w] = await api('GET', '/api/workouts/history', token);
+  assert.deepEqual(w.sets.map((s) => [s.exerciseId, s.weight, s.reps, s.rpe]), [[1, 80, 5, 8]]);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('strength goal: set in the plan tab, synced, next session prefilled from it', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `goal_${Date.now()}`);
+
+  await page.click('nav >> text=PLAN');
+  await page.click('[data-test=goal-new]');
+  await page.fill('[data-test=goal-search]', 'bench press');
+  await page.click('[data-goal-pick="1"]');
+  await page.fill('[data-test=goal-weight]', '100');
+  await page.fill('[data-test=goal-start]', '90');
+  await page.waitForSelector('[data-test=goal-preview] >> text=Start: 3×5 @ 72.5 kg');
+  await page.click('[data-test=goal-save]');
+  await page.waitForSelector('[data-goal="1"] >> text=100 kg 1RM');
+  const goals = await api('GET', '/api/goals', token);
+  assert.deepEqual(goals.map((g) => [g.exerciseId, g.targetWeight, g.targetReps, g.startE1RM]), [[1, 100, 1, 90]]);
+
+  // Die Einheit übernimmt die Vorgabe des Ziels
+  await page.click('nav >> text=GYM');
+  await page.click('[data-test=start-empty]');
+  await page.fill('[data-test=picker-search]', 'bench press');
+  await page.click('[role=option]:has-text("Bench Press") >> nth=0');
+  await page.click('[data-test=picker-add]');
+  const bench = page.locator('[data-block="1"]');
+  await bench.locator('[data-test=block-goal]').waitFor();
+  assert.equal(await bench.locator('[data-test=ghost-weight]').inputValue(), '72.5');
+  assert.equal(await bench.locator('[data-test=ghost-reps]').inputValue(), '5');
+  assert.deepEqual(errors, []);
+  await context.close();
+});

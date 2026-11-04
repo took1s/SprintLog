@@ -1,18 +1,29 @@
 <script setup lang="ts">
 // Laufende Einheit als Übungs-Blöcke: jeder Satz eine Zeile, der nächste steht vorausgefüllt bereit (✓ = loggen).
+// - Nach dem Satz: RPE/RIR direkt unter der Zeile wählen (ein Tipp, kein Dialog).
+// - Satz nach links wischen = löschen (mit Rückgängig).
+// - "Fertig" schließt eine Übung ab: kein hängender nächster Satz mehr; automatisch, sobald das Plan-Ziel erfüllt ist.
+// - ⋯ öffnet ein Aktions-Sheet (über allen Blöcken, nichts wird verdeckt).
 import { computed, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t, tn, intlLocale } from '@/i18n';
 import { dayName, exerciseName, muscleName, noteText, programName } from '@/i18n/content';
-import { useAppStore, rpeText } from '@/stores/app';
+import { useAppStore, rpeText, rpeToRir, SET_RPE } from '@/stores/app';
+import { useGoalsStore } from '@/stores/goals';
 import { formatClock, formatCompact, formatDate, formatNumber } from '@/lib/format';
 import { prescriptionText } from '@/lib/program';
 import { previousForRow } from '@/lib/workout';
+import { goalTargetLabel, prescriptionLabel } from '@/lib/goalText';
 import type { WorkoutSet } from '@/types';
+import SwipeRow from '@/components/workout/SwipeRow.vue';
 
 const app = useAppStore();
-const { hasSets, isEditing, planProgress, programs, session, sessionElapsed, sessionSummary, settings, workoutBlocks } = storeToRefs(app);
-const { abortSession, editSessionSet, finishSession, moveBlock, openPicker, openSetModal, quickLog, removeBlock, setGhostValue, toggleGhostWarmup } = app;
+const goals = useGoalsStore();
+const { hasSets, isEditing, planProgress, programs, rpePrompt, session, sessionElapsed, sessionSummary, settings, workoutBlocks } = storeToRefs(app);
+const {
+  abortSession, completeBlock, deleteSessionSet, dismissRpePrompt, editSessionSet, finishSession, moveBlock, openExerciseInfo, openPicker,
+  openSetModal, quickLog, removeBlock, reopenBlock, setGhostValue, setSetRpe, toggleGhostWarmup,
+} = app;
 
 const planProgram = computed(() => programs.value.find((p) => p.id === session.value.plan?.programId) ?? null);
 const planDay = computed(() => planProgram.value?.days.find((d) => d.id === session.value.plan?.dayId) ?? null);
@@ -20,8 +31,13 @@ const planTitle = computed(() => (session.value.plan
   ? (planProgram.value && planDay.value ? dayName(planProgram.value, planDay.value) : session.value.plan.dayName)
   : ''));
 
-/** Geöffnetes ⋯-Menü (Übungs-ID). */
-const menuFor = ref<number | null>(null);
+/** Übung, deren Aktions-Sheet offen ist. */
+const sheetFor = ref<number | null>(null);
+const sheetBlock = computed(() => workoutBlocks.value.find((b) => b.exercise.id === sheetFor.value) ?? null);
+const sheetIndex = computed(() => workoutBlocks.value.findIndex((b) => b.exercise.id === sheetFor.value));
+
+/** Aktion ausführen, dann Sheet schließen (Reihenfolge wichtig: die Aktion liest den Block aus dem Sheet). */
+function act(fn: () => void) { fn(); sheetFor.value = null; }
 
 const num = (v: number | null | undefined, decimals = 2) => (v == null ? '' : formatNumber(v, decimals));
 
@@ -43,6 +59,12 @@ const decimalSep = computed(() => (1.5).toLocaleString(intlLocale()).charAt(1));
 const inputValue = (v: number) => String(Math.round(v * 100) / 100).replace('.', decimalSep.value);
 
 function selectAll(e: FocusEvent) { (e.target as HTMLInputElement | null)?.select(); }
+
+/** Schnellwahl unter dem Satz: RPE 7-10 (alles darunter ist kein Arbeitssatz - dafür gibt es den Dialog). */
+const QUICK_RPE = SET_RPE.filter((r) => r >= 7);
+
+/** RPE-Auswahl als RIR anzeigen, falls eingestellt (gespeichert wird immer RPE). */
+const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).replace('.', decimalSep.value) : String(r).replace('.', decimalSep.value));
 </script>
 
 <template>
@@ -76,30 +98,31 @@ function selectAll(e: FocusEvent) { (e.target as HTMLInputElement | null)?.selec
 
       <!-- Übungs-Blöcke -->
       <TransitionGroup name="swap" tag="div" class="space-y-3">
-          <article v-for="(block, bi) in workoutBlocks" :key="block.exercise.id" class="glass-panel rounded-2xl p-4" :data-block="block.exercise.id">
+          <article v-for="block in workoutBlocks" :key="block.exercise.id" class="glass-panel rounded-2xl p-4" :data-block="block.exercise.id" :data-done="block.done || undefined">
               <header class="mb-2 flex items-start justify-between gap-2">
                   <button type="button" class="min-w-0 text-left" @click="openSetModal(block.exercise)" :aria-label="t('workout.details', { name: exerciseName(block.exercise) })">
-                      <h3 class="display line-clamp-2 text-lg text-white">{{ exerciseName(block.exercise) }}</h3>
+                      <div class="flex items-center gap-2">
+                          <span v-if="block.done" class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-emerald-400/20 text-emerald-400" aria-hidden="true">
+                              <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                          </span>
+                          <h3 class="display line-clamp-2 text-lg text-white">{{ exerciseName(block.exercise) }}</h3>
+                      </div>
                       <p class="mt-0.5 truncate font-mono text-xs text-slate-400">
                           <template v-if="block.target">{{ prescriptionText(block.target) }}</template>
                           <template v-else-if="block.previous.length">{{ t('workout.lastTime', { value: prevText(block.previous.filter((s) => !s.isWarmup).at(-1) ?? block.previous.at(-1) ?? null, block.exercise.trackingType), sets: block.previous.filter((s) => !s.isWarmup).length }) }}</template>
                           <template v-else>{{ muscleName(block.exercise.muscleGroup) }} · {{ t('workout.firstTime') }}</template>
                       </p>
                       <p v-if="block.target?.note" class="truncate font-mono text-[10px] text-accent">{{ noteText(block.target.note) }}</p>
+                      <!-- Kraft-Ziel: Vorgabe für heute -->
+                      <p v-if="block.goal && !block.target" class="mt-1 flex min-w-0 items-center gap-1.5 font-mono text-[11px]" :class="block.goal.progress.achieved ? 'text-yellow-400' : 'text-accent'" data-test="block-goal">
+                          <svg class="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.5"/></svg>
+                          <span class="truncate">{{ goalTargetLabel(block.goal.goal) }} · {{ prescriptionLabel(block.goal.next, block.goal.goal) }}</span>
+                      </p>
                   </button>
-                  <div class="relative flex-shrink-0">
-                      <button type="button" @click="menuFor = menuFor === block.exercise.id ? null : block.exercise.id"
-                              class="-mr-2 -mt-1 flex h-11 w-11 items-center justify-center rounded-lg text-slate-400 hover:bg-white/5 hover:text-white" :aria-label="t('workout.menu')" :aria-expanded="menuFor === block.exercise.id">
-                          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
-                      </button>
-                      <div v-if="menuFor === block.exercise.id" class="fixed inset-0 z-20" @click="menuFor = null"></div>
-                      <div v-if="menuFor === block.exercise.id" class="modal-panel glass-panel absolute right-0 top-11 z-30 w-48 overflow-hidden rounded-xl py-1 text-sm" role="menu">
-                          <button role="menuitem" class="block w-full px-4 py-2.5 text-left text-slate-200 hover:bg-white/5" @click="menuFor = null; openSetModal(block.exercise)">{{ t('workout.technique') }}</button>
-                          <button v-if="bi > 0" role="menuitem" class="block w-full px-4 py-2.5 text-left text-slate-200 hover:bg-white/5" @click="menuFor = null; moveBlock(block.exercise.id, -1)">{{ t('workout.moveUp') }}</button>
-                          <button v-if="bi < workoutBlocks.length - 1" role="menuitem" class="block w-full px-4 py-2.5 text-left text-slate-200 hover:bg-white/5" @click="menuFor = null; moveBlock(block.exercise.id, 1)">{{ t('workout.moveDown') }}</button>
-                          <button role="menuitem" class="block w-full px-4 py-2.5 text-left text-red-400 hover:bg-red-500/10" @click="menuFor = null; removeBlock(block.exercise.id)">{{ t('workout.remove') }}</button>
-                      </div>
-                  </div>
+                  <button type="button" @click="sheetFor = block.exercise.id"
+                          class="-mr-2 -mt-1 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-white/5 hover:text-white" :aria-label="t('workout.menu')" aria-haspopup="dialog">
+                      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+                  </button>
               </header>
 
               <!-- Tabelle: # | vorher | Werte | ✓ -->
@@ -112,67 +135,102 @@ function selectAll(e: FocusEvent) { (e.target as HTMLInputElement | null)?.selec
                   <span></span>
               </div>
 
-              <!-- Erledigte Sätze: antippen = bearbeiten -->
-              <button v-for="(set, si) in block.sets" :key="set.index" type="button" @click="editSessionSet(set.index)"
-                      class="grid w-full grid-cols-[2.75rem_minmax(0,1fr)_4.5rem_4.5rem_3rem] items-center gap-x-2 rounded-lg px-1 py-1.5 text-left transition-colors hover:bg-white/5"
-                      :aria-label="t('workout.editSet', { n: rowLabel(block.sets, si) })">
-                  <span class="text-center font-mono text-xs font-bold" :class="set.isWarmup ? 'text-orange-400' : 'text-slate-400'">{{ rowLabel(block.sets, si) }}</span>
-                  <span class="truncate font-mono text-[11px] text-slate-500">
-                      {{ prevText(set.isWarmup ? null : previousForRow(block.previous, block.sets.slice(0, si).filter((s) => !s.isWarmup).length), block.exercise.trackingType) }}
-                      <template v-if="set.rpe != null"> · {{ rpeText(set.rpe, settings.useRir) }}</template>
-                      <template v-if="set.note"> · ✎</template>
-                  </span>
-                  <template v-if="block.exercise.trackingType === 'DistanceTime'">
-                      <span class="text-center font-mono text-base font-bold text-white">{{ num(set.distance, 1) }}</span>
-                      <span class="text-center font-mono text-base font-bold text-white">{{ num(set.time, 2) }}</span>
-                  </template>
-                  <template v-else-if="block.exercise.trackingType === 'Duration'">
-                      <span></span><span class="text-center font-mono text-base font-bold text-white">{{ num(set.time, 0) }}</span>
-                  </template>
-                  <template v-else>
-                      <span class="text-center font-mono text-base font-bold text-white">{{ (set.weight ?? 0) > 0 ? num(set.weight) : t('workout.bw') }}</span>
-                      <span class="text-center font-mono text-base font-bold text-white">{{ set.reps }}</span>
-                  </template>
-                  <span class="mr-1.5 flex h-7 w-7 items-center justify-center justify-self-end rounded-md bg-emerald-400/15 text-emerald-400" aria-hidden="true">
-                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                  </span>
-              </button>
+              <!-- Erledigte Sätze: antippen = bearbeiten, nach links wischen = löschen -->
+              <template v-for="(set, si) in block.sets" :key="set.index">
+                  <SwipeRow :label="t('workout.deleteSet')" @tap="editSessionSet(set.index)" @delete="deleteSessionSet(set.index)">
+                      <button type="button" class="grid w-full grid-cols-[2.75rem_minmax(0,1fr)_4.5rem_4.5rem_3rem] items-center gap-x-2 px-1 py-1.5 text-left transition-colors hover:bg-white/5"
+                              :aria-label="t('workout.editSet', { n: rowLabel(block.sets, si) })" data-test="set-row">
+                          <span class="text-center font-mono text-xs font-bold" :class="set.isWarmup ? 'text-orange-400' : 'text-slate-400'">{{ rowLabel(block.sets, si) }}</span>
+                          <span class="truncate font-mono text-[11px] text-slate-500">
+                              {{ prevText(set.isWarmup ? null : previousForRow(block.previous, block.sets.slice(0, si).filter((s) => !s.isWarmup).length), block.exercise.trackingType) }}
+                              <template v-if="set.rpe != null"> · <span class="text-orange-300">{{ rpeText(set.rpe, settings.useRir) }}</span></template>
+                              <template v-if="set.note"> · ✎</template>
+                          </span>
+                          <template v-if="block.exercise.trackingType === 'DistanceTime'">
+                              <span class="text-center font-mono text-base font-bold text-white">{{ num(set.distance, 1) }}</span>
+                              <span class="text-center font-mono text-base font-bold text-white">{{ num(set.time, 2) }}</span>
+                          </template>
+                          <template v-else-if="block.exercise.trackingType === 'Duration'">
+                              <span></span><span class="text-center font-mono text-base font-bold text-white">{{ num(set.time, 0) }}</span>
+                          </template>
+                          <template v-else>
+                              <span class="text-center font-mono text-base font-bold text-white">{{ (set.weight ?? 0) > 0 ? num(set.weight) : t('workout.bw') }}</span>
+                              <span class="text-center font-mono text-base font-bold text-white">{{ set.reps }}</span>
+                          </template>
+                          <span class="mr-1.5 flex h-7 w-7 items-center justify-center justify-self-end rounded-md bg-emerald-400/15 text-emerald-400" aria-hidden="true">
+                              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                          </span>
+                      </button>
+                  </SwipeRow>
 
-              <!-- Nächster Satz (vorausgefüllt) -->
-              <div class="mt-1 grid grid-cols-[2.75rem_minmax(0,1fr)_4.5rem_4.5rem_3rem] items-center gap-x-2 rounded-xl bg-accent/5 px-1 py-1.5 ring-1 ring-inset ring-accent/25" data-test="ghost-row">
-                  <button type="button" @click="toggleGhostWarmup(block.exercise.id)"
-                          class="h-11 w-11 rounded-lg font-mono text-sm font-bold transition-colors"
-                          :class="block.ghost.isWarmup ? 'bg-orange-400/15 text-orange-400' : 'text-slate-400 hover:bg-white/5'"
-                          :aria-pressed="block.ghost.isWarmup" :aria-label="t('workout.toggleWarmup')">
-                      {{ block.ghost.isWarmup ? 'W' : block.workingDone + 1 }}
-                  </button>
-                  <span class="truncate font-mono text-[11px] text-slate-500">{{ prevText(block.ghost.isWarmup ? null : previousForRow(block.previous, block.workingDone), block.exercise.trackingType) }}</span>
-                  <template v-if="block.exercise.trackingType === 'DistanceTime'">
-                      <input :value="inputValue(block.ghost.distance)" @input="setGhostValue(block.exercise.id, 'distance', ($event.target as HTMLInputElement).value)" @focus="selectAll"
-                             inputmode="decimal" type="text" class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.m')">
-                      <input :value="inputValue(block.ghost.time)" @input="setGhostValue(block.exercise.id, 'time', ($event.target as HTMLInputElement).value)" @focus="selectAll"
-                             inputmode="decimal" type="text" class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.s')">
-                  </template>
-                  <template v-else-if="block.exercise.trackingType === 'Duration'">
-                      <span></span>
-                      <input :value="inputValue(block.ghost.time)" @input="setGhostValue(block.exercise.id, 'time', ($event.target as HTMLInputElement).value)" @focus="selectAll"
-                             inputmode="numeric" type="text" class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.s')">
-                  </template>
-                  <template v-else>
-                      <input :value="inputValue(block.ghost.weight)" @input="setGhostValue(block.exercise.id, 'weight', ($event.target as HTMLInputElement).value)" @focus="selectAll"
-                             inputmode="decimal" type="text" class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.kg')" data-test="ghost-weight">
-                      <input :value="inputValue(block.ghost.reps)" @input="setGhostValue(block.exercise.id, 'reps', ($event.target as HTMLInputElement).value)" @focus="selectAll"
-                             inputmode="numeric" type="text" class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('workout.col.reps')" data-test="ghost-reps">
-                  </template>
-                  <button type="button" @click="quickLog(block.exercise.id)" data-test="log-ghost"
-                          class="flex h-11 w-11 items-center justify-center justify-self-end rounded-lg bg-accent text-on-accent shadow-glow transition-transform hover:brightness-105 active:scale-90"
-                          :aria-label="t('workout.logSet', { name: exerciseName(block.exercise) })">
-                      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                  <!-- Wie schwer war's? Direkt unter dem gerade geloggten Satz -->
+                  <transition name="fade">
+                      <div v-if="rpePrompt?.index === set.index" class="my-1 flex items-center gap-1 rounded-xl bg-white/[0.04] py-1 pl-2 pr-1" role="group" :aria-label="settings.useRir ? t('workout.rirAsk') : t('workout.rpeAsk')" data-test="rpe-strip">
+                          <span class="mr-1 flex-shrink-0 text-[10px] font-bold uppercase text-slate-400 tracking-label">{{ settings.useRir ? t('set.rir') : t('set.rpe') }}</span>
+                          <div class="grid min-w-0 flex-1 grid-cols-7 gap-0.5">
+                              <button v-for="r in QUICK_RPE" :key="r" type="button" @click="setSetRpe(set.index, r)" :data-rpe="r"
+                                      class="h-10 min-w-0 rounded-lg font-mono text-[13px] font-bold text-slate-200 transition-colors hover:bg-orange-400/15 hover:text-orange-300 active:scale-95">
+                                  {{ effortLabel(r) }}
+                              </button>
+                          </div>
+                          <button type="button" @click="dismissRpePrompt" class="flex h-10 w-9 flex-shrink-0 items-center justify-center rounded-lg text-slate-500 hover:text-white" :aria-label="t('workout.rpeSkip')">✕</button>
+                      </div>
+                  </transition>
+              </template>
+
+              <!-- Nächster Satz (vorausgefüllt) - nur solange die Übung offen ist -->
+              <template v-if="!block.done">
+                  <div class="mt-1 grid grid-cols-[2.75rem_minmax(0,1fr)_4.5rem_4.5rem_3rem] items-center gap-x-2 rounded-xl bg-accent/5 px-1 py-1.5 ring-1 ring-inset ring-accent/25" data-test="ghost-row">
+                      <button type="button" @click="toggleGhostWarmup(block.exercise.id)"
+                              class="h-11 w-11 rounded-lg font-mono text-sm font-bold transition-colors"
+                              :class="block.ghost.isWarmup ? 'bg-orange-400/15 text-orange-400' : 'text-slate-400 hover:bg-white/5'"
+                              :aria-pressed="block.ghost.isWarmup" :aria-label="t('workout.toggleWarmup')">
+                          {{ block.ghost.isWarmup ? 'W' : block.workingDone + 1 }}
+                      </button>
+                      <span class="truncate font-mono text-[11px] text-slate-500">{{ prevText(block.ghost.isWarmup ? null : previousForRow(block.previous, block.workingDone), block.exercise.trackingType) }}</span>
+                      <template v-if="block.exercise.trackingType === 'DistanceTime'">
+                          <input :value="inputValue(block.ghost.distance)" @input="setGhostValue(block.exercise.id, 'distance', ($event.target as HTMLInputElement).value)" @focus="selectAll"
+                                 inputmode="decimal" type="text" class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.m')">
+                          <input :value="inputValue(block.ghost.time)" @input="setGhostValue(block.exercise.id, 'time', ($event.target as HTMLInputElement).value)" @focus="selectAll"
+                                 inputmode="decimal" type="text" class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.s')">
+                      </template>
+                      <template v-else-if="block.exercise.trackingType === 'Duration'">
+                          <span></span>
+                          <input :value="inputValue(block.ghost.time)" @input="setGhostValue(block.exercise.id, 'time', ($event.target as HTMLInputElement).value)" @focus="selectAll"
+                                 inputmode="numeric" type="text" class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.s')">
+                      </template>
+                      <template v-else>
+                          <input :value="inputValue(block.ghost.weight)" @input="setGhostValue(block.exercise.id, 'weight', ($event.target as HTMLInputElement).value)" @focus="selectAll"
+                                 inputmode="decimal" type="text" class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.kg')" data-test="ghost-weight">
+                          <input :value="inputValue(block.ghost.reps)" @input="setGhostValue(block.exercise.id, 'reps', ($event.target as HTMLInputElement).value)" @focus="selectAll"
+                                 inputmode="numeric" type="text" class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('workout.col.reps')" data-test="ghost-reps">
+                      </template>
+                      <button type="button" @click="quickLog(block.exercise.id)" data-test="log-ghost"
+                              class="flex h-11 w-11 items-center justify-center justify-self-end rounded-lg bg-accent text-on-accent shadow-glow transition-transform hover:brightness-105 active:scale-90"
+                              :aria-label="t('workout.logSet', { name: exerciseName(block.exercise) })">
+                          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                      </button>
+                  </div>
+                  <div v-if="block.workingDone || block.target?.sets" class="mt-1 flex min-h-[2.75rem] items-center justify-between gap-2 px-1">
+                      <span class="font-mono text-[10px]" :class="block.target?.sets && block.workingDone >= block.target.sets ? 'text-emerald-400' : 'text-slate-500'">
+                          <template v-if="block.target?.sets">{{ t('workout.planProgress', { done: Math.min(block.workingDone, block.target.sets), total: block.target.sets }) }}</template>
+                      </span>
+                      <button v-if="block.workingDone" type="button" @click="completeBlock(block.exercise.id)" data-test="complete-block"
+                              class="flex min-h-[2.75rem] items-center gap-1.5 rounded-lg px-3 text-[11px] font-bold uppercase text-slate-400 tracking-label hover:bg-white/5 hover:text-emerald-400">
+                          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                          {{ t('workout.complete') }}
+                      </button>
+                  </div>
+              </template>
+
+              <!-- Abgeschlossen: Zusammenfassung + "Satz hinzufügen" -->
+              <div v-else class="mt-1 flex min-h-[2.75rem] items-center justify-between gap-2 border-t border-white/5 px-1 pt-1">
+                  <span class="font-mono text-[11px] text-emerald-400">{{ t('workout.completed') }} · {{ tn('units.sets', block.workingDone) }}</span>
+                  <button type="button" @click="reopenBlock(block.exercise.id)" data-test="reopen-block"
+                          class="flex min-h-[2.75rem] items-center rounded-lg px-3 text-[11px] font-bold uppercase text-accent tracking-label hover:bg-accent/10">
+                      + {{ t('workout.addSet') }}
                   </button>
               </div>
-              <p v-if="block.target && block.target.sets" class="mt-1 px-1 font-mono text-[10px]" :class="block.workingDone >= block.target.sets ? 'text-emerald-400' : 'text-slate-500'">
-                  {{ t('workout.planProgress', { done: Math.min(block.workingDone, block.target.sets), total: block.target.sets }) }}
-              </p>
           </article>
       </TransitionGroup>
 
@@ -186,5 +244,39 @@ function selectAll(e: FocusEvent) { (e.target as HTMLInputElement | null)?.selec
               {{ isEditing ? t('workout.discardChanges') : t('workout.discard') }}
           </button>
       </div>
+
+      <!-- Aktions-Sheet einer Übung: liegt über allem (Teleport), damit kein anderer Block es verdeckt -->
+      <Teleport to="body">
+          <transition name="fade">
+              <div v-if="sheetBlock" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 backdrop-blur-sm sm:items-center" @click.self="sheetFor = null" data-test="block-sheet">
+                  <div class="glass-panel modal-panel w-full max-w-md overflow-hidden rounded-t-3xl pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="exerciseName(sheetBlock.exercise)">
+                      <div class="mx-auto mt-2 h-1 w-10 rounded-full bg-white/20 sm:hidden" aria-hidden="true"></div>
+                      <div class="px-6 pb-2 pt-4">
+                          <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ muscleName(sheetBlock.exercise.muscleGroup) }} · {{ tn('units.sets', sheetBlock.sets.length) }}</p>
+                          <h2 class="display truncate text-xl text-white">{{ exerciseName(sheetBlock.exercise) }}</h2>
+                      </div>
+                      <nav class="px-3 pb-2" role="menu">
+                          <button role="menuitem" class="sheet-item" @click="act(() => openExerciseInfo(sheetBlock!.exercise.id, 'workout'))">
+                              <span>{{ t('workout.info') }}</span><span class="sheet-hint">{{ t('workout.infoHint') }}</span>
+                          </button>
+                          <button role="menuitem" class="sheet-item" @click="act(() => openSetModal(sheetBlock!.exercise))">
+                              <span>{{ t('workout.detailedSet') }}</span><span class="sheet-hint">{{ t('workout.detailedSetHint') }}</span>
+                          </button>
+                          <button v-if="(sheetBlock.exercise.trackingType ?? 'WeightReps') === 'WeightReps'" role="menuitem" class="sheet-item" @click="act(() => goals.openGoal(sheetBlock!.exercise.id))">
+                              <span>{{ sheetBlock.goal ? t('goals.editGoal') : t('goals.setGoal') }}</span>
+                              <span class="sheet-hint">{{ sheetBlock.goal ? goalTargetLabel(sheetBlock.goal.goal) : t('goals.setGoalHint') }}</span>
+                          </button>
+                          <button v-if="sheetBlock.done" role="menuitem" class="sheet-item" @click="act(() => reopenBlock(sheetBlock!.exercise.id))">{{ t('workout.reopen') }}</button>
+                          <button v-else-if="sheetBlock.workingDone" role="menuitem" class="sheet-item" @click="act(() => completeBlock(sheetBlock!.exercise.id))">{{ t('workout.complete') }}</button>
+                          <div class="grid grid-cols-2 gap-2 px-1 py-1">
+                              <button role="menuitem" class="btn-ghost rounded-xl py-3 text-sm" :disabled="sheetIndex <= 0" @click="act(() => moveBlock(sheetBlock!.exercise.id, -1))">↑ {{ t('workout.moveUp') }}</button>
+                              <button role="menuitem" class="btn-ghost rounded-xl py-3 text-sm" :disabled="sheetIndex >= workoutBlocks.length - 1" @click="act(() => moveBlock(sheetBlock!.exercise.id, 1))">↓ {{ t('workout.moveDown') }}</button>
+                          </div>
+                          <button role="menuitem" class="sheet-item text-red-400" @click="act(() => removeBlock(sheetBlock!.exercise.id))" data-test="sheet-remove">{{ t('workout.remove') }}</button>
+                      </nav>
+                  </div>
+              </div>
+          </transition>
+      </Teleport>
   </section>
 </template>

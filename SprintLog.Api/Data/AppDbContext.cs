@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<RecoveryCode> RecoveryCodes => Set<RecoveryCode>();
     public DbSet<AuthToken> AuthTokens => Set<AuthToken>();
     public DbSet<WellnessEntry> Wellness => Set<WellnessEntry>();
+    public DbSet<LiftGoal> Goals => Set<LiftGoal>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -110,6 +111,18 @@ public class AppDbContext : DbContext
             e.HasIndex(w => new { w.UserId, w.Date }).IsUnique();
             e.Property(w => w.Note).HasMaxLength(200);
             e.HasOne<User>().WithMany().HasForeignKey(w => w.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LiftGoal>(e =>
+        {
+            e.ToTable("Goals", t =>
+            {
+                t.HasCheckConstraint("CK_Goals_TargetReps", "\"TargetReps\" BETWEEN 1 AND 12");
+                t.HasCheckConstraint("CK_Goals_TargetWeight", "\"TargetWeight\" > 0");
+            });
+            e.HasIndex(g => new { g.UserId, g.ExerciseId }).IsUnique();
+            e.HasOne<User>().WithMany().HasForeignKey(g => g.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(g => g.Exercise).WithMany().HasForeignKey(g => g.ExerciseId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<DeletedWorkout>(e =>
