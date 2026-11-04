@@ -372,7 +372,7 @@ export const en = {
     tracking: 'Tracking',
     create: 'Create & log',
     errors: { name: 'Name must be at least 2 characters.' },
-    toast: { created: '"{name}" created.', deleted: 'Exercise deleted.', needsConnection: 'Creating exercises needs a connection.' },
+    toast: { offline: '"{name}" saved on this device - it syncs as soon as you are online.', created: '"{name}" created.', deleted: 'Exercise deleted.', needsConnection: 'Creating exercises needs a connection.' },
     confirm: { title: 'Delete exercise?', message: '"{name}" will be removed from your catalog.' },
   },
   finish: {

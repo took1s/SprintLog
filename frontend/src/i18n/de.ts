@@ -373,7 +373,7 @@ export const de: Messages = {
     tracking: 'Erfassung',
     create: 'Anlegen & eintragen',
     errors: { name: 'Der Name muss mindestens 2 Zeichen haben.' },
-    toast: { created: '"{name}" angelegt.', deleted: 'Übung gelöscht.', needsConnection: 'Zum Anlegen von Übungen ist eine Verbindung nötig.' },
+    toast: { offline: '„{name}“ auf dem Gerät gespeichert - wird synchronisiert, sobald du online bist.', created: '"{name}" angelegt.', deleted: 'Übung gelöscht.', needsConnection: 'Zum Anlegen von Übungen ist eine Verbindung nötig.' },
     confirm: { title: 'Übung löschen?', message: '"{name}" wird aus deinem Katalog entfernt.' },
   },
   finish: {

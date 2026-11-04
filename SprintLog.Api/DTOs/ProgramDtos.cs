@@ -125,7 +125,18 @@ public record ProgramDayResponse(int Id, int Position, string Name, string? Note
 
 public record ProgramResponse(
     int Id, string Name, string Goal, int Weeks, bool IsActive, DateTime? StartedAt, DateTime CreatedAt, string? TemplateKey,
-    List<ProgramDayResponse> Days, int? CycleWeeks, int? DeloadEvery);
+    List<ProgramDayResponse> Days, int? CycleWeeks, int? DeloadEvery, int TrainingDays = 0, int MatchDays = 0);
+
+/// <summary>Wochenplan eines Programms: Bitmasken Mo = 1 ... So = 64. Ein Tag ist nie gleichzeitig Training und Spiel.</summary>
+public record ScheduleInput(int TrainingDays, int MatchDays)
+{
+    public const int AllDays = 127;
+
+    public ValidationErrors Validate() => new ValidationErrors()
+        .AddIf(TrainingDays is < 0 or > AllDays, "trainingDays", "Training days must be a weekday bitmask (0-127).")
+        .AddIf(MatchDays is < 0 or > AllDays, "matchDays", "Match days must be a weekday bitmask (0-127).")
+        .AddIf((TrainingDays & MatchDays) != 0, "matchDays", "A day cannot be a training and a match day at once.");
+}
 
 /// <summary>Eingebaute Vorlage (Daten: Data/program-templates.json).</summary>
 public record ProgramTemplate(string Key, string Name, string Description, string Goal, string Level, int Weeks, List<ProgramDayInput> Days)

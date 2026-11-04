@@ -19,6 +19,7 @@ public static class ProgramEndpoints
         group.MapPost("/", Create);
         group.MapPut("/{id:int}", Update);
         group.MapPost("/{id:int}/activate", Activate);
+        group.MapPut("/{id:int}/schedule", SetSchedule);
         group.MapPost("/{id:int}/deactivate", Deactivate);
         group.MapDelete("/{id:int}", Delete);
     }
@@ -162,6 +163,22 @@ public static class ProgramEndpoints
         return Results.Ok(ToResponse(await Load(db, userId.Value).FirstAsync(p => p.Id == id, ct)));
     }
 
+    /// <summary>Trainings- und Spieltage setzen (idempotent, für die Offline-Queue unkritisch).</summary>
+    private static async Task<IResult> SetSchedule(int id, ScheduleInput input, HttpContext http, AppDbContext db, CancellationToken ct)
+    {
+        var userId = http.User.GetUserId();
+        if (userId is null) return Results.Unauthorized();
+        var errors = input.Validate();
+        if (errors.HasErrors) return errors.ToResult();
+
+        var program = await db.Programs.FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId, ct);
+        if (program is null) return Results.NotFound();
+        program.TrainingDays = input.TrainingDays;
+        program.MatchDays = input.MatchDays;
+        await db.SaveChangesAsync(ct);
+        return Results.Ok(ToResponse(await Load(db, userId.Value).FirstAsync(p => p.Id == id, ct)));
+    }
+
     private static async Task<IResult> Deactivate(int id, HttpContext http, AppDbContext db, CancellationToken ct)
     {
         var userId = http.User.GetUserId();
@@ -241,5 +258,5 @@ public static class ProgramEndpoints
                 x.Id, x.Position, x.ExerciseId, x.Exercise.Name, x.Exercise.TrackingType, x.Exercise.MuscleGroup,
                 x.Sets, x.RepsMin, x.RepsMax, x.Distance, x.Time, x.TargetRpe, x.RestSeconds, x.ProgressionStep,
                 x.PercentOf1Rm, x.Note, (x.WeekSteps ?? new()).OrderBy(s => s.FromWeek).Select(WeekStepDto.From).ToList())).ToList()
-        )).ToList(), p.CycleWeeks, p.DeloadEvery);
+        )).ToList(), p.CycleWeeks, p.DeloadEvery, p.TrainingDays, p.MatchDays);
 }

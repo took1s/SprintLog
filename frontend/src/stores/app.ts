@@ -34,6 +34,7 @@ import type {
 import { useUiStore } from './ui';
 import { useGoalsStore, type GoalView } from './goals';
 import { alternativesFor, type Alternative } from '../lib/alternatives';
+import { isLocalExerciseId, localExerciseId, mergeExercises, queueHasLocalExercises, remapIds, remapKeys, remapQueue, remapSets } from '../lib/offlineExercises';
 import { t, tn, tDynamic, intlLocale, textIn, loadAllLocales, SUPPORTED_LOCALES } from '../i18n';
 import { templateText, exerciseName as trExerciseName, dayName as trDayName, programName as trProgramName } from '../i18n/content';
 
@@ -684,6 +685,7 @@ export const useAppStore = defineStore('app', () => {
     if (refresh) await refreshSession();
     if (!isAuthenticated.value) return;
     await Promise.allSettled([loadExercises(), loadFavorites(), loadPrograms(), loadTemplates(), loadWellness(), goalsStore.load()]);
+    await pushLocalExercises();
     await syncNow({ reload: false });
     await loadHistory();
   }
@@ -691,7 +693,8 @@ export const useAppStore = defineStore('app', () => {
   async function loadExercises() {
     loadingExercises.value = !exercises.value.length;
     try {
-      exercises.value = await api().get<Exercise[]>('/api/exercises');
+      // Noch nicht synchronisierte eigene Übungen (offline angelegt) behalten
+      exercises.value = mergeExercises(await api().get<Exercise[]>('/api/exercises'), exercises.value);
       writeJson(keys.value!.exercises, exercises.value);
       online.value = true;
       enrichSession();
@@ -750,7 +753,10 @@ export const useAppStore = defineStore('app', () => {
 
   async function loadFavorites() {
     try {
-      favorites.value = await api().get<number[]>('/api/favorites');
+      await pushPendingFavorites();
+      const server = await api().get<number[]>('/api/favorites');
+      // Offline angelegte (lokale) Favoriten behalten, bis ihre Übung synchronisiert ist
+      favorites.value = [...server, ...favorites.value.filter((id) => isLocalExerciseId(id) && !server.includes(id))];
       writeJson(keys.value!.favorites, favorites.value);
     } catch (e) {
       if (isNetworkError(e)) online.value = false;
@@ -782,8 +788,56 @@ export const useAppStore = defineStore('app', () => {
   let syncRun = 0;
   let syncStartedAt = 0;
 
+  /**
+   * Offline angelegte eigene Übungen beim Server anlegen und alle Verweise auf die echte ID umschreiben.
+   * Liefert false, solange noch lokale Übungen übrig sind (dann warten Einheiten mit ihnen in der Schlange).
+   */
+  let pushingExercises: Promise<boolean> | null = null;
+  function pushLocalExercises(): Promise<boolean> {
+    pushingExercises ??= (async () => {
+      const local = exercises.value.filter((e) => isLocalExerciseId(e.id));
+      if (!local.length) return true;
+      const mapping = new Map<number, number>();
+      for (const ex of local) {
+        try {
+          const created = await api().post<Exercise>('/api/exercises', { name: ex.name, category: ex.category, muscleGroup: ex.muscleGroup || null, trackingType: ex.trackingType });
+          mapping.set(ex.id, created.id);
+          exercises.value = exercises.value.map((e) => (e.id === ex.id ? created : e));
+        } catch (e) {
+          if (isNetworkError(e)) { online.value = false; break; }
+          // Name schon vergeben o. Ä.: vorhandene eigene Übung mit gleichem Namen nehmen, sonst weiter versuchen
+          const same = exercises.value.find((x) => !isLocalExerciseId(x.id) && x.isCustom && x.name.toLowerCase() === ex.name.toLowerCase());
+          if (same) { mapping.set(ex.id, same.id); exercises.value = exercises.value.filter((x) => x.id !== ex.id); }
+        }
+      }
+      if (mapping.size) applyExerciseMapping(mapping);
+      return !exercises.value.some((e) => isLocalExerciseId(e.id));
+    })().finally(() => { pushingExercises = null; });
+    return pushingExercises;
+  }
+
+  function applyExerciseMapping(m: Map<number, number>) {
+    const s = session.value;
+    s.sets = remapSets(s.sets, m);
+    s.order = remapIds(s.order, m);
+    s.done = remapIds(s.done, m);
+    s.templates = remapKeys(s.templates, m);
+    if (s.plan?.targets) s.plan.targets = s.plan.targets.map((x) => ({ ...x, exerciseId: m.get(x.exerciseId) ?? x.exerciseId }));
+    ghostDraft.value = remapKeys(ghostDraft.value, m) ?? {};
+    queue.value = remapQueue(queue.value, m);
+    favorites.value = remapIds(favorites.value, m) ?? [];
+    if (keys.value) {
+      writeJson(keys.value.exercises, exercises.value);
+      writeJson(keys.value.favorites, favorites.value);
+    }
+    persistQueue();
+    persistSession();
+  }
+
   async function syncNow({ reload = true } = {}) {
     if (!isAuthenticated.value || !queue.value.some((q) => q.status === QueueStatus.Pending)) return;
+    // Einheiten mit offline angelegten Übungen erst senden, wenn die Übungen beim Server sind
+    if (queueHasLocalExercises(queue.value) && !(await pushLocalExercises())) return;
     if (syncing.value && Date.now() - syncStartedAt < SYNC_LOCK_MS) return;
     const run = ++syncRun;
     syncing.value = true;
@@ -825,7 +879,10 @@ export const useAppStore = defineStore('app', () => {
    * Ein Versuch ohne Netz scheitert sofort und kostet nichts.
    */
   function kickSync() {
-    if (isAuthenticated.value && pendingCount.value) void syncNow();
+    if (!isAuthenticated.value) return;
+    if (Object.keys(pendingFavorites()).length) void pushPendingFavorites();
+    if (exercises.value.some((e) => isLocalExerciseId(e.id))) void pushLocalExercises().then(() => { if (pendingCount.value) void syncNow(); });
+    else if (pendingCount.value) void syncNow();
   }
 
   /**
@@ -854,18 +911,33 @@ export const useAppStore = defineStore('app', () => {
   // =====================================================================
   // Favoriten / Übungsliste
   // =====================================================================
+  /** Favoriten-Änderungen ohne Netz: lokal sofort, an den Server beim nächsten Sync (letzter Stand je Übung zählt). */
+  const favoritesPendingKey = () => (user.value ? `sprintlog:${user.value.userId}:favoritesPending` : null);
+  function pendingFavorites(): Record<number, 'add' | 'remove'> { const k = favoritesPendingKey(); return k ? readJson(k, {}) : {}; }
+  function setPendingFavorites(v: Record<number, 'add' | 'remove'>) { const k = favoritesPendingKey(); if (k) writeJson(k, v); }
+
+  async function pushPendingFavorites() {
+    const pending = pendingFavorites();
+    for (const [id, op] of Object.entries(pending)) {
+      if (isLocalExerciseId(Number(id))) continue;
+      try {
+        if (op === 'remove') await api().del(`/api/favorites/${id}`);
+        else await api().post(`/api/favorites/${id}`);
+        delete pending[Number(id)];
+      } catch (e) {
+        if (isNetworkError(e)) break;
+        delete pending[Number(id)];
+      }
+    }
+    setPendingFavorites(pending);
+  }
+
   async function toggleFavorite(ex: Exercise) {
-    if (!online.value) { toast(t('favorites.needsConnection'), 'error'); return; }
     const isFav = favorites.value.includes(ex.id);
     favorites.value = isFav ? favorites.value.filter((id) => id !== ex.id) : [...favorites.value, ex.id];
-    try {
-      if (isFav) await api().del(`/api/favorites/${ex.id}`);
-      else await api().post(`/api/favorites/${ex.id}`);
-      writeJson(keys.value!.favorites, favorites.value);
-    } catch (e) {
-      toast(errorMessage(e), 'error');
-      await loadFavorites();
-    }
+    writeJson(keys.value!.favorites, favorites.value);
+    setPendingFavorites({ ...pendingFavorites(), [ex.id]: isFav ? 'remove' : 'add' });
+    await pushPendingFavorites();
   }
 
   function toggleMuscleFilter(group: string) {
@@ -1846,7 +1918,7 @@ export const useAppStore = defineStore('app', () => {
   // =====================================================================
   /** @param name vorbelegter Name; mit Name aus der Übungsauswahl wird die neue Übung direkt zur Einheit hinzugefügt. */
   function openCustomModal(name?: string) {
-    if (!online.value) { toast(t('custom.toast.needsConnection'), 'error'); return; }
+    // Auch offline möglich: die Übung wird lokal angelegt und später synchronisiert (pushLocalExercises)
     const fromPicker = typeof name === 'string';
     customModal.value = {
       open: true,
@@ -1866,9 +1938,17 @@ export const useAppStore = defineStore('app', () => {
     if (m.name.trim().length < 2) { m.error = t('custom.errors.name'); return; }
     m.busy = true;
     try {
-      const created = await api().post<Exercise>('/api/exercises', {
-        name: m.name.trim(), category: m.category, muscleGroup: m.muscleGroup.trim() || null, trackingType: m.trackingType,
-      });
+      let created: Exercise;
+      const body = { name: m.name.trim(), category: m.category, muscleGroup: m.muscleGroup.trim() || null, trackingType: m.trackingType };
+      try {
+        created = await api().post<Exercise>('/api/exercises', body);
+      } catch (e) {
+        if (!isNetworkError(e)) throw e;
+        // Offline (z. B. Gym-WLAN mit Login-Seite): lokal anlegen, später synchronisieren
+        online.value = false;
+        created = { id: localExerciseId(exercises.value), name: body.name, category: body.category, muscleGroup: body.muscleGroup ?? '', trackingType: body.trackingType, isCustom: true } as Exercise;
+        toast(t('custom.toast.offline', { name: created.name }), 'info');
+      }
       exercises.value = [...exercises.value, created];
       writeJson(keys.value!.exercises, exercises.value);
       m.open = false;
@@ -1888,7 +1968,7 @@ export const useAppStore = defineStore('app', () => {
     const ok = await confirm({ title: t('custom.confirm.title'), message: t('custom.confirm.message', { name: ex.name }), confirmText: t('common.delete'), danger: true });
     if (!ok) return;
     try {
-      await api().del(`/api/exercises/${ex.id}`);
+      if (!isLocalExerciseId(ex.id)) await api().del(`/api/exercises/${ex.id}`);
       exercises.value = exercises.value.filter((e) => e.id !== ex.id);
       favorites.value = favorites.value.filter((id) => id !== ex.id);
       writeJson(keys.value!.exercises, exercises.value);
