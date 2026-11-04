@@ -374,7 +374,7 @@ export const de: Messages = {
     tracking: 'Erfassung',
     create: 'Anlegen & eintragen',
     errors: { name: 'Der Name muss mindestens 2 Zeichen haben.', exists: '"{name}" gibt es schon - wähle die Übung aus der Liste.' },
-    toast: { offline: '„{name}“ auf dem Gerät gespeichert - wird synchronisiert, sobald du online bist.', created: '"{name}" angelegt.', deleted: 'Übung gelöscht.', needsConnection: 'Zum Anlegen von Übungen ist eine Verbindung nötig.' },
+    toast: { inUse: '"{name}" steckt noch in einer nicht synchronisierten Einheit - erst abschließen und synchronisieren.', offline: '„{name}“ auf dem Gerät gespeichert - wird synchronisiert, sobald du online bist.', created: '"{name}" angelegt.', deleted: 'Übung gelöscht.', needsConnection: 'Zum Anlegen von Übungen ist eine Verbindung nötig.' },
     confirm: { title: 'Übung löschen?', message: '"{name}" wird aus deinem Katalog entfernt.' },
   },
   finish: {
@@ -584,6 +584,15 @@ export const de: Messages = {
     scheme: 'Modus',
     schemes: { auto: 'Auto', light: 'Hell', dark: 'Dunkel' },
     season: 'Saison',
+    icon: {
+      title: 'App-Symbol',
+      auto: 'Automatisch',
+      default: 'Standard',
+      halloween: 'Halloween',
+      nativeHint: 'Automatisch nimmt in der Saison das Saison-Symbol (Halloween: 1.10. - 15.11.). iOS bestätigt den Wechsel kurz.',
+      unsupported: 'Dieses Gerät kann das App-Symbol nicht wechseln.',
+      webHint: 'Auf dem iPhone-Home-Bildschirm: SprintLog entfernen und über Teilen → Zum Home-Bildschirm neu hinzufügen - dann erscheint das gewählte Symbol. In der App aus TestFlight wechselt es von selbst.',
+    },
     themes: {
       pitch: { name: 'Pitch Night', description: 'Anzeigetafel-Schrift, Lime-Akzent' },
       clean: { name: 'Clean Pro', description: 'Ruhig und hell, Orange-Akzent' },

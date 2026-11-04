@@ -373,7 +373,7 @@ export const en = {
     tracking: 'Tracking',
     create: 'Create & log',
     errors: { name: 'Name must be at least 2 characters.', exists: '"{name}" already exists - pick it from the list.' },
-    toast: { offline: '"{name}" saved on this device - it syncs as soon as you are online.', created: '"{name}" created.', deleted: 'Exercise deleted.', needsConnection: 'Creating exercises needs a connection.' },
+    toast: { inUse: '"{name}" is still used in a workout that is not synced yet - finish and sync it first.', offline: '"{name}" saved on this device - it syncs as soon as you are online.', created: '"{name}" created.', deleted: 'Exercise deleted.', needsConnection: 'Creating exercises needs a connection.' },
     confirm: { title: 'Delete exercise?', message: '"{name}" will be removed from your catalog.' },
   },
   finish: {
@@ -583,6 +583,15 @@ export const en = {
     scheme: 'Mode',
     schemes: { auto: 'Auto', light: 'Light', dark: 'Dark' },
     season: 'Season',
+    icon: {
+      title: 'App icon',
+      auto: 'Automatic',
+      default: 'Standard',
+      halloween: 'Halloween',
+      nativeHint: 'Automatic switches to the seasonal icon in season (Halloween: Oct 1 - Nov 15). iOS briefly confirms the change.',
+      unsupported: 'This device cannot change the app icon.',
+      webHint: 'On the iPhone home screen: remove SprintLog and add it again via Share → Add to Home Screen - it then gets the chosen icon. In the app from TestFlight it switches by itself.',
+    },
     themes: {
       pitch: { name: 'Pitch Night', description: 'Scoreboard type, lime accent' },
       clean: { name: 'Clean Pro', description: 'Calm and bright, orange accent' },

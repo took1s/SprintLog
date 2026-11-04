@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import { en } from './en';
 // DE/RU werden erst geladen, wenn sie gebraucht werden (eigene Chunks, offline per Service-Worker-Cache).
 import type { de as DeMessages } from './de';
+import { motivationEn, type MotivationTexts } from './motivation.en';
 
 export const SUPPORTED_LOCALES = ['en', 'de', 'ru'] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -27,9 +28,11 @@ export type PluralKey = PluralPaths<typeof en>;
 export type Params = Record<string, string | number>;
 
 const catalogs: Partial<Record<Locale, Tree>> = { en: en as unknown as Tree };
+/** Motivations-Zeilen je Sprache (DE/RU laden mit den übrigen Texten der Sprache). */
+export const motivationTexts: Partial<Record<Locale, MotivationTexts>> = { en: motivationEn };
 const loaders: Record<Exclude<Locale, 'en'>, () => Promise<typeof DeMessages>> = {
-  de: () => import('./de').then((m) => m.de),
-  ru: () => import('./ru').then((m) => m.ru),
+  de: () => Promise.all([import('./de'), import('./motivation.de')]).then(([m, mo]) => { motivationTexts.de = mo.motivationDe; return m.de; }),
+  ru: () => Promise.all([import('./ru'), import('./motivation.ru')]).then(([m, mo]) => { motivationTexts.ru = mo.motivationRu; return m.ru; }),
 };
 const pending = new Map<Locale, Promise<void>>();
 /** Zählt geladene Sprachen hoch - computed, die textIn() fremder Sprachen nutzen (Suche), rechnen dann neu. */

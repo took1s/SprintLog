@@ -43,14 +43,28 @@ export interface WakeLockControl { set(enabled: boolean): Promise<void> }
 /** Bildschirm während einer aktiven Einheit wach halten (Screen Wake Lock API). */
 export function createWakeLock(): WakeLockControl {
   let sentinel: WakeLockSentinel | null = null;
+  let pending: Promise<void> | null = null;
   let wanted = false;
 
-  async function acquire() {
-    if (!wanted || sentinel || !('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
-    try {
-      sentinel = await navigator.wakeLock.request('screen');
-      sentinel.addEventListener('release', () => { sentinel = null; });
-    } catch { sentinel = null; }
+  async function release() {
+    const s = sentinel;
+    sentinel = null;
+    if (s) await s.release().catch(() => {});
+  }
+
+  function acquire(): Promise<void> {
+    if (!wanted || sentinel || !('wakeLock' in navigator) || document.visibilityState !== 'visible') return Promise.resolve();
+    // Nur eine Anfrage gleichzeitig (visibilitychange + set) - sonst entstehen zwei Sperren, freigegeben wird nur eine
+    pending ??= (async () => {
+      try {
+        const s = await navigator.wakeLock.request('screen');
+        s.addEventListener('release', () => { if (sentinel === s) sentinel = null; });
+        sentinel = s;
+        // Während der Anfrage beendet? Dann sofort wieder freigeben (Bildschirm soll nicht wach bleiben)
+        if (!wanted) await release();
+      } catch { sentinel = null; } finally { pending = null; }
+    })();
+    return pending;
   }
 
   document.addEventListener('visibilitychange', () => { void acquire(); });
@@ -59,7 +73,7 @@ export function createWakeLock(): WakeLockControl {
     async set(enabled: boolean) {
       wanted = enabled;
       if (enabled) await acquire();
-      else if (sentinel) { await sentinel.release().catch(() => {}); sentinel = null; }
+      else { if (pending) await pending; await release(); }
     },
   };
 }

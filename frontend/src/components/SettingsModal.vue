@@ -2,15 +2,27 @@
 import { t, tn, locale, setLocale, SUPPORTED_LOCALES, LOCALE_NAMES } from '@/i18n';
 
 const TOGGLES = ['autoTimer', 'sound', 'vibration', 'wakeLock', 'showTechnique', 'useRir', 'rpePrompt', 'motivation'] as const;
+import { computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
 import AccountSecurity from '@/components/AccountSecurity.vue';
 import { formatDate } from '@/lib/format';
 import { appearance, activeScheme, inSeason, setScheme, setTheme, SCHEMES, THEMES, THEME_SWATCHES } from '@/lib/theme';
+import { APP_ICON_CHOICES, appIconChoice, appIconNative, resolveAppIcon, setAppIcon, type AppIconChoice } from '@/lib/appIcon';
+import { isNative } from '@/lib/native';
 
 const app = useAppStore();
 const { deleteAccount, online, pendingCount, profile, settings, settingsOpen, syncing, user } = storeToRefs(app);
 const { confirmDeleteAccount, exportData, logout, syncNow } = app;
+
+// ---------- App-Icon ----------
+const ICON_SRC = { default: '/brand/icon.svg', halloween: '/brand/icon-halloween.svg' } as const;
+const iconPreview = (c: AppIconChoice) => ICON_SRC[resolveAppIcon(c)];
+const iconHint = computed(() => {
+  if (isNative()) return appIconNative.value ? t('appearance.icon.nativeHint') : t('appearance.icon.unsupported');
+  return t('appearance.icon.webHint');
+});
+const pickIcon = (c: AppIconChoice) => { void setAppIcon(c); };
 </script>
 
 <template>
@@ -46,6 +58,17 @@ const { confirmDeleteAccount, exportData, logout, syncNow } = app;
                   <button v-for="scheme in SCHEMES" :key="scheme" type="button" role="radio" :aria-checked="appearance.scheme === scheme" @click="setScheme(scheme)"
                           class="flex-1 rounded-lg py-2 text-xs font-bold transition-colors" :class="appearance.scheme === scheme ? 'bg-surface text-white shadow-sm' : 'text-slate-400'">{{ t(`appearance.schemes.${scheme}`) }}</button>
               </div>
+
+              <h4 class="label-xs mb-3 text-accent">{{ t('appearance.icon.title') }}</h4>
+              <div class="mb-2 grid grid-cols-3 gap-2" role="radiogroup" :aria-label="t('appearance.icon.title')">
+                  <button v-for="c in APP_ICON_CHOICES" :key="c" type="button" role="radio" :aria-checked="appIconChoice === c" @click="pickIcon(c)" :data-icon-option="c"
+                          class="flex min-h-[2.75rem] flex-col items-center gap-2 rounded-2xl border-2 px-2 py-3 transition-colors" :class="appIconChoice === c ? 'border-accent' : 'border-white/10 hover:border-white/20'">
+                      <!-- Vorschau: so sieht das Symbol auf dem Home-Bildschirm aus (bei "Automatisch": das gerade gültige) -->
+                      <img :src="iconPreview(c)" alt="" width="48" height="48" class="h-12 w-12 rounded-[0.8rem] shadow-sm" aria-hidden="true">
+                      <span class="text-center text-xs font-bold leading-tight text-white">{{ t(`appearance.icon.${c}`) }}</span>
+                  </button>
+              </div>
+              <p class="mb-6 text-[11px] leading-relaxed text-slate-400" data-test="icon-hint">{{ iconHint }}</p>
 
               <h4 class="label-xs mb-3 text-accent">{{ t('common.language') }}</h4>
               <div class="mb-6 grid grid-cols-3 gap-2" role="radiogroup" :aria-label="t('common.language')">

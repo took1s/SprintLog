@@ -507,7 +507,7 @@ async function handleApi(req, res, url) {
   return problem(res, 404, 'Not Found');
 }
 
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
 
 function serveStatic(res, url) {
   let path = normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, '');

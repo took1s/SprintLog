@@ -10,7 +10,8 @@ import { t, tn, intlLocale } from '@/i18n';
 import { dayName, exerciseName, muscleName, noteText, programName } from '@/i18n/content';
 import { useAppStore, rpeText, rpeToRir, SET_RPE } from '@/stores/app';
 import { useGoalsStore } from '@/stores/goals';
-import { formatClock, formatCompact, formatDate, formatNumber } from '@/lib/format';
+import ElapsedClock from './ElapsedClock.vue';
+import { formatCompact, formatDate, formatNumber } from '@/lib/format';
 import { prescriptionText } from '@/lib/program';
 import { previousForRow } from '@/lib/workout';
 import { goalTargetLabel, prescriptionLabel } from '@/lib/goalText';
@@ -21,7 +22,7 @@ import { tap } from '@/lib/native';
 
 const app = useAppStore();
 const goals = useGoalsStore();
-const { hasSets, isEditing, planProgress, programs, rpePrompt, session, sessionElapsed, sessionSummary, settings, workoutBlocks } = storeToRefs(app);
+const { hasSets, isEditing, planProgress, programs, rpePrompt, session, sessionSummary, settings, workoutBlocks } = storeToRefs(app);
 const {
   abortSession, completeBlock, reorderBlock, deleteSessionSet, dismissRpePrompt, editSessionSet, finishSession, moveBlock, openExerciseInfo, openPicker,
   openReplace, openSetModal, quickLog, removeBlock, startHold, reopenBlock, setGhostValue, setSetRpe, toggleGhostWarmup,
@@ -157,10 +158,10 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
               <div class="display truncate text-xl text-white">
                   <template v-if="session.plan">{{ planTitle }}</template>
                   <template v-else-if="isEditing">{{ formatDate(session.meta?.date ?? session.startedAt, { weekday: 'short', day: '2-digit', month: 'short' }) }}</template>
-                  <template v-else><span class="font-mono">{{ formatClock(sessionElapsed) }}</span></template>
+                  <template v-else><ElapsedClock class="font-mono" /></template>
               </div>
               <div class="font-mono text-[11px] text-slate-400">
-                  <template v-if="session.plan">{{ formatClock(sessionElapsed) }} · {{ planProgress.done }}/{{ planProgress.total }} {{ t('plan.sets') }}</template>
+                  <template v-if="session.plan"><ElapsedClock /> · {{ planProgress.done }}/{{ planProgress.total }} {{ t('plan.sets') }}</template>
                   <template v-else>{{ tn('units.sets', session.sets.length) }}<template v-if="sessionSummary.volume"> · {{ formatCompact(sessionSummary.volume) }} {{ t('units.kg') }}</template></template>
               </div>
           </div>

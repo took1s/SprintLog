@@ -111,7 +111,8 @@ export const useGoalsStore = defineStore('goals', () => {
   }
 
   async function pushPending() {
-    for (const g of goals.value.filter((x) => x.pending)) {
+    // Ziele auf offline angelegten Übungen warten, bis die Übung eine Server-ID hat (remapExercises)
+    for (const g of goals.value.filter((x) => x.pending && x.exerciseId > 0)) {
       try {
         if (g.pending === 'delete') {
           await app().api().del(`/api/goals/${g.exerciseId}`);
@@ -198,7 +199,15 @@ export const useGoalsStore = defineStore('goals', () => {
     await pushPending();
   }
 
+  /** Offline angelegte Übung hat ihre Server-ID bekommen. */
+  function remapExercises(m: ReadonlyMap<number, number>) {
+    if (!goals.value.some((g) => m.has(g.exerciseId))) return;
+    goals.value = goals.value.map((g) => (m.has(g.exerciseId) ? { ...g, exerciseId: m.get(g.exerciseId)!, pending: g.pending ?? 'put' } : g));
+    persist();
+    void pushPending();
+  }
+
   function clear() { goals.value = []; draft.value = emptyDraft(); }
 
-  return { connect, goals, draft, active, byExercise, views, viewFor, suggestionFor, estimateFor, load, pushPending, openGoal, openNewGoal, closeGoal, saveGoal, removeGoal, checkAchieved, clear };
+  return { connect, goals, draft, active, byExercise, views, viewFor, suggestionFor, estimateFor, load, pushPending, remapExercises, openGoal, openNewGoal, closeGoal, saveGoal, removeGoal, checkAchieved, clear };
 });
