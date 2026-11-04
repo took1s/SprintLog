@@ -83,8 +83,9 @@ function finish(complete: boolean) {
 <template>
   <transition name="fade">
       <div v-if="holdTimer && ex" class="fixed inset-0 z-[65] flex flex-col items-center justify-center bg-ink/95 px-6 backdrop-blur-md" role="dialog" aria-modal="true" :aria-label="exerciseName(ex)" data-test="hold-timer">
-          <p class="text-[11px] font-bold uppercase text-accent tracking-label">{{ leadLeft > 0 ? t('hold.getReady') : holdTimer.pausedAt ? t('hold.paused') : t('hold.hold') }}</p>
-          <h2 class="display mt-2 max-w-xs text-center text-2xl text-white">{{ exerciseName(ex) }}</h2>
+          <!-- Phasenwechsel ansagen (Bereit / Halten / Pause) - nicht jede Sekunde, das wäre für VoiceOver Dauerfeuer -->
+          <p class="text-[11px] font-bold uppercase text-accent tracking-label" aria-live="polite">{{ leadLeft > 0 ? t('hold.getReady') : holdTimer.pausedAt ? t('hold.paused') : t('hold.hold') }}</p>
+          <h2 class="display mt-2 max-w-xs break-words text-center text-2xl text-white">{{ exerciseName(ex) }}</h2>
 
           <div class="relative mt-8 h-64 w-64">
               <svg class="h-full w-full -rotate-90" viewBox="0 0 100 100" aria-hidden="true">
@@ -93,7 +94,7 @@ function finish(complete: boolean) {
                           :stroke-dasharray="282.74" :stroke-dashoffset="282.74 * (1 - progress)" class="text-accent" />
               </svg>
               <div class="absolute inset-0 flex flex-col items-center justify-center">
-                  <span class="font-mono font-black text-white" :class="leadLeft > 0 ? 'text-8xl' : 'text-6xl'" aria-live="polite" data-test="hold-clock">{{ clock }}</span>
+                  <span class="font-mono font-black text-white" :class="leadLeft > 0 ? 'text-8xl' : 'text-6xl'" role="timer" data-test="hold-clock">{{ clock }}</span>
                   <span v-if="leadLeft === 0" class="mt-1 font-mono text-xs text-slate-400">{{ t('hold.of', { seconds: holdTimer.target }) }}</span>
               </div>
           </div>
@@ -101,7 +102,7 @@ function finish(complete: boolean) {
           <div class="mt-10 grid w-full max-w-xs grid-cols-2 gap-3 pb-[env(safe-area-inset-bottom)]">
               <button type="button" @click="togglePause" class="btn-secondary rounded-xl py-4 text-sm">{{ holdTimer.pausedAt ? t('hold.resume') : t('hold.pause') }}</button>
               <button type="button" @click="finish(false)" :disabled="leadLeft > 0" class="btn-primary rounded-xl py-4 text-sm" data-test="hold-done">{{ t('hold.done') }}</button>
-              <button type="button" @click="closeHoldTimer" class="col-span-2 py-3 text-[11px] font-bold uppercase text-slate-500 hover:text-red-400 tracking-label">{{ t('hold.cancel') }}</button>
+              <button type="button" @click="closeHoldTimer" class="col-span-2 min-h-[2.75rem] rounded-xl py-3 text-[11px] font-bold uppercase text-slate-400 hover:text-red-400 tracking-label">{{ t('hold.cancel') }}</button>
           </div>
       </div>
   </transition>

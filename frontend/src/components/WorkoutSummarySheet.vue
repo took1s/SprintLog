@@ -4,7 +4,7 @@ import { computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t } from '@/i18n';
 import { useAppStore } from '@/stores/app';
-import { formatDate, formatNumber } from '@/lib/format';
+import { formatDate, formatNumber, formatTime } from '@/lib/format';
 import { REGIONS } from '@/lib/recovery';
 
 const app = useAppStore();
@@ -26,7 +26,7 @@ const fullyReady = computed(() => {
   const s = summary.value;
   if (!s || s.recovery.total <= 0) return '';
   const at = new Date(new Date(s.at).getTime() + s.recovery.total * H);
-  return t('summary.fullyReady', { day: formatDate(at.toISOString(), { weekday: 'long' }), time: formatDate(at.toISOString(), { hour: '2-digit', minute: '2-digit' }) });
+  return t('summary.fullyReady', { day: formatDate(at.toISOString(), { weekday: 'long' }), time: formatTime(at.toISOString()) });
 });
 
 const next = computed(() => {
@@ -44,11 +44,12 @@ const next = computed(() => {
 const stats = computed(() => {
   const s = summary.value;
   if (!s) return [];
+  // Einheit getrennt vom Wert: die Zahl darf groß sein, "kg" steht klein daneben und passt auch bei 12 345 noch in die Kachel
   return [
-    { label: t('summary.sets'), value: String(s.sets) },
-    { label: t('summary.volume'), value: s.volume > 0 ? `${formatNumber(Math.round(s.volume), 0)} ${t('units.kg')}` : '--' },
-    { label: t('summary.minutes'), value: s.minutes ? String(s.minutes) : '--' },
-    { label: t('summary.rpe'), value: s.rpe ? String(s.rpe) : '--' },
+    { label: t('summary.sets'), value: String(s.sets), unit: '' },
+    { label: t('summary.volume'), value: s.volume > 0 ? formatNumber(Math.round(s.volume), 0) : '--', unit: s.volume > 0 ? t('units.kg') : '' },
+    { label: t('summary.minutes'), value: s.minutes ? String(s.minutes) : '--', unit: '' },
+    { label: t('summary.rpe'), value: s.rpe ? String(s.rpe) : '--', unit: '' },
   ];
 });
 </script>
@@ -56,14 +57,14 @@ const stats = computed(() => {
 <template>
   <transition name="fade">
       <div v-if="summary" class="fixed inset-0 z-[70] flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="closeSummary">
-          <div class="glass-panel modal-panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="t('summary.kicker')" data-test="workout-summary">
+          <div class="glass-panel modal-panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="t('summary.kicker')" data-test="workout-summary">
               <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('summary.kicker') }}</p>
-              <h2 class="display mt-1 text-2xl leading-tight text-white" data-test="summary-line">{{ summary.line }}</h2>
+              <h2 class="display mt-1 break-words text-2xl leading-tight text-white" data-test="summary-line">{{ summary.line }}</h2>
 
               <dl class="mt-5 grid grid-cols-4 gap-2">
-                  <div v-for="s in stats" :key="s.label" class="rounded-xl border border-white/5 bg-black/20 px-2 py-3 text-center">
-                      <dt class="stat-label">{{ s.label }}</dt>
-                      <dd class="mt-1 truncate font-mono text-base font-black text-white">{{ s.value }}</dd>
+                  <div v-for="s in stats" :key="s.label" class="min-w-0 rounded-xl border border-white/5 bg-black/20 px-1.5 py-3 text-center">
+                      <dt class="stat-label truncate">{{ s.label }}</dt>
+                      <dd class="mt-1 truncate font-mono text-xl font-black leading-none text-white">{{ s.value }}<span v-if="s.unit" class="ml-0.5 text-[10px] font-bold text-slate-400">{{ s.unit }}</span></dd>
                   </div>
               </dl>
 
@@ -74,9 +75,9 @@ const stats = computed(() => {
                       <li v-for="r in rows" :key="r.region" class="grid grid-cols-[6.5rem_minmax(0,1fr)_auto] items-center gap-3">
                           <span class="truncate text-xs font-bold text-slate-200">{{ t(`recovery.regions.${r.region}`) }}</span>
                           <span class="h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
-                              <span class="block h-full rounded-full bg-accent" :style="{ width: r.width + '%' }"></span>
+                              <span class="bar-accent block h-full rounded-full" :style="{ width: r.width + '%' }"></span>
                           </span>
-                          <span class="font-mono text-[11px] text-slate-300">~{{ r.hours }} h</span>
+                          <span class="whitespace-nowrap font-mono text-[11px] text-slate-300">~{{ r.hours }} {{ t('units.h') }}</span>
                       </li>
                   </ul>
                   <p v-if="fullyReady" class="mt-3 text-sm font-bold text-white">{{ fullyReady }}</p>

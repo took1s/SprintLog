@@ -34,4 +34,12 @@ describe('exercise alternatives', () => {
     expect(alts[0].reasons).toContain('familiar');
     expect(alts.map((a) => a.exercise.id)).not.toContain(3);
   });
+
+  test('same movement pattern ranks first (press before fly)', () => {
+    const ex = (id: number, name: string) => ({ id, name, category: 'Gym', muscleGroup: 'Chest', trackingType: 'WeightReps', isCustom: false }) as Exercise;
+    const list = [ex(1, 'Bench Press'), ex(2, 'Cable Crossover'), ex(3, 'Dumbbell Bench Press'), ex(4, 'Push-ups')];
+    const r = alternativesFor(list[0], list);
+    expect(r.map((x) => x.exercise.id)).toEqual([3, 4, 2]);
+    expect(r[0].reasons).toContain('pattern');
+  });
 });

@@ -193,6 +193,9 @@
   }
   .preset-btn:hover { @apply border-white/10 bg-white/10 text-white; }
 
+  /* Balken in Akzentfarbe, der auch auf Weiß >= 3:1 hat (Lime/Orange-Fläche wäre im hellen Theme zu blass) */
+  .bar-accent { background: rgb(var(--accent-ring)); }
+
   .heat-0 { background: rgb(var(--c-fg) / 0.05); }
   .heat-1 { background: rgb(var(--c-accent) / 0.28); }
   .heat-2 { background: rgb(var(--c-accent) / 0.5); }

@@ -49,7 +49,7 @@ const lastCount = computed(() => new Set((lastWorkout.value?.sets ?? []).map((s)
               <span class="block text-[10px] font-bold uppercase tracking-label">{{ t('start.nextPlanDay') }}</span>
               <span class="mt-1 block truncate text-base font-bold text-white">{{ dayName(activeProgram, programInfo.next) }}</span>
               <span class="block truncate font-mono text-[11px] text-slate-400">{{ programName(activeProgram) }} · {{ tn('units.exercises', programInfo.next.exercises.length) }}</span>
-              <span v-if="coach.kind === 'light'" class="mt-1 block text-[11px] font-bold text-yellow-300">{{ t('coach.kinds.light.title') }}</span>
+              <span v-if="coach.kind === 'light'" class="mt-1 block text-[11px] font-bold text-orange-300">{{ t('coach.kinds.light.title') }}</span>
           </button>
           <button v-if="lastWorkout" type="button" @click="repeatWorkout(lastWorkout)" data-test="start-repeat"
                   class="btn-ghost min-w-0 rounded-2xl p-4 text-left">

@@ -1039,7 +1039,7 @@ export const useAppStore = defineStore('app', () => {
     }
     await syncNow();
     const entry = queue.value.find((q) => q.clientId === clientId);
-    if (!entry) toast(savedMessage, 'success');
+    if (!entry) { if (savedMessage) toast(savedMessage, 'success'); }
     else if (entry.status === QueueStatus.Pending) toast(offlineMessage, 'info');
     // Failed: syncNow hat die Ablehnung bereits gemeldet.
   }
@@ -1707,7 +1707,8 @@ export const useAppStore = defineStore('app', () => {
     tab.value = 'Data';
     dataTab.value = 'history';
     // 2. ... dann synchronisieren.
-    await syncAndAnnounce(saved.clientId, t(editing ? 'finish.toast.updated' : 'finish.toast.saved'), t(editing ? 'finish.toast.updatedOffline' : 'finish.toast.savedOffline'));
+    // Neue Einheit: die Zusammenfassung bestätigt das Speichern schon - kein zweiter "Gespeichert"-Toast
+    await syncAndAnnounce(saved.clientId, editing ? t('finish.toast.updated') : '', t(editing ? 'finish.toast.updatedOffline' : 'finish.toast.savedOffline'));
   }
 
   /** Sätze einer Einheit in das Format der laufenden Session übernehmen. */

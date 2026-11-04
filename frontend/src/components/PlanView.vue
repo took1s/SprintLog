@@ -33,7 +33,7 @@ const sessionsPerWeek = (key: string | null | undefined, days: number) => templa
               <div class="mb-4 flex items-start justify-between gap-3">
                   <div class="min-w-0">
                       <div class="text-[10px] font-bold uppercase tracking-widest text-accent">{{ t('plan.activeProgram', { goal: goalName(activeProgram.goal) }) }}</div>
-                      <h2 class="break-words text-2xl display leading-tight text-white">{{ programName(activeProgram) }}</h2>
+                      <h2 class="hyphens-auto break-words text-2xl display leading-tight text-white">{{ programName(activeProgram) }}</h2>
                       <div class="mt-1 font-mono text-[10px] text-slate-400">
                           {{ t('plan.weekOf', { week: Math.min(programInfo.week, activeProgram.weeks), weeks: activeProgram.weeks }) }} · {{ tn('units.sessions', programInfo.sessions) }}
                           <template v-if="programInfo.lastDate"> · {{ t('plan.lastRelative', { when: formatRelative(programInfo.lastDate, clockDate) }) }}</template>
@@ -134,8 +134,8 @@ const sessionsPerWeek = (key: string | null | undefined, days: number) => templa
               <div class="mb-3 flex items-end justify-between">
                   <h3 class="display text-white">{{ activeProgram ? t('plan.otherPrograms') : t('plan.startProgram') }}</h3>
                   <div class="flex gap-2">
-                      <button type="button" @click="openPlanBuilder()" class="cyber-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest" data-test="open-builder">{{ t('coach.buildPlan') }}</button>
-                      <button @click="openProgramEditor()" class="cyber-outline-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest">{{ t('plan.newCustom') }}</button>
+                      <button type="button" @click="openPlanBuilder()" class="cyber-btn flex min-h-[2.75rem] items-center rounded-lg px-3 text-[10px] font-bold uppercase tracking-widest" data-test="open-builder">{{ t('coach.buildPlan') }}</button>
+                      <button @click="openProgramEditor()" class="cyber-outline-btn flex min-h-[2.75rem] items-center rounded-lg px-3 text-[10px] font-bold uppercase tracking-widest">{{ t('plan.newCustom') }}</button>
                   </div>
               </div>
               <div class="mb-3 flex gap-2" role="radiogroup">

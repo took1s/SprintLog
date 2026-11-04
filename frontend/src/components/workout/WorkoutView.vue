@@ -124,7 +124,7 @@ const num = (v: number | null | undefined, decimals = 2) => (v == null ? '' : fo
 function prevText(set: WorkoutSet | null, type: string | undefined): string {
   if (!set) return '-';
   if (type === 'DistanceTime') return `${num(set.distance, 1)}·${num(set.time, 2)}`;
-  if (type === 'Duration') return `${num(set.time, 0)}s`;
+  if (type === 'Duration') return `${num(set.time, 0)} ${t('units.s')}`;
   return `${num(set.weight)}×${set.reps ?? '-'}`;
 }
 
@@ -201,7 +201,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                   </button>
                   <div class="-mr-2 flex flex-shrink-0 items-start">
                   <!-- Griff: gedrückt halten und ziehen -->
-                  <button v-if="workoutBlocks.length > 1" type="button" class="-mt-1 flex h-11 w-9 flex-shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-slate-500 hover:bg-white/5 hover:text-white active:cursor-grabbing"
+                  <button v-if="workoutBlocks.length > 1" type="button" class="-mt-1 flex h-11 w-11 flex-shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-slate-500 hover:bg-white/5 hover:text-white active:cursor-grabbing"
                           :aria-label="t('workout.dragHandle')" data-test="drag-handle"
                           @pointerdown="startDrag($event, block.exercise.id)" @pointermove="moveDrag" @pointerup="endDrag" @pointercancel="endDrag">
                       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
@@ -285,7 +285,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                       <template v-else-if="block.exercise.trackingType === 'Duration'">
                           <!-- Timer starten: zählt die geplante Zeit herunter und loggt den Satz -->
                           <button type="button" @click="startHold(block.exercise.id)" data-test="start-hold"
-                                  class="flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-accent/40 text-[11px] font-black uppercase text-accent tracking-label hover:bg-accent/10"
+                                  class="btn-secondary flex h-11 w-full items-center justify-center gap-1.5 rounded-lg text-[11px] font-black uppercase tracking-label"
                                   :aria-label="t('hold.start', { name: exerciseName(block.exercise) })">
                               <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>
                               {{ t('hold.go') }}

@@ -493,7 +493,6 @@ test('older app versions with a token in localStorage are moved to a cookie sess
   // Schreiben funktioniert mit der neuen Cookie-Sitzung
   await logSet(page, 'Bench Press');
   await finishWorkout(page);
-  await page.waitForSelector('text=Workout saved.');
   assert.equal((await api('GET', '/api/workouts/history', registered.token)).length, 1);
   assert.deepEqual(errors, []);
   await context.close();
@@ -556,7 +555,6 @@ test('one tap per set: add exercises, ghost rows are prefilled, repeat last work
 
   await page.click('[data-test=finish-workout]');
   await saveWorkout(page);
-  await page.waitForSelector('text=Workout saved.');
   let history = await api('GET', '/api/workouts/history', token);
   assert.equal(history.length, 1);
   assert.deepEqual(history[0].sets.map((s) => [s.exerciseId, s.weight, s.reps]), [[1, 80, 5], [1, 80, 5], [63, 120, 3]]);
@@ -670,7 +668,6 @@ test('workout UX: exercise info in picker, RPE right after the set, swipe delete
 
   await page.click('[data-test=finish-workout]');
   await saveWorkout(page);
-  await page.waitForSelector('text=Workout saved.');
   const [w] = await api('GET', '/api/workouts/history', token);
   assert.deepEqual(w.sets.map((s) => [s.exerciseId, s.weight, s.reps, s.rpe]), [[1, 80, 5, 8]]);
   assert.deepEqual(errors, []);

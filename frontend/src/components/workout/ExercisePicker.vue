@@ -40,7 +40,7 @@ function createCustom() {
                       <h2 class="display truncate text-2xl text-white">{{ exerciseName(replacing) }}</h2>
                   </div>
                   <h2 v-else class="display text-2xl text-white">{{ t('picker.title') }}</h2>
-                  <button type="button" @click="picker.open = false" class="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-white/5 hover:text-white" :aria-label="t('common.close')">✕</button>
+                  <button type="button" @click="picker.open = false" class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-white/5 hover:text-white" :aria-label="t('common.close')">✕</button>
               </div>
 
               <div class="px-5">
@@ -74,8 +74,9 @@ function createCustom() {
                           <button type="button" role="option" :aria-selected="false" @click="togglePicked(alt.exercise.id)" :data-replace="alt.exercise.id"
                                   class="flex min-w-0 flex-1 items-center gap-3 rounded-xl bg-accent/5 px-3 py-3 text-left ring-1 ring-inset ring-accent/20 transition-colors hover:bg-accent/10">
                               <span class="min-w-0 flex-1">
-                                  <span class="block truncate font-bold text-white">{{ exerciseName(alt.exercise) }}</span>
-                                  <span class="block truncate font-mono text-[11px] text-accent">{{ alt.reasons.map((r) => t(`picker.reason.${r}`)).join(' · ') || muscleName(alt.exercise.muscleGroup) }}</span>
+                                  <!-- Zwei Zeilen statt Abschneiden: "Bankdrücken Schrägbank ..." unterscheidet sich oft erst am Ende -->
+                                  <span class="line-clamp-2 break-words font-bold leading-snug text-white">{{ exerciseName(alt.exercise) }}</span>
+                                  <span class="mt-0.5 block truncate font-mono text-[11px] text-accent">{{ alt.reasons.map((r) => t(`picker.reason.${r}`)).join(' · ') || muscleName(alt.exercise.muscleGroup) }}</span>
                               </span>
                               <span class="flex-shrink-0 text-xs font-bold text-accent">{{ t('picker.swap') }}</span>
                           </button>
