@@ -372,7 +372,7 @@ export const de: Messages = {
     musclePlaceholder: 'z. B. Beine',
     tracking: 'Erfassung',
     create: 'Anlegen & eintragen',
-    errors: { name: 'Der Name muss mindestens 2 Zeichen haben.' },
+    errors: { name: 'Der Name muss mindestens 2 Zeichen haben.', exists: '"{name}" gibt es schon - wähle die Übung aus der Liste.' },
     toast: { offline: '„{name}“ auf dem Gerät gespeichert - wird synchronisiert, sobald du online bist.', created: '"{name}" angelegt.', deleted: 'Übung gelöscht.', needsConnection: 'Zum Anlegen von Übungen ist eine Verbindung nötig.' },
     confirm: { title: 'Übung löschen?', message: '"{name}" wird aus deinem Katalog entfernt.' },
   },

@@ -939,9 +939,17 @@ export const useAppStore = defineStore('app', () => {
           exercises.value = exercises.value.map((e) => (e.id === ex.id ? created : e));
         } catch (e) {
           if (isNetworkError(e)) { online.value = false; break; }
-          // Name schon vergeben o. Ä.: vorhandene eigene Übung mit gleichem Namen nehmen, sonst weiter versuchen
-          const same = exercises.value.find((x) => !isLocalExerciseId(x.id) && x.isCustom && x.name.toLowerCase() === ex.name.toLowerCase());
-          if (same) { mapping.set(ex.id, same.id); exercises.value = exercises.value.filter((x) => x.id !== ex.id); }
+          // Name schon vergeben (z. B. auf einem anderen Gerät angelegt): die vorhandene Übung übernehmen
+          const sameName = (list: readonly Exercise[]) => list.find((x) => !isLocalExerciseId(x.id) && x.name.toLowerCase() === ex.name.toLowerCase());
+          let same = sameName(exercises.value);
+          if (!same) {
+            try { same = sameName(await api().get<Exercise[]>('/api/exercises')); } catch { /* nächster Versuch beim nächsten Sync */ }
+          }
+          if (same) {
+            const match = same;
+            mapping.set(ex.id, match.id);
+            exercises.value = [...exercises.value.filter((x) => x.id !== ex.id && x.id !== match.id), match];
+          } else console.warn('[exercises] offline exercise rejected', e);
         }
       }
       if (mapping.size) applyExerciseMapping(mapping);
@@ -2108,8 +2116,10 @@ export const useAppStore = defineStore('app', () => {
         created = await api().post<Exercise>('/api/exercises', body);
       } catch (e) {
         if (!isNetworkError(e)) throw e;
-        // Offline (z. B. Gym-WLAN mit Login-Seite): lokal anlegen, später synchronisieren
+        // Offline (z. B. Gym-WLAN mit Login-Seite): lokal anlegen, später synchronisieren.
+        // Gleiche Regel wie der Server: Namen dürfen nicht doppelt sein (sonst hinge die Einheit später fest).
         online.value = false;
+        if (exercises.value.some((x) => x.name.toLowerCase() === body.name.toLowerCase())) { m.error = t('custom.errors.exists', { name: body.name }); return; }
         created = { id: localExerciseId(exercises.value), name: body.name, category: body.category, muscleGroup: body.muscleGroup ?? '', trackingType: body.trackingType, isCustom: true } as Exercise;
         toast(t('custom.toast.offline', { name: created.name }), 'info');
       }
@@ -2118,7 +2128,7 @@ export const useAppStore = defineStore('app', () => {
       m.open = false;
       search.value = '';
       tab.value = created.category as Tab;
-      toast(t('custom.toast.created', { name: created.name }), 'success');
+      if (!isLocalExerciseId(created.id)) toast(t('custom.toast.created', { name: created.name }), 'success');
       if (m.addToWorkout) addExercises([created.id]);
       else openSetModal(created);
     } catch (e) {

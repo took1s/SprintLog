@@ -371,7 +371,7 @@ export const en = {
     musclePlaceholder: 'e.g. Legs',
     tracking: 'Tracking',
     create: 'Create & log',
-    errors: { name: 'Name must be at least 2 characters.' },
+    errors: { name: 'Name must be at least 2 characters.', exists: '"{name}" already exists - pick it from the list.' },
     toast: { offline: '"{name}" saved on this device - it syncs as soon as you are online.', created: '"{name}" created.', deleted: 'Exercise deleted.', needsConnection: 'Creating exercises needs a connection.' },
     confirm: { title: 'Delete exercise?', message: '"{name}" will be removed from your catalog.' },
   },
