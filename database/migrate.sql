@@ -2150,3 +2150,47 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261104000814_V14CatalogV8') THEN
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (258, 'Football', 'Legs', 'Askling Extender', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (259, 'Football', 'Legs', 'Askling Diver', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (260, 'Football', 'Legs', 'Askling Glider', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (261, 'Gym', 'Legs', 'Isometric Bridge Hold', 'Duration', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (262, 'Gym', 'Legs', 'Swiss Ball Hamstring Curl', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (263, 'Gym', 'Legs', 'Single-Leg Glute Bridge', 'WeightReps', NULL);
+    INSERT INTO "Exercises" ("Id", "Category", "MuscleGroup", "Name", "TrackingType", "UserId")
+    VALUES (264, 'Gym', 'Legs', 'Assisted Nordic Hamstring Curl', 'WeightReps', NULL);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261104000814_V14CatalogV8') THEN
+    PERFORM setval(
+        pg_get_serial_sequence('"Exercises"', 'Id'),
+        GREATEST(
+            (SELECT MAX("Id") FROM "Exercises") + 1,
+            nextval(pg_get_serial_sequence('"Exercises"', 'Id'))),
+        false);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261104000814_V14CatalogV8') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261104000814_V14CatalogV8', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
