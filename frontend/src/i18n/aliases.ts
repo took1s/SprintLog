@@ -225,4 +225,11 @@ export const exerciseAliases: Record<number, readonly string[]> = {
   255: ['ropes', 'канаты', 'seile'],
   256: ['swim', 'бассейн', 'pool'],
   257: ['jumping jack', 'звездочка', 'hampelmann'],
+  258: ['askling', 'extender', 'l-protocol', 'экстендер', 'аскинг', 'beinbeuger reha', 'бедро реабилитация'],
+  259: ['askling', 'diver', 'ныряльщик', 'taucher', 'l-protocol'],
+  260: ['askling', 'glider', 'скольжение', 'gleiter', 'l-protocol'],
+  261: ['isometric', 'изометрия', 'мостик статика', 'brücke halten', 'heel bridge', 'hamstring bridge'],
+  262: ['swiss ball', 'stability ball curl', 'фитбол', 'gymnastikball', 'slider curl', 'слайдеры'],
+  263: ['single leg bridge', 'мостик на одной ноге', 'einbeinig brücke', 'sl bridge'],
+  264: ['band nordic', 'нордик с резинкой', 'nordic band', 'assisted nordic', 'нордик лёгкий'],
 };

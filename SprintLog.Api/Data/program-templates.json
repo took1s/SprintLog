@@ -437,6 +437,424 @@
     ]
   },
   {
+    "key": "hamstring-rehab-1",
+    "name": "Hamstring Rehab 1 · Strength",
+    "description": "Phase 1 of 3 after a hamstring strain: load the muscle where it does not hurt - no sprints, no Nordics. Pain up to 3/10 during an exercise is fine if the next morning is not worse. Move on to phase 2 when jogging is pain-free and single-leg bridges reach 20 reps.",
+    "goal": "Rehab",
+    "level": "All levels",
+    "weeks": 2,
+    "sessionsPerWeek": 5,
+    "category": "Football",
+    "sources": [
+      {
+        "title": "Askling et al. 2013, Br J Sports Med - L-protocol in elite football",
+        "url": "https://bjsm.bmj.com/content/47/15/953"
+      },
+      {
+        "title": "Hickey et al. 2020, JOSPT - pain-threshold vs pain-free rehab",
+        "url": "https://mural.maynoothuniversity.ie/17929/"
+      }
+    ],
+    "days": [
+      {
+        "name": "Strength",
+        "notes": "Also do the Extender at home in the morning and evening. Stop and see your doctor if the pain is sharp or you feel a pop.",
+        "exercises": [
+          {
+            "exerciseId": 258,
+            "sets": 3,
+            "repsMin": 12,
+            "repsMax": 12,
+            "restSeconds": 30,
+            "progressionStep": 0,
+            "note": "Slowly, stop before pain"
+          },
+          {
+            "exerciseId": 261,
+            "sets": 5,
+            "time": 30,
+            "restSeconds": 30,
+            "weekSteps": [
+              {
+                "fromWeek": 2,
+                "time": 45
+              }
+            ]
+          },
+          {
+            "exerciseId": 263,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "restSeconds": 60,
+            "progressionStep": 0,
+            "note": "Per leg - healthy leg first"
+          },
+          {
+            "exerciseId": 262,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 10,
+            "restSeconds": 60,
+            "progressionStep": 0,
+            "note": "Only with pain 0-2"
+          },
+          {
+            "exerciseId": 48,
+            "sets": 3,
+            "time": 30,
+            "restSeconds": 30,
+            "note": "Per side"
+          },
+          {
+            "exerciseId": 201,
+            "sets": 3,
+            "repsMin": 15,
+            "repsMax": 15,
+            "restSeconds": 45,
+            "progressionStep": 0,
+            "note": "Per leg"
+          }
+        ]
+      },
+      {
+        "name": "Bike + Extender",
+        "notes": "Keeps your fitness without loading the hamstring. Upper body in the gym as usual.",
+        "exercises": [
+          {
+            "exerciseId": 84,
+            "sets": 1,
+            "time": 1500,
+            "restSeconds": 0,
+            "note": "Stationary bike - easy, you can still talk"
+          },
+          {
+            "exerciseId": 106,
+            "sets": 2,
+            "time": 600,
+            "restSeconds": 120,
+            "note": "Only if completely pain-free, else bike longer"
+          },
+          {
+            "exerciseId": 258,
+            "sets": 3,
+            "repsMin": 12,
+            "repsMax": 12,
+            "restSeconds": 30,
+            "progressionStep": 0,
+            "note": "Slowly, stop before pain"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "hamstring-rehab-2",
+    "name": "Hamstring Rehab 2 · Length",
+    "description": "Phase 2 of 3: strength at long muscle length (Askling protocol - elite footballers were back in 28 instead of 51 days) and a step-by-step return to running at 60-80 %. Move on to phase 3 when 8 × 80 m at 80 % is pain-free twice in a row and assisted Nordics do not hurt.",
+    "goal": "Rehab",
+    "level": "All levels",
+    "weeks": 3,
+    "sessionsPerWeek": 4,
+    "category": "Football",
+    "sources": [
+      {
+        "title": "Askling et al. 2013, Br J Sports Med - L-protocol in elite football",
+        "url": "https://bjsm.bmj.com/content/47/15/953"
+      },
+      {
+        "title": "Hickey et al. 2020, JOSPT - pain-threshold vs pain-free rehab",
+        "url": "https://mural.maynoothuniversity.ie/17929/"
+      }
+    ],
+    "days": [
+      {
+        "name": "Askling + RDL",
+        "notes": "Extender every day, Diver every other day, Glider every third day. Add weight to the RDL only after a pain-free session.",
+        "exercises": [
+          {
+            "exerciseId": 258,
+            "sets": 3,
+            "repsMin": 12,
+            "repsMax": 12,
+            "restSeconds": 30,
+            "progressionStep": 0,
+            "note": "Slowly, stop before pain"
+          },
+          {
+            "exerciseId": 259,
+            "sets": 3,
+            "repsMin": 6,
+            "repsMax": 6,
+            "restSeconds": 45,
+            "progressionStep": 0,
+            "note": "Standing on the injured leg"
+          },
+          {
+            "exerciseId": 260,
+            "sets": 3,
+            "repsMin": 4,
+            "repsMax": 4,
+            "restSeconds": 60,
+            "progressionStep": 0,
+            "note": "Weight on the injured leg, hands on a support"
+          },
+          {
+            "exerciseId": 49,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 8,
+            "targetRpe": 7,
+            "restSeconds": 120,
+            "progressionStep": 2.5,
+            "note": "Start light - kettlebell or empty bar"
+          },
+          {
+            "exerciseId": 97,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 8,
+            "restSeconds": 60,
+            "progressionStep": 0,
+            "note": "Per leg, keep the hips level"
+          }
+        ]
+      },
+      {
+        "name": "Running 60-80 %",
+        "notes": "Next step only if the last one was pain 0-2 and the next morning was not worse. Never two running days in a row.",
+        "exercises": [
+          {
+            "exerciseId": 106,
+            "sets": 1,
+            "time": 600,
+            "restSeconds": 60
+          },
+          {
+            "exerciseId": 92,
+            "sets": 3,
+            "distance": 20,
+            "restSeconds": 30
+          },
+          {
+            "exerciseId": 93,
+            "sets": 6,
+            "distance": 60,
+            "restSeconds": 60,
+            "note": "Walk back - 60 % of max speed",
+            "weekSteps": [
+              {
+                "fromWeek": 2,
+                "sets": 8,
+                "distance": 60,
+                "note": "Walk back - 70 % of max speed"
+              },
+              {
+                "fromWeek": 3,
+                "sets": 8,
+                "distance": 80,
+                "note": "Walk back - 80 % of max speed"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Eccentric + core",
+        "notes": "Slow lowering builds the strength the hamstring needs at top speed.",
+        "exercises": [
+          {
+            "exerciseId": 258,
+            "sets": 3,
+            "repsMin": 12,
+            "repsMax": 12,
+            "restSeconds": 30,
+            "progressionStep": 0,
+            "note": "Slowly, stop before pain"
+          },
+          {
+            "exerciseId": 262,
+            "sets": 3,
+            "repsMin": 6,
+            "repsMax": 6,
+            "restSeconds": 60,
+            "progressionStep": 0,
+            "note": "Up on two legs, down on one in 3-4 s"
+          },
+          {
+            "exerciseId": 264,
+            "sets": 2,
+            "repsMin": 5,
+            "repsMax": 5,
+            "restSeconds": 120,
+            "progressionStep": 0,
+            "note": "Band or hands help, partial range, pain 0-2 only"
+          },
+          {
+            "exerciseId": 263,
+            "sets": 3,
+            "repsMin": 12,
+            "repsMax": 15,
+            "restSeconds": 60,
+            "progressionStep": 0,
+            "note": "Per leg"
+          },
+          {
+            "exerciseId": 48,
+            "sets": 3,
+            "time": 30,
+            "restSeconds": 30,
+            "note": "Per side"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "hamstring-rehab-3",
+    "name": "Hamstring Rehab 3 · Speed",
+    "description": "Phase 3 of 3: Nordics, top speed and football movements. Sprint on fresh legs, never the day after Nordics. Back to team training when a 100 % sprint feels normal, 30 m is within 5 % of your best and Nordics 3 × 6 are pain-free - and your doctor agrees.",
+    "goal": "Rehab",
+    "level": "All levels",
+    "weeks": 2,
+    "sessionsPerWeek": 4,
+    "category": "Football",
+    "sources": [
+      {
+        "title": "Askling et al. 2013, Br J Sports Med - L-protocol in elite football",
+        "url": "https://bjsm.bmj.com/content/47/15/953"
+      },
+      {
+        "title": "van Dyk et al. 2019, Br J Sports Med - Nordic hamstring exercise",
+        "url": "https://bjsm.bmj.com/content/53/21/1362"
+      }
+    ],
+    "days": [
+      {
+        "name": "Speed + Nordic",
+        "notes": "Full warm-up, sprints first, Nordics at the end. Build up to 100 % over 3-5 sessions.",
+        "exercises": [
+          {
+            "exerciseId": 106,
+            "sets": 1,
+            "time": 600,
+            "restSeconds": 60
+          },
+          {
+            "exerciseId": 92,
+            "sets": 3,
+            "distance": 20,
+            "restSeconds": 30
+          },
+          {
+            "exerciseId": 231,
+            "sets": 6,
+            "distance": 15,
+            "restSeconds": 90,
+            "note": "90 %, then 95 %, then 100 % over the sessions"
+          },
+          {
+            "exerciseId": 89,
+            "sets": 3,
+            "distance": 20,
+            "restSeconds": 180,
+            "note": "Only once accelerations at 95 % were pain-free",
+            "weekSteps": [
+              {
+                "fromWeek": 2,
+                "sets": 4
+              }
+            ]
+          },
+          {
+            "exerciseId": 50,
+            "sets": 3,
+            "repsMin": 4,
+            "repsMax": 6,
+            "restSeconds": 120,
+            "progressionStep": 0,
+            "note": "Fall as slowly as possible, full range"
+          }
+        ]
+      },
+      {
+        "name": "Strength",
+        "notes": "Not the day before a speed session.",
+        "exercises": [
+          {
+            "exerciseId": 49,
+            "sets": 3,
+            "repsMin": 5,
+            "repsMax": 6,
+            "targetRpe": 8,
+            "restSeconds": 150,
+            "progressionStep": 2.5
+          },
+          {
+            "exerciseId": 192,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 10,
+            "restSeconds": 90,
+            "progressionStep": 0,
+            "note": "Per leg"
+          },
+          {
+            "exerciseId": 262,
+            "sets": 3,
+            "repsMin": 8,
+            "repsMax": 8,
+            "restSeconds": 60,
+            "progressionStep": 0,
+            "note": "On one leg"
+          },
+          {
+            "exerciseId": 201,
+            "sets": 3,
+            "repsMin": 15,
+            "repsMax": 15,
+            "restSeconds": 45,
+            "progressionStep": 0,
+            "note": "Per leg"
+          }
+        ]
+      },
+      {
+        "name": "Ball + change of direction",
+        "notes": "Winger work: braking, turns, crosses. Long crosses and full-power shots last and only when pain-free.",
+        "exercises": [
+          {
+            "exerciseId": 58,
+            "sets": 6,
+            "distance": 20,
+            "restSeconds": 60,
+            "note": "45° first, then 90° and 180°"
+          },
+          {
+            "exerciseId": 239,
+            "sets": 1,
+            "time": 600,
+            "restSeconds": 60
+          },
+          {
+            "exerciseId": 238,
+            "sets": 1,
+            "time": 600,
+            "restSeconds": 60,
+            "note": "Short, then medium, then long crosses"
+          },
+          {
+            "exerciseId": 240,
+            "sets": 1,
+            "time": 600,
+            "restSeconds": 60,
+            "note": "Full-power shots only when pain-free"
+          }
+        ]
+      }
+    ]
+  },
+  {
     "key": "aerobic-4x4",
     "name": "Aerobic Intervals 4x4",
     "description": "4 × 4 minutes at 90-95 % of max heart rate with 3 minutes of jogging. In the original study players improved VO2max by 11 % and covered 20 % more distance per match.",

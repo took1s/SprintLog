@@ -699,3 +699,31 @@ test('strength goal: set in the plan tab, synced, next session prefilled from it
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('hamstring rehab: phase 1 template starts with Askling Extender, bodyweight ghost and isometric hold', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `rehab_${Date.now()}`);
+
+  await page.click('nav >> text=PLAN');
+  await page.click('button[role=radio]:text-is("Field & prevention")');
+  await page.waitForSelector('[data-template=hamstring-rehab-2]');
+  await page.waitForSelector('[data-template=hamstring-rehab-3]');
+  await page.click('[data-template=hamstring-rehab-1] >> button:text-is("Start")');
+  await page.waitForSelector('text=Active program');
+  const [program] = await api('GET', '/api/programs', token);
+  assert.equal(program.goal, 'Rehab');
+  assert.deepEqual(program.days.map((d) => d.name), ['Strength', 'Bike + Extender']);
+
+  await page.click('button:has-text("Start Strength")');
+  const extender = page.locator('[data-block="258"]');
+  await extender.locator('text=Slowly, stop before pain').waitFor();
+  assert.equal(await extender.locator('[data-test=ghost-weight]').inputValue(), '0', 'bodyweight starts at 0 kg');
+  assert.equal(await extender.locator('[data-test=ghost-reps]').inputValue(), '12');
+  await extender.locator('[data-test=log-ghost]').click();
+  await page.click('button[aria-label="Stop timer"]');
+  await extender.locator('[data-test=set-row]').waitFor();
+  await page.waitForSelector('[data-block="261"] input[aria-label="s"]');
+  assert.equal(await page.locator('[data-block="261"] input[aria-label="s"]').inputValue(), '30');
+  assert.deepEqual(errors, []);
+  await context.close();
+});

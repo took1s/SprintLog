@@ -45,7 +45,7 @@ const DELOADS = [null, 3, 4, 5, 6, 8] as const;
                       <input v-model="programEditor.draft.name" maxlength="60" class="cyber-input w-full rounded-xl p-3 text-sm" :placeholder="t('editor.namePlaceholder')"></label>
                   <label class="col-span-4 sm:col-span-2"><span class="label-xs mb-2">{{ t('editor.goal') }}</span>
                       <select v-model="programEditor.draft.goal" class="cyber-input w-full rounded-xl p-3 text-sm">
-                          <option v-for="g in (['Strength', 'Hypertrophy', 'Speed', 'General'] as const)" :key="g" :value="g">{{ t(`plan.goals.${g}`) }}</option>
+                          <option v-for="g in (['Strength', 'Hypertrophy', 'Speed', 'General', 'Rehab'] as const)" :key="g" :value="g">{{ t(`plan.goals.${g}`) }}</option>
                       </select></label>
                   <label class="col-span-2 sm:col-span-1"><span class="label-xs mb-2">{{ t('editor.weeks') }}</span>
                       <input v-model.number="programEditor.draft.weeks" type="number" min="1" max="52" class="cyber-input w-full rounded-xl p-3 text-sm"></label>

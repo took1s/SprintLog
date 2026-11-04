@@ -45,7 +45,7 @@ public record ProgramInput(string? Name, string? Goal, int Weeks, List<ProgramDa
     /// <summary>Sätze bzw. Läufe pro Übung (Sprint-Protokolle haben bis zu 24 Wiederholungen).</summary>
     public const int MaxSets = 30;
 
-    public static readonly string[] AllowedGoals = { "Strength", "Hypertrophy", "Speed", "General" };
+    public static readonly string[] AllowedGoals = { "Strength", "Hypertrophy", "Speed", "General", "Rehab" };
     public const int MaxDays = 7;
     public const int MaxExercisesPerDay = 15;
 
@@ -54,7 +54,7 @@ public record ProgramInput(string? Name, string? Goal, int Weeks, List<ProgramDa
         var name = Name?.Trim() ?? string.Empty;
         var errors = new ValidationErrors()
             .AddIf(name.Length is < 2 or > 60, "name", "Name must be 2-60 characters.")
-            .AddIf(Goal is null || !AllowedGoals.Contains(Goal), "goal", "Goal must be Strength, Hypertrophy, Speed or General.")
+            .AddIf(Goal is null || !AllowedGoals.Contains(Goal), "goal", "Goal must be Strength, Hypertrophy, Speed, General or Rehab.")
             .AddIf(Weeks is < 1 or > 52, "weeks", "Weeks must be between 1 and 52.")
             .AddIf(Days is null || Days.Count == 0, "days", "A program needs at least one day.")
             .AddIf(Days is { Count: > MaxDays }, "days", $"A program can have at most {MaxDays} days.")

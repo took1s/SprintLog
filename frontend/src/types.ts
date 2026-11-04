@@ -3,7 +3,7 @@
 export type TrackingType = 'WeightReps' | 'DistanceTime' | 'Duration';
 export type Category = 'Gym' | 'Football';
 export type WorkoutType = 'Gym' | 'Football' | 'Hybrid' | 'Match';
-export type ProgramGoal = 'Strength' | 'Hypertrophy' | 'Speed' | 'General';
+export type ProgramGoal = 'Strength' | 'Hypertrophy' | 'Speed' | 'General' | 'Rehab';
 
 export interface Exercise {
   id: number;
