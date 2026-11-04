@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia';
 import { useAppStore, SESSION_RPE, sessionRpeLabel } from '@/stores/app';
 
 const app = useAppStore();
-const { finishLoad, finishModal, isEditing, session, sessionSummary } = storeToRefs(app);
+const { finishLoad, finishModal, isEditing, session, sessionRecovery, sessionSummary } = storeToRefs(app);
 const { confirmFinish } = app;
 </script>
 
@@ -54,6 +54,10 @@ const { confirmFinish } = app;
               <textarea id="finish-notes" v-model="finishModal.notes" rows="3" maxlength="500" class="cyber-input mb-1 w-full resize-none rounded-xl p-3 text-sm" :placeholder="t('finish.notesPlaceholder')"></textarea>
               <p class="mb-5 text-right font-mono text-[9px] text-slate-600">{{ (finishModal.notes || '').length }}/500</p>
 
+              <p v-if="!isEditing" class="mb-4 flex items-center gap-2 rounded-xl border border-white/5 bg-black/20 px-3 py-2.5 text-xs text-slate-300" data-test="finish-recovery">
+                  <svg class="h-4 w-4 flex-shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path stroke-linecap="round" d="M12 7.5V12l3 2"/></svg>
+                  <span>{{ sessionRecovery.total > 0 ? t('recovery.estimate', { hours: sessionRecovery.total }) : t('recovery.light') }}<template v-if="sessionRecovery.main && sessionRecovery.total > 0"> · {{ t(`recovery.regions.${sessionRecovery.main}`) }}</template></span>
+              </p>
               <p v-if="finishModal.error" class="mb-3 font-mono text-xs text-red-400" role="alert">{{ finishModal.error }}</p>
               <button type="submit" class="cyber-btn w-full rounded-xl py-4 font-bold">{{ isEditing ? t('finish.saveChanges') : t('finish.saveWorkout') }}</button>
           </form>

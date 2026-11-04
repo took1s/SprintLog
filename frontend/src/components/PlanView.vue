@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia';
 import { useAppStore, zoneClass } from '@/stores/app';
 import WellnessCard from '@/components/WellnessCard.vue';
 import GoalsPanel from '@/components/GoalsPanel.vue';
+import WeekSchedule from '@/components/WeekSchedule.vue';
 import { formatNumber } from '@/lib/format';
 import { formatRelative } from '@/lib/format';
 import { cycleWeek, prescriptionText } from '@/lib/program';
@@ -12,7 +13,9 @@ import { cycleWeek, prescriptionText } from '@/lib/program';
 const app = useAppStore();
 const { activeProgram, clockDate, expandedDay, filteredTemplates, isDeloadNow, loadInfo, loadZone, loadingPrograms, otherPrograms, planWeek, programInfo, progressInPlan, templateFilter, templates } = storeToRefs(app);
 const FILTERS = ['all', 'Football', 'Gym'] as const;
-const { activateProgram, currentPrescription, dayLabel, openProgramEditor, startProgramDay, startTemplate, stopProgram } = app;
+const { activateProgram, currentPrescription, dayLabel, openPlanBuilder, openProgramEditor, startProgramDay, startTemplate, stopProgram } = app;
+/** Ziel-Einheiten pro Woche: aus der Vorlage, sonst Anzahl der Plan-Tage. */
+const sessionsPerWeek = (key: string | null | undefined, days: number) => templates.value.find((x) => x.key === key)?.sessionsPerWeek ?? days;
 </script>
 
 <template>
@@ -46,6 +49,7 @@ const { activateProgram, currentPrescription, dayLabel, openProgramEditor, start
               <div class="mb-5 h-1.5 overflow-hidden rounded-full bg-white/5">
                   <div class="h-full rounded-full bg-gradient-to-r from-accent/60 to-accent" :style="{ width: Math.min(100, (programInfo.week - 1) / activeProgram.weeks * 100 + 4) + '%' }"></div>
               </div>
+              <WeekSchedule :program="activeProgram" :sessions-per-week="sessionsPerWeek(activeProgram.templateKey, activeProgram.days.length)" />
               <p v-if="programInfo.finished" class="mb-4 rounded-xl border border-yellow-400/30 bg-yellow-400/10 p-3 text-xs text-yellow-300">
                   {{ t('plan.completed') }}
               </p>
@@ -129,7 +133,10 @@ const { activateProgram, currentPrescription, dayLabel, openProgramEditor, start
           <div>
               <div class="mb-3 flex items-end justify-between">
                   <h3 class="display text-white">{{ activeProgram ? t('plan.otherPrograms') : t('plan.startProgram') }}</h3>
-                  <button @click="openProgramEditor()" class="cyber-outline-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest">{{ t('plan.newCustom') }}</button>
+                  <div class="flex gap-2">
+                      <button type="button" @click="openPlanBuilder()" class="cyber-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest" data-test="open-builder">{{ t('coach.buildPlan') }}</button>
+                      <button @click="openProgramEditor()" class="cyber-outline-btn rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest">{{ t('plan.newCustom') }}</button>
+                  </div>
               </div>
               <div class="mb-3 flex gap-2" role="radiogroup">
                   <button v-for="f in FILTERS" :key="f" type="button" role="radio" :aria-checked="templateFilter === f" @click="templateFilter = f"

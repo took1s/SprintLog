@@ -278,9 +278,9 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                       <span class="truncate font-mono text-[11px] text-slate-500">{{ prevText(block.ghost.isWarmup ? null : previousForRow(block.previous, block.workingDone), block.exercise.trackingType) }}</span>
                       <template v-if="block.exercise.trackingType === 'DistanceTime'">
                           <DecimalInput :model-value="block.ghost.distance" @update:model-value="setGhostValue(block.exercise.id, 'distance', $event ?? 0)" select-on-focus
-                                 class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.m')">
+                                 class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.m')" />
                           <DecimalInput :model-value="block.ghost.time" @update:model-value="setGhostValue(block.exercise.id, 'time', $event ?? 0)" select-on-focus
-                                 class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.s')">
+                                 class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.s')" />
                       </template>
                       <template v-else-if="block.exercise.trackingType === 'Duration'">
                           <!-- Timer starten: zählt die geplante Zeit herunter und loggt den Satz -->
@@ -291,13 +291,13 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                               {{ t('hold.go') }}
                           </button>
                           <DecimalInput :model-value="block.ghost.time" @update:model-value="setGhostValue(block.exercise.id, 'time', $event ?? 0)" select-on-focus integer
-                                 class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.s')">
+                                 class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.s')" />
                       </template>
                       <template v-else>
                           <DecimalInput :model-value="block.ghost.weight" @update:model-value="setGhostValue(block.exercise.id, 'weight', $event ?? 0)" select-on-focus
-                                 class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.kg')" data-test="ghost-weight">
+                                 class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.kg')" data-test="ghost-weight" />
                           <DecimalInput :model-value="block.ghost.reps" @update:model-value="setGhostValue(block.exercise.id, 'reps', $event ?? 0)" select-on-focus integer
-                                 class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('workout.col.reps')" data-test="ghost-reps">
+                                 class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('workout.col.reps')" data-test="ghost-reps" />
                       </template>
                       <button type="button" @click="quickLog(block.exercise.id)" data-test="log-ghost"
                               class="flex h-11 w-11 items-center justify-center justify-self-end rounded-lg bg-accent text-on-accent shadow-glow transition-transform hover:brightness-105 active:scale-90"

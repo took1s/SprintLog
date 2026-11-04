@@ -136,6 +136,10 @@ export interface TrainingProgram {
   cycleWeeks?: number | null;
   /** Jede N-te Woche Entlastung. */
   deloadEvery?: number | null;
+  /** Wochenplan: Trainingstage als Bitmaske Mo = 1 ... So = 64 (0 = nicht festgelegt). */
+  trainingDays?: number;
+  /** Spieltage, Bitmaske wie trainingDays. */
+  matchDays?: number;
 }
 
 export interface ProgramTemplate {

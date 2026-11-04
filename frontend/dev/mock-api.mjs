@@ -50,7 +50,7 @@ function newProgram(user, input, templateKey, activate) {
   if (activate) db.programs.filter((p) => p.userId === user.id).forEach((p) => { p.isActive = false; });
   const p = {
     id: db.nextProgramId++, userId: user.id, name: input.name, goal: input.goal, weeks: input.weeks, templateKey,
-    cycleWeeks: input.cycleWeeks ?? null, deloadEvery: input.deloadEvery ?? null,
+    cycleWeeks: input.cycleWeeks ?? null, deloadEvery: input.deloadEvery ?? null, trainingDays: 0, matchDays: 0,
     isActive: activate, startedAt: activate ? new Date().toISOString() : null, createdAt: new Date().toISOString(),
     days: input.days.map((d) => ({ id: db.nextDayId++, name: d.name, notes: d.notes ?? null, exercises: d.exercises.map((x) => ({ ...x, id: db.nextPxId++ })) })),
   };
@@ -469,6 +469,16 @@ async function handleApi(req, res, url) {
     if (!body.name || body.name.trim().length < 2) return problem(res, 400, 'One or more validation errors occurred.', { name: ['Name must be 2-60 characters.'] });
     const hasActive = db.programs.some((p) => p.userId === user.id && p.isActive);
     return json(res, 201, programResponse(newProgram(user, { ...body, name: body.name.trim() }, null, !hasActive)));
+  }
+  m = path.match(/^\/api\/programs\/(\d+)\/schedule$/);
+  if (m && method === 'PUT') {
+    const p = db.programs.find((x) => x.id === Number(m[1]) && x.userId === user.id);
+    if (!p) return problem(res, 404, 'Not Found');
+    const body = await readBody(req);
+    const ok = (v) => Number.isInteger(v) && v >= 0 && v <= 127;
+    if (!ok(body.trainingDays) || !ok(body.matchDays) || (body.trainingDays & body.matchDays) !== 0) return problem(res, 400, 'Validation failed', { matchDays: ['Invalid schedule.'] });
+    Object.assign(p, { trainingDays: body.trainingDays, matchDays: body.matchDays });
+    return json(res, 200, programResponse(p));
   }
   m = path.match(/^\/api\/programs\/(\d+)(\/(activate|deactivate))?$/);
   if (m) {

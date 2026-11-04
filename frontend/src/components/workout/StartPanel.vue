@@ -6,9 +6,11 @@ import { t, tn } from '@/i18n';
 import { dayName, exerciseName, programName } from '@/i18n/content';
 import { useAppStore, MATCH } from '@/stores/app';
 import { formatRelative } from '@/lib/format';
+import CoachCard from './CoachCard.vue';
+import RecoveryCard from '@/components/RecoveryCard.vue';
 
 const app = useAppStore();
-const { activeProgram, allWorkouts, clockDate, exercisesById, programInfo, tab } = storeToRefs(app);
+const { activeProgram, allWorkouts, clockDate, coach, exercisesById, programInfo, startLine, tab } = storeToRefs(app);
 const { repeatWorkout, startProgramDay, startWorkout } = app;
 
 const isField = computed(() => tab.value === 'Football');
@@ -33,6 +35,9 @@ const lastCount = computed(() => new Set((lastWorkout.value?.sets ?? []).map((s)
   <section class="glass-panel mb-6 rounded-3xl p-5" data-test="start-panel">
       <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ isField ? t('start.kickerField') : t('start.kicker') }}</p>
       <h2 class="display mt-1 text-3xl text-white">{{ isField ? t('start.titleField') : t('start.title') }}</h2>
+      <p v-if="startLine" class="mt-2 text-sm leading-snug text-slate-300" data-test="start-line">{{ startLine }}</p>
+
+      <CoachCard />
 
       <button type="button" @click="startWorkout" data-test="start-empty" class="btn-primary mt-5 flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base">
           <span class="text-xl leading-none">+</span> {{ t('start.empty') }}
@@ -44,6 +49,7 @@ const lastCount = computed(() => new Set((lastWorkout.value?.sets ?? []).map((s)
               <span class="block text-[10px] font-bold uppercase tracking-label">{{ t('start.nextPlanDay') }}</span>
               <span class="mt-1 block truncate text-base font-bold text-white">{{ dayName(activeProgram, programInfo.next) }}</span>
               <span class="block truncate font-mono text-[11px] text-slate-400">{{ programName(activeProgram) }} · {{ tn('units.exercises', programInfo.next.exercises.length) }}</span>
+              <span v-if="coach.kind === 'light'" class="mt-1 block text-[11px] font-bold text-yellow-300">{{ t('coach.kinds.light.title') }}</span>
           </button>
           <button v-if="lastWorkout" type="button" @click="repeatWorkout(lastWorkout)" data-test="start-repeat"
                   class="btn-ghost min-w-0 rounded-2xl p-4 text-left">
@@ -52,5 +58,7 @@ const lastCount = computed(() => new Set((lastWorkout.value?.sets ?? []).map((s)
               <span class="block font-mono text-[11px] text-slate-400">{{ tn('units.exercises', lastCount) }} · {{ tn('units.sets', lastWorkout.sets?.length ?? 0) }}</span>
           </button>
       </div>
+
+      <RecoveryCard />
   </section>
 </template>

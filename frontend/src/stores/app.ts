@@ -34,6 +34,12 @@ import type {
 import { useUiStore } from './ui';
 import { useGoalsStore, type GoalView } from './goals';
 import { alternativesFor, type Alternative } from '../lib/alternatives';
+import { hasSchedule, kindOf, nextDayOf, weekdayOf, type Schedule } from '../lib/schedule';
+import { estimateRecovery, recoveryStatus, type RecoveryEstimate } from '../lib/recovery';
+import { dailyLine, eventLine, isMilestone, startTrigger } from '../lib/motivation';
+import { coachToday, regionsOf } from '../lib/coach';
+import { recommendPlans, scheduleFor, type PlanAnswers } from '../lib/planBuilder';
+import { regionOf } from '../lib/recovery';
 import { isLocalExerciseId, localExerciseId, mergeExercises, queueHasLocalExercises, remapIds, remapKeys, remapQueue, remapSets } from '../lib/offlineExercises';
 import { t, tn, tDynamic, intlLocale, textIn, loadAllLocales, SUPPORTED_LOCALES } from '../i18n';
 import { templateText, exerciseName as trExerciseName, dayName as trDayName, programName as trProgramName } from '../i18n/content';
@@ -52,6 +58,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   useRir: false,
   /** Nach jedem Satz kurz RPE/RIR abfragen (eine Zeile unter dem Satz, ohne Dialog). */
   rpePrompt: true,
+  /** Motivations-Zeilen auf dem Startbildschirm, bei Rekorden und nach dem Training. */
+  motivation: true,
 });
 export type Settings = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: (typeof DEFAULT_SETTINGS)[K] extends boolean ? boolean : number };
 
@@ -396,6 +404,131 @@ export const useAppStore = defineStore('app', () => {
     const f = finishModal.value;
     return (f.sessionRpe ?? 0) > 0 && (f.durationMin ?? 0) > 0 ? Math.round(f.sessionRpe! * f.durationMin!) : 0;
   });
+  // ---------- Wochenplan + Erholung ----------
+  /** Wochenplan offline ändern: lokal sofort, Server beim nächsten Sync (PUT ist idempotent). */
+  const schedulePendingKey = () => (user.value ? `sprintlog:${user.value.userId}:schedulePending` : null);
+  const pendingSchedules = (): Record<number, Schedule> => { const k = schedulePendingKey(); return k ? readJson(k, {}) : {}; };
+  const savePendingSchedules = (v: Record<number, Schedule>) => { const k = schedulePendingKey(); if (k) writeJson(k, v); };
+  function applyPendingSchedules(list: TrainingProgram[]): TrainingProgram[] {
+    const p = pendingSchedules();
+    return list.map((x) => (p[x.id] ? { ...x, ...p[x.id] } : x));
+  }
+  async function pushPendingSchedules() {
+    const p = pendingSchedules();
+    for (const [id, sch] of Object.entries(p)) {
+      try { await api().put(`/api/programs/${id}/schedule`, sch); delete p[Number(id)]; } catch (e) { if (isNetworkError(e)) break; delete p[Number(id)]; }
+    }
+    savePendingSchedules(p);
+  }
+  async function setSchedule(program: TrainingProgram, schedule: Schedule) {
+    programs.value = programs.value.map((x) => (x.id === program.id ? { ...x, ...schedule } : x));
+    if (keys.value) writeJson(keys.value.programs, programs.value);
+    savePendingSchedules({ ...pendingSchedules(), [program.id]: schedule });
+    await pushPendingSchedules();
+  }
+
+  /** Heute laut Wochenplan des aktiven Programms (null = kein Wochenplan). */
+  const todayPlan = computed(() => {
+    const p = activeProgram.value;
+    if (!p || !hasSchedule(p)) return null;
+    const today = clockDate.value;
+    const kind = kindOf(p, weekdayOf(today));
+    const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    return { kind, nextTraining: kind === 'training' ? today : nextDayOf(p, 'training', tomorrow), nextMatch: nextDayOf(p, 'match', today) };
+  });
+
+  /** Tage der Reha-Programme (Einheiten daraus belasten wenig). */
+  const rehabDayIds = computed(() => new Set(programs.value.filter((p) => p.goal === 'Rehab').flatMap((p) => p.days.map((d) => d.id!))));
+  const muscleOf = (id: number | null | undefined) => { const e = id != null ? exercisesById.value.get(id) : undefined; return { muscleGroup: e?.muscleGroup, trackingType: e?.trackingType }; };
+  /** Erholungsstatus je Bereich aus den letzten Tagen. */
+  const recovery = computed(() => recoveryStatus(allWorkouts.value, muscleOf, clockDate.value, rehabDayIds.value));
+  /** Schätzung für die gerade laufende Einheit (im Abschluss-Dialog). */
+  const sessionRecovery = computed(() => estimateRecovery(
+    session.value.sets.map((x) => ({ ...x, ...muscleOf(x.exerciseId) })),
+    { sessionRpe: finishModal.value.sessionRpe, durationMin: finishModal.value.durationMin, rehab: session.value.plan?.dayId != null && rehabDayIds.value.has(session.value.plan.dayId) },
+  ));
+
+  // ---------- Motivation ----------
+  const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  /** Zeile auf dem Startbildschirm (null = keine, z. B. heute schon trainiert und nichts Besonderes). */
+  const startLine = computed(() => {
+    if (!settings.value.motivation) return '';
+    const now = clockDate.value;
+    const days = new Set(allWorkouts.value.map((w) => dayKey(new Date(String(w.date)))));
+    const last = allWorkouts.value.reduce<number>((m, w) => Math.max(m, new Date(String(w.date)).getTime() || 0), 0);
+    // Serie: Tage mit Einheit bis heute/gestern; geplante Ruhe- und Spieltage unterbrechen sie nicht
+    const p = activeProgram.value;
+    let streak = 0;
+    for (let i = days.has(dayKey(now)) ? 0 : 1; i < 60; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      if (days.has(dayKey(d))) { streak += 1; continue; }
+      if (p && hasSchedule(p) && kindOf(p, weekdayOf(d)) !== 'training') continue;
+      break;
+    }
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - weekdayOf(now));
+    const weekCount = allWorkouts.value.filter((w) => new Date(String(w.date)) >= monday).length;
+    const trig = startTrigger({
+      now, name: user.value?.username, trainedToday: days.has(dayKey(now)),
+      daysSinceLast: last ? Math.floor((now.getTime() - last) / 86_400_000) : null,
+      streak, weekCount, todayKind: todayPlan.value?.kind ?? null, rehabActive: p?.goal === 'Rehab',
+    });
+    return trig ? dailyLine(trig.key, trig.params, now) : '';
+  });
+
+  // ---------- Coach ----------
+  const coach = computed(() => {
+    const now = clockDate.value;
+    const p = activeProgram.value;
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const days = new Set(allWorkouts.value.map((w) => dayKey(new Date(String(w.date)))));
+    const last = allWorkouts.value.reduce<number>((m, w) => Math.max(m, new Date(String(w.date)).getTime() || 0), 0);
+    const next = programInfo.value?.next ?? null;
+    const nextRegions = next ? regionsOf(next.exercises.map((x) => ({ region: regionOf(x.muscleGroup ?? exercisesById.value.get(x.exerciseId)?.muscleGroup, x.trackingType ?? exercisesById.value.get(x.exerciseId)?.trackingType), sets: x.sets }))) : [];
+    return coachToday({
+      now,
+      todayKind: p && hasSchedule(p) ? kindOf(p, weekdayOf(now)) : null,
+      tomorrowKind: p && hasSchedule(p) ? kindOf(p, weekdayOf(tomorrow)) : null,
+      loadZone: loadInfo.value.zone,
+      readiness: readinessToday.value,
+      recovery: recovery.value,
+      daysSinceLast: last ? Math.floor((now.getTime() - last) / 86_400_000) : null,
+      trainedToday: days.has(dayKey(now)),
+      rehab: p?.goal === 'Rehab',
+      nextDay: p && next ? trDayName(p, next) : null,
+      nextDayRegions: nextRegions,
+    });
+  });
+
+  /** "Plan für mich": Antworten -> passende Vorlagen + Wochenplan. */
+  const planBuilder = ref<{ open: boolean; answers: PlanAnswers; busy: boolean }>({ open: false, answers: { focus: 'football', daysPerWeek: 3, matchDay: 6, level: 'Intermediate' }, busy: false });
+  const planChoices = computed(() => recommendPlans(templates.value, planBuilder.value.answers));
+  function openPlanBuilder() {
+    const a = planBuilder.value.answers;
+    planBuilder.value = { open: true, answers: { ...a, focus: activeProgram.value?.goal === 'Rehab' ? 'rehab' : a.focus }, busy: false };
+  }
+  async function startPlanChoice(template: ProgramTemplate) {
+    const b = planBuilder.value;
+    b.busy = true;
+    try {
+      await startTemplate(template);
+      const p = activeProgram.value;
+      if (p && p.templateKey === template.key) await setSchedule(p, scheduleFor(b.answers));
+      b.open = false;
+    } finally {
+      b.busy = false;
+    }
+  }
+
+  function prLine(set: { exerciseId: number; exerciseName?: string; weight?: number | null }): string {
+    const name = trExerciseName(set.exerciseId, set.exerciseName);
+    if (!settings.value.motivation || !(set.weight && set.weight > 0)) return t('set.toast.record', { name });
+    return eventLine('personalRecord', { exercise: name, weight: formatNumber(set.weight, 2) }) || t('set.toast.record', { name });
+  }
+
+  /** Zusammenfassung direkt nach dem Speichern: Motivation, Eckdaten, Erholung, nächstes Training. */
+  const summary = ref<{ line: string; recovery: RecoveryEstimate; at: string; sets: number; volume: number; minutes: number | null; rpe: number | null } | null>(null);
+  function closeSummary() { summary.value = null; }
+
   const sessionElapsed = computed(() => (session.value.startedAt ? Math.max(0, (now.value - new Date(session.value.startedAt).getTime()) / 1000) : 0));
   const sessionGroups = computed(() => groupSetsByExercise(session.value.sets));
   const sessionSummary = computed(() => summarizeWorkout({ sets: session.value.sets }));
@@ -735,7 +868,8 @@ export const useAppStore = defineStore('app', () => {
     if (!isAuthenticated.value) return;
     loadingPrograms.value = !programs.value.length;
     try {
-      programs.value = await api().get<TrainingProgram[]>('/api/programs');
+      await pushPendingSchedules();
+      programs.value = applyPendingSchedules(await api().get<TrainingProgram[]>('/api/programs'));
       writeJson(keys.value!.programs, programs.value);
     } catch (e) {
       if (isNetworkError(e)) online.value = false;
@@ -1059,7 +1193,7 @@ export const useAppStore = defineStore('app', () => {
     }
     persistSession();
     closeSetModal();
-    if (wasPR) toast(t('set.toast.record', { name: trExerciseName(set.exerciseId, set.exerciseName) }), 'gold');
+    if (wasPR) toast(prLine(set), 'gold');
     void goalsStore.checkAchieved(set);
   }
 
@@ -1142,7 +1276,9 @@ export const useAppStore = defineStore('app', () => {
   });
 
   function ensureStarted() {
-    if (!session.value.startedAt) session.value.startedAt = new Date().toISOString();
+    if (session.value.startedAt) return;
+    session.value.startedAt = new Date().toISOString();
+    if (!session.value.plan && !isEditing.value) announceSessionStart();
   }
 
   /** Übungen als Blöcke hinzufügen (ohne Satz). Startet die Einheit. */
@@ -1270,7 +1406,7 @@ export const useAppStore = defineStore('app', () => {
     if (block.target?.sets && !set.isWarmup && block.workingDone + 1 >= block.target.sets) markDone(id, true);
     rpePrompt.value = settings.value.rpePrompt && !set.isWarmup && type === TrackingType.WeightReps ? { index: session.value.sets.length - 1, exerciseId: id } : null;
     persistSession();
-    if (wasPR) toast(t('set.toast.record', { name: trExerciseName(set.exerciseId, set.exerciseName) }), 'gold');
+    if (wasPR) toast(prLine(set), 'gold');
     void goalsStore.checkAchieved(set);
   }
 
@@ -1446,6 +1582,15 @@ export const useAppStore = defineStore('app', () => {
     openPicker();
   }
 
+  /** Erste Einheit des Tages: kurze Motivations-Zeile. */
+  function announceSessionStart() {
+    if (!settings.value.motivation) return;
+    const today = dayKey(new Date());
+    if (allWorkouts.value.some((w) => dayKey(new Date(String(w.date))) === today)) return;
+    const line = eventLine('sessionStart', {});
+    if (line) toast(line, 'info');
+  }
+
   /** Ergänzt Kategorie/Typ für Sätze aus Altdaten, sobald der Übungskatalog geladen ist. */
   function enrichSession() {
     if (!session.value.sets.length) return;
@@ -1526,6 +1671,25 @@ export const useAppStore = defineStore('app', () => {
       queue.value = [...queue.value, saved];
     }
     persistQueue();
+
+    // Zusammenfassung (nur für neue Einheiten): Erholung aus den Sätzen, bevor die Session geleert wird
+    if (!editing) {
+      const total = allWorkouts.value.length + 1;
+      const rpe = base.sessionRpe;
+      const key = isMilestone(total) ? 'milestone' : (rpe ?? 0) >= 8.5 ? 'finishHard' : 'finish';
+      summary.value = {
+        line: settings.value.motivation ? eventLine(key, { total }) : t('finish.toast.saved'),
+        recovery: estimateRecovery(base.sets.map((x) => ({ ...x, ...muscleOf(x.exerciseId) })), {
+          kind: base.workoutType, sessionRpe: rpe, durationMin: base.durationSeconds ? base.durationSeconds / 60 : null,
+          rehab: base.programDayId != null && rehabDayIds.value.has(base.programDayId),
+        }),
+        at: new Date(new Date(base.date).getTime() + (base.durationSeconds ?? 0) * 1000).toISOString(),
+        sets: base.sets.filter((x) => !x.isWarmup).length,
+        volume: summarizeWorkout({ sets: base.sets }).volume,
+        minutes: base.durationSeconds ? Math.round(base.durationSeconds / 60) : null,
+        rpe,
+      };
+    }
 
     session.value = EMPTY_SESSION();
     ghostDraft.value = {};
@@ -2308,6 +2472,7 @@ export const useAppStore = defineStore('app', () => {
     workoutBlocks, ghostDraft, picker, obsidianWorkout, openObsidian, pickerResults, pickerMuscles, searchExercises,
     exerciseInfo, openExerciseInfo, closeExerciseInfo, holdTimer, startHold, closeHoldTimer, logHold,
     rpePrompt, completeBlock, reopenBlock, setSetRpe, dismissRpePrompt, deleteSessionSet,
+    setSchedule, todayPlan, recovery, sessionRecovery, startLine, summary, closeSummary, coach, planBuilder, planChoices, openPlanBuilder, startPlanChoice,
     addExercises, removeBlock, moveBlock, reorderBlock, openReplace, replaceBlock, replaceSuggestions, setGhostValue, stepGhost, toggleGhostWarmup, quickLog, openPicker, togglePicked, addFromCatalog, confirmPicker, startWorkout, exerciseFor,
     modalEx, modalType, modalKey, modalRecord, modalPrevious, modalSessionSets, modalTarget, modalE1RM, modalIntensity,
     modalZone, modalSpeed, modalSpeedVsBest, modalIsNewPR,
