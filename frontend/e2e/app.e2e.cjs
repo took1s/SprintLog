@@ -83,7 +83,14 @@ async function logoutViaSettings(page) {
 /** Finish -> Abschluss-Dialog -> speichern. */
 async function finishWorkout(page) {
   await page.click('button:text-is("Finish")');
+  await saveWorkout(page);
+}
+
+/** "Save workout" -> Zusammenfassung (Erholung, nächstes Training) erscheint und wird geschlossen. */
+async function saveWorkout(page) {
   await page.click('button:has-text("Save workout")');
+  await page.click('[data-test=summary-done]');
+  await page.waitForSelector('[data-test=workout-summary]', { state: 'detached' });
 }
 
 /** Übung über die Auswahl in die laufende Einheit holen (Katalog ist dann ausgeblendet). */
@@ -223,7 +230,7 @@ test('RPE, warm-up, session RPE and notes are saved; editing a workout updates i
   await page.click('button:has-text("Finish")');
   await page.click('[aria-label="Finish workout"] button:text-is("7")');
   await page.fill('#finish-notes', 'Good session');
-  await page.click('button:has-text("Save workout")');
+  await saveWorkout(page);
   await page.waitForSelector('text=Good session');
 
   let [w] = await api('GET', '/api/workouts/history', token);
@@ -486,7 +493,6 @@ test('older app versions with a token in localStorage are moved to a cookie sess
   // Schreiben funktioniert mit der neuen Cookie-Sitzung
   await logSet(page, 'Bench Press');
   await finishWorkout(page);
-  await page.waitForSelector('text=Workout saved.');
   assert.equal((await api('GET', '/api/workouts/history', registered.token)).length, 1);
   assert.deepEqual(errors, []);
   await context.close();
@@ -548,8 +554,7 @@ test('one tap per set: add exercises, ghost rows are prefilled, repeat last work
   await page.click('button[aria-label="Stop timer"]');
 
   await page.click('[data-test=finish-workout]');
-  await page.click('button:has-text("Save workout")');
-  await page.waitForSelector('text=Workout saved.');
+  await saveWorkout(page);
   let history = await api('GET', '/api/workouts/history', token);
   assert.equal(history.length, 1);
   assert.deepEqual(history[0].sets.map((s) => [s.exerciseId, s.weight, s.reps]), [[1, 80, 5], [1, 80, 5], [63, 120, 3]]);
@@ -586,7 +591,7 @@ test('obsidian export: quality is saved, lines match the vault format and are co
   await page.click('[aria-label="Finish workout"] button:text-is("8")');
   await page.click('[data-quality="7"]');
   await page.fill('[aria-label="Finish workout"] input[type=number]', '60');
-  await page.click('button:has-text("Save workout")');
+  await saveWorkout(page);
   await page.waitForSelector('text=Quality 7/10');
   const [w] = await api('GET', '/api/workouts/history', token);
   assert.equal(w.quality, 7);
@@ -662,8 +667,7 @@ test('workout UX: exercise info in picker, RPE right after the set, swipe delete
   assert.equal(await page.locator('[data-block]').count(), 2);
 
   await page.click('[data-test=finish-workout]');
-  await page.click('button:has-text("Save workout")');
-  await page.waitForSelector('text=Workout saved.');
+  await saveWorkout(page);
   const [w] = await api('GET', '/api/workouts/history', token);
   assert.deepEqual(w.sets.map((s) => [s.exerciseId, s.weight, s.reps, s.rpe]), [[1, 80, 5, 8]]);
   assert.deepEqual(errors, []);
@@ -724,6 +728,165 @@ test('hamstring rehab: phase 1 template starts with Askling Extender, bodyweight
   await extender.locator('[data-test=set-row]').waitFor();
   await page.waitForSelector('[data-block="261"] input[aria-label="s"]');
   assert.equal(await page.locator('[data-block="261"] input[aria-label="s"]').inputValue(), '30');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('gym extras: comma decimals, drag & drop order, hold timer for planks, replace an exercise without a ball', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `extras_${Date.now()}`);
+
+  await page.click('[data-test=start-empty]');
+  for (const [query, name] of [['bench press', 'Bench Press'], ['plank', 'Plank'], ['passing', 'Passing Drill']]) {
+    await page.fill('[data-test=picker-search]', query);
+    await page.click(`[role=option]:has-text("${name}") >> nth=0`);
+  }
+  await page.click('[data-test=picker-add]');
+  const order = () => page.$$eval('[data-block]', (els) => els.map((e) => Number(e.getAttribute('data-block'))));
+  assert.deepEqual(await order(), [1, 47, 238]);
+
+  // iPhone-Tastatur hat nur ein Komma: "72,5" bleibt beim Tippen stehen und wird als 72.5 geloggt
+  const bench = page.locator('[data-block="1"]');
+  await bench.locator('[data-test=ghost-weight]').click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.type('72,5');
+  assert.equal(await bench.locator('[data-test=ghost-weight]').inputValue(), '72,5');
+  await bench.locator('[data-test=ghost-reps]').fill('6');
+  await bench.locator('[data-test=log-ghost]').click();
+  await page.click('button[aria-label="Stop timer"]');
+  await bench.locator('[data-test=set-row]:has-text("72.5")').waitFor();
+
+  // Drag & drop: die Planke über das Bankdrücken ziehen
+  const handle = page.locator('[data-block="47"] [data-test=drag-handle]');
+  const from = await handle.boundingBox();
+  const to = await page.locator('[data-block="1"]').boundingBox();
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + from.width / 2, to.y + 10, { steps: 15 });
+  await page.mouse.up();
+  await page.waitForFunction(() => document.querySelector('[data-block]')?.getAttribute('data-block') === '47');
+  assert.deepEqual(await order(), [47, 1, 238]);
+
+  // Timer für Zeit-Übungen: 3-2-1, dann läuft die Uhr; "Fertig" loggt die gehaltene Zeit
+  const plank = page.locator('[data-block="47"]');
+  await plank.locator('input[aria-label="s"]').fill('30');
+  await plank.locator('[data-test=start-hold]').click();
+  await page.waitForSelector('[data-test=hold-timer]');
+  await page.waitForTimeout(4600);
+  await page.click('[data-test=hold-done]');
+  await page.waitForSelector('[data-test=hold-timer]', { state: 'detached' });
+  await plank.locator('[data-test=set-row]').waitFor();
+  const held = Number(await plank.locator('[data-test=set-row] span.text-base').last().innerText());
+  assert.ok(held >= 1 && held <= 3, `held ${held} s`);
+  await page.click('button[aria-label="Stop timer"]').catch(() => {});
+
+  // Kein Ball da: Übung ersetzen -> passende Vorschläge ohne Ball
+  await page.click('[data-block="238"] button[aria-label="Exercise options"]');
+  await page.click('[data-test=sheet-replace]');
+  const suggestion = page.locator('[data-replace]').first();
+  await suggestion.waitFor();
+  const replacement = Number(await suggestion.getAttribute('data-replace'));
+  await suggestion.click();
+  await page.waitForSelector('[data-block="238"]', { state: 'detached' });
+  await page.waitForSelector(`[data-block="${replacement}"]`);
+  assert.deepEqual(await order(), [47, 1, replacement]);
+
+  await page.click('[data-test=finish-workout]');
+  await page.waitForSelector('[data-test=finish-recovery]');
+  await page.click('button:has-text("Save workout")');
+  await page.waitForSelector('[data-test=summary-recovery] >> text=Upper body');
+  await page.click('[data-test=summary-done]');
+  const [w] = await api('GET', '/api/workouts/history', token);
+  assert.deepEqual(w.sets.map((s) => [s.exerciseId, s.weight ?? null, s.reps ?? null]).filter((x) => x[0] === 1), [[1, 72.5, 6]]);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('offline at the gym: create a custom exercise without internet, it syncs with the workout later', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `gymoffline_${Date.now()}`);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload();
+  await page.waitForSelector('h3:has-text("Bench Press")');
+  await context.setOffline(true);
+  await page.waitForSelector('text=Offline');
+
+  await page.fill('input[type=search]', 'Box Landmine Press');
+  await page.click('text=Create "Box Landmine Press"');
+  await page.click('button:has-text("Create & log")');
+  await page.waitForSelector('button:has-text("Log set")');
+  await page.fill('#in-weight', '27,5');
+  await page.fill('#in-reps', '8');
+  await page.click('button:has-text("Log set")');
+  await finishWorkout(page);
+  await page.waitForSelector('text=Pending sync');
+  assert.equal((await api('GET', '/api/workouts/history', token)).length, 0);
+
+  await context.setOffline(false);
+  await page.waitForSelector('text=Pending sync', { state: 'detached', timeout: 15000 });
+  const custom = (await api('GET', '/api/exercises', token)).find((e) => e.name === 'Box Landmine Press');
+  assert.ok(custom && custom.id > 0, 'custom exercise created on the server');
+  const history = await api('GET', '/api/workouts/history', token);
+  assert.equal(history.length, 1);
+  assert.deepEqual(history[0].sets.map((s) => [s.exerciseId, s.weight, s.reps]), [[custom.id, 27.5, 8]]);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('coach + plan for me: 4 answers start a program with a week plan around the match day', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `coach_${Date.now()}`);
+
+  // Ohne Plan: der Coach bietet "Plan für mich" an
+  await page.waitForSelector('[data-test=coach-card]');
+  await page.click('[data-test=coach-build]');
+  await page.waitForSelector('[data-test=plan-builder]');
+  await page.click('[data-focus=football]');
+  await page.click('[data-days="3"]');
+  await page.click('[data-match="6"]');
+  const first = page.locator('[data-choice]').first();
+  await first.waitFor();
+  const key = await first.getAttribute('data-choice');
+  await first.locator('[data-start-choice]').click();
+  await page.waitForSelector('[data-test=plan-builder]', { state: 'detached' });
+
+  const deadline = Date.now() + 8000;
+  let program;
+  while (Date.now() < deadline) {
+    [program] = await api('GET', '/api/programs', token);
+    if (program?.matchDays) break;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  assert.equal(program.templateKey, key);
+  assert.equal(program.matchDays, 64, 'Sunday is the match day');
+  assert.equal(program.trainingDays & 32, 0, 'no training the day before the match');
+  assert.equal(program.trainingDays & 64, 0);
+  assert.ok(program.trainingDays > 0);
+
+  // Wochenplan im Plan-Tab bearbeiten: Montag umschalten und speichern
+  await page.click('nav >> text=PLAN');
+  await page.waitForSelector('[data-test=week-schedule]');
+  await page.click('[data-test=schedule-edit]');
+  const monday = page.locator('[data-test=week-schedule] [data-day="0"]');
+  const before = program.trainingDays & 1;
+  await monday.click();
+  if (before) await monday.click(); // Training -> Spiel -> Ruhe
+  await page.click('[data-test=schedule-save]');
+  await page.waitForSelector('[data-test=schedule-today]');
+  const deadline2 = Date.now() + 5000;
+  let updated;
+  while (Date.now() < deadline2) {
+    [updated] = await api('GET', '/api/programs', token);
+    if ((updated.trainingDays & 1) !== before) break;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  assert.notEqual(updated.trainingDays & 1, before, 'Monday toggled');
+  assert.equal(updated.matchDays, 64);
+
+  // Start-Screen: Coach mit Empfehlung
+  await page.click('nav >> text=GYM');
+  const kind = await page.getAttribute('[data-test=coach-card]', 'data-coach');
+  assert.ok(['train', 'light', 'rest', 'match'].includes(kind), kind);
   assert.deepEqual(errors, []);
   await context.close();
 });

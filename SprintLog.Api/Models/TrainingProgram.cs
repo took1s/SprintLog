@@ -31,6 +31,12 @@ public class TrainingProgram
     /// <summary>Jede N-te Woche ist eine Entlastungswoche: ~60 % der Sätze, ~10 % weniger Gewicht, RPE -2. null = keine.</summary>
     public int? DeloadEvery { get; set; }
 
+    /// <summary>Trainingstage als Bitmaske, Montag = 1, Dienstag = 2 ... Sonntag = 64. 0 = nicht festgelegt.</summary>
+    public int TrainingDays { get; set; }
+
+    /// <summary>Spieltage (z. B. Sonntag) als Bitmaske wie <see cref="TrainingDays"/> - keine schwere Einheit, Erholung davor/danach.</summary>
+    public int MatchDays { get; set; }
+
     public List<ProgramDay> Days { get; set; } = new();
 }
 

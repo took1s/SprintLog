@@ -7,7 +7,7 @@ import { ref, watch } from 'vue';
 import { readJson, writeJson } from './storage';
 import { syncStatusBar } from './native';
 
-export const THEMES = ['pitch', 'clean', 'midnight', 'mono'] as const;
+export const THEMES = ['pitch', 'clean', 'midnight', 'mono', 'halloween'] as const;
 export type ThemeName = (typeof THEMES)[number];
 export const SCHEMES = ['auto', 'light', 'dark'] as const;
 export type SchemePreference = (typeof SCHEMES)[number];
@@ -23,7 +23,21 @@ export const THEME_SWATCHES: Record<ThemeName, Record<'light' | 'dark', [string,
   clean: { dark: ['#11110f', '#1c1b18', '#ff6a33'], light: ['#f6f5f2', '#ffffff', '#e84810'] },
   midnight: { dark: ['#090b14', '#131727', '#7c8cff'], light: ['#f3f4fb', '#ffffff', '#4f46e5'] },
   mono: { dark: ['#080808', '#121212', '#ff3328'], light: ['#f2f2f0', '#ffffff', '#d60600'] },
+  halloween: { dark: ['#120c1c', '#1c142a', '#ff7a1a'], light: ['#f8f4ef', '#ffffff', '#ff7a1a'] },
 };
+
+/** Saison-Themes: in diesem Zeitraum in der Auswahl als "Saison" markiert (Monat 1-12, Tag). */
+export const SEASONAL: Partial<Record<ThemeName, { from: [number, number]; to: [number, number] }>> = {
+  halloween: { from: [10, 1], to: [11, 15] },
+};
+
+/** Ist das Theme gerade in seiner Saison? */
+export function inSeason(theme: ThemeName, date = new Date()): boolean {
+  const s = SEASONAL[theme];
+  if (!s) return false;
+  const v = (date.getMonth() + 1) * 100 + date.getDate();
+  return v >= s.from[0] * 100 + s.from[1] && v <= s.to[0] * 100 + s.to[1];
+}
 
 export function sanitizeAppearance(value: Partial<Appearance> | null | undefined): Appearance {
   return {

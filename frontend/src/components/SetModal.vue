@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DecimalInput from '@/components/DecimalInput.vue';
 import { computed } from 'vue';
 import { techniqueFor } from '@/lib/figure';
 import { localizedTechnique } from '@/i18n/techniqueText';
@@ -111,7 +112,7 @@ const modalTechnique = computed(() => {
                       <label class="label-xs mb-3" for="in-weight">{{ t('set.weight') }}</label>
                       <div class="stepper">
                           <button @click="step('weight', -2.5)" class="stepper-btn" :aria-label="t('set.decrease', { what: t('set.fields.weight') })">-</button>
-                          <input id="in-weight" v-model.number="setModal.weight" type="number" inputmode="decimal" min="0" step="0.5" class="stepper-input">
+                          <DecimalInput id="in-weight" v-model="setModal.weight" class="stepper-input" />
                           <button @click="step('weight', 2.5)" class="stepper-btn" :aria-label="t('set.increase', { what: t('set.fields.weight') })">+</button>
                       </div>
                   </div>
@@ -155,7 +156,7 @@ const modalTechnique = computed(() => {
                       </div>
                       <div class="stepper">
                           <button @click="step('distance', -5)" class="stepper-btn" :aria-label="t('set.decrease', { what: t('set.fields.distance') })">-</button>
-                          <input id="in-distance" v-model.number="setModal.distance" type="number" inputmode="decimal" min="0" step="1" class="stepper-input">
+                          <DecimalInput id="in-distance" v-model="setModal.distance" class="stepper-input" />
                           <button @click="step('distance', 5)" class="stepper-btn" :aria-label="t('set.increase', { what: t('set.fields.distance') })">+</button>
                       </div>
                   </div>
@@ -163,7 +164,7 @@ const modalTechnique = computed(() => {
                       <label class="label-xs mb-3" for="in-time">{{ t('set.time') }}</label>
                       <div class="stepper">
                           <button @click="step('time', -0.1)" class="stepper-btn" :aria-label="t('set.decrease', { what: t('set.fields.time') })">-</button>
-                          <input id="in-time" v-model.number="setModal.time" type="number" inputmode="decimal" min="0" step="0.01" class="stepper-input">
+                          <DecimalInput id="in-time" v-model="setModal.time" class="stepper-input" />
                           <button @click="step('time', 0.1)" class="stepper-btn" :aria-label="t('set.increase', { what: t('set.fields.time') })">+</button>
                       </div>
                   </div>

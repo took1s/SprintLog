@@ -1,7 +1,7 @@
 /*
  * SprintLog - Design-Tokens für alle Themes.
  *
- * Aufbau: <html data-theme="pitch|clean|midnight|mono" data-scheme="light|dark">
+ * Aufbau: <html data-theme="pitch|clean|midnight|mono|halloween" data-scheme="light|dark">
  *   - data-theme bestimmt den Charakter (Schriften, Radien, Effekte),
  *   - data-scheme die Farben (hell/dunkel; "auto" wird in lib/theme.ts aufgelöst).
  *
@@ -102,6 +102,27 @@
   --glow: 0 0 0 transparent;
   --btn-case: uppercase;
   --btn-tracking: 0.1em;
+}
+
+/* Saison-Theme: Flutlicht-Plakat (Oswald), weiche Kürbis-Glut über Orbs, leichtes Glas */
+[data-theme='halloween'] {
+  --font-body: 'Manrope Variable', Manrope, system-ui, -apple-system, sans-serif;
+  --font-display: 'Oswald Variable', 'Arial Narrow', 'Manrope Variable', sans-serif;
+  --font-num: 'Oswald Variable', 'Manrope Variable', sans-serif;
+  --display-weight: 600;
+  --display-case: uppercase;
+  --display-tracking: 0.02em;
+  --label-tracking: 0.14em;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+  --border-w: 1px;
+  --panel-blur: 16px;
+  --orbs: 1;
+  --btn-case: uppercase;
+  --btn-tracking: 0.08em;
 }
 
 [data-theme] { --accent-ring: var(--c-accent); }
@@ -368,4 +389,71 @@
   --modal-bg: rgb(var(--c-surface));
   --backdrop: rgb(0 0 0 / 0.7);
   --glow: none;
+}
+
+/* E · Halloween (Saison) - Tinten-Violett, Kürbis-Orange, dezentes Glühen statt Grusel-Deko */
+[data-theme='halloween'][data-scheme='dark'] {
+  color-scheme: dark;
+  --c-bg: 18 12 28;
+  --c-surface: 28 20 42;
+  --c-surface-2: 36 27 54;
+  --c-fg: 247 241 251;
+  --c-fg-2: 222 212 234;
+  --c-muted: 172 160 190;
+  --c-subtle: 146 134 166;
+  --c-faint: 96 84 116;
+  --c-well: 0 0 0;
+  --c-accent: 255 122 26;
+  --c-accent-text: 255 146 72;
+  --c-on-accent: 22 12 6;
+  --c-danger: 255 99 132;
+  --c-danger-text: 255 130 156;
+  --c-success: 86 214 150;
+  --c-success-text: 110 226 170;
+  --c-warn: 255 184 64;
+  --c-warn-text: 255 198 100;
+  --c-gold: 250 206 60;
+  --c-gold-text: 253 216 96;
+  --c-gym: 184 146 255;
+  --c-gym-text: 204 176 255;
+  --panel-bg: linear-gradient(160deg, rgb(var(--c-surface) / 0.92), rgb(var(--c-surface) / 0.78));
+  --panel-border: rgb(var(--c-fg) / 0.07);
+  --panel-shadow: 0 1px 0 rgb(var(--c-fg) / 0.05) inset, 0 18px 40px rgb(0 0 0 / 0.35);
+  --modal-bg: rgb(var(--c-surface-2));
+  --backdrop: rgb(6 4 10 / 0.72);
+  --glow: 0 8px 28px rgb(var(--c-accent) / 0.22);
+}
+
+[data-theme='halloween'][data-scheme='light'] {
+  color-scheme: light;
+  --c-bg: 248 244 239;
+  --c-surface: 255 255 255;
+  --c-surface-2: 255 255 255;
+  --c-fg: 28 16 40;
+  --c-fg-2: 52 38 68;
+  --c-muted: 94 82 110;
+  --c-subtle: 112 100 128;
+  --c-faint: 170 160 182;
+  --c-well: 222 212 226;
+  --c-accent: 255 122 26;
+  --c-accent-text: 178 66 0;
+  --c-on-accent: 28 16 40;
+  --c-danger: 206 30 64;
+  --c-danger-text: 180 20 52;
+  --c-success: 16 140 90;
+  --c-success-text: 4 115 78;
+  --c-warn: 196 112 0;
+  --c-warn-text: 150 86 0;
+  --c-gold: 176 116 4;
+  --c-gold-text: 148 92 6;
+  --c-gym: 124 58 237;
+  --c-gym-text: 109 40 217;
+  --panel-bg: rgb(var(--c-surface) / 0.9);
+  --panel-border: rgb(var(--c-fg) / 0.08);
+  --panel-shadow: 0 1px 2px rgb(28 16 40 / 0.05), 0 10px 30px rgb(28 16 40 / 0.06);
+  --modal-bg: rgb(var(--c-surface));
+  --backdrop: rgb(28 16 40 / 0.42);
+  --glow: 0 6px 20px rgb(var(--c-accent) / 0.25);
+  /* Orange auf Weiß ist als Rahmen zu schwach (2.6:1) - Ring in der dunklen Textvariante */
+  --accent-ring: 178 66 0;
 }

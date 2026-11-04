@@ -2194,3 +2194,29 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261104194306_V15ProgramSchedule') THEN
+    ALTER TABLE "Programs" ADD "MatchDays" integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261104194306_V15ProgramSchedule') THEN
+    ALTER TABLE "Programs" ADD "TrainingDays" integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261104194306_V15ProgramSchedule') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261104194306_V15ProgramSchedule', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

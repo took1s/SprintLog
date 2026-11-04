@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { t, tn, locale, setLocale, SUPPORTED_LOCALES, LOCALE_NAMES } from '@/i18n';
 
-const TOGGLES = ['autoTimer', 'sound', 'vibration', 'wakeLock', 'showTechnique', 'useRir', 'rpePrompt'] as const;
+const TOGGLES = ['autoTimer', 'sound', 'vibration', 'wakeLock', 'showTechnique', 'useRir', 'rpePrompt', 'motivation'] as const;
 import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
 import AccountSecurity from '@/components/AccountSecurity.vue';
 import { formatDate } from '@/lib/format';
-import { appearance, activeScheme, setScheme, setTheme, SCHEMES, THEMES, THEME_SWATCHES } from '@/lib/theme';
+import { appearance, activeScheme, inSeason, setScheme, setTheme, SCHEMES, THEMES, THEME_SWATCHES } from '@/lib/theme';
 
 const app = useAppStore();
 const { deleteAccount, online, pendingCount, profile, settings, settingsOpen, syncing, user } = storeToRefs(app);
@@ -36,7 +36,9 @@ const { confirmDeleteAccount, exportData, logout, syncNow } = app;
                           <span class="h-8 flex-1 rounded-md" :style="{ background: THEME_SWATCHES[name][activeScheme][1] }"></span>
                           <span class="h-8 w-8 rounded-md" :style="{ background: THEME_SWATCHES[name][activeScheme][2] }"></span>
                       </span>
-                      <span class="mt-2 block px-1 text-sm font-bold text-white">{{ t(`appearance.themes.${name}.name`) }}</span>
+                      <span class="mt-2 flex items-center gap-1.5 px-1 text-sm font-bold text-white">{{ t(`appearance.themes.${name}.name`) }}
+                          <span v-if="inSeason(name)" class="rounded-full bg-accent/15 px-1.5 py-0.5 text-[9px] font-black uppercase text-accent tracking-label">{{ t('appearance.season') }}</span>
+                      </span>
                       <span class="block px-1 pb-1 text-[11px] leading-tight text-slate-400">{{ t(`appearance.themes.${name}.description`) }}</span>
                   </button>
               </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DecimalInput from '@/components/DecimalInput.vue';
 // Kraft-Ziel anlegen/bearbeiten: Übung wählen, Zielgewicht × Wdh., Startwert, Steigerung, optional Wunschdatum.
 // Unten steht live die erste Vorgabe und wie realistisch das Datum ist - man sieht sofort, was die App daraus macht.
 import { computed, ref, watch } from 'vue';
@@ -100,7 +101,7 @@ const realismClass = computed(() => ({ ok: 'text-emerald-400', ambitious: 'text-
                       <label class="label-xs mb-2" for="goal-weight">{{ t('goals.targetWeight') }}</label>
                       <div class="stepper">
                           <button type="button" @click="stepWeight(-draft.increment)" class="stepper-btn" :aria-label="t('set.decrease', { what: t('set.fields.weight') })">-</button>
-                          <input id="goal-weight" v-model.number="draft.targetWeight" type="number" inputmode="decimal" min="0" step="0.5" class="stepper-input" data-test="goal-weight">
+                          <DecimalInput id="goal-weight" :model-value="draft.targetWeight" @update:model-value="draft.targetWeight = $event ?? 0" class="stepper-input" data-test="goal-weight" />
                           <button type="button" @click="stepWeight(draft.increment)" class="stepper-btn" :aria-label="t('set.increase', { what: t('set.fields.weight') })">+</button>
                       </div>
 
@@ -113,7 +114,7 @@ const realismClass = computed(() => ({ ok: 'text-emerald-400', ambitious: 'text-
 
                       <label class="label-xs mb-2 mt-5" for="goal-start">{{ t('goals.current') }}</label>
                       <div class="flex items-center gap-3">
-                          <input id="goal-start" v-model.number="draft.startE1RM" type="number" inputmode="decimal" min="0" step="0.5" class="field h-12 w-32 rounded-xl px-4 font-mono text-lg font-bold" data-test="goal-start">
+                          <DecimalInput id="goal-start" v-model="draft.startE1RM" class="field h-12 w-32 rounded-xl px-4 font-mono text-lg font-bold" data-test="goal-start" />
                           <span class="text-xs leading-snug text-slate-500">{{ goals.estimateFor(ex.id) ? t('goals.currentHint') : t('goals.currentUnknown') }}</span>
                       </div>
 

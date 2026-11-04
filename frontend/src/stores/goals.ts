@@ -9,6 +9,9 @@ import { t } from '../i18n';
 import { isApiError, type Api } from '../lib/api';
 import { goalProgress, goalSessions, nextPrescription, reachesGoal, type GoalPrescription, type GoalProgress, type LiftGoal } from '../lib/goals';
 import { readJson, userKeys, writeJson } from '../lib/storage';
+import { eventLine } from '../lib/motivation';
+import { exerciseName } from '../i18n/content';
+import { formatNumber } from '../lib/format';
 import { epley1RM } from '../lib/analytics';
 import type { Exercise, Workout, WorkoutSet } from '../types';
 import { useUiStore } from './ui';
@@ -189,7 +192,9 @@ export const useGoalsStore = defineStore('goals', () => {
     g.achievedAt = new Date().toISOString();
     g.pending = 'put';
     persist();
-    useUiStore().toast(t('goals.toast.achieved', { weight: g.targetWeight, reps: g.targetReps }), 'gold');
+    const ex = app().exercisesById.get(g.exerciseId);
+    const line = eventLine('goalReached', { exercise: exerciseName(ex ?? g.exerciseId), weight: formatNumber(g.targetWeight, 2) });
+    useUiStore().toast(line || t('goals.toast.achieved', { weight: g.targetWeight, reps: g.targetReps }), 'gold');
     await pushPending();
   }
 

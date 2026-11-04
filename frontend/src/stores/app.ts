@@ -33,6 +33,14 @@ import type {
 } from '../types';
 import { useUiStore } from './ui';
 import { useGoalsStore, type GoalView } from './goals';
+import { alternativesFor, type Alternative } from '../lib/alternatives';
+import { hasSchedule, kindOf, nextDayOf, weekdayOf, type Schedule } from '../lib/schedule';
+import { estimateRecovery, recoveryStatus, type RecoveryEstimate } from '../lib/recovery';
+import { dailyLine, eventLine, isMilestone, startTrigger } from '../lib/motivation';
+import { coachToday, regionsOf } from '../lib/coach';
+import { recommendPlans, scheduleFor, type PlanAnswers } from '../lib/planBuilder';
+import { regionOf } from '../lib/recovery';
+import { isLocalExerciseId, localExerciseId, mergeExercises, queueHasLocalExercises, remapIds, remapKeys, remapQueue, remapSets } from '../lib/offlineExercises';
 import { t, tn, tDynamic, intlLocale, textIn, loadAllLocales, SUPPORTED_LOCALES } from '../i18n';
 import { templateText, exerciseName as trExerciseName, dayName as trDayName, programName as trProgramName } from '../i18n/content';
 
@@ -50,6 +58,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   useRir: false,
   /** Nach jedem Satz kurz RPE/RIR abfragen (eine Zeile unter dem Satz, ohne Dialog). */
   rpePrompt: true,
+  /** Motivations-Zeilen auf dem Startbildschirm, bei Rekorden und nach dem Training. */
+  motivation: true,
 });
 export type Settings = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: (typeof DEFAULT_SETTINGS)[K] extends boolean ? boolean : number };
 
@@ -82,6 +92,8 @@ export interface SessionSet extends WorkoutSet {
 
 export interface PlanTarget extends ProgramExercise {
   name?: string;
+  /** Ersetzt (z. B. kein Ball da): Name der Übung aus dem Plan. */
+  replacedFrom?: string;
   category: string;
   suggestion: TargetSuggestion;
 }
@@ -392,6 +404,131 @@ export const useAppStore = defineStore('app', () => {
     const f = finishModal.value;
     return (f.sessionRpe ?? 0) > 0 && (f.durationMin ?? 0) > 0 ? Math.round(f.sessionRpe! * f.durationMin!) : 0;
   });
+  // ---------- Wochenplan + Erholung ----------
+  /** Wochenplan offline ändern: lokal sofort, Server beim nächsten Sync (PUT ist idempotent). */
+  const schedulePendingKey = () => (user.value ? `sprintlog:${user.value.userId}:schedulePending` : null);
+  const pendingSchedules = (): Record<number, Schedule> => { const k = schedulePendingKey(); return k ? readJson(k, {}) : {}; };
+  const savePendingSchedules = (v: Record<number, Schedule>) => { const k = schedulePendingKey(); if (k) writeJson(k, v); };
+  function applyPendingSchedules(list: TrainingProgram[]): TrainingProgram[] {
+    const p = pendingSchedules();
+    return list.map((x) => (p[x.id] ? { ...x, ...p[x.id] } : x));
+  }
+  async function pushPendingSchedules() {
+    const p = pendingSchedules();
+    for (const [id, sch] of Object.entries(p)) {
+      try { await api().put(`/api/programs/${id}/schedule`, sch); delete p[Number(id)]; } catch (e) { if (isNetworkError(e)) break; delete p[Number(id)]; }
+    }
+    savePendingSchedules(p);
+  }
+  async function setSchedule(program: TrainingProgram, schedule: Schedule) {
+    programs.value = programs.value.map((x) => (x.id === program.id ? { ...x, ...schedule } : x));
+    if (keys.value) writeJson(keys.value.programs, programs.value);
+    savePendingSchedules({ ...pendingSchedules(), [program.id]: schedule });
+    await pushPendingSchedules();
+  }
+
+  /** Heute laut Wochenplan des aktiven Programms (null = kein Wochenplan). */
+  const todayPlan = computed(() => {
+    const p = activeProgram.value;
+    if (!p || !hasSchedule(p)) return null;
+    const today = clockDate.value;
+    const kind = kindOf(p, weekdayOf(today));
+    const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    return { kind, nextTraining: kind === 'training' ? today : nextDayOf(p, 'training', tomorrow), nextMatch: nextDayOf(p, 'match', today) };
+  });
+
+  /** Tage der Reha-Programme (Einheiten daraus belasten wenig). */
+  const rehabDayIds = computed(() => new Set(programs.value.filter((p) => p.goal === 'Rehab').flatMap((p) => p.days.map((d) => d.id!))));
+  const muscleOf = (id: number | null | undefined) => { const e = id != null ? exercisesById.value.get(id) : undefined; return { muscleGroup: e?.muscleGroup, trackingType: e?.trackingType }; };
+  /** Erholungsstatus je Bereich aus den letzten Tagen. */
+  const recovery = computed(() => recoveryStatus(allWorkouts.value, muscleOf, clockDate.value, rehabDayIds.value));
+  /** Schätzung für die gerade laufende Einheit (im Abschluss-Dialog). */
+  const sessionRecovery = computed(() => estimateRecovery(
+    session.value.sets.map((x) => ({ ...x, ...muscleOf(x.exerciseId) })),
+    { sessionRpe: finishModal.value.sessionRpe, durationMin: finishModal.value.durationMin, rehab: session.value.plan?.dayId != null && rehabDayIds.value.has(session.value.plan.dayId) },
+  ));
+
+  // ---------- Motivation ----------
+  const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  /** Zeile auf dem Startbildschirm (null = keine, z. B. heute schon trainiert und nichts Besonderes). */
+  const startLine = computed(() => {
+    if (!settings.value.motivation) return '';
+    const now = clockDate.value;
+    const days = new Set(allWorkouts.value.map((w) => dayKey(new Date(String(w.date)))));
+    const last = allWorkouts.value.reduce<number>((m, w) => Math.max(m, new Date(String(w.date)).getTime() || 0), 0);
+    // Serie: Tage mit Einheit bis heute/gestern; geplante Ruhe- und Spieltage unterbrechen sie nicht
+    const p = activeProgram.value;
+    let streak = 0;
+    for (let i = days.has(dayKey(now)) ? 0 : 1; i < 60; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      if (days.has(dayKey(d))) { streak += 1; continue; }
+      if (p && hasSchedule(p) && kindOf(p, weekdayOf(d)) !== 'training') continue;
+      break;
+    }
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - weekdayOf(now));
+    const weekCount = allWorkouts.value.filter((w) => new Date(String(w.date)) >= monday).length;
+    const trig = startTrigger({
+      now, name: user.value?.username, trainedToday: days.has(dayKey(now)),
+      daysSinceLast: last ? Math.floor((now.getTime() - last) / 86_400_000) : null,
+      streak, weekCount, todayKind: todayPlan.value?.kind ?? null, rehabActive: p?.goal === 'Rehab',
+    });
+    return trig ? dailyLine(trig.key, trig.params, now) : '';
+  });
+
+  // ---------- Coach ----------
+  const coach = computed(() => {
+    const now = clockDate.value;
+    const p = activeProgram.value;
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const days = new Set(allWorkouts.value.map((w) => dayKey(new Date(String(w.date)))));
+    const last = allWorkouts.value.reduce<number>((m, w) => Math.max(m, new Date(String(w.date)).getTime() || 0), 0);
+    const next = programInfo.value?.next ?? null;
+    const nextRegions = next ? regionsOf(next.exercises.map((x) => ({ region: regionOf(x.muscleGroup ?? exercisesById.value.get(x.exerciseId)?.muscleGroup, x.trackingType ?? exercisesById.value.get(x.exerciseId)?.trackingType), sets: x.sets }))) : [];
+    return coachToday({
+      now,
+      todayKind: p && hasSchedule(p) ? kindOf(p, weekdayOf(now)) : null,
+      tomorrowKind: p && hasSchedule(p) ? kindOf(p, weekdayOf(tomorrow)) : null,
+      loadZone: loadInfo.value.zone,
+      readiness: readinessToday.value,
+      recovery: recovery.value,
+      daysSinceLast: last ? Math.floor((now.getTime() - last) / 86_400_000) : null,
+      trainedToday: days.has(dayKey(now)),
+      rehab: p?.goal === 'Rehab',
+      nextDay: p && next ? trDayName(p, next) : null,
+      nextDayRegions: nextRegions,
+    });
+  });
+
+  /** "Plan für mich": Antworten -> passende Vorlagen + Wochenplan. */
+  const planBuilder = ref<{ open: boolean; answers: PlanAnswers; busy: boolean }>({ open: false, answers: { focus: 'football', daysPerWeek: 3, matchDay: 6, level: 'Intermediate' }, busy: false });
+  const planChoices = computed(() => recommendPlans(templates.value, planBuilder.value.answers));
+  function openPlanBuilder() {
+    const a = planBuilder.value.answers;
+    planBuilder.value = { open: true, answers: { ...a, focus: activeProgram.value?.goal === 'Rehab' ? 'rehab' : a.focus }, busy: false };
+  }
+  async function startPlanChoice(template: ProgramTemplate) {
+    const b = planBuilder.value;
+    b.busy = true;
+    try {
+      await startTemplate(template);
+      const p = activeProgram.value;
+      if (p && p.templateKey === template.key) await setSchedule(p, scheduleFor(b.answers));
+      b.open = false;
+    } finally {
+      b.busy = false;
+    }
+  }
+
+  function prLine(set: { exerciseId: number; exerciseName?: string; weight?: number | null }): string {
+    const name = trExerciseName(set.exerciseId, set.exerciseName);
+    if (!settings.value.motivation || !(set.weight && set.weight > 0)) return t('set.toast.record', { name });
+    return eventLine('personalRecord', { exercise: name, weight: formatNumber(set.weight, 2) }) || t('set.toast.record', { name });
+  }
+
+  /** Zusammenfassung direkt nach dem Speichern: Motivation, Eckdaten, Erholung, nächstes Training. */
+  const summary = ref<{ line: string; recovery: RecoveryEstimate; at: string; sets: number; volume: number; minutes: number | null; rpe: number | null } | null>(null);
+  function closeSummary() { summary.value = null; }
+
   const sessionElapsed = computed(() => (session.value.startedAt ? Math.max(0, (now.value - new Date(session.value.startedAt).getTime()) / 1000) : 0));
   const sessionGroups = computed(() => groupSetsByExercise(session.value.sets));
   const sessionSummary = computed(() => summarizeWorkout({ sets: session.value.sets }));
@@ -681,6 +818,7 @@ export const useAppStore = defineStore('app', () => {
     if (refresh) await refreshSession();
     if (!isAuthenticated.value) return;
     await Promise.allSettled([loadExercises(), loadFavorites(), loadPrograms(), loadTemplates(), loadWellness(), goalsStore.load()]);
+    await pushLocalExercises();
     await syncNow({ reload: false });
     await loadHistory();
   }
@@ -688,7 +826,8 @@ export const useAppStore = defineStore('app', () => {
   async function loadExercises() {
     loadingExercises.value = !exercises.value.length;
     try {
-      exercises.value = await api().get<Exercise[]>('/api/exercises');
+      // Noch nicht synchronisierte eigene Übungen (offline angelegt) behalten
+      exercises.value = mergeExercises(await api().get<Exercise[]>('/api/exercises'), exercises.value);
       writeJson(keys.value!.exercises, exercises.value);
       online.value = true;
       enrichSession();
@@ -729,7 +868,8 @@ export const useAppStore = defineStore('app', () => {
     if (!isAuthenticated.value) return;
     loadingPrograms.value = !programs.value.length;
     try {
-      programs.value = await api().get<TrainingProgram[]>('/api/programs');
+      await pushPendingSchedules();
+      programs.value = applyPendingSchedules(await api().get<TrainingProgram[]>('/api/programs'));
       writeJson(keys.value!.programs, programs.value);
     } catch (e) {
       if (isNetworkError(e)) online.value = false;
@@ -747,7 +887,10 @@ export const useAppStore = defineStore('app', () => {
 
   async function loadFavorites() {
     try {
-      favorites.value = await api().get<number[]>('/api/favorites');
+      await pushPendingFavorites();
+      const server = await api().get<number[]>('/api/favorites');
+      // Offline angelegte (lokale) Favoriten behalten, bis ihre Übung synchronisiert ist
+      favorites.value = [...server, ...favorites.value.filter((id) => isLocalExerciseId(id) && !server.includes(id))];
       writeJson(keys.value!.favorites, favorites.value);
     } catch (e) {
       if (isNetworkError(e)) online.value = false;
@@ -779,8 +922,64 @@ export const useAppStore = defineStore('app', () => {
   let syncRun = 0;
   let syncStartedAt = 0;
 
+  /**
+   * Offline angelegte eigene Übungen beim Server anlegen und alle Verweise auf die echte ID umschreiben.
+   * Liefert false, solange noch lokale Übungen übrig sind (dann warten Einheiten mit ihnen in der Schlange).
+   */
+  let pushingExercises: Promise<boolean> | null = null;
+  function pushLocalExercises(): Promise<boolean> {
+    pushingExercises ??= (async () => {
+      const local = exercises.value.filter((e) => isLocalExerciseId(e.id));
+      if (!local.length) return true;
+      const mapping = new Map<number, number>();
+      for (const ex of local) {
+        try {
+          const created = await api().post<Exercise>('/api/exercises', { name: ex.name, category: ex.category, muscleGroup: ex.muscleGroup || null, trackingType: ex.trackingType });
+          mapping.set(ex.id, created.id);
+          exercises.value = exercises.value.map((e) => (e.id === ex.id ? created : e));
+        } catch (e) {
+          if (isNetworkError(e)) { online.value = false; break; }
+          // Name schon vergeben (z. B. auf einem anderen Gerät angelegt): die vorhandene Übung übernehmen
+          const sameName = (list: readonly Exercise[]) => list.find((x) => !isLocalExerciseId(x.id) && x.name.toLowerCase() === ex.name.toLowerCase());
+          let same = sameName(exercises.value);
+          if (!same) {
+            try { same = sameName(await api().get<Exercise[]>('/api/exercises')); } catch { /* nächster Versuch beim nächsten Sync */ }
+          }
+          if (same) {
+            const match = same;
+            mapping.set(ex.id, match.id);
+            exercises.value = [...exercises.value.filter((x) => x.id !== ex.id && x.id !== match.id), match];
+          } else console.warn('[exercises] offline exercise rejected', e);
+        }
+      }
+      if (mapping.size) applyExerciseMapping(mapping);
+      return !exercises.value.some((e) => isLocalExerciseId(e.id));
+    })().finally(() => { pushingExercises = null; });
+    return pushingExercises;
+  }
+
+  function applyExerciseMapping(m: Map<number, number>) {
+    const s = session.value;
+    s.sets = remapSets(s.sets, m);
+    s.order = remapIds(s.order, m);
+    s.done = remapIds(s.done, m);
+    s.templates = remapKeys(s.templates, m);
+    if (s.plan?.targets) s.plan.targets = s.plan.targets.map((x) => ({ ...x, exerciseId: m.get(x.exerciseId) ?? x.exerciseId }));
+    ghostDraft.value = remapKeys(ghostDraft.value, m) ?? {};
+    queue.value = remapQueue(queue.value, m);
+    favorites.value = remapIds(favorites.value, m) ?? [];
+    if (keys.value) {
+      writeJson(keys.value.exercises, exercises.value);
+      writeJson(keys.value.favorites, favorites.value);
+    }
+    persistQueue();
+    persistSession();
+  }
+
   async function syncNow({ reload = true } = {}) {
     if (!isAuthenticated.value || !queue.value.some((q) => q.status === QueueStatus.Pending)) return;
+    // Einheiten mit offline angelegten Übungen erst senden, wenn die Übungen beim Server sind
+    if (queueHasLocalExercises(queue.value) && !(await pushLocalExercises())) return;
     if (syncing.value && Date.now() - syncStartedAt < SYNC_LOCK_MS) return;
     const run = ++syncRun;
     syncing.value = true;
@@ -822,7 +1021,10 @@ export const useAppStore = defineStore('app', () => {
    * Ein Versuch ohne Netz scheitert sofort und kostet nichts.
    */
   function kickSync() {
-    if (isAuthenticated.value && pendingCount.value) void syncNow();
+    if (!isAuthenticated.value) return;
+    if (Object.keys(pendingFavorites()).length) void pushPendingFavorites();
+    if (exercises.value.some((e) => isLocalExerciseId(e.id))) void pushLocalExercises().then(() => { if (pendingCount.value) void syncNow(); });
+    else if (pendingCount.value) void syncNow();
   }
 
   /**
@@ -837,7 +1039,7 @@ export const useAppStore = defineStore('app', () => {
     }
     await syncNow();
     const entry = queue.value.find((q) => q.clientId === clientId);
-    if (!entry) toast(savedMessage, 'success');
+    if (!entry) { if (savedMessage) toast(savedMessage, 'success'); }
     else if (entry.status === QueueStatus.Pending) toast(offlineMessage, 'info');
     // Failed: syncNow hat die Ablehnung bereits gemeldet.
   }
@@ -851,18 +1053,33 @@ export const useAppStore = defineStore('app', () => {
   // =====================================================================
   // Favoriten / Übungsliste
   // =====================================================================
+  /** Favoriten-Änderungen ohne Netz: lokal sofort, an den Server beim nächsten Sync (letzter Stand je Übung zählt). */
+  const favoritesPendingKey = () => (user.value ? `sprintlog:${user.value.userId}:favoritesPending` : null);
+  function pendingFavorites(): Record<number, 'add' | 'remove'> { const k = favoritesPendingKey(); return k ? readJson(k, {}) : {}; }
+  function setPendingFavorites(v: Record<number, 'add' | 'remove'>) { const k = favoritesPendingKey(); if (k) writeJson(k, v); }
+
+  async function pushPendingFavorites() {
+    const pending = pendingFavorites();
+    for (const [id, op] of Object.entries(pending)) {
+      if (isLocalExerciseId(Number(id))) continue;
+      try {
+        if (op === 'remove') await api().del(`/api/favorites/${id}`);
+        else await api().post(`/api/favorites/${id}`);
+        delete pending[Number(id)];
+      } catch (e) {
+        if (isNetworkError(e)) break;
+        delete pending[Number(id)];
+      }
+    }
+    setPendingFavorites(pending);
+  }
+
   async function toggleFavorite(ex: Exercise) {
-    if (!online.value) { toast(t('favorites.needsConnection'), 'error'); return; }
     const isFav = favorites.value.includes(ex.id);
     favorites.value = isFav ? favorites.value.filter((id) => id !== ex.id) : [...favorites.value, ex.id];
-    try {
-      if (isFav) await api().del(`/api/favorites/${ex.id}`);
-      else await api().post(`/api/favorites/${ex.id}`);
-      writeJson(keys.value!.favorites, favorites.value);
-    } catch (e) {
-      toast(errorMessage(e), 'error');
-      await loadFavorites();
-    }
+    writeJson(keys.value!.favorites, favorites.value);
+    setPendingFavorites({ ...pendingFavorites(), [ex.id]: isFav ? 'remove' : 'add' });
+    await pushPendingFavorites();
   }
 
   function toggleMuscleFilter(group: string) {
@@ -984,7 +1201,7 @@ export const useAppStore = defineStore('app', () => {
     }
     persistSession();
     closeSetModal();
-    if (wasPR) toast(t('set.toast.record', { name: trExerciseName(set.exerciseId, set.exerciseName) }), 'gold');
+    if (wasPR) toast(prLine(set), 'gold');
     void goalsStore.checkAchieved(set);
   }
 
@@ -1067,7 +1284,9 @@ export const useAppStore = defineStore('app', () => {
   });
 
   function ensureStarted() {
-    if (!session.value.startedAt) session.value.startedAt = new Date().toISOString();
+    if (session.value.startedAt) return;
+    session.value.startedAt = new Date().toISOString();
+    if (!session.value.plan && !isEditing.value) announceSessionStart();
   }
 
   /** Übungen als Blöcke hinzufügen (ohne Satz). Startet die Einheit. */
@@ -1102,6 +1321,19 @@ export const useAppStore = defineStore('app', () => {
     const j = i + delta;
     if (i < 0 || j < 0 || j >= order.length) return;
     [order[i], order[j]] = [order[j], order[i]];
+    session.value.order = order;
+    persistSession();
+  }
+
+  /** Übung an eine neue Position ziehen (Drag & Drop). */
+  function reorderBlock(id: number, toIndex: number) {
+    const order = workoutBlocks.value.map((b) => b.exercise.id);
+    const from = order.indexOf(id);
+    if (from < 0) return;
+    const to = Math.max(0, Math.min(order.length - 1, toIndex));
+    if (from === to) return;
+    order.splice(from, 1);
+    order.splice(to, 0, id);
     session.value.order = order;
     persistSession();
   }
@@ -1182,8 +1414,23 @@ export const useAppStore = defineStore('app', () => {
     if (block.target?.sets && !set.isWarmup && block.workingDone + 1 >= block.target.sets) markDone(id, true);
     rpePrompt.value = settings.value.rpePrompt && !set.isWarmup && type === TrackingType.WeightReps ? { index: session.value.sets.length - 1, exerciseId: id } : null;
     persistSession();
-    if (wasPR) toast(t('set.toast.record', { name: trExerciseName(set.exerciseId, set.exerciseName) }), 'gold');
+    if (wasPR) toast(prLine(set), 'gold');
     void goalsStore.checkAchieved(set);
+  }
+
+  // ---------- Timer für Zeit-Übungen (Planke, Isometrie) ----------
+  const holdTimer = ref<{ exerciseId: number; target: number; startedAt: number; pausedAt: number | null; pausedMs: number } | null>(null);
+  function startHold(id: number) {
+    const block = workoutBlocks.value.find((b) => b.exercise.id === id);
+    const target = Math.max(1, Math.round(block?.ghost.time ?? 30));
+    holdTimer.value = { exerciseId: id, target, startedAt: Date.now(), pausedAt: null, pausedMs: 0 };
+  }
+  function closeHoldTimer() { holdTimer.value = null; }
+  /** Gehaltene Sekunden als Satz loggen (wie ✓, nur mit der gemessenen Zeit). */
+  function logHold(id: number, seconds: number) {
+    holdTimer.value = null;
+    setGhostValue(id, 'time', seconds);
+    quickLog(id);
   }
 
   // ---------- Übungs-Info (Technik, eigene Werte, Ziel) ----------
@@ -1244,13 +1491,68 @@ export const useAppStore = defineStore('app', () => {
   }
 
   // ---------- Übungsauswahl ----------
-  const picker = ref({ open: false, query: '', filter: 'recent' as PickerFilter, category: 'Gym' as 'Gym' | 'Football', muscle: null as string | null, selected: [] as number[] });
+  const picker = ref({
+    open: false, query: '', filter: 'recent' as PickerFilter, category: 'Gym' as 'Gym' | 'Football', muscle: null as string | null, selected: [] as number[],
+    /** Ersetzen-Modus: diese Übung wird gegen die gewählte getauscht (ein Tipp genügt). */
+    replaceFor: null as number | null,
+  });
 
   function openPicker() {
     void loadAllLocales(); // mehrsprachige Suche
-    picker.value = { open: true, query: '', filter: records.value.size ? 'recent' : 'all', category: tab.value === 'Football' ? 'Football' : 'Gym', muscle: null, selected: [] };
+    picker.value = { open: true, query: '', filter: records.value.size ? 'recent' : 'all', category: tab.value === 'Football' ? 'Football' : 'Gym', muscle: null, selected: [], replaceFor: null };
+  }
+  /** "Ersetzen" im Block-Menü: z. B. kein Ball da -> passende Alternative wählen. */
+  function openReplace(id: number) {
+    void loadAllLocales();
+    const ex = exerciseFor(id);
+    picker.value = { open: true, query: '', filter: 'all', category: ex?.category === 'Football' ? 'Football' : 'Gym', muscle: null, selected: [], replaceFor: id };
+  }
+  /** Vorschläge im Ersetzen-Modus. */
+  const replaceSuggestions = computed<Alternative[]>(() => {
+    const id = picker.value.replaceFor;
+    const original = id != null ? exerciseFor(id) : null;
+    if (!original) return [];
+    const exclude = new Set(workoutBlocks.value.map((b) => b.exercise.id));
+    return alternativesFor(original, exercises.value, { exclude, used: (x) => usage.value.get(`id:${x}`) ?? 0 });
+  });
+  /** Übung im Block tauschen. Schon geloggte Sätze bleiben beim Original (das dann als fertig gilt). */
+  function replaceBlock(fromId: number, toId: number) {
+    const s = session.value;
+    const order = workoutBlocks.value.map((b) => b.exercise.id);
+    const at = order.indexOf(fromId);
+    if (at < 0 || order.includes(toId)) return;
+    const hasSets = s.sets.some((x) => x.exerciseId === fromId);
+    const to = exerciseFor(toId);
+    // Plan-Vorgabe übernehmen, damit Fortschritt und Hinweise weiterlaufen
+    if (s.plan?.targets) {
+      const target = s.plan.targets.find((x) => x.exerciseId === fromId);
+      if (target && !s.plan.targets.some((x) => x.exerciseId === toId)) {
+        const copy: PlanTarget = { ...target, exerciseId: toId, exerciseName: to?.name ?? target.exerciseName, replacedFrom: target.exerciseName, suggestion: { kind: 'new' } as TargetSuggestion };
+        s.plan.targets = hasSets ? [...s.plan.targets, copy] : s.plan.targets.map((x) => (x.exerciseId === fromId ? copy : x));
+      }
+    }
+    if (hasSets) {
+      order.splice(at + 1, 0, toId);
+      s.done = [...new Set([...(s.done ?? []), fromId])];
+    } else {
+      order.splice(at, 1, toId);
+      if (s.templates) delete s.templates[fromId];
+      s.done = (s.done ?? []).filter((x) => x !== fromId);
+      delete ghostDraft.value[fromId];
+    }
+    s.order = order;
+    ensureStarted();
+    persistSession();
+    toast(t('workout.toast.replaced', { from: trExerciseName(fromId), to: trExerciseName(toId) }), 'success');
   }
   function togglePicked(id: number) {
+    if (picker.value.replaceFor != null) {
+      const from = picker.value.replaceFor;
+      picker.value.open = false;
+      picker.value.replaceFor = null;
+      replaceBlock(from, id);
+      return;
+    }
     const sel = picker.value.selected;
     picker.value.selected = sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id];
   }
@@ -1286,6 +1588,15 @@ export const useAppStore = defineStore('app', () => {
   /** Leere Einheit starten: Übungsauswahl öffnen. */
   async function startWorkout() {
     openPicker();
+  }
+
+  /** Erste Einheit des Tages: kurze Motivations-Zeile. */
+  function announceSessionStart() {
+    if (!settings.value.motivation) return;
+    const today = dayKey(new Date());
+    if (allWorkouts.value.some((w) => dayKey(new Date(String(w.date))) === today)) return;
+    const line = eventLine('sessionStart', {});
+    if (line) toast(line, 'info');
   }
 
   /** Ergänzt Kategorie/Typ für Sätze aus Altdaten, sobald der Übungskatalog geladen ist. */
@@ -1369,6 +1680,25 @@ export const useAppStore = defineStore('app', () => {
     }
     persistQueue();
 
+    // Zusammenfassung (nur für neue Einheiten): Erholung aus den Sätzen, bevor die Session geleert wird
+    if (!editing) {
+      const total = allWorkouts.value.length + 1;
+      const rpe = base.sessionRpe;
+      const key = isMilestone(total) ? 'milestone' : (rpe ?? 0) >= 8.5 ? 'finishHard' : 'finish';
+      summary.value = {
+        line: settings.value.motivation ? eventLine(key, { total }) : t('finish.toast.saved'),
+        recovery: estimateRecovery(base.sets.map((x) => ({ ...x, ...muscleOf(x.exerciseId) })), {
+          kind: base.workoutType, sessionRpe: rpe, durationMin: base.durationSeconds ? base.durationSeconds / 60 : null,
+          rehab: base.programDayId != null && rehabDayIds.value.has(base.programDayId),
+        }),
+        at: new Date(new Date(base.date).getTime() + (base.durationSeconds ?? 0) * 1000).toISOString(),
+        sets: base.sets.filter((x) => !x.isWarmup).length,
+        volume: summarizeWorkout({ sets: base.sets }).volume,
+        minutes: base.durationSeconds ? Math.round(base.durationSeconds / 60) : null,
+        rpe,
+      };
+    }
+
     session.value = EMPTY_SESSION();
     ghostDraft.value = {};
     persistSession();
@@ -1377,7 +1707,8 @@ export const useAppStore = defineStore('app', () => {
     tab.value = 'Data';
     dataTab.value = 'history';
     // 2. ... dann synchronisieren.
-    await syncAndAnnounce(saved.clientId, t(editing ? 'finish.toast.updated' : 'finish.toast.saved'), t(editing ? 'finish.toast.updatedOffline' : 'finish.toast.savedOffline'));
+    // Neue Einheit: die Zusammenfassung bestätigt das Speichern schon - kein zweiter "Gespeichert"-Toast
+    await syncAndAnnounce(saved.clientId, editing ? t('finish.toast.updated') : '', t(editing ? 'finish.toast.updatedOffline' : 'finish.toast.savedOffline'));
   }
 
   /** Sätze einer Einheit in das Format der laufenden Session übernehmen. */
@@ -1760,7 +2091,7 @@ export const useAppStore = defineStore('app', () => {
   // =====================================================================
   /** @param name vorbelegter Name; mit Name aus der Übungsauswahl wird die neue Übung direkt zur Einheit hinzugefügt. */
   function openCustomModal(name?: string) {
-    if (!online.value) { toast(t('custom.toast.needsConnection'), 'error'); return; }
+    // Auch offline möglich: die Übung wird lokal angelegt und später synchronisiert (pushLocalExercises)
     const fromPicker = typeof name === 'string';
     customModal.value = {
       open: true,
@@ -1780,15 +2111,25 @@ export const useAppStore = defineStore('app', () => {
     if (m.name.trim().length < 2) { m.error = t('custom.errors.name'); return; }
     m.busy = true;
     try {
-      const created = await api().post<Exercise>('/api/exercises', {
-        name: m.name.trim(), category: m.category, muscleGroup: m.muscleGroup.trim() || null, trackingType: m.trackingType,
-      });
+      let created: Exercise;
+      const body = { name: m.name.trim(), category: m.category, muscleGroup: m.muscleGroup.trim() || null, trackingType: m.trackingType };
+      try {
+        created = await api().post<Exercise>('/api/exercises', body);
+      } catch (e) {
+        if (!isNetworkError(e)) throw e;
+        // Offline (z. B. Gym-WLAN mit Login-Seite): lokal anlegen, später synchronisieren.
+        // Gleiche Regel wie der Server: Namen dürfen nicht doppelt sein (sonst hinge die Einheit später fest).
+        online.value = false;
+        if (exercises.value.some((x) => x.name.toLowerCase() === body.name.toLowerCase())) { m.error = t('custom.errors.exists', { name: body.name }); return; }
+        created = { id: localExerciseId(exercises.value), name: body.name, category: body.category, muscleGroup: body.muscleGroup ?? '', trackingType: body.trackingType, isCustom: true } as Exercise;
+        toast(t('custom.toast.offline', { name: created.name }), 'info');
+      }
       exercises.value = [...exercises.value, created];
       writeJson(keys.value!.exercises, exercises.value);
       m.open = false;
       search.value = '';
       tab.value = created.category as Tab;
-      toast(t('custom.toast.created', { name: created.name }), 'success');
+      if (!isLocalExerciseId(created.id)) toast(t('custom.toast.created', { name: created.name }), 'success');
       if (m.addToWorkout) addExercises([created.id]);
       else openSetModal(created);
     } catch (e) {
@@ -1802,7 +2143,7 @@ export const useAppStore = defineStore('app', () => {
     const ok = await confirm({ title: t('custom.confirm.title'), message: t('custom.confirm.message', { name: ex.name }), confirmText: t('common.delete'), danger: true });
     if (!ok) return;
     try {
-      await api().del(`/api/exercises/${ex.id}`);
+      if (!isLocalExerciseId(ex.id)) await api().del(`/api/exercises/${ex.id}`);
       exercises.value = exercises.value.filter((e) => e.id !== ex.id);
       favorites.value = favorites.value.filter((id) => id !== ex.id);
       writeJson(keys.value!.exercises, exercises.value);
@@ -2140,9 +2481,10 @@ export const useAppStore = defineStore('app', () => {
     categoryExercises, availableMuscleGroups, allMuscleGroups, filteredExercises, sortLabel,
     sessionActive, hasSets, isEditing, finishLoad, sessionElapsed, sessionGroups, sessionSummary,
     workoutBlocks, ghostDraft, picker, obsidianWorkout, openObsidian, pickerResults, pickerMuscles, searchExercises,
-    exerciseInfo, openExerciseInfo, closeExerciseInfo,
+    exerciseInfo, openExerciseInfo, closeExerciseInfo, holdTimer, startHold, closeHoldTimer, logHold,
     rpePrompt, completeBlock, reopenBlock, setSetRpe, dismissRpePrompt, deleteSessionSet,
-    addExercises, removeBlock, moveBlock, setGhostValue, stepGhost, toggleGhostWarmup, quickLog, openPicker, togglePicked, addFromCatalog, confirmPicker, startWorkout, exerciseFor,
+    setSchedule, todayPlan, recovery, sessionRecovery, startLine, summary, closeSummary, coach, planBuilder, planChoices, openPlanBuilder, startPlanChoice,
+    addExercises, removeBlock, moveBlock, reorderBlock, openReplace, replaceBlock, replaceSuggestions, setGhostValue, stepGhost, toggleGhostWarmup, quickLog, openPicker, togglePicked, addFromCatalog, confirmPicker, startWorkout, exerciseFor,
     modalEx, modalType, modalKey, modalRecord, modalPrevious, modalSessionSets, modalTarget, modalE1RM, modalIntensity,
     modalZone, modalSpeed, modalSpeedVsBest, modalIsNewPR,
     timerActive, timerLeft, timerProgress,

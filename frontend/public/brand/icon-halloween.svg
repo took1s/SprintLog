@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Saison-Variante: Kürbis-S in violetter Nacht, Sichelmond -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22163a"/><stop offset="1" stop-color="#0c0814"/></linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ff7a1a" stop-opacity="0.24"/><stop offset="1" stop-color="#ff7a1a" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <circle cx="512" cy="512" r="440" fill="url(#glow)"/>
+  <path d="M316.5 260.6A100.0 100.0 0 1 1 220.1 128.0A82.0 82.0 0 0 0 316.5 260.6Z" fill="#f3e4cf"/>
+  <path transform="translate(534.5 476) scale(0.9) skewX(-14)" d="M230 -200H-40A120 120 0 0 0 -40 40H40A120 120 0 0 1 40 280H-260" fill="none" stroke="#ff7a1a" stroke-width="160"/>
+</svg>
