@@ -44,7 +44,7 @@ import BrandMark from '@/components/BrandMark.vue';
     <!-- Kopf: Marke, Sprache, Hell/Dunkel -->
     <header class="flex items-center justify-between py-2">
       <div class="flex items-center gap-2.5">
-        <BrandMark class="h-9 w-9 rounded-xl" />
+        <BrandMark :variant="appearance.theme === 'halloween' ? 'halloween' : 'default'" class="h-9 w-9 rounded-xl" />
         <span class="display text-xl text-white">SprintLog</span>
       </div>
       <div class="flex items-center gap-1">

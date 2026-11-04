@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DecimalInput from '@/components/DecimalInput.vue';
 import { t } from '@/i18n';
 import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
@@ -41,7 +42,7 @@ const bar = (value: number | null) => ({ good: 'bg-emerald-400', ok: 'bg-yellow-
           </div>
           <div class="grid grid-cols-3 gap-3">
               <label class="block"><span class="label-xs mb-1">{{ t('wellness.sleepHours') }}</span>
-                  <input v-model.number="checkIn.sleepHours" type="number" min="0" max="24" step="0.5" inputmode="decimal" class="cyber-input w-full rounded-xl p-2.5 text-sm" placeholder="8"></label>
+                  <DecimalInput v-model="checkIn.sleepHours" class="cyber-input w-full rounded-xl p-2.5 text-sm" placeholder="8" /></label>
               <label class="col-span-2 block"><span class="label-xs mb-1">{{ t('wellness.note') }}</span>
                   <input v-model="checkIn.note" maxlength="200" class="cyber-input w-full rounded-xl p-2.5 text-sm" :placeholder="t('wellness.notePlaceholder')"></label>
           </div>

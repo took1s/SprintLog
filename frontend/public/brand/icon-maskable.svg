@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Maskable: gleiche Gestaltung, Zeichen innerhalb der 80-%-Sicherheitszone -->
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#151e1a"/><stop offset="1" stop-color="#090c0b"/></linearGradient></defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <!-- Mittelkreis + Mittellinie: Fußball-Kontext, verschwindet in kleinen Größen bewusst -->
+  <g fill="none" stroke="#c6ff3d" stroke-opacity="0.08" stroke-width="28"><circle cx="512" cy="512" r="270"/><path d="M0 512H1024"/></g>
+  <path transform="translate(530.5 482.4) scale(0.74) skewX(-14)" d="M230 -200H-40A120 120 0 0 0 -40 40H40A120 120 0 0 1 40 280H-260" fill="none" stroke="#c6ff3d" stroke-width="160"/>
+</svg>

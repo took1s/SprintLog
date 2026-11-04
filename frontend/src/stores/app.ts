@@ -33,6 +33,7 @@ import type {
 } from '../types';
 import { useUiStore } from './ui';
 import { useGoalsStore, type GoalView } from './goals';
+import { alternativesFor, type Alternative } from '../lib/alternatives';
 import { t, tn, tDynamic, intlLocale, textIn, loadAllLocales, SUPPORTED_LOCALES } from '../i18n';
 import { templateText, exerciseName as trExerciseName, dayName as trDayName, programName as trProgramName } from '../i18n/content';
 
@@ -82,6 +83,8 @@ export interface SessionSet extends WorkoutSet {
 
 export interface PlanTarget extends ProgramExercise {
   name?: string;
+  /** Ersetzt (z. B. kein Ball da): Name der Übung aus dem Plan. */
+  replacedFrom?: string;
   category: string;
   suggestion: TargetSuggestion;
 }
@@ -1106,6 +1109,19 @@ export const useAppStore = defineStore('app', () => {
     persistSession();
   }
 
+  /** Übung an eine neue Position ziehen (Drag & Drop). */
+  function reorderBlock(id: number, toIndex: number) {
+    const order = workoutBlocks.value.map((b) => b.exercise.id);
+    const from = order.indexOf(id);
+    if (from < 0) return;
+    const to = Math.max(0, Math.min(order.length - 1, toIndex));
+    if (from === to) return;
+    order.splice(from, 1);
+    order.splice(to, 0, id);
+    session.value.order = order;
+    persistSession();
+  }
+
   function setGhostValue(id: number, field: 'weight' | 'reps' | 'distance' | 'time', value: unknown) {
     const num = Number(String(value).replace(',', '.'));
     ghostDraft.value = { ...ghostDraft.value, [id]: { ...ghostDraft.value[id], [field]: Number.isFinite(num) ? Math.max(0, num) : 0 } };
@@ -1186,6 +1202,21 @@ export const useAppStore = defineStore('app', () => {
     void goalsStore.checkAchieved(set);
   }
 
+  // ---------- Timer für Zeit-Übungen (Planke, Isometrie) ----------
+  const holdTimer = ref<{ exerciseId: number; target: number; startedAt: number; pausedAt: number | null; pausedMs: number } | null>(null);
+  function startHold(id: number) {
+    const block = workoutBlocks.value.find((b) => b.exercise.id === id);
+    const target = Math.max(1, Math.round(block?.ghost.time ?? 30));
+    holdTimer.value = { exerciseId: id, target, startedAt: Date.now(), pausedAt: null, pausedMs: 0 };
+  }
+  function closeHoldTimer() { holdTimer.value = null; }
+  /** Gehaltene Sekunden als Satz loggen (wie ✓, nur mit der gemessenen Zeit). */
+  function logHold(id: number, seconds: number) {
+    holdTimer.value = null;
+    setGhostValue(id, 'time', seconds);
+    quickLog(id);
+  }
+
   // ---------- Übungs-Info (Technik, eigene Werte, Ziel) ----------
   /** Geöffnete Info-Seite einer Übung; `source` = von wo (im Picker gibt es "Auswählen"). */
   const exerciseInfo = ref<{ id: number; source: 'picker' | 'workout' | 'catalog' } | null>(null);
@@ -1244,13 +1275,68 @@ export const useAppStore = defineStore('app', () => {
   }
 
   // ---------- Übungsauswahl ----------
-  const picker = ref({ open: false, query: '', filter: 'recent' as PickerFilter, category: 'Gym' as 'Gym' | 'Football', muscle: null as string | null, selected: [] as number[] });
+  const picker = ref({
+    open: false, query: '', filter: 'recent' as PickerFilter, category: 'Gym' as 'Gym' | 'Football', muscle: null as string | null, selected: [] as number[],
+    /** Ersetzen-Modus: diese Übung wird gegen die gewählte getauscht (ein Tipp genügt). */
+    replaceFor: null as number | null,
+  });
 
   function openPicker() {
     void loadAllLocales(); // mehrsprachige Suche
-    picker.value = { open: true, query: '', filter: records.value.size ? 'recent' : 'all', category: tab.value === 'Football' ? 'Football' : 'Gym', muscle: null, selected: [] };
+    picker.value = { open: true, query: '', filter: records.value.size ? 'recent' : 'all', category: tab.value === 'Football' ? 'Football' : 'Gym', muscle: null, selected: [], replaceFor: null };
+  }
+  /** "Ersetzen" im Block-Menü: z. B. kein Ball da -> passende Alternative wählen. */
+  function openReplace(id: number) {
+    void loadAllLocales();
+    const ex = exerciseFor(id);
+    picker.value = { open: true, query: '', filter: 'all', category: ex?.category === 'Football' ? 'Football' : 'Gym', muscle: null, selected: [], replaceFor: id };
+  }
+  /** Vorschläge im Ersetzen-Modus. */
+  const replaceSuggestions = computed<Alternative[]>(() => {
+    const id = picker.value.replaceFor;
+    const original = id != null ? exerciseFor(id) : null;
+    if (!original) return [];
+    const exclude = new Set(workoutBlocks.value.map((b) => b.exercise.id));
+    return alternativesFor(original, exercises.value, { exclude, used: (x) => usage.value.get(`id:${x}`) ?? 0 });
+  });
+  /** Übung im Block tauschen. Schon geloggte Sätze bleiben beim Original (das dann als fertig gilt). */
+  function replaceBlock(fromId: number, toId: number) {
+    const s = session.value;
+    const order = workoutBlocks.value.map((b) => b.exercise.id);
+    const at = order.indexOf(fromId);
+    if (at < 0 || order.includes(toId)) return;
+    const hasSets = s.sets.some((x) => x.exerciseId === fromId);
+    const to = exerciseFor(toId);
+    // Plan-Vorgabe übernehmen, damit Fortschritt und Hinweise weiterlaufen
+    if (s.plan?.targets) {
+      const target = s.plan.targets.find((x) => x.exerciseId === fromId);
+      if (target && !s.plan.targets.some((x) => x.exerciseId === toId)) {
+        const copy: PlanTarget = { ...target, exerciseId: toId, exerciseName: to?.name ?? target.exerciseName, replacedFrom: target.exerciseName, suggestion: { kind: 'new' } as TargetSuggestion };
+        s.plan.targets = hasSets ? [...s.plan.targets, copy] : s.plan.targets.map((x) => (x.exerciseId === fromId ? copy : x));
+      }
+    }
+    if (hasSets) {
+      order.splice(at + 1, 0, toId);
+      s.done = [...new Set([...(s.done ?? []), fromId])];
+    } else {
+      order.splice(at, 1, toId);
+      if (s.templates) delete s.templates[fromId];
+      s.done = (s.done ?? []).filter((x) => x !== fromId);
+      delete ghostDraft.value[fromId];
+    }
+    s.order = order;
+    ensureStarted();
+    persistSession();
+    toast(t('workout.toast.replaced', { from: trExerciseName(fromId), to: trExerciseName(toId) }), 'success');
   }
   function togglePicked(id: number) {
+    if (picker.value.replaceFor != null) {
+      const from = picker.value.replaceFor;
+      picker.value.open = false;
+      picker.value.replaceFor = null;
+      replaceBlock(from, id);
+      return;
+    }
     const sel = picker.value.selected;
     picker.value.selected = sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id];
   }
@@ -2140,9 +2226,9 @@ export const useAppStore = defineStore('app', () => {
     categoryExercises, availableMuscleGroups, allMuscleGroups, filteredExercises, sortLabel,
     sessionActive, hasSets, isEditing, finishLoad, sessionElapsed, sessionGroups, sessionSummary,
     workoutBlocks, ghostDraft, picker, obsidianWorkout, openObsidian, pickerResults, pickerMuscles, searchExercises,
-    exerciseInfo, openExerciseInfo, closeExerciseInfo,
+    exerciseInfo, openExerciseInfo, closeExerciseInfo, holdTimer, startHold, closeHoldTimer, logHold,
     rpePrompt, completeBlock, reopenBlock, setSetRpe, dismissRpePrompt, deleteSessionSet,
-    addExercises, removeBlock, moveBlock, setGhostValue, stepGhost, toggleGhostWarmup, quickLog, openPicker, togglePicked, addFromCatalog, confirmPicker, startWorkout, exerciseFor,
+    addExercises, removeBlock, moveBlock, reorderBlock, openReplace, replaceBlock, replaceSuggestions, setGhostValue, stepGhost, toggleGhostWarmup, quickLog, openPicker, togglePicked, addFromCatalog, confirmPicker, startWorkout, exerciseFor,
     modalEx, modalType, modalKey, modalRecord, modalPrevious, modalSessionSets, modalTarget, modalE1RM, modalIntensity,
     modalZone, modalSpeed, modalSpeedVsBest, modalIsNewPR,
     timerActive, timerLeft, timerProgress,

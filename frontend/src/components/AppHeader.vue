@@ -7,12 +7,13 @@ const app = useAppStore();
 const { online, pendingCount, syncState, syncing, tab } = storeToRefs(app);
 const { openSettings, syncNow } = app;
 import BrandMark from '@/components/BrandMark.vue';
+import { appearance } from '@/lib/theme';
 </script>
 
 <template>
   <header class="mb-6 flex items-center justify-between gap-3">
       <h1 class="flex min-w-0 items-center gap-2">
-          <BrandMark class="h-8 w-8" />
+          <BrandMark :variant="appearance.theme === 'halloween' ? 'halloween' : 'default'" class="h-8 w-8" />
           <span class="display truncate text-xl text-white">SprintLog</span>
       </h1>
       <div class="flex flex-shrink-0 items-center gap-2">

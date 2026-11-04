@@ -30,13 +30,14 @@ const MatchModal = defineAsyncComponent(() => import('@/components/MatchModal.vu
 const RecoveryCodesModal = defineAsyncComponent(() => import('@/components/RecoveryCodesModal.vue'));
 const ExerciseInfoSheet = defineAsyncComponent(() => import('@/components/ExerciseInfoSheet.vue'));
 const GoalSheet = defineAsyncComponent(() => import('@/components/GoalSheet.vue'));
+const HoldTimer = defineAsyncComponent(() => import('@/components/workout/HoldTimer.vue'));
 
 const app = useAppStore();
 const goals = useGoalsStore();
 const { booting, isAuthenticated, tab, authMode, sessionActive } = storeToRefs(app);
 
 /** Dialog-Chunks erst beim ersten Öffnen laden - danach bleiben sie gemountet (Schließen-Animation bleibt erhalten). */
-const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false });
+const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, hold: false });
 watchEffect(() => {
   if (app.setModal.open) used.set = true;
   if (app.customModal.open) used.custom = true;
@@ -46,6 +47,7 @@ watchEffect(() => {
   if (app.recoveryCodes) used.codes = true;
   if (app.exerciseInfo) used.info = true;
   if (goals.draft.open) used.goal = true;
+  if (app.holdTimer) used.hold = true;
 });
 
 onMounted(() => { void app.init(); });
@@ -93,6 +95,7 @@ onMounted(() => { void app.init(); });
       <MatchModal v-if="used.match" />
       <ExerciseInfoSheet v-if="used.info" />
       <GoalSheet v-if="used.goal" />
+      <HoldTimer v-if="used.hold" />
     </template>
 
     <RecoveryCodesModal v-if="used.codes" />
