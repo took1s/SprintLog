@@ -444,5 +444,13 @@ public class AppDbContext : DbContext
         Ex(255, "Battle Ropes", "Gym", "Cardio", TrackingType.Duration),
         Ex(256, "Swimming", "Gym", "Cardio", TrackingType.Duration),
         Ex(257, "Jumping Jacks", "Gym", "Cardio", TrackingType.Duration),
+        // v8: Reha Beinbeuger (Askling-Protokoll, Isometrie, Einbein-Varianten)
+        Ex(258, "Askling Extender", "Football", "Legs"),
+        Ex(259, "Askling Diver", "Football", "Legs"),
+        Ex(260, "Askling Glider", "Football", "Legs"),
+        Ex(261, "Isometric Bridge Hold", "Gym", "Legs", TrackingType.Duration),
+        Ex(262, "Swiss Ball Hamstring Curl", "Gym", "Legs"),
+        Ex(263, "Single-Leg Glute Bridge", "Gym", "Legs"),
+        Ex(264, "Assisted Nordic Hamstring Curl", "Gym", "Legs"),
     };
 }

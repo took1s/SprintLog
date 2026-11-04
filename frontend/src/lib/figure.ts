@@ -751,6 +751,8 @@ export const EXERCISE_MOTION: Record<number, string | null> = {
   119: 'twist', 120: 'seatedChestPress', 121: 'lateralRaise', 122: 'curl', 123: 'fly', 124: 'calfRaise', 125: 'airSquat', 126: 'kickback', 127: 'jog', 128: 'stepUp', 129: 'jog', 130: 'cycling',
   // v7
   131: 'bench', 132: 'dbBench', 133: 'fly', 134: 'fly', 135: 'fly', 136: 'straightArm', 137: 'straightArm', 138: 'bench', 139: 'pushup', 140: 'pushup', 141: 'seatedChestPress', 142: 'seatedChestPress', 143: null, 144: 'dip', 145: 'cableRow', 146: 'pulldown', 147: 'pulldown', 148: 'pulldown', 149: 'pullup', 150: 'pullup', 151: 'row', 152: 'dbRow', 153: 'dbRow', 154: 'deadlift', 155: 'deadlift', 156: 'rdl', 157: 'kickback', 158: 'shrug', 159: null, 160: 'dbPress', 161: null, 162: 'rearDelt', 163: 'rearDelt', 164: 'frontRaise', 165: 'frontRaise', 166: 'lateralRaise', 167: 'ohp', 168: null, 169: 'curl', 170: 'curl', 171: 'curl', 172: 'curl', 173: 'barbellCurl', 174: 'curl', 175: 'barbellCurl', 176: 'pushdown', 177: 'overheadExt', 178: 'pushdown', 179: 'skullCrusher', 180: 'pushdown', 181: 'dip', 182: 'dip', 183: null, 184: 'gobletSquat', 185: 'squat', 186: 'squat', 187: 'squat', 188: 'airSquat', 189: 'legPress', 190: 'legCurl', 191: 'legExtension', 192: 'hipThrust', 193: 'rdl', 194: 'rdl', 195: 'rdl', 196: 'calfRaise', 197: null, 198: null, 199: null, 200: null, 201: 'calfRaise', 202: 'abduction', 203: 'lunge', 204: 'nordic', 205: 'crunch', 206: 'crunch', 207: 'crunch', 208: 'legRaise', 209: 'legRaise', 210: 'legRaise', 211: null, 212: null, 213: 'twist', 214: null, 215: 'clean', 216: 'jump', 217: 'jump', 218: 'wallBall', 219: 'wallBall', 220: 'jump', 221: 'jumpRope', 222: 'pushPress', 223: 'kbSwing', 224: null, 225: 'rearDelt', 226: null, 227: null, 228: 'sprint', 229: null, 230: 'sprint', 231: 'sprint', 232: 'shuttle', 233: 'sprint', 234: 'jog', 235: 'jog', 236: null, 237: null, 238: null, 239: 'shuttle', 240: null, 241: null, 242: null, 243: null, 244: null, 245: null, 246: null, 247: null, 248: null, 249: null, 250: null, 251: null, 252: null, 253: 'jog', 254: null, 255: null, 256: null, 257: 'jump',
+  // v8
+  258: null, 259: null, 260: null, 261: null, 262: null, 263: 'bridge', 264: 'nordic',
 };
 
 /** Erkennung für eigene Übungen über den Namen (Reihenfolge = Priorität). */
@@ -792,6 +794,7 @@ export { BODYWEIGHT_EXERCISES } from './bodyweight';
 const EXERCISE_TECHNIQUE_ONLY: Record<number, string> = {
   10: 'wristCurl', 11: 'wristCurl',
   143: 'landminePress', 159: 'superman', 161: 'uprightRow', 168: 'handstandPushup', 183: 'wristCurl', 197: 'tibialis', 198: 'reverseNordic', 199: 'spanishSquat', 200: 'wallSit', 211: 'mountainClimber', 212: 'birdDog', 214: 'getUp', 224: 'burpee', 226: 'externalRotation', 227: 'bandWalk', 229: 'sledPush', 236: 'footballDrill', 237: 'footballDrill', 238: 'footballDrill', 240: 'footballDrill', 241: 'footballDrill', 242: 'stretch', 243: 'stretch', 244: 'mobilityFlow', 245: 'stretch', 246: 'stretch', 247: 'stretch', 248: 'mobilityFlow', 249: 'mobilityFlow', 250: 'mobilityFlow', 251: 'mobilityFlow', 252: 'foamRoll', 254: 'skiErg', 255: 'battleRope', 256: 'swim',
+  258: 'asklingExtender', 259: 'asklingDiver', 260: 'asklingGlider', 261: 'isoBridge', 262: 'ballCurl',
 };
 
 type ExerciseLike = { id?: number; name?: Exercise['name']; isCustom?: boolean; trackingType?: TrackingType };
@@ -814,6 +817,12 @@ export function techniqueFor(exercise: ExerciseLike | null | undefined): { motio
 
 /** Technik-Hinweise und Zielmuskulatur pro Bewegungsmuster. */
 export const TECHNIQUE: Record<string, Technique> = {
+  // v8: Reha Beinbeuger
+  asklingExtender: { muscles: ['Hamstrings'], cues: ['Lie on your back, hold the thigh with both hands at 90\u00b0', 'Slowly straighten the knee until you feel a light stretch', 'Stop before pain, bend back slowly'] },
+  asklingDiver: { muscles: ['Hamstrings', 'Glutes'], cues: ['Stand on the injured leg, knee slightly bent', 'Tip forward like a dive: arms forward, other leg straight back', 'Hips level, back straight, return slowly'] },
+  asklingGlider: { muscles: ['Hamstrings'], cues: ['Injured leg in front with the weight on it, slight knee bend', 'Slide the other leg backwards on a towel', 'Come back with the help of the hands on a support, not with the hamstring'] },
+  isoBridge: { muscles: ['Hamstrings', 'Glutes'], cues: ['Lie on your back, heels on a bench, knees slightly bent', 'Push the heels down and lift the hips', 'Hold, breathe calmly, no pain'] },
+  ballCurl: { muscles: ['Hamstrings', 'Glutes', 'Core'], cues: ['Heels on the ball, hips lifted', 'Pull the ball in with the heels, hips stay up', 'Roll back out slowly'] },
   // v7: nur Hinweise (keine eigene Animation)
   landminePress: { muscles: ['Shoulders', 'Upper chest', 'Triceps', 'Core'], cues: ['Hold the end of the bar at shoulder height', 'Press up and forward along the arc of the bar', 'Ribs down, do not lean back'] },
   superman: { muscles: ['Lower back', 'Glutes', 'Upper back'], cues: ['Lie face down, arms stretched forward', 'Lift arms, chest and legs a few centimetres', 'Hold 2 s, keep the neck long'] },

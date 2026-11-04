@@ -31,6 +31,11 @@ const MUSCLES: Record<Lang, Record<string, string>> = {
 
 const CUES: Record<Lang, Record<string, string[]>> = {
   de: {
+    asklingExtender: ['Auf dem Rücken liegen, Oberschenkel mit beiden Händen bei 90° halten', 'Knie langsam strecken, bis ein leichter Zug kommt', 'Vor dem Schmerz stoppen, langsam zurück beugen'],
+    asklingDiver: ['Auf dem verletzten Bein stehen, Knie leicht gebeugt', 'Wie ein Kopfsprung nach vorn kippen: Arme vor, anderes Bein gestreckt nach hinten', 'Hüfte gerade, Rücken gerade, langsam zurück'],
+    asklingGlider: ['Verletztes Bein vorn, Gewicht darauf, Knie leicht gebeugt', 'Das andere Bein auf einem Handtuch nach hinten gleiten lassen', 'Mit den Händen an einer Stütze zurückkommen, nicht mit dem Beinbeuger'],
+    isoBridge: ['Auf dem Rücken, Fersen auf einer Bank, Knie leicht gebeugt', 'Fersen nach unten drücken und Hüfte anheben', 'Halten, ruhig atmen, ohne Schmerz'],
+    ballCurl: ['Fersen auf dem Ball, Hüfte angehoben', 'Ball mit den Fersen heranziehen, Hüfte bleibt oben', 'Langsam wieder herausrollen'],
     landminePress: ['Stangenende auf Schulterhöhe halten', 'Entlang des Bogens nach oben-vorn drücken', 'Rippen unten lassen, nicht nach hinten lehnen'],
     superman: ['Bauchlage, Arme nach vorn gestreckt', 'Arme, Brust und Beine wenige Zentimeter anheben', '2 s halten, Nacken lang lassen'],
     uprightRow: ['Griff etwas breiter als schulterbreit', 'Ellbogen führen, bis Höhe untere Brust ziehen', 'Stoppen, wenn die Ellbogen auf Schulterhöhe sind'],
@@ -130,6 +135,11 @@ const CUES: Record<Lang, Record<string, string[]>> = {
     deadBug: ['Unterer Rücken bleibt am Boden', 'Gegenüberliegenden Arm und Bein langsam absenken', 'Beim Strecken ausatmen'],
   },
   ru: {
+    asklingExtender: ['Лёжа на спине, держи бедро двумя руками под 90°', 'Медленно разгибай колено до лёгкого натяжения', 'Остановись до боли, медленно согни обратно'],
+    asklingDiver: ['Стой на травмированной ноге, колено слегка согнуто', 'Наклонись как в прыжке в воду: руки вперёд, вторая нога прямая назад', 'Таз ровно, спина прямая, медленно вернись'],
+    asklingGlider: ['Травмированная нога впереди, вес на ней, колено слегка согнуто', 'Вторая нога скользит назад на полотенце', 'Возвращайся с помощью рук об опору, а не бедром'],
+    isoBridge: ['Лёжа на спине, пятки на скамье, колени слегка согнуты', 'Дави пятками вниз и подними таз', 'Держи, дыши спокойно, без боли'],
+    ballCurl: ['Пятки на мяче, таз поднят', 'Подтяни мяч пятками, таз остаётся вверху', 'Медленно выкати обратно'],
     landminePress: ['Держи конец грифа на уровне плеча', 'Жми вверх и вперёд по дуге грифа', 'Рёбра вниз, не отклоняйся назад'],
     superman: ['Лёжа на животе, руки вытянуты вперёд', 'Подними руки, грудь и ноги на несколько сантиметров', 'Задержись на 2 с, шея вытянута'],
     uprightRow: ['Хват чуть шире плеч', 'Веди локтями, тяни до уровня низа груди', 'Остановись, когда локти на уровне плеч'],

@@ -2182,6 +2182,62 @@ namespace SprintLog.Api.Migrations
                             MuscleGroup = "Cardio",
                             Name = "Jumping Jacks",
                             TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 258,
+                            Category = "Football",
+                            MuscleGroup = "Legs",
+                            Name = "Askling Extender",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 259,
+                            Category = "Football",
+                            MuscleGroup = "Legs",
+                            Name = "Askling Diver",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 260,
+                            Category = "Football",
+                            MuscleGroup = "Legs",
+                            Name = "Askling Glider",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 261,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Isometric Bridge Hold",
+                            TrackingType = "Duration"
+                        },
+                        new
+                        {
+                            Id = 262,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Swiss Ball Hamstring Curl",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 263,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Single-Leg Glute Bridge",
+                            TrackingType = "WeightReps"
+                        },
+                        new
+                        {
+                            Id = 264,
+                            Category = "Gym",
+                            MuscleGroup = "Legs",
+                            Name = "Assisted Nordic Hamstring Curl",
+                            TrackingType = "WeightReps"
                         });
                 });
 
