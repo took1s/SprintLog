@@ -17,6 +17,7 @@ export type Reason =
   | { key: 'recovered' }
   | { key: 'longBreak'; days: number }
   | { key: 'rehab' }
+  | { key: 'rehabRest' }
   | { key: 'planNext'; day: string }
   | { key: 'trainedToday' };
 
@@ -53,6 +54,9 @@ export function coachToday(c: CoachInput): CoachToday {
   if (c.trainedToday) return { kind: 'rest', reasons: [{ key: 'trainedToday' }], startPlan: false };
   if (c.todayKind === 'match') return { kind: 'match', reasons: [{ key: 'matchToday' }], startPlan: false };
   if (c.rehab) {
+    // Der Wochenplan gilt auch in der Reha: Ruhetag = Ruhe (das Gewebe heilt in den Pausen)
+    if (c.todayKind === 'rest') return { kind: 'rest', reasons: [{ key: 'restDay' }, { key: 'rehabRest' }], startPlan: false };
+    if (c.loadZone === 'danger') return { kind: 'rest', reasons: [{ key: 'loadDanger' }, { key: 'rehabRest' }], startPlan: false };
     reasons.push({ key: 'rehab' });
     if (c.nextDay) reasons.push({ key: 'planNext', day: c.nextDay });
     return { kind: 'rehab', reasons, startPlan: true };

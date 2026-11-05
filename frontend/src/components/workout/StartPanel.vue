@@ -50,6 +50,7 @@ const lastCount = computed(() => new Set((lastWorkout.value?.sets ?? []).map((s)
               <span class="mt-1 block truncate text-base font-bold text-white">{{ dayName(activeProgram, programInfo.next) }}</span>
               <span class="block truncate font-mono text-[11px] text-slate-400">{{ programName(activeProgram) }} · {{ tn('units.exercises', programInfo.next.exercises.length) }}</span>
               <span v-if="coach.kind === 'light'" class="mt-1 block text-[11px] font-bold text-orange-300">{{ t('coach.kinds.light.title') }}</span>
+              <span v-else-if="coach.kind === 'rest'" class="mt-1 block text-[11px] font-bold text-slate-400" data-test="plan-rest-hint">{{ t('coach.kinds.rest.title') }}</span>
           </button>
           <button v-if="lastWorkout" type="button" @click="repeatWorkout(lastWorkout)" data-test="start-repeat"
                   class="btn-ghost min-w-0 rounded-2xl p-4 text-left">

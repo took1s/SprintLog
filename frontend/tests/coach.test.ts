@@ -38,6 +38,12 @@ describe('coach', () => {
 
   test('rehab and already trained', () => {
     expect(coachToday({ ...base, rehab: true }).kind).toBe('rehab');
+    // Ruhetag im Wochenplan: Coach und Plan sagen dasselbe
+    const rest = coachToday({ ...base, rehab: true, todayKind: 'rest' });
+    expect(rest.kind).toBe('rest');
+    expect(rest.startPlan).toBe(false);
+    expect(rest.reasons.map((x) => x.key)).toEqual(['restDay', 'rehabRest']);
+    expect(coachToday({ ...base, rehab: true, todayKind: null }).kind).toBe('rehab'); // ohne Wochenplan: Reha-Tag
     expect(coachToday({ ...base, trainedToday: true }).kind).toBe('rest');
   });
 

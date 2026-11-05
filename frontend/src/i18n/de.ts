@@ -839,6 +839,7 @@ export const de: Messages = {
       notRecovered: '{region} erst zu {percent} % erholt',
       recovered: 'Von den letzten Einheiten erholt',
       longBreak: '{days} Tage ohne Training - eine lockere Einheit bringt dich zurück',
+      rehabRest: 'Reha: heute keine Belastung - nur sanftes, schmerzfreies Dehnen',
       rehab: 'Reha-Programm aktiv',
       planNext: 'Als Nächstes im Plan: {day}',
       trainedToday: 'Heute schon trainiert - stark',
