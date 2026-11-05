@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -55,7 +56,7 @@ public sealed class SprintLogApiFactory : WebApplicationFactory<Program>, IAsync
             ["Database:MigrateOnStartup"] = "true",
             ["RateLimiting:AuthPermitLimit"] = "10000",
             ["RateLimiting:AiPermitLimit"] = "10000",
-            ["Ai:DailyLimit"] = "5",
+            ["Ai:DailyLimit"] = "12",
             ["App:PublicUrl"] = PublicUrl
         }));
         // E-Mails landen in einem Postfach im Speicher statt bei Brevo.
@@ -136,16 +137,26 @@ public sealed class ShiftedTimeProvider : TimeProvider
     public override DateTimeOffset GetUtcNow() => System.GetUtcNow() + Offset;
 }
 
-/// <summary>KI-Client für Tests: liefert, was der Test vorgibt, und merkt sich die letzte Anfrage.</summary>
+/// <summary>KI-Client für Tests: liefert, was der Test vorgibt (pro Aufruf-Nummer), und merkt sich alle Anfragen.</summary>
 public sealed class FakeAiClient : IAiClient
 {
+    private readonly object _lock = new();
     public bool IsEnabled { get; set; } = true;
-    public Func<string, IReadOnlyList<AiMessage>, AiTool?, AiCompletion> Reply { get; set; } = (_, _, _) => new AiCompletion("ok", null, 10, 5);
-    public (string System, IReadOnlyList<AiMessage> Messages, AiTool? Tool)? Last { get; private set; }
+    public Func<AiRequest, int, AiResponse> Reply { get; set; } = (_, _) => AiResponse.FromText("ok");
+    public List<AiRequest> Requests { get; } = new();
 
-    public Task<AiCompletion> CompleteAsync(string system, IReadOnlyList<AiMessage> messages, int maxTokens, AiTool? tool, CancellationToken ct)
+    public void Reset(Func<AiRequest, int, AiResponse>? reply = null)
     {
-        Last = (system, messages, tool);
-        return Task.FromResult(Reply(system, messages, tool));
+        lock (_lock) Requests.Clear();
+        IsEnabled = true;
+        Reply = reply ?? ((_, _) => AiResponse.FromText("ok"));
+    }
+
+    public Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct)
+    {
+        int n;
+        // Kopie: der Server hängt nach dem Aufruf weitere Nachrichten an dieselbe Liste
+        lock (_lock) { Requests.Add(request with { Messages = (JsonArray)request.Messages.DeepClone() }); n = Requests.Count - 1; }
+        return Task.FromResult(Reply(request, n));
     }
 }

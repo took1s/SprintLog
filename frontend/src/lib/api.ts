@@ -100,6 +100,9 @@ const NO_REFRESH = /^\/api\/auth\/(login|register|refresh|logout|recover|reset-p
 /** Wartezeiten zwischen erneuten Refresh-Versuchen nach 409. */
 export const REFRESH_RACE_DELAYS = [300, 800, 1500] as const;
 
+/** Obergrenze für KI-Anfragen (Render-Kaltstart + mehrere Modell-Aufrufe). */
+export const AI_TIMEOUT_MS = 150_000;
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function createApi({ onUnauthorized, getLegacyToken, onLegacyTokenUsed, timeoutMs = 15000, native = isNative() ? nativeSession : undefined }: ApiOptions = {}): Api {
@@ -107,7 +110,8 @@ export function createApi({ onUnauthorized, getLegacyToken, onLegacyTokenUsed, t
     const headers: Record<string, string> = { Accept: 'application/json', ...clientHeaders(), ...extraHeaders };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    // KI-Antworten (Analyse, Pläne mit mehreren Werkzeug-Aufrufen) brauchen deutlich länger als normale Requests
+    const timer = setTimeout(() => controller.abort(), path.startsWith('/api/ai/') ? Math.max(timeoutMs, AI_TIMEOUT_MS) : timeoutMs);
     try {
       const response = await fetch(apiUrl(path), {
         method,

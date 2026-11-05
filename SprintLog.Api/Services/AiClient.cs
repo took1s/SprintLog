@@ -8,12 +8,35 @@ using SprintLog.Api.Infrastructure;
 
 namespace SprintLog.Api.Services;
 
-public sealed record AiMessage(string Role, string Content);
-
-/// <summary>Werkzeug mit festem JSON-Schema - erzwingt strukturierte Antworten (z. B. einen Trainingsplan).</summary>
+/// <summary>Werkzeug mit JSON-Schema, das das Modell aufrufen kann (Statistik abfragen, Plan vorschlagen ...).</summary>
 public sealed record AiTool(string Name, string Description, JsonObject InputSchema);
 
-public sealed record AiCompletion(string? Text, JsonElement? ToolInput, int InputTokens, int OutputTokens);
+/// <summary>
+/// Eine Anfrage an die Messages-API. <see cref="Messages"/> enthält Inhalte im Format der API
+/// (Text, tool_use, tool_result), damit Werkzeug-Schleifen möglich sind.
+/// </summary>
+public sealed record AiRequest(string Model, string System, JsonArray Messages, int MaxTokens, IReadOnlyList<AiTool>? Tools = null, JsonObject? ToolChoice = null);
+
+public sealed record AiToolUse(string Id, string Name, JsonElement Input);
+
+public sealed record AiResponse(JsonArray Content, string? StopReason, int InputTokens, int OutputTokens)
+{
+    public string Text => string.Join("\n", Content.OfType<JsonObject>()
+        .Where(b => (string?)b["type"] == "text").Select(b => (string?)b["text"] ?? string.Empty)).Trim();
+
+    public IReadOnlyList<AiToolUse> ToolUses => Content.OfType<JsonObject>()
+        .Where(b => (string?)b["type"] == "tool_use")
+        .Select(b => new AiToolUse((string?)b["id"] ?? string.Empty, (string?)b["name"] ?? string.Empty,
+            JsonSerializer.Deserialize<JsonElement>(b["input"]?.ToJsonString() ?? "{}")))
+        .ToList();
+
+    /// <summary>Hilfen für Tests und Fakes.</summary>
+    public static AiResponse FromText(string text) =>
+        new(new JsonArray(new JsonObject { ["type"] = "text", ["text"] = text }), "end_turn", 0, 0);
+
+    public static AiResponse FromTool(string name, object input, string id = "toolu_1") =>
+        new(new JsonArray(new JsonObject { ["type"] = "tool_use", ["id"] = id, ["name"] = name, ["input"] = JsonSerializer.SerializeToNode(input) }), "tool_use", 0, 0);
+}
 
 /// <summary>Fehler der KI mit stabilem Code für den Client (Text kommt aus den App-Übersetzungen).</summary>
 public sealed class AiException(string code, HttpStatusCode status, string? detail = null) : Exception(detail ?? code)
@@ -25,14 +48,14 @@ public sealed class AiException(string code, HttpStatusCode status, string? deta
 public interface IAiClient
 {
     bool IsEnabled { get; }
-    Task<AiCompletion> CompleteAsync(string system, IReadOnlyList<AiMessage> messages, int maxTokens, AiTool? tool, CancellationToken ct);
+    Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct);
 }
 
 /// <summary>Kein API-Key gesetzt: KI-Funktionen sind ausgeblendet.</summary>
 public sealed class DisabledAiClient : IAiClient
 {
     public bool IsEnabled => false;
-    public Task<AiCompletion> CompleteAsync(string system, IReadOnlyList<AiMessage> messages, int maxTokens, AiTool? tool, CancellationToken ct) =>
+    public Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct) =>
         throw new AiException("ai_disabled", HttpStatusCode.ServiceUnavailable);
 }
 
@@ -52,19 +75,23 @@ public sealed class AnthropicAiClient : IAiClient
 
     public bool IsEnabled => true;
 
-    public async Task<AiCompletion> CompleteAsync(string system, IReadOnlyList<AiMessage> messages, int maxTokens, AiTool? tool, CancellationToken ct)
+    public async Task<AiResponse> CompleteAsync(AiRequest r, CancellationToken ct)
     {
         var body = new JsonObject
         {
-            ["model"] = _options.Model,
-            ["max_tokens"] = maxTokens,
-            ["system"] = system,
-            ["messages"] = new JsonArray(messages.Select(m => (JsonNode)new JsonObject { ["role"] = m.Role, ["content"] = m.Content }).ToArray()),
+            ["model"] = r.Model,
+            ["max_tokens"] = r.MaxTokens,
+            // Prompt-Caching: Werkzeuge + System-Prompt sind innerhalb einer Werkzeug-Schleife und eines Gesprächs gleich
+            ["system"] = new JsonArray(new JsonObject { ["type"] = "text", ["text"] = r.System, ["cache_control"] = new JsonObject { ["type"] = "ephemeral" } }),
+            ["messages"] = r.Messages.DeepClone(),
         };
-        if (tool is not null)
+        if (r.Tools is { Count: > 0 })
         {
-            body["tools"] = new JsonArray(new JsonObject { ["name"] = tool.Name, ["description"] = tool.Description, ["input_schema"] = tool.InputSchema.DeepClone() });
-            body["tool_choice"] = new JsonObject { ["type"] = "tool", ["name"] = tool.Name };
+            body["tools"] = new JsonArray(r.Tools.Select(t => (JsonNode)new JsonObject
+            {
+                ["name"] = t.Name, ["description"] = t.Description, ["input_schema"] = t.InputSchema.DeepClone(),
+            }).ToArray());
+            if (r.ToolChoice is not null) body["tool_choice"] = r.ToolChoice.DeepClone();
         }
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "v1/messages") { Content = JsonContent.Create(body) };
@@ -84,20 +111,13 @@ public sealed class AnthropicAiClient : IAiClient
             var json = await response.Content.ReadAsStringAsync(ct);
             if (!response.IsSuccessStatusCode) throw MapError(response.StatusCode, json);
 
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-            string? text = null;
-            JsonElement? toolInput = null;
-            foreach (var block in root.GetProperty("content").EnumerateArray())
-            {
-                var type = block.GetProperty("type").GetString();
-                if (type == "text") text = (text ?? string.Empty) + block.GetProperty("text").GetString();
-                else if (type == "tool_use") toolInput = block.GetProperty("input").Clone();
-            }
-            var usage = root.TryGetProperty("usage", out var u) ? u : default;
-            int Tokens(string name) => usage.ValueKind == JsonValueKind.Object && usage.TryGetProperty(name, out var v) ? v.GetInt32() : 0;
-            _log.LogInformation("Claude call {Model}: {In} in / {Out} out tokens", _options.Model, Tokens("input_tokens"), Tokens("output_tokens"));
-            return new AiCompletion(text?.Trim(), toolInput, Tokens("input_tokens"), Tokens("output_tokens"));
+            var root = JsonNode.Parse(json)!.AsObject();
+            var content = root["content"] as JsonArray ?? new JsonArray();
+            var usage = root["usage"] as JsonObject;
+            int Tokens(string name) => (int?)usage?[name] ?? 0;
+            _log.LogInformation("Claude {Model}: {In} in (+{CacheRead} cached) / {Out} out, stop {Stop}",
+                r.Model, Tokens("input_tokens"), Tokens("cache_read_input_tokens"), Tokens("output_tokens"), (string?)root["stop_reason"]);
+            return new AiResponse((JsonArray)content.DeepClone(), (string?)root["stop_reason"], Tokens("input_tokens"), Tokens("output_tokens"));
         }
     }
 
@@ -108,12 +128,11 @@ public sealed class AnthropicAiClient : IAiClient
         var message = string.Empty;
         try
         {
-            using var doc = JsonDocument.Parse(body);
-            var err = doc.RootElement.GetProperty("error");
-            type = err.GetProperty("type").GetString() ?? type;
-            message = err.TryGetProperty("message", out var m) ? m.GetString() ?? string.Empty : string.Empty;
+            var err = JsonNode.Parse(body)?["error"];
+            type = (string?)err?["type"] ?? type;
+            message = (string?)err?["message"] ?? string.Empty;
         }
-        catch (Exception) { /* kein JSON */ }
+        catch (JsonException) { /* kein JSON */ }
         _log.LogWarning("Claude API error {Status} {Type}", (int)status, type);
 
         if (message.Contains("credit balance", StringComparison.OrdinalIgnoreCase))
@@ -122,14 +141,15 @@ public sealed class AnthropicAiClient : IAiClient
         {
             HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => new AiException("ai_key_invalid", HttpStatusCode.ServiceUnavailable),
             HttpStatusCode.TooManyRequests or (HttpStatusCode)529 => new AiException("ai_busy", HttpStatusCode.ServiceUnavailable),
+            HttpStatusCode.NotFound when type == "not_found_error" => new AiException("ai_model", HttpStatusCode.ServiceUnavailable),
             _ => new AiException("ai_unavailable", HttpStatusCode.BadGateway),
         };
     }
 }
 
 /// <summary>
-/// Tageskontingent pro Nutzer (im Speicher - nach einem Neustart beginnt es neu; der Kontostand bei Anthropic ist
-/// die harte Grenze). Schützt vor versehentlichen Schleifen und hält die Kosten planbar.
+/// Tageskontingent pro Nutzer in Einheiten (schnelle Frage 1, gründliche Antwort und Pläne mehr) - im Speicher, nach einem
+/// Neustart beginnt es neu; der Kontostand bei Anthropic ist die harte Grenze. Schützt vor Schleifen und hält Kosten planbar.
 /// </summary>
 public sealed class AiQuota(IOptions<AiOptions> options, TimeProvider time)
 {

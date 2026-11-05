@@ -71,14 +71,16 @@ builder.Services.AddOptions<AiOptions>().Configure<IConfiguration>((options, con
 {
     options.ApiKey = config["Ai:AnthropicApiKey"] ?? config["ANTHROPIC_API_KEY"] ?? string.Empty;
     options.Model = config["Ai:Model"] ?? options.Model;
+    options.DeepModel = config["Ai:DeepModel"] ?? options.DeepModel;
     options.DailyLimit = config.GetValue("Ai:DailyLimit", options.DailyLimit);
 });
 builder.Services.AddSingleton<AiQuota>();
+builder.Services.AddScoped<AiTools>();
 if (!string.IsNullOrWhiteSpace(builder.Configuration["Ai:AnthropicApiKey"] ?? builder.Configuration["ANTHROPIC_API_KEY"]))
     builder.Services.AddHttpClient<IAiClient, AnthropicAiClient>(c =>
     {
         c.BaseAddress = new Uri("https://api.anthropic.com/");
-        c.Timeout = TimeSpan.FromSeconds(60); // Pläne brauchen einige Sekunden
+        c.Timeout = TimeSpan.FromSeconds(120); // gründliche Antworten und Pläne brauchen teils deutlich länger
     });
 else
     builder.Services.AddSingleton<IAiClient, DisabledAiClient>();
@@ -286,6 +288,7 @@ app.MapWellnessEndpoints();
 app.MapGoalEndpoints();
 app.MapMonitoringEndpoints();
 app.MapAiEndpoints();
+app.MapProfileEndpoints();
 
 var monitoring = app.Services.GetRequiredService<MonitoringOptions>();
 app.Logger.LogInformation("SprintLog {Release} started ({Environment}). Sentry: {Sentry}, browser errors: {Browser}, e-mail: {Email}",

@@ -1,8 +1,9 @@
+using System.Text.Json.Nodes;
 using SprintLog.Api.Infrastructure;
 
 namespace SprintLog.Api.DTOs;
 
-public record AiStatusResponse(bool Enabled, int Remaining, int DailyLimit);
+public record AiStatusResponse(bool Enabled, int Remaining, int DailyLimit, IReadOnlyDictionary<string, int> Costs);
 
 public record AiChatMessage(string? Role, string? Content);
 
@@ -10,7 +11,8 @@ public record AiChatMessage(string? Role, string? Content);
 /// Frage an den Coach. <c>Context</c> ist eine kompakte Zusammenfassung der eigenen Trainingsdaten, die der Client
 /// (offline-first, kennt Erholung/Wochenplan/Belastung) erstellt - der Server reicht sie nur als Daten weiter.
 /// </summary>
-public record AiAskInput(string? Question, string? Context, List<AiChatMessage>? History, string? Locale)
+/// <param name="Mode">"quick" (schnelles Modell) oder "deep" (gründliches Modell, mehr Werkzeug-Schritte).</param>
+public record AiAskInput(string? Question, string? Context, List<AiChatMessage>? History, string? Locale, string? Mode = null)
 {
     public const int MaxQuestion = 1000;
     public const int MaxContext = 12_000;
@@ -23,7 +25,8 @@ public record AiAskInput(string? Question, string? Context, List<AiChatMessage>?
         var errors = new ValidationErrors()
             .AddIf(q.Length is < 2 or > MaxQuestion, "question", $"Question must be 2-{MaxQuestion} characters.")
             .AddIf(Context is { Length: > MaxContext }, "context", $"Context must not exceed {MaxContext} characters.")
-            .AddIf(History is { Count: > MaxHistory }, "history", $"At most {MaxHistory} previous messages.");
+            .AddIf(History is { Count: > MaxHistory }, "history", $"At most {MaxHistory} previous messages.")
+            .AddIf(Mode is not (null or "quick" or "deep"), "mode", "Mode must be quick or deep.");
         if (History is not null)
             for (var i = 0; i < History.Count && i < MaxHistory; i++)
                 errors
@@ -33,7 +36,8 @@ public record AiAskInput(string? Question, string? Context, List<AiChatMessage>?
     }
 }
 
-public record AiAskResponse(string Answer, int Remaining);
+/// <param name="Actions">Vorschläge als Karten: { type: program | goal | schedule, ... } - erst der Nutzer speichert.</param>
+public record AiAskResponse(string Answer, int Remaining, List<JsonObject> Actions);
 
 public record AiPlanAnswers(string? Focus, int DaysPerWeek, int? MatchDay, string? Level);
 
@@ -56,3 +60,14 @@ public record AiPlanInput(AiPlanAnswers? Answers, string? Notes, string? Context
 
 /// <summary>Vorschlag zum Ansehen - gespeichert wird erst, wenn der Nutzer ihn übernimmt (normales POST /api/programs).</summary>
 public record AiPlanResponse(ProgramInput Program, string Summary, int Remaining);
+
+/// <summary>Analyse-Bericht: "full" (8-12 Wochen) oder "week" (Wochenbilanz).</summary>
+public record AiAnalysisInput(string? Context, string? Locale, string? Period = null)
+{
+    public ValidationErrors Validate() => new ValidationErrors()
+        .AddIf(Period is not (null or "full" or "week"), "period", "Period must be full or week.")
+        .AddIf(Context is { Length: > AiAskInput.MaxContext }, "context", $"Context must not exceed {AiAskInput.MaxContext} characters.");
+}
+
+/// <summary>Bericht im Format von submit_report (headline, summary, sections, recommendations, nextWeekFocus).</summary>
+public record AiAnalysisResponse(JsonObject Report, DateTime GeneratedAt, int Remaining);
