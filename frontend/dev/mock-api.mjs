@@ -377,6 +377,40 @@ async function handleApi(req, res, url) {
   }
 
   // ---- Kraft-Ziele (pro Übung)
+  // ---------- KI-Coach (wie /api/ai in der echten API, mit festen Antworten statt Claude) ----------
+  if (path.startsWith('/api/ai/')) {
+    const limit = 30;
+    db.aiUsed ??= {};
+    const used = db.aiUsed[user.id] ?? 0;
+    if (method === 'GET' && path === '/api/ai/status') return json(res, 200, { enabled: process.env.MOCK_AI !== '0', remaining: Math.max(0, limit - used), dailyLimit: limit });
+    if (process.env.MOCK_AI === '0') return json(res, 503, { title: 'ai_disabled', status: 503, code: 'ai_disabled' });
+    const body = await readBody(req);
+    if (method === 'POST' && path === '/api/ai/ask') {
+      const q = String(body.question ?? '').trim();
+      if (q.length < 2) return problem(res, 400, 'Validation failed', { question: ['Question must be 2-1000 characters.'] });
+      if (used + 1 > limit) return json(res, 429, { title: 'ai_quota', status: 429, code: 'ai_quota' });
+      if (q.toLowerCase().includes('fail')) return json(res, 503, { title: 'ai_busy', status: 503, code: 'ai_busy' });
+      db.aiUsed[user.id] = used + 1;
+      await new Promise((r) => setTimeout(r, 300));
+      const ctx = String(body.context ?? '');
+      const today = (ctx.match(/Today is a (\w+) day/) ?? [])[1] ?? 'unknown';
+      const answer = `Mock coach (${body.locale}): today is a ${today} day.\n- Keep it light if your legs are not recovered.\n- History: ${(body.history ?? []).length} messages.`;
+      return json(res, 200, { answer, remaining: limit - used - 1 });
+    }
+    if (method === 'POST' && path === '/api/ai/plan') {
+      if (used + 3 > limit) return json(res, 429, { title: 'ai_quota', status: 429, code: 'ai_quota' });
+      db.aiUsed[user.id] = used + 3;
+      await new Promise((r) => setTimeout(r, 300));
+      const n = Math.min(6, Math.max(1, Number(body.answers?.daysPerWeek) || 3));
+      const pick = (id) => visible(user.id).find((e) => e.id === id);
+      const pool = [12, 50, 1, 47, 34].map(pick).filter(Boolean);
+      const target = (e) => (e.trackingType === 'DistanceTime' ? { distance: 30 } : e.trackingType === 'Duration' ? { time: 40 } : { repsMin: 6, repsMax: 8 });
+      const days = Array.from({ length: n }, (_, i) => ({ id: null, name: `AI ${String.fromCharCode(65 + i)}`, notes: null, exercises: pool.slice(0, 4).map((e) => ({ exerciseId: e.id, sets: 3, ...target(e) })) }));
+      return json(res, 200, { program: { name: 'AI Football Plan', goal: 'Speed', weeks: 6, days }, summary: `Built for ${n} days around your match.${body.notes ? ` Notes: ${String(body.notes).slice(0, 60)}` : ''}`, remaining: limit - used - 3 });
+    }
+    return problem(res, 404, 'Not Found');
+  }
+
   if (method === 'GET' && path === '/api/goals') return json(res, 200, db.goals.filter((g) => g.userId === user.id).map(({ userId, ...rest }) => rest));
   m = path.match(/^\/api\/goals\/(\d+)$/);
   if (m && method === 'PUT') {

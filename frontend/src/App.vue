@@ -17,6 +17,7 @@ import FinishModal from '@/components/FinishModal.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { t } from '@/i18n';
 import { useGoalsStore } from '@/stores/goals';
+import { useAiStore } from '@/stores/ai';
 
 // Seltener gebrauchte Teile als eigene Chunks (kleineres Start-Bundle; offline per Service-Worker-Cache verfügbar):
 // Auswertungen inkl. Chart.js, Plan, Satz-Dialog mit Animationen, Einstellungen, Editoren.
@@ -33,13 +34,15 @@ const GoalSheet = defineAsyncComponent(() => import('@/components/GoalSheet.vue'
 const HoldTimer = defineAsyncComponent(() => import('@/components/workout/HoldTimer.vue'));
 const PlanBuilderSheet = defineAsyncComponent(() => import('@/components/PlanBuilderSheet.vue'));
 const WorkoutSummarySheet = defineAsyncComponent(() => import('@/components/WorkoutSummarySheet.vue'));
+const AiCoachSheet = defineAsyncComponent(() => import('@/components/AiCoachSheet.vue'));
 
 const app = useAppStore();
 const goals = useGoalsStore();
+const aiStore = useAiStore();
 const { booting, isAuthenticated, tab, authMode, sessionActive } = storeToRefs(app);
 
 /** Dialog-Chunks erst beim ersten Öffnen laden - danach bleiben sie gemountet (Schließen-Animation bleibt erhalten). */
-const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, hold: false, builder: false, summary: false });
+const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, hold: false, builder: false, summary: false, ai: false });
 watchEffect(() => {
   if (app.setModal.open) used.set = true;
   if (app.customModal.open) used.custom = true;
@@ -52,6 +55,7 @@ watchEffect(() => {
   if (app.holdTimer) used.hold = true;
   if (app.planBuilder.open) used.builder = true;
   if (app.summary) used.summary = true;
+  if (aiStore.open) used.ai = true;
 });
 
 onMounted(() => { void app.init(); });
@@ -102,6 +106,7 @@ onMounted(() => { void app.init(); });
       <HoldTimer v-if="used.hold" />
       <PlanBuilderSheet v-if="used.builder" />
       <WorkoutSummarySheet v-if="used.summary" />
+      <AiCoachSheet v-if="used.ai" />
     </template>
 
     <RecoveryCodesModal v-if="used.codes" />
