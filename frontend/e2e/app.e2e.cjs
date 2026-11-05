@@ -915,3 +915,57 @@ test('app icon: Halloween icon for the home screen and tab, remembered per devic
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('AI coach: chat with context and history, errors with retry, plan from the AI saved with week plan', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `ai_${Date.now()}`);
+
+  // Chat: Vorschlag antippen -> Antwort mit Kontext (Wochenplan) und Verlauf
+  await page.click('[data-test=coach-ask]');
+  await page.waitForSelector('[data-test=ai-chat]');
+  await page.click('[data-suggestion=today]');
+  await page.waitForSelector('[data-role=assistant] >> text=Mock coach (en)');
+  assert.match(await page.innerText('[data-test=ai-remaining]'), /29 questions left/);
+  await page.fill('[data-test=ai-input]', 'And tomorrow?');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('[data-role=assistant] >> text=History: 2 messages');
+
+  // Fehler -> Hinweis + "Erneut versuchen" schickt die Frage ohne Duplikat nochmal
+  await page.fill('[data-test=ai-input]', 'please fail');
+  await page.click('[data-test=ai-send]');
+  await page.waitForSelector('[data-error=ai_busy]');
+  assert.equal(await page.locator('[data-role=user]').count(), 3);
+
+  // Verlauf bleibt nach Neuladen (lokal), Abmelden löscht ihn
+  await page.reload();
+  await page.click('[data-test=coach-ask]');
+  await page.waitForSelector('[data-role=assistant] >> text=History: 2 messages');
+  await page.click('[aria-label=Close] >> nth=-1');
+  await page.waitForSelector('[data-test=ai-chat]', { state: 'detached' });
+
+  // Plan von der KI: Antworten + Hinweis -> Vorschau -> speichern & starten (mit Wochenplan um den Spieltag)
+  await page.click('[data-test=coach-build]');
+  await page.waitForSelector('[data-test=plan-builder]');
+  await page.click('[data-days="3"]');
+  await page.click('[data-match="6"]');
+  await page.fill('[data-test=ai-plan-notes]', 'Hamstring strain in August');
+  await page.click('[data-test=ai-plan-generate]');
+  await page.waitForSelector('[data-test=ai-plan-name] >> text=AI Football Plan');
+  await page.waitForSelector('[data-test=ai-plan] >> text=Notes: Hamstring strain in August');
+  await page.click('[data-test=ai-plan-accept]');
+  await page.waitForSelector('[data-test=plan-builder]', { state: 'detached' });
+  let program;
+  const deadline = Date.now() + 8000;
+  while (Date.now() < deadline) {
+    [program] = await api('GET', '/api/programs', token);
+    if (program?.matchDays) break;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  assert.equal(program.name, 'AI Football Plan');
+  assert.equal(program.isActive, true);
+  assert.equal(program.days.length, 3);
+  assert.equal(program.matchDays, 64);
+  assert.equal(program.trainingDays & 32, 0);
+  assert.deepEqual(errors, []);
+  await context.close();
+});

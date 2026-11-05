@@ -1,10 +1,12 @@
 <script setup lang="ts">
 // "Plan für mich": vier Fragen, live die drei passendsten Vorlagen - Start übernimmt Programm UND Wochenplan.
-import { computed } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t, tn, intlLocale } from '@/i18n';
 import { goalName, levelName, templateText } from '@/i18n/content';
 import { useAppStore } from '@/stores/app';
+import { useAiStore } from '@/stores/ai';
+import { exerciseName } from '@/i18n/content';
 import { WEEKDAYS } from '@/lib/schedule';
 import type { PlanFocus, PlanLevel } from '@/lib/planBuilder';
 
@@ -23,6 +25,28 @@ const dayLong = (d: number) => new Date(2024, 0, 1 + d).toLocaleDateString(intlL
 const a = computed(() => planBuilder.value.answers);
 const close = () => { planBuilder.value.open = false; };
 const chip = (on: boolean) => (on ? 'chip chip-active' : 'chip chip-idle');
+
+// ---------- Plan von der KI ----------
+const ai = useAiStore();
+const { plan: aiPlan } = storeToRefs(ai);
+const { exercisesById } = storeToRefs(app);
+if (!ai.status) void ai.loadStatus();
+/** "Nordic Curl 3×6-8" / "Sprints 6×30 m" / "Plank 3×45 s" */
+function prescription(x: { exerciseId: number; sets: number; repsMin?: number | null; repsMax?: number | null; distance?: number | null; time?: number | null }) {
+  const ex = exercisesById.value.get(x.exerciseId);
+  const name = ex ? exerciseName(ex) : `#${x.exerciseId}`;
+  const what = x.distance ? `${x.distance} ${t('units.m')}` : x.time ? `${x.time} ${t('units.s')}` : x.repsMin ? `${x.repsMin}${x.repsMax && x.repsMax !== x.repsMin ? `-${x.repsMax}` : ''}` : '';
+  return `${name} ${x.sets}×${what}`;
+}
+
+// Fokus folgt dem Inhalt: der Knopf, der gerade fokussiert war, verschwindet beim Umschalten Formular <-> Ergebnis.
+const aiPlanName = ref<HTMLElement | null>(null);
+const aiPlanGenerate = ref<HTMLButtonElement | null>(null);
+watch(() => !!aiPlan.value.result, (has, had) => {
+  if (has === had) return;
+  // Ergebnis: Name fokussieren (scrollt ihn ins Bild, Screenreader liest den Plan); zurück: wieder auf "Составить план"
+  void nextTick(() => (has ? aiPlanName.value?.focus() : aiPlanGenerate.value?.focus({ preventScroll: true })));
+});
 </script>
 
 <template>
@@ -75,6 +99,50 @@ const chip = (on: boolean) => (on ? 'chip chip-active' : 'chip chip-idle');
                       </div>
                   </fieldset>
                   <p v-else class="mb-6 rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-3 text-xs leading-relaxed text-emerald-200">{{ t('builder.rehabNote') }}</p>
+
+                  <section v-if="ai.enabled" class="mb-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4" aria-labelledby="ai-plan-title" data-test="ai-plan">
+                      <h3 id="ai-plan-title" class="flex items-center gap-2 font-bold text-white">
+                          <svg class="h-4 w-4 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3z"/></svg>
+                          {{ t('ai.plan.title') }}
+                      </h3>
+                      <template v-if="!aiPlan.result">
+                          <p class="mt-1 text-xs leading-relaxed text-slate-400">{{ t('ai.plan.intro') }}</p>
+                          <label for="ai-plan-notes" class="label-xs mb-1.5 mt-3 block">{{ t('ai.plan.notesLabel') }}</label>
+                          <textarea id="ai-plan-notes" v-model="aiPlan.notes" rows="3" maxlength="600" :placeholder="t('ai.plan.notesPlaceholder')"
+                                    class="cyber-input w-full resize-none rounded-xl p-3 text-base" data-test="ai-plan-notes"></textarea>
+                          <!-- Sekundär: die bewährten Vorlagen unten bleiben die Hauptaktion. Beim Laden nicht dimmen - der Fortschrittstext muss lesbar bleiben. -->
+                          <button ref="aiPlanGenerate" type="button" @click="ai.generatePlan(a)" :disabled="aiPlan.busy || !online" :aria-busy="aiPlan.busy"
+                                  class="btn-secondary mt-3 flex min-h-[2.75rem] w-full items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-bold leading-tight" :class="aiPlan.busy ? '' : 'disabled:opacity-50'" data-test="ai-plan-generate">
+                              <span v-if="aiPlan.busy" class="h-4 w-4 flex-shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none" aria-hidden="true"></span>
+                              {{ aiPlan.busy ? t('ai.plan.generating') : t('ai.plan.generate') }}
+                          </button>
+                          <p v-if="aiPlan.error" class="mt-2 text-xs text-red-300" role="alert" :data-error="aiPlan.error">{{ t(`ai.errors.${aiPlan.error}`) }}</p>
+                      </template>
+                      <template v-else>
+                          <p ref="aiPlanName" tabindex="-1" class="mt-2 break-words text-lg font-bold leading-tight text-white outline-none" data-test="ai-plan-name">{{ aiPlan.result.program.name }}</p>
+                          <p class="mt-1 font-mono text-[11px] text-slate-400">{{ goalName(aiPlan.result.program.goal) }} · {{ t('builder.perWeek', { n: aiPlan.result.program.days.length }) }} · {{ tn('units.weeks', aiPlan.result.program.weeks) }}</p>
+                          <p v-if="aiPlan.result.summary" class="mt-2 text-sm leading-relaxed text-slate-200">{{ aiPlan.result.summary }}</p>
+                          <ol class="mt-3 space-y-2">
+                              <li v-for="(d, i) in aiPlan.result.program.days" :key="i" class="rounded-xl border border-white/5 bg-black/20 p-3">
+                                  <p class="text-xs font-bold uppercase text-slate-300 tracking-label">{{ d.name }}</p>
+                                  <ul class="mt-1.5 space-y-0.5">
+                                      <li v-for="x in d.exercises" :key="x.exerciseId" class="text-sm text-slate-200">{{ prescription(x) }}</li>
+                                  </ul>
+                              </li>
+                          </ol>
+                          <p class="mt-3 text-[11px] text-slate-400">{{ t('ai.plan.review') }}</p>
+                          <div class="mt-3 grid grid-cols-2 gap-2">
+                              <button type="button" @click="ai.generatePlan(aiPlan.result.answers)" :disabled="aiPlan.busy || aiPlan.saving" :aria-busy="aiPlan.busy"
+                                      class="btn-ghost flex min-h-[2.75rem] items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm leading-tight" :class="{ '!opacity-100': aiPlan.busy }" data-test="ai-plan-again">
+                                  <span v-if="aiPlan.busy" class="h-4 w-4 flex-shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none" aria-hidden="true"></span>
+                                  {{ aiPlan.busy ? t('ai.plan.generating') : t('ai.plan.again') }}
+                              </button>
+                              <button type="button" @click="ai.acceptPlan()" :disabled="aiPlan.saving || aiPlan.busy" class="btn-primary min-h-[2.75rem] rounded-xl text-sm font-bold disabled:opacity-50" data-test="ai-plan-accept">{{ t('ai.plan.accept') }}</button>
+                          </div>
+                          <button type="button" @click="ai.discardPlan()" class="mt-2 min-h-[2.75rem] w-full text-xs font-bold text-slate-400 hover:text-white">{{ t('ai.plan.discard') }}</button>
+                      </template>
+                      <p class="mt-3 text-[11px] leading-snug text-slate-400">{{ t('ai.disclaimer') }}</p>
+                  </section>
 
                   <h3 class="label-xs mb-2">{{ t('builder.results') }}</h3>
                   <p v-if="!online" class="rounded-xl border border-white/10 bg-black/20 p-3 text-xs leading-relaxed text-slate-300">{{ t('plan.templatesOffline') }}</p>

@@ -222,7 +222,8 @@ input[type="number"] { -moz-appearance: textfield; }
 .swap-leave-to { opacity: 0; transform: translateY(-6px); }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  /* Endlos-Animationen (Spinner, Puls) einmal statt flackernd im 0,01-ms-Takt */
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
 /* ---------- Übungsfigur (figure.ts) - außerhalb von @layer, damit nichts entfernt wird ---------- */

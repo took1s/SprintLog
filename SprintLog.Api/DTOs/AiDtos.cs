@@ -1,0 +1,58 @@
+using SprintLog.Api.Infrastructure;
+
+namespace SprintLog.Api.DTOs;
+
+public record AiStatusResponse(bool Enabled, int Remaining, int DailyLimit);
+
+public record AiChatMessage(string? Role, string? Content);
+
+/// <summary>
+/// Frage an den Coach. <c>Context</c> ist eine kompakte Zusammenfassung der eigenen Trainingsdaten, die der Client
+/// (offline-first, kennt Erholung/Wochenplan/Belastung) erstellt - der Server reicht sie nur als Daten weiter.
+/// </summary>
+public record AiAskInput(string? Question, string? Context, List<AiChatMessage>? History, string? Locale)
+{
+    public const int MaxQuestion = 1000;
+    public const int MaxContext = 12_000;
+    public const int MaxHistory = 10;
+    public const int MaxHistoryMessage = 2_000;
+
+    public ValidationErrors Validate()
+    {
+        var q = Question?.Trim() ?? string.Empty;
+        var errors = new ValidationErrors()
+            .AddIf(q.Length is < 2 or > MaxQuestion, "question", $"Question must be 2-{MaxQuestion} characters.")
+            .AddIf(Context is { Length: > MaxContext }, "context", $"Context must not exceed {MaxContext} characters.")
+            .AddIf(History is { Count: > MaxHistory }, "history", $"At most {MaxHistory} previous messages.");
+        if (History is not null)
+            for (var i = 0; i < History.Count && i < MaxHistory; i++)
+                errors
+                    .AddIf(History[i].Role is not ("user" or "assistant"), $"history[{i}]", "Role must be user or assistant.")
+                    .AddIf(string.IsNullOrWhiteSpace(History[i].Content) || History[i].Content!.Length > MaxHistoryMessage, $"history[{i}]", $"Message must be 1-{MaxHistoryMessage} characters.");
+        return errors;
+    }
+}
+
+public record AiAskResponse(string Answer, int Remaining);
+
+public record AiPlanAnswers(string? Focus, int DaysPerWeek, int? MatchDay, string? Level);
+
+/// <summary>Plan von der KI: Antworten aus "Plan für mich" + freie Hinweise (Verletzung, Geräte, Zeit).</summary>
+public record AiPlanInput(AiPlanAnswers? Answers, string? Notes, string? Context, string? Locale)
+{
+    public const int MaxNotes = 600;
+    public static readonly string[] Focuses = { "football", "speed", "strength", "muscle", "rehab" };
+    public static readonly string[] Levels = { "Beginner", "Intermediate", "Advanced" };
+
+    public ValidationErrors Validate() => new ValidationErrors()
+        .AddIf(Answers is null, "answers", "Answers are required.")
+        .AddIf(Answers is not null && !Focuses.Contains(Answers.Focus), "answers.focus", "Unknown focus.")
+        .AddIf(Answers is not null && !Levels.Contains(Answers.Level), "answers.level", "Unknown level.")
+        .AddIf(Answers is { DaysPerWeek: < 1 or > 6 }, "answers.daysPerWeek", "Days per week must be 1-6.")
+        .AddIf(Answers is { MatchDay: < 0 or > 6 }, "answers.matchDay", "Match day must be 0-6.")
+        .AddIf(Notes is { Length: > MaxNotes }, "notes", $"Notes must not exceed {MaxNotes} characters.")
+        .AddIf(Context is { Length: > AiAskInput.MaxContext }, "context", $"Context must not exceed {AiAskInput.MaxContext} characters.");
+}
+
+/// <summary>Vorschlag zum Ansehen - gespeichert wird erst, wenn der Nutzer ihn übernimmt (normales POST /api/programs).</summary>
+public record AiPlanResponse(ProgramInput Program, string Summary, int Remaining);

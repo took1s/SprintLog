@@ -66,6 +66,23 @@ if (emailEnabled)
 else
     builder.Services.AddSingleton<IEmailSender, DisabledEmailSender>();
 
+// ---------- KI-Coach (optional, Claude-API) ----------
+builder.Services.AddOptions<AiOptions>().Configure<IConfiguration>((options, config) =>
+{
+    options.ApiKey = config["Ai:AnthropicApiKey"] ?? config["ANTHROPIC_API_KEY"] ?? string.Empty;
+    options.Model = config["Ai:Model"] ?? options.Model;
+    options.DailyLimit = config.GetValue("Ai:DailyLimit", options.DailyLimit);
+});
+builder.Services.AddSingleton<AiQuota>();
+if (!string.IsNullOrWhiteSpace(builder.Configuration["Ai:AnthropicApiKey"] ?? builder.Configuration["ANTHROPIC_API_KEY"]))
+    builder.Services.AddHttpClient<IAiClient, AnthropicAiClient>(c =>
+    {
+        c.BaseAddress = new Uri("https://api.anthropic.com/");
+        c.Timeout = TimeSpan.FromSeconds(60); // Pläne brauchen einige Sekunden
+    });
+else
+    builder.Services.AddSingleton<IAiClient, DisabledAiClient>();
+
 // ---------- Datenbank ----------
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {
@@ -138,6 +155,14 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy(AuthEndpoints.RateLimitPolicy, http =>
     {
         var limit = http.RequestServices.GetRequiredService<IConfiguration>().GetValue("RateLimiting:AuthPermitLimit", 10);
+        return RateLimitPartition.GetFixedWindowLimiter(
+            http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = limit, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 });
+    });
+    // KI: höchstens 6 Anfragen pro Minute (läuft vor der Authentifizierung, daher pro IP; das Tageskontingent pro Nutzer regelt AiQuota)
+    options.AddPolicy(AiEndpoints.RateLimitPolicy, http =>
+    {
+        var limit = http.RequestServices.GetRequiredService<IConfiguration>().GetValue("RateLimiting:AiPermitLimit", 6);
         return RateLimitPartition.GetFixedWindowLimiter(
             http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = limit, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 });
@@ -260,6 +285,7 @@ app.MapProgramEndpoints();
 app.MapWellnessEndpoints();
 app.MapGoalEndpoints();
 app.MapMonitoringEndpoints();
+app.MapAiEndpoints();
 
 var monitoring = app.Services.GetRequiredService<MonitoringOptions>();
 app.Logger.LogInformation("SprintLog {Release} started ({Environment}). Sentry: {Sentry}, browser errors: {Browser}, e-mail: {Email}",

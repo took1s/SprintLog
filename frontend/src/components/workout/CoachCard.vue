@@ -1,15 +1,19 @@
 <script setup lang="ts">
 // Coach-Empfehlung für heute: was (trainieren / locker / Pause / Spiel / Reha) und warum.
 // Die Gründe sind kurz und nachprüfbar - der Coach rät, er entscheidet nicht.
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t } from '@/i18n';
 import { useAppStore } from '@/stores/app';
+import { useAiStore } from '@/stores/ai';
 import type { Reason, TodayKind } from '@/lib/coach';
 
 const app = useAppStore();
 const { activeProgram, coach } = storeToRefs(app);
 const { openPlanBuilder } = app;
+const ai = useAiStore();
+// KI-Status einmal holen (ohne API-Key auf dem Server bleibt der Knopf unsichtbar)
+onMounted(() => { if (!ai.status) void ai.loadStatus(); });
 
 // Nur Paletten-Farben aus tailwind.config.cjs (sky/blue gibt es dort nicht - die Klassen würden leer bleiben).
 // Spiel = Gold wie im Wochenplan, locker = Warnfarbe, Pause = neutral.
@@ -46,6 +50,11 @@ const reasons = computed(() => coach.value.reasons.map(reasonText));
       <ul v-if="reasons.length" class="mt-3 flex flex-wrap gap-1.5" :aria-label="t('coach.why')">
           <li v-for="r in reasons" :key="r" class="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] leading-tight text-slate-300">{{ r }}</li>
       </ul>
+      <!-- Ruhiger Knopf: ohne Plan ist "План для меня" die Aktion der Karte, darunter folgt der große Start-Knopf -->
+      <button v-if="ai.enabled" type="button" @click="ai.openChat()" class="btn-ghost mt-3 flex min-h-[2.75rem] w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold" data-test="coach-ask">
+          <svg class="h-4 w-4 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3zM19 15l.9 2.1 2.1.9-2.1.9L19 21l-.9-2.1-2.1-.9 2.1-.9L19 15z"/></svg>
+          {{ t('ai.open') }}
+      </button>
       <template v-if="!activeProgram">
           <p class="mt-3 text-xs leading-relaxed text-slate-400">{{ t('coach.noPlan') }}</p>
           <button type="button" @click="openPlanBuilder()" class="btn-secondary mt-3 w-full rounded-xl py-3 text-sm" data-test="coach-build">{{ t('coach.buildPlan') }}</button>

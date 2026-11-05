@@ -764,6 +764,7 @@ export const useAppStore = defineStore('app', () => {
       remove(k.programs);
       remove(k.wellness);
       remove(k.goals);
+      remove(k.aiChat); // Gespräche mit dem KI-Coach sind privat (geteilte Geräte)
     }
     goalsStore.clear();
     removeLegacyToken();
