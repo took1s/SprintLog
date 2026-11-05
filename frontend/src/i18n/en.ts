@@ -838,6 +838,7 @@ export const en = {
       notRecovered: '{region} only {percent} % recovered',
       recovered: 'Recovered from the last sessions',
       longBreak: '{days} days without training - an easy session gets you back in',
+      rehabRest: 'Rehab: no loading today - only gentle, pain-free stretching',
       rehab: 'Rehab program active',
       planNext: 'Next in your plan: {day}',
       trainedToday: 'Already trained today - well done',
