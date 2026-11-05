@@ -54,6 +54,8 @@ public sealed class SprintLogApiFactory : WebApplicationFactory<Program>, IAsync
             ["JWT_SECRET"] = JwtSecret,
             ["Database:MigrateOnStartup"] = "true",
             ["RateLimiting:AuthPermitLimit"] = "10000",
+            ["RateLimiting:AiPermitLimit"] = "10000",
+            ["Ai:DailyLimit"] = "5",
             ["App:PublicUrl"] = PublicUrl
         }));
         // E-Mails landen in einem Postfach im Speicher statt bei Brevo.
@@ -61,10 +63,16 @@ public sealed class SprintLogApiFactory : WebApplicationFactory<Program>, IAsync
         {
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(Emails);
+            // KI ohne echte Claude-API: Antworten kommen aus dem Test
+            services.RemoveAll<IAiClient>();
+            services.AddSingleton<IAiClient>(Ai);
         });
     }
 
     public const string PublicUrl = "https://sprintlog.test";
+
+    /// <summary>Gefälschter KI-Client (Antwort pro Test setzbar).</summary>
+    public FakeAiClient Ai { get; } = new();
 
     /// <summary>Alle "versendeten" E-Mails (für Tests von Bestätigung und Passwort-Reset).</summary>
     public FakeEmailSender Emails { get; } = new();
@@ -126,4 +134,18 @@ public sealed class ShiftedTimeProvider : TimeProvider
 {
     public TimeSpan Offset { get; set; }
     public override DateTimeOffset GetUtcNow() => System.GetUtcNow() + Offset;
+}
+
+/// <summary>KI-Client für Tests: liefert, was der Test vorgibt, und merkt sich die letzte Anfrage.</summary>
+public sealed class FakeAiClient : IAiClient
+{
+    public bool IsEnabled { get; set; } = true;
+    public Func<string, IReadOnlyList<AiMessage>, AiTool?, AiCompletion> Reply { get; set; } = (_, _, _) => new AiCompletion("ok", null, 10, 5);
+    public (string System, IReadOnlyList<AiMessage> Messages, AiTool? Tool)? Last { get; private set; }
+
+    public Task<AiCompletion> CompleteAsync(string system, IReadOnlyList<AiMessage> messages, int maxTokens, AiTool? tool, CancellationToken ct)
+    {
+        Last = (system, messages, tool);
+        return Task.FromResult(Reply(system, messages, tool));
+    }
 }
