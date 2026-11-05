@@ -112,7 +112,10 @@ export const useAiStore = defineStore('ai', () => {
 
   function openChat() {
     open.value = true;
-    error.value = null;
+    // Unbeantwortete letzte Frage (Fehler, App zwischendurch geschlossen): Hinweis + "Erneut versuchen" behalten
+    const unanswered = messages.value[messages.value.length - 1]?.role === 'user';
+    if (!unanswered) error.value = null;
+    else if (!busy.value && !error.value) error.value = 'unknown';
     void loadStatus();
   }
 
