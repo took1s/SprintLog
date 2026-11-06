@@ -56,10 +56,12 @@ public static class WorkoutEndpoints
             Assists = req.Match?.Assists,
             Opponent = string.IsNullOrWhiteSpace(req.Match?.Opponent) ? null : req.Match.Opponent.Trim(),
             Notes = NormalizeNotes(req.Notes),
+            Gym = NormalizeNotes(req.Gym),
             ProgramDayId = req.ProgramDayId,
             ClientId = req.ClientId,
             UpdatedAt = now.UtcDateTime,
-            Sets = MapSets(req)
+            Sets = MapSets(req),
+            ExerciseNotes = MapExerciseNotes(req)
         };
 
         db.Workouts.Add(workout);
@@ -114,7 +116,7 @@ public static class WorkoutEndpoints
         var errors = req.Validate(now);
         if (errors.HasErrors) return errors.ToResult();
 
-        var workout = await db.Workouts.Include(w => w.Sets).FirstOrDefaultAsync(w => w.Id == id && w.UserId == userId, ct);
+        var workout = await db.Workouts.Include(w => w.Sets).Include(w => w.ExerciseNotes).FirstOrDefaultAsync(w => w.Id == id && w.UserId == userId, ct);
         if (workout is null) return Results.NotFound();
 
         if (await CheckExercisesAsync(db, userId.Value, req, ct) is { } exerciseError) return exerciseError;
@@ -130,11 +132,14 @@ public static class WorkoutEndpoints
         workout.Assists = req.Match?.Assists;
         workout.Opponent = string.IsNullOrWhiteSpace(req.Match?.Opponent) ? null : req.Match.Opponent.Trim();
         workout.Notes = NormalizeNotes(req.Notes);
+        workout.Gym = NormalizeNotes(req.Gym);
         workout.UpdatedAt = now.UtcDateTime;
 
         // Sätze komplett ersetzen - einfacher und eindeutiger als ein Abgleich einzelner Sätze.
         db.WorkoutSets.RemoveRange(workout.Sets);
         workout.Sets = MapSets(req);
+        db.WorkoutExerciseNotes.RemoveRange(workout.ExerciseNotes);
+        workout.ExerciseNotes = MapExerciseNotes(req);
         await db.SaveChangesAsync(ct);
 
         var updated = await Project(db.Workouts.AsNoTracking().Where(w => w.Id == id)).FirstAsync(ct);
@@ -260,7 +265,21 @@ public static class WorkoutEndpoints
             Time = s.Time,
             Rpe = s.Rpe,
             IsWarmup = s.IsWarmup,
-            Note = string.IsNullOrWhiteSpace(s.Note) ? null : s.Note.Trim()
+            Note = string.IsNullOrWhiteSpace(s.Note) ? null : s.Note.Trim(),
+            Level = s.Level,
+            Power = s.Power,
+            HeartRate = s.HeartRate,
+            Cadence = s.Cadence,
+            Calories = s.Calories
+        }).ToList();
+
+    private static List<WorkoutExerciseNote> MapExerciseNotes(CreateWorkoutRequest req) =>
+        (req.ExerciseNotes ?? new()).Select(n => new WorkoutExerciseNote
+        {
+            ExerciseId = n.ExerciseId,
+            Note = string.IsNullOrWhiteSpace(n.Note) ? null : n.Note.Trim(),
+            Skipped = n.Skipped,
+            Reason = n.Reason
         }).ToList();
 
     private static string? NormalizeNotes(string? notes) =>
@@ -268,7 +287,9 @@ public static class WorkoutEndpoints
 
     private static async Task<IResult?> CheckExercisesAsync(AppDbContext db, int userId, CreateWorkoutRequest req, CancellationToken ct)
     {
-        var exerciseIds = (req.Sets ?? new()).Select(s => s.ExerciseId).Distinct().ToList();
+        var exerciseIds = (req.Sets ?? new()).Select(s => s.ExerciseId)
+            .Concat((req.ExerciseNotes ?? new()).Select(n => n.ExerciseId))
+            .Distinct().ToList();
         if (exerciseIds.Count == 0) return null;
         var knownIds = await db.Exercises.VisibleTo(userId)
             .Where(e => exerciseIds.Contains(e.Id))
@@ -317,9 +338,18 @@ public static class WorkoutEndpoints
                     s.Time,
                     s.Rpe,
                     s.IsWarmup,
-                    s.Note))
+                    s.Note,
+                    s.Level,
+                    s.Power,
+                    s.HeartRate,
+                    s.Cadence,
+                    s.Calories,
+                    s.Exercise.IsAssisted,
+                    s.Exercise.PerSide))
                 .ToList(),
             w.UpdatedAt,
             w.WorkoutType == CreateWorkoutRequest.MatchType ? new MatchDetails(w.Goals, w.Assists, w.Opponent) : null,
-            w.Quality));
+            w.Quality,
+            w.Gym,
+            w.ExerciseNotes.OrderBy(n => n.Id).Select(n => new ExerciseNoteDto(n.ExerciseId, n.Note, n.Skipped, n.Reason)).ToList()));
 }

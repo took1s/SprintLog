@@ -7,6 +7,11 @@ public static class Seed
     public const int Sprints = 12;
     public const int Plank = 47;
     public const int Nordic = 50;
+    public const int SidePlank = 48;
+    public const int Bulgarian = 33;
+    public const int StationaryBike = 84;
+    public const int AssistedPullUp = 111;
+    public const int LatPulldown = 44;
 }
 
 public static class Payloads

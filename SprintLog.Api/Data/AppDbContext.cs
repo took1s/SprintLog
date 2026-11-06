@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Exercise> Exercises => Set<Exercise>();
     public DbSet<Workout> Workouts => Set<Workout>();
     public DbSet<WorkoutSet> WorkoutSets => Set<WorkoutSet>();
+    public DbSet<WorkoutExerciseNote> WorkoutExerciseNotes => Set<WorkoutExerciseNote>();
     public DbSet<Favorite> Favorites => Set<Favorite>();
     public DbSet<TrainingProgram> Programs => Set<TrainingProgram>();
     public DbSet<ProgramDay> ProgramDays => Set<ProgramDay>();
@@ -66,6 +67,7 @@ public class AppDbContext : DbContext
             e.Property(w => w.WorkoutType).HasMaxLength(20);
             e.Property(w => w.Notes).HasMaxLength(CreateWorkoutRequest.MaxNotesLength);
             e.Property(w => w.Opponent).HasMaxLength(60);
+            e.Property(w => w.Gym).HasMaxLength(CreateWorkoutRequest.MaxGymLength);
             e.ToTable(t => t.HasCheckConstraint("CK_Workouts_Quality", "\"Quality\" IS NULL OR \"Quality\" BETWEEN 1 AND 10"));
             e.HasOne(w => w.User).WithMany(u => u.Workouts).HasForeignKey(w => w.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(w => new { w.UserId, w.Date });
@@ -199,10 +201,29 @@ public class AppDbContext : DbContext
             e.HasOne(s => s.Exercise).WithMany(x => x.Sets).HasForeignKey(s => s.ExerciseId).OnDelete(DeleteBehavior.NoAction);
             e.Property(s => s.Note).HasMaxLength(200);
         });
+
+        modelBuilder.Entity<WorkoutExerciseNote>(e =>
+        {
+            e.HasOne(n => n.Workout).WithMany(w => w.ExerciseNotes).HasForeignKey(n => n.WorkoutId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(n => n.Exercise).WithMany().HasForeignKey(n => n.ExerciseId).OnDelete(DeleteBehavior.NoAction);
+            e.Property(n => n.Note).HasMaxLength(CreateWorkoutRequest.MaxSetNoteLength);
+            e.Property(n => n.Reason).HasMaxLength(20);
+            e.HasIndex(n => new { n.WorkoutId, n.ExerciseId }).IsUnique();
+        });
     }
 
+    /// <summary>Unterstützte Maschinen: Gewicht = Hilfe (weniger ist besser).</summary>
+    internal static readonly HashSet<int> AssistedSeedIds = new() { 111, 112 };
+
+    /// <summary>Einseitige Übungen: Werte pro Seite.</summary>
+    internal static readonly HashSet<int> PerSideSeedIds = new() { 33, 36, 41, 48, 85, 86, 97, 98, 102, 103, 148, 178, 189, 191, 192, 201, 203, 226, 263 };
+
     private static Exercise Ex(int id, string name, string category, string muscleGroup, TrackingType trackingType = TrackingType.WeightReps) =>
-        new() { Id = id, Name = name, Category = category, MuscleGroup = muscleGroup, TrackingType = trackingType };
+        new()
+        {
+            Id = id, Name = name, Category = category, MuscleGroup = muscleGroup, TrackingType = trackingType,
+            IsAssisted = AssistedSeedIds.Contains(id), PerSide = PerSideSeedIds.Contains(id)
+        };
 
     /// <summary>Standard-Übungskatalog. IDs sind fix, damit bestehende Daten gültig bleiben.</summary>
     internal static readonly Exercise[] SeedExercises =
@@ -289,8 +310,8 @@ public class AppDbContext : DbContext
         Ex(80, "Ab Wheel Rollout", "Gym", "Core"),
         Ex(81, "Crunches", "Gym", "Core"),
         Ex(82, "Jump Rope", "Gym", "Cardio", TrackingType.Duration),
-        Ex(83, "Rowing Machine", "Gym", "Cardio", TrackingType.DistanceTime),
-        Ex(84, "Cycling (Stationary)", "Gym", "Cardio", TrackingType.DistanceTime),
+        Ex(83, "Rowing Machine", "Gym", "Cardio", TrackingType.Cardio),
+        Ex(84, "Cycling (Stationary)", "Gym", "Cardio", TrackingType.Cardio),
 
         // v5: Verletzungsprävention (FIFA 11+, Copenhagen), Feld-Kondition, Athletik, Körpergewicht
         Ex(85, "Copenhagen Adduction", "Football", "Legs"),
@@ -337,10 +358,10 @@ public class AppDbContext : DbContext
         Ex(124, "Standing Calf Raise Machine", "Gym", "Legs"),
         Ex(125, "Belt Squat", "Gym", "Legs"),
         Ex(126, "Cable Glute Kickback", "Gym", "Legs"),
-        Ex(127, "Treadmill", "Gym", "Cardio", TrackingType.DistanceTime),
-        Ex(128, "Stair Climber", "Gym", "Cardio", TrackingType.Duration),
-        Ex(129, "Elliptical Trainer", "Gym", "Cardio", TrackingType.Duration),
-        Ex(130, "Air Bike", "Gym", "Cardio", TrackingType.Duration),
+        Ex(127, "Treadmill", "Gym", "Cardio", TrackingType.Cardio),
+        Ex(128, "Stair Climber", "Gym", "Cardio", TrackingType.Cardio),
+        Ex(129, "Elliptical Trainer", "Gym", "Cardio", TrackingType.Cardio),
+        Ex(130, "Air Bike", "Gym", "Cardio", TrackingType.Cardio),
         // v7: großer Katalog - Hammer Strength, Pullover, Kabel, Kettlebell, Bänder, Prävention, Feld, Mobilität
         Ex(131, "Decline Bench Press", "Gym", "Chest"),
         Ex(132, "Decline Dumbbell Press", "Gym", "Chest"),
@@ -465,7 +486,7 @@ public class AppDbContext : DbContext
         Ex(251, "Leg Swings", "Football", "Mobility", TrackingType.Duration),
         Ex(252, "Foam Rolling", "Football", "Mobility", TrackingType.Duration),
         Ex(253, "Incline Treadmill Walk", "Gym", "Cardio", TrackingType.Duration),
-        Ex(254, "SkiErg", "Gym", "Cardio", TrackingType.Duration),
+        Ex(254, "SkiErg", "Gym", "Cardio", TrackingType.Cardio),
         Ex(255, "Battle Ropes", "Gym", "Cardio", TrackingType.Duration),
         Ex(256, "Swimming", "Gym", "Cardio", TrackingType.Duration),
         Ex(257, "Jumping Jacks", "Gym", "Cardio", TrackingType.Duration),

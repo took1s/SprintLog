@@ -32,6 +32,12 @@ public class Workout
     public int? ProgramDayId { get; set; }
     public ProgramDay? ProgramDay { get; set; }
 
+    /// <summary>Studio, in dem trainiert wurde (Geräte und Gewichte unterscheiden sich je Studio).</summary>
+    public string? Gym { get; set; }
+
+    /// <summary>Notizen pro Übung - auch für ausgelassene Übungen (Grund für die KI).</summary>
+    public List<WorkoutExerciseNote> ExerciseNotes { get; set; } = new();
+
     // Nur bei "Match": Tore, Vorlagen, Gegner (optional)
     public int? Goals { get; set; }
     public int? Assists { get; set; }

@@ -22,6 +22,8 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
     public const string SubmitReport = "submit_report";
     public const string Remember = "remember";
     public const string ForgetMemory = "forget_memory";
+    public const string ProposeWorkoutChange = "propose_workout_change";
+    public const int MaxWorkoutOps = 10;
 
     /// <summary>Gedächtnis-Änderungen dieser Anfrage (Hinweise im Chat). AiTools lebt pro Request.</summary>
     public List<MemoryChangeDto> MemoryChanges { get; } = new();
@@ -137,8 +139,27 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
         "Delete a memory entry that is wrong or no longer true (e.g. an injury has healed, the match day changed - then remember the new fact). Id from coach_memory.",
         Schema("""{"type":"object","required":["id"],"properties":{"id":{"type":"integer"}}}"""));
 
+    public static readonly AiTool ProposeWorkoutChangeTool = new(ProposeWorkoutChange,
+        "Change the workout the athlete is doing RIGHT NOW (see live_workout). The athlete sees a card and applies it with one tap. " +
+        "Operations: add (new exercise with sets and targets), replace (swap exerciseId for withExerciseId, e.g. machine busy or pain), " +
+        "remove (drop an exercise that has no logged sets yet), adjust (new targets for the REMAINING sets: sets = how many more, reps, weight in kg, time in s, distance in m, targetRpe). " +
+        "For assisted machines weight = assistance (less = harder). Only catalog ids. Never claim the workout was changed before the athlete applies it.",
+        Schema("""
+        {"type":"object","required":["changes","operations"],"properties":{
+          "changes":{"type":"array","maxItems":6,"items":{"type":"string"},"description":"Short reasons per change, in the athlete's language"},
+          "operations":{"type":"array","minItems":1,"maxItems":10,"items":{"type":"object","required":["op","exerciseId"],"properties":{
+            "op":{"type":"string","enum":["add","replace","remove","adjust"]},
+            "exerciseId":{"type":"integer"},"withExerciseId":{"type":"integer","description":"replace only"},
+            "sets":{"type":"integer","minimum":1,"maximum":10},"reps":{"type":"integer","minimum":1,"maximum":50},
+            "weight":{"type":"number","minimum":0,"maximum":500},"time":{"type":"number","description":"seconds"},"distance":{"type":"number","description":"meters"},
+            "targetRpe":{"type":"number","minimum":5,"maximum":10},"note":{"type":"string","description":"max 120 characters"}}}}}}
+        """));
+
     public static readonly IReadOnlyList<AiTool> DataTools = new[] { Programs, ExerciseHistory, PersonalRecords, TrainingSummary, LoadMetrics, WellnessTrend, MatchStats, SearchExercises };
     public static readonly IReadOnlyList<AiTool> ChatTools = DataTools.Concat(new[] { ProposeProgramTool, ProposeProgramUpdateTool, ProposeGoalTool, ProposeScheduleTool, RememberTool, ForgetMemoryTool }).ToList();
+
+    /// <summary>Im Training: zusätzlich die laufende Einheit ändern.</summary>
+    public static readonly IReadOnlyList<AiTool> LiveWorkoutTools = ChatTools.Append(ProposeWorkoutChangeTool).ToList();
 
     // ---------- Ausführung ----------
 
@@ -161,6 +182,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
                 ProposeProgram => await ProgramActionAsync(userId, use.Input, 7, actions, ct),
                 ProposeGoal => await GoalActionAsync(userId, use.Input, actions, ct),
                 ProposeSchedule => ScheduleAction(use.Input, actions),
+                ProposeWorkoutChange => await WorkoutChangeActionAsync(userId, use.Input, actions, ct),
                 Remember => await RememberAsync(userId, use.Input, ct),
                 ForgetMemory => await ForgetAsync(userId, Int(use.Input, "id"), ct),
                 _ => new { error = $"Unknown tool {use.Name}" },
@@ -210,13 +232,39 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
     public static double? E1Rm(double? weight, int? reps) =>
         weight is > 0 && reps is >= 1 and <= 12 ? (reps == 1 ? weight.Value : weight.Value * (1 + reps.Value / 30.0)) : null;
 
-    private static string SetText(WorkoutSet s) =>
-        s.Distance is { } d ? $"{R(d, 0)}m{(s.Time is { } t ? $" {R(t, 2)}s" : string.Empty)}"
-        : s.Weight is null && s.Reps is null && s.Time is { } hold ? $"{R(hold, 0)}s"
-        : $"{(s.Weight is > 0 ? R(s.Weight.Value, 2).ToString(CultureInfo.InvariantCulture) : "BW")}x{s.Reps}{(s.Rpe is { } rpe ? $"@{R(rpe)}" : string.Empty)}";
+    private static string SetText(WorkoutSet s) => SetText(s, s.Exercise);
+
+    /// <summary>Satz kompakt für die KI: Kraft "80x5@8", unterstützt "assist 30kg x8", Ausdauer "20:00 6.2km L8 150W HR142", einseitig "/side".</summary>
+    internal static string SetText(WorkoutSet s, Exercise? ex)
+    {
+        var side = ex?.PerSide == true ? "/side" : string.Empty;
+        var rpe = s.Rpe is { } r ? $"@{R(r)}" : string.Empty;
+        if (ex?.TrackingType == TrackingType.Cardio)
+        {
+            var parts = new List<string>();
+            if (s.Time is { } t) parts.Add($"{(int)t / 60}:{(int)t % 60:00}min");
+            if (s.Distance is > 0) parts.Add($"{R(s.Distance.Value / 1000, 2).ToString(CultureInfo.InvariantCulture)}km");
+            if (s.Level is { } lv) parts.Add($"L{R(lv).ToString(CultureInfo.InvariantCulture)}");
+            if (s.Power is { } w) parts.Add($"{w}W");
+            if (s.Cadence is { } c) parts.Add($"{c}rpm");
+            if (s.HeartRate is { } hr) parts.Add($"HR{hr}");
+            if (s.Calories is { } kcal) parts.Add($"{kcal}kcal");
+            return string.Join(" ", parts) + rpe;
+        }
+        if (s.Distance is { } d) return $"{R(d, 0)}m{(s.Time is { } t2 ? $" {R(t2, 2)}s" : string.Empty)}{side}";
+        if (s.Weight is null && s.Reps is null && s.Time is { } hold) return $"{R(hold, 0)}s{side}";
+        var w2 = s.Weight is > 0 ? R(s.Weight.Value, 2).ToString(CultureInfo.InvariantCulture) : "BW";
+        return ex?.IsAssisted == true
+            ? $"assist {(s.Weight is > 0 ? w2 + "kg" : "none")} x{s.Reps}{side}{rpe}"
+            : $"{w2}x{s.Reps}{side}{rpe}";
+    }
+
+    /// <summary>Notiz/Auslassung einer Übung für die KI ("skipped (pain): Schulter zwickt").</summary>
+    internal static string? NoteText(WorkoutExerciseNote? n) =>
+        n is null ? null : $"{(n.Skipped ? $"skipped{(n.Reason is null ? "" : $" ({n.Reason})")}" : n.Reason ?? "note")}{(n.Note is null ? "" : $": {n.Note}")}";
 
     private IQueryable<Workout> Workouts(int userId, DateTime since) =>
-        db.Workouts.AsNoTracking().Where(w => w.UserId == userId && w.Date >= since).Include(w => w.Sets).ThenInclude(s => s.Exercise);
+        db.Workouts.AsNoTracking().Where(w => w.UserId == userId && w.Date >= since).Include(w => w.Sets).ThenInclude(s => s.Exercise).Include(w => w.ExerciseNotes);
 
     private async Task<Exercise?> ResolveAsync(int userId, string query, CancellationToken ct)
     {
@@ -234,7 +282,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
         if (ex is null) return new { error = $"No exercise matches '{query}'. Use search_exercises first." };
         var since = Now.AddDays(-7 * weeks);
         var sessions = await Workouts(userId, since)
-            .Where(w => w.Sets.Any(s => s.ExerciseId == ex.Id))
+            .Where(w => w.Sets.Any(s => s.ExerciseId == ex.Id) || w.ExerciseNotes.Any(n => n.ExerciseId == ex.Id))
             .OrderByDescending(w => w.Date).Take(30).ToListAsync(ct);
 
         var rows = sessions.Select(w =>
@@ -242,16 +290,22 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
             var sets = w.Sets.Where(s => s.ExerciseId == ex.Id).OrderBy(s => s.SetNumber).ToList();
             var work = sets.Where(s => !s.IsWarmup).ToList();
             if (work.Count == 0) work = sets;
-            var best = work.Select(s => (Set: s, E1: E1Rm(s.Weight, s.Reps))).OrderByDescending(x => x.E1 ?? 0).First();
-            var times = work.Where(s => s.Time is > 0 && s.Distance is > 0).Select(s => s.Time!.Value).ToList();
+            // Unterstützte Maschine: kein 1RM (das Gewicht hilft), Fortschritt = weniger Hilfe bei gleichen Wdh.
+            var best = ex.IsAssisted || work.Count == 0 ? (Set: (WorkoutSet?)null, E1: (double?)null)
+                : work.Select(s => (Set: (WorkoutSet?)s, E1: E1Rm(s.Weight, s.Reps))).OrderByDescending(x => x.E1 ?? 0).First();
+            var times = ex.TrackingType == TrackingType.Cardio ? new List<double>() : work.Where(s => s.Time is > 0 && s.Distance is > 0).Select(s => s.Time!.Value).ToList();
+            var note = w.ExerciseNotes.FirstOrDefault(n => n.ExerciseId == ex.Id);
             return new
             {
                 date = Day(w.Date),
+                gym = w.Gym,
                 sets = string.Join(", ", work.Select(SetText)),
                 warmupSets = sets.Count - work.Count,
                 e1rm = best.E1 is { } e ? R(e) : (double?)null,
-                tonnageKg = work.Sum(s => (s.Weight ?? 0) * (s.Reps ?? 0)) is var t and > 0 ? R(t, 0) : (double?)null,
+                minAssistKg = ex.IsAssisted && work.Any(s => s.Weight is not null) ? R(work.Min(s => s.Weight ?? 0), 1) : (double?)null,
+                tonnageKg = ex.IsAssisted ? null : work.Sum(s => (s.Weight ?? 0) * (s.Reps ?? 0) * (ex.PerSide ? 2 : 1)) is var t and > 0 ? R(t, 0) : (double?)null,
                 bestTime = times.Count > 0 ? R(times.Min(), 2) : (double?)null,
+                note = NoteText(note),
                 sessionRpe = w.SessionRpe,
             };
         }).ToList();
@@ -267,21 +321,32 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
         var timed = rows.Where(r => r.bestTime is not null).Reverse().ToList();
         object? speedTrend = timed.Count >= 2 ? new { firstBest = timed[0].bestTime, lastBest = timed[^1].bestTime, allTimeBest = timed.Min(r => r.bestTime) } : null;
 
-        return new { exercise = new { ex.Id, ex.Name, tracking = ex.TrackingType.ToString(), ex.MuscleGroup }, weeks, sessionCount = rows.Count, trend, speedTrend, sessions = rows };
+        var hints = new List<string>();
+        if (ex.IsAssisted) hints.Add("Assisted machine: the weight is ASSISTANCE - less kg = harder = progress. Compare minAssistKg at similar reps.");
+        if (ex.PerSide) hints.Add("Unilateral: values are per side, both sides were trained.");
+        if (rows.Select(r => r.gym).Where(g => g is not null).Distinct().Count() > 1)
+            hints.Add("Several gyms: machines and stacks differ between gyms - compare weights only within the same gym.");
+        return new { exercise = new { ex.Id, ex.Name, tracking = ex.TrackingType.ToString(), ex.MuscleGroup, assisted = ex.IsAssisted, perSide = ex.PerSide }, hints, weeks, sessionCount = rows.Count, trend, speedTrend, sessions = rows };
     }
 
     private async Task<object> RecordsAsync(int userId, int limit, CancellationToken ct)
     {
         var sets = await db.WorkoutSets.AsNoTracking()
             .Where(s => s.Workout.UserId == userId && !s.IsWarmup)
-            .Select(s => new { s.ExerciseId, s.Exercise.Name, s.Exercise.TrackingType, s.Weight, s.Reps, s.Distance, s.Time, s.Workout.Date })
+            .Select(s => new { s.ExerciseId, s.Exercise.Name, s.Exercise.TrackingType, s.Exercise.IsAssisted, s.Weight, s.Reps, s.Distance, s.Time, s.Workout.Date, s.Workout.Gym })
             .ToListAsync(ct);
 
-        var strength = sets.Where(s => s.TrackingType == TrackingType.WeightReps && E1Rm(s.Weight, s.Reps) is not null)
-            .GroupBy(s => s.Name)
+        // Rekorde je Studio getrennt: Maschinen und Gewichte unterscheiden sich (Gym = null -> ohne Angabe)
+        var strength = sets.Where(s => s.TrackingType == TrackingType.WeightReps && !s.IsAssisted && E1Rm(s.Weight, s.Reps) is not null)
+            .GroupBy(s => (s.Name, s.Gym))
             .Select(g => g.OrderByDescending(s => E1Rm(s.Weight, s.Reps)).First())
             .OrderByDescending(s => s.Date).Take(limit)
-            .Select(s => new { exercise = s.Name, e1rm = R(E1Rm(s.Weight, s.Reps)!.Value), set = $"{s.Weight}x{s.Reps}", date = Day(s.Date) });
+            .Select(s => new { exercise = s.Name, gym = s.Gym, e1rm = R(E1Rm(s.Weight, s.Reps)!.Value), set = $"{s.Weight}x{s.Reps}", date = Day(s.Date) });
+        var assisted = sets.Where(s => s.IsAssisted && s.Reps is > 0)
+            .GroupBy(s => (s.Name, s.Gym))
+            .Select(g => g.OrderBy(s => s.Weight ?? 0).ThenByDescending(s => s.Reps).First())
+            .OrderByDescending(s => s.Date).Take(limit)
+            .Select(s => new { exercise = s.Name, gym = s.Gym, leastAssistKg = s.Weight ?? 0, reps = s.Reps, date = Day(s.Date), note = "less assistance = better" });
         var speed = sets.Where(s => s.TrackingType == TrackingType.DistanceTime && s.Distance is > 0 && s.Time is > 0)
             .GroupBy(s => (s.Name, Distance: Math.Round(s.Distance!.Value)))
             .Select(g => g.OrderBy(s => s.Time).First())
@@ -292,7 +357,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
             .Select(g => g.OrderByDescending(s => s.Time).First())
             .OrderByDescending(s => s.Date).Take(limit)
             .Select(s => new { exercise = s.Name, bestS = R(s.Time!.Value, 0), date = Day(s.Date) });
-        return new { strength, speed, holds };
+        return new { strength, assisted, speed, holds };
     }
 
     private async Task<object> SummaryAsync(int userId, int weeks, CancellationToken ct)
@@ -315,7 +380,10 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
                 football = ws.Count(w => w.WorkoutType is "Football" or "Hybrid"),
                 matches = ws.Count(w => w.WorkoutType == "Match"),
                 workSets = work.Count,
-                tonnageKg = R(work.Sum(s => (s.Weight ?? 0) * (s.Reps ?? 0)), 0),
+                tonnageKg = R(work.Where(s => !s.Exercise.IsAssisted && s.Exercise.TrackingType == TrackingType.WeightReps)
+                    .Sum(s => (s.Weight ?? 0) * (s.Reps ?? 0) * (s.Exercise.PerSide ? 2 : 1)), 0),
+                cardioMinutes = R(work.Where(s => s.Exercise.TrackingType == TrackingType.Cardio).Sum(s => s.Time ?? 0) / 60, 0),
+                skippedExercises = ws.Sum(w => w.ExerciseNotes.Count(n => n.Skipped)),
                 sprintReps = work.Count(s => s.Exercise.TrackingType == TrackingType.DistanceTime),
                 loadAU = ws.Sum(w => (w.SessionRpe ?? 0) * (w.DurationSeconds ?? 0) / 60),
             };
@@ -497,6 +565,67 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
 
     // ---------- Vorschläge (werden nur angezeigt, nie automatisch gespeichert) ----------
 
+    /// <summary>
+    /// Änderung an der laufenden Einheit: nur Katalog-Übungen, Werte in sinnvollen Grenzen. Der Client wendet sie lokal an
+    /// (offline-first, die Einheit liegt noch nicht auf dem Server) - erst nach Tipp auf "Übernehmen".
+    /// </summary>
+    private async Task<object> WorkoutChangeActionAsync(int userId, JsonElement input, List<JsonObject> actions, CancellationToken ct)
+    {
+        if (!input.TryGetProperty("operations", out var opsEl) || opsEl.ValueKind != JsonValueKind.Array) return new { error = "operations is required." };
+        var ids = new HashSet<int>();
+        foreach (var o in opsEl.EnumerateArray())
+        {
+            if (o.ValueKind != JsonValueKind.Object) continue;
+            if (Int(o, "exerciseId") is { } a) ids.Add(a);
+            if (Int(o, "withExerciseId") is { } b) ids.Add(b);
+        }
+        var catalog = await db.Exercises.AsNoTracking().VisibleTo(userId).Where(e => ids.Contains(e.Id))
+            .Select(e => new { e.Id, e.Name, e.TrackingType }).ToDictionaryAsync(e => e.Id, ct);
+
+        var ops = new JsonArray();
+        var rejected = new List<string>();
+        foreach (var o in opsEl.EnumerateArray())
+        {
+            if (ops.Count >= MaxWorkoutOps || o.ValueKind != JsonValueKind.Object) break;
+            var op = Str(o, "op");
+            if (op is not ("add" or "replace" or "remove" or "adjust") || Int(o, "exerciseId") is not { } id || !catalog.TryGetValue(id, out var ex))
+            {
+                rejected.Add($"{op ?? "?"} #{Int(o, "exerciseId")}: unknown exercise id or op");
+                continue;
+            }
+            var item = new JsonObject { ["op"] = op, ["exerciseId"] = id, ["name"] = ex.Name, ["trackingType"] = ex.TrackingType.ToString() };
+            if (op == "replace")
+            {
+                if (Int(o, "withExerciseId") is not { } w || w == id || !catalog.TryGetValue(w, out var with))
+                {
+                    rejected.Add($"replace #{id}: withExerciseId must be another catalog exercise");
+                    continue;
+                }
+                item["withExerciseId"] = w;
+                item["withName"] = with.Name;
+                item["trackingType"] = with.TrackingType.ToString();
+            }
+            if (op != "remove")
+            {
+                if (Int(o, "sets") is { } sets) item["sets"] = Math.Clamp(sets, 1, 10);
+                if (Int(o, "reps") is { } reps) item["reps"] = Math.Clamp(reps, 1, 50);
+                if (Num(o, "weight") is { } kg) item["weight"] = Math.Round(Math.Clamp(kg, 0, 500) * 4) / 4; // 0,25-kg-Schritte
+                if (Num(o, "time") is { } s) item["time"] = Math.Round(Math.Clamp(s, 1, 7_200));
+                if (Num(o, "distance") is { } m) item["distance"] = Math.Round(Math.Clamp(m, 1, 100_000));
+                if (Num(o, "targetRpe") is { } r) item["targetRpe"] = Math.Clamp(Math.Round(r * 2) / 2, 5, 10);
+            }
+            if (Clip(Str(o, "note"), 120) is { Length: > 0 } note) item["note"] = note;
+            ops.Add(item);
+        }
+        if (ops.Count == 0) return new { error = "No valid operation. " + string.Join("; ", rejected) };
+
+        var changes = input.TryGetProperty("changes", out var ch) && ch.ValueKind == JsonValueKind.Array
+            ? ch.EnumerateArray().Where(c => c.ValueKind == JsonValueKind.String).Select(c => Clip(c.GetString(), 200)).Where(c => c.Length > 0).Take(6).ToList()
+            : new List<string>();
+        actions.Add(new JsonObject { ["type"] = "workout", ["operations"] = ops, ["changes"] = JsonSerializer.SerializeToNode(changes) });
+        return new { shown = true, applied = ops.Count, rejected, note = "The athlete applies it with one tap. Say in one or two sentences what changes and why." };
+    }
+
     public async Task<IReadOnlyDictionary<int, TrackingType>> CatalogAsync(int userId, CancellationToken ct) =>
         await db.Exercises.AsNoTracking().VisibleTo(userId).ToDictionaryAsync(e => e.Id, e => e.TrackingType, ct);
 
@@ -570,6 +699,9 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
                             break;
                         case TrackingType.Duration:
                             seconds = Math.Clamp(Num(x, "time") ?? 30, 5, 600);
+                            break;
+                        case TrackingType.Cardio:
+                            seconds = Math.Clamp(Num(x, "time") ?? 600, 60, 7_200);
                             break;
                         default:
                             repsMin = Math.Clamp(Int(x, "repsMin") ?? Int(x, "repsMax") ?? 8, 1, 30);

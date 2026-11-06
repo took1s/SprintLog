@@ -3,7 +3,15 @@ using SprintLog.Api.Models;
 
 namespace SprintLog.Api.DTOs;
 
-public record WorkoutSetDto(int ExerciseId, double? Weight, int? Reps, double? Distance, double? Time, double? Rpe = null, bool IsWarmup = false, string? Note = null);
+public record WorkoutSetDto(
+    int ExerciseId, double? Weight, int? Reps, double? Distance, double? Time, double? Rpe = null, bool IsWarmup = false, string? Note = null,
+    double? Level = null, int? Power = null, int? HeartRate = null, int? Cadence = null, int? Calories = null);
+
+/// <summary>Notiz zu einer Übung der Einheit; <c>Skipped</c> + <c>Reason</c> = ausgelassen (pain, equipment, time, fatigue, other).</summary>
+public record ExerciseNoteDto(int ExerciseId, string? Note, bool Skipped = false, string? Reason = null)
+{
+    public static readonly string[] Reasons = { "pain", "equipment", "time", "fatigue", "other" };
+}
 
 public record CreateWorkoutRequest(
     string? WorkoutType,
@@ -15,9 +23,13 @@ public record CreateWorkoutRequest(
     string? Notes = null,
     int? ProgramDayId = null,
     MatchDetails? Match = null,
-    int? Quality = null)
+    int? Quality = null,
+    string? Gym = null,
+    List<ExerciseNoteDto>? ExerciseNotes = null)
 {
     public const string MatchType = "Match";
+    public const int MaxGymLength = 40;
+    public const int MaxExerciseNotes = 50;
     public bool IsMatch => WorkoutType == MatchType;
 
     public const int MaxNotesLength = 500;
@@ -31,6 +43,9 @@ public record CreateWorkoutRequest(
     public const int MaxReps = 1000;
     public const double MaxDistance = 100_000; // 100 km
     public const double MaxTime = 86_400;      // 24 h
+    public const double MaxLevel = 100;
+    public const int MaxPower = 3_000;
+    public const int MaxCalories = 10_000;
 
     public ValidationErrors Validate(DateTimeOffset now)
     {
@@ -49,7 +64,23 @@ public record CreateWorkoutRequest(
             .AddIf(DurationSeconds is < 0 or > 86_400, "durationSeconds", "Duration must be between 0 and 24 hours.")
             .AddIf(SessionRpe is < 1 or > 10, "sessionRpe", "Session RPE must be between 1 and 10.")
             .AddIf(Quality is < 1 or > 10, "quality", "Quality must be between 1 and 10.")
-            .AddIf(Notes is { Length: > MaxNotesLength }, "notes", $"Notes must not exceed {MaxNotesLength} characters.");
+            .AddIf(Notes is { Length: > MaxNotesLength }, "notes", $"Notes must not exceed {MaxNotesLength} characters.")
+            .AddIf(Gym is { Length: > MaxGymLength }, "gym", $"Gym must not exceed {MaxGymLength} characters.")
+            .AddIf(ExerciseNotes is { Count: > MaxExerciseNotes }, "exerciseNotes", $"At most {MaxExerciseNotes} exercise notes.");
+
+        if (ExerciseNotes is not null)
+        {
+            for (var i = 0; i < ExerciseNotes.Count && i < MaxExerciseNotes; i++)
+            {
+                var n = ExerciseNotes[i];
+                var key = $"exerciseNotes[{i}]";
+                errors
+                    .AddIf(n.Note is { Length: > MaxSetNoteLength }, key, $"Exercise notes must not exceed {MaxSetNoteLength} characters.")
+                    .AddIf(n.Reason is not null && !ExerciseNoteDto.Reasons.Contains(n.Reason), key, "Unknown reason.")
+                    .AddIf(!n.Skipped && n.Reason is null && string.IsNullOrWhiteSpace(n.Note), key, "Empty exercise note.");
+            }
+            errors.AddIf(ExerciseNotes.Select(n => n.ExerciseId).Distinct().Count() != ExerciseNotes.Count, "exerciseNotes", "One note per exercise.");
+        }
 
         if (Sets is null || Sets.Count == 0) return errors;
 
@@ -62,7 +93,12 @@ public record CreateWorkoutRequest(
                 .AddIf(s.Weight > MaxWeight || s.Reps > MaxReps || s.Distance > MaxDistance || s.Time > MaxTime, key, "Metric value is out of range.")
                 .AddIf(double.IsNaN(s.Weight ?? 0) || double.IsNaN(s.Distance ?? 0) || double.IsNaN(s.Time ?? 0), key, "Metric value is not a number.")
                 .AddIf(s.Rpe is < 1 or > 10 || (s.Rpe is { } rpe && Math.Abs(rpe * 2 - Math.Round(rpe * 2)) > 1e-9), key, "RPE must be between 1 and 10 in steps of 0.5.")
-                .AddIf(s.Note is { Length: > MaxSetNoteLength }, key, $"Set notes must not exceed {MaxSetNoteLength} characters.");
+                .AddIf(s.Note is { Length: > MaxSetNoteLength }, key, $"Set notes must not exceed {MaxSetNoteLength} characters.")
+                .AddIf(s.Level is < 0 or > MaxLevel || (s.Level is { } lv && double.IsNaN(lv)), key, "Level must be between 0 and 100.")
+                .AddIf(s.Power is < 0 or > MaxPower, key, "Power must be between 0 and 3000 W.")
+                .AddIf(s.HeartRate is < 30 or > 250, key, "Heart rate must be between 30 and 250 bpm.")
+                .AddIf(s.Cadence is < 0 or > 300, key, "Cadence must be between 0 and 300 per minute.")
+                .AddIf(s.Calories is < 0 or > MaxCalories, key, "Calories are out of range.");
         }
 
         return errors;
@@ -81,7 +117,14 @@ public record WorkoutSetResponse(
     double? Time,
     double? Rpe,
     bool IsWarmup,
-    string? Note = null);
+    string? Note = null,
+    double? Level = null,
+    int? Power = null,
+    int? HeartRate = null,
+    int? Cadence = null,
+    int? Calories = null,
+    bool IsAssisted = false,
+    bool PerSide = false);
 
 public record WorkoutResponse(
     int Id,
@@ -95,7 +138,9 @@ public record WorkoutResponse(
     List<WorkoutSetResponse> Sets,
     DateTime UpdatedAt,
     MatchDetails? Match = null,
-    int? Quality = null);
+    int? Quality = null,
+    string? Gym = null,
+    List<ExerciseNoteDto>? ExerciseNotes = null);
 
 /// <summary>Spiel-Details (nur bei WorkoutType "Match").</summary>
 public record MatchDetails(int? Goals, int? Assists, string? Opponent);
