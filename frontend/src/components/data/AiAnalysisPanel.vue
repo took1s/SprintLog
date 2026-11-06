@@ -5,12 +5,13 @@ import { computed, nextTick, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t } from '@/i18n';
 import { formatDate } from '@/lib/format';
-import { useAiStore } from '@/stores/ai';
+import { deviceOnline, useAiStore } from '@/stores/ai';
 import { useAppStore } from '@/stores/app';
 
 const ai = useAiStore();
 const { analysis, analysisBusy, analysisError, status, profileFilled } = storeToRefs(ai);
-const { online, allWorkouts } = storeToRefs(useAppStore());
+const { allWorkouts } = storeToRefs(useAppStore());
+const online = deviceOnline;
 
 const STATUS = {
   good: { dot: 'bg-emerald-400', text: 'text-emerald-300', border: 'border-emerald-400/30' },

@@ -5,7 +5,7 @@ import { storeToRefs } from 'pinia';
 import { t, tn, intlLocale } from '@/i18n';
 import { goalName, levelName, templateText } from '@/i18n/content';
 import { useAppStore } from '@/stores/app';
-import { useAiStore } from '@/stores/ai';
+import { deviceOnline, useAiStore } from '@/stores/ai';
 import { exerciseName } from '@/i18n/content';
 import { WEEKDAYS } from '@/lib/schedule';
 import type { PlanFocus, PlanLevel } from '@/lib/planBuilder';
@@ -111,7 +111,7 @@ watch(() => !!aiPlan.value.result, (has, had) => {
                           <textarea id="ai-plan-notes" v-model="aiPlan.notes" rows="3" maxlength="600" :placeholder="t('ai.plan.notesPlaceholder')"
                                     class="cyber-input w-full resize-none rounded-xl p-3 text-base" data-test="ai-plan-notes"></textarea>
                           <!-- Sekundär: die bewährten Vorlagen unten bleiben die Hauptaktion. Beim Laden nicht dimmen - der Fortschrittstext muss lesbar bleiben. -->
-                          <button ref="aiPlanGenerate" type="button" @click="ai.generatePlan(a)" :disabled="aiPlan.busy || !online" :aria-busy="aiPlan.busy"
+                          <button ref="aiPlanGenerate" type="button" @click="ai.generatePlan(a)" :disabled="aiPlan.busy || !deviceOnline" :aria-busy="aiPlan.busy"
                                   class="btn-secondary mt-3 flex min-h-[2.75rem] w-full items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-bold leading-tight" :class="aiPlan.busy ? '' : 'disabled:opacity-50'" data-test="ai-plan-generate">
                               <span v-if="aiPlan.busy" class="h-4 w-4 flex-shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none" aria-hidden="true"></span>
                               {{ aiPlan.busy ? t('ai.plan.generating') : t('ai.plan.generate') }}

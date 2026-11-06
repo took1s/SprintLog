@@ -3,13 +3,14 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t, tn } from '@/i18n';
-import { useAiStore } from '@/stores/ai';
-import { useAppStore } from '@/stores/app';
+import { deviceOnline, useAiStore } from '@/stores/ai';
 import AiActionCard from './AiActionCard.vue';
+import AiText from './AiText.vue';
 
 const ai = useAiStore();
 const { open, messages, busy, error, status, mode, applying, profileFilled } = storeToRefs(ai);
-const { online } = storeToRefs(useAppStore());
+// Geräte-Netz statt Sync-Status (der kann nach einem einzelnen Fehlschlag fälschlich "offline" melden)
+const online = deviceOnline;
 
 const draft = ref('');
 const list = ref<HTMLElement | null>(null);
@@ -18,7 +19,7 @@ const panel = ref<HTMLElement | null>(null);
 
 /** Vorschläge mit passendem Modus: Bilanz und Stagnation brauchen die gründliche Analyse mit exakten Zahlen. */
 const SUGGESTIONS = [
-  { key: 'today', mode: 'quick' }, { key: 'week', mode: 'deep' }, { key: 'recovery', mode: 'quick' }, { key: 'plateau', mode: 'deep' },
+  { key: 'today', mode: 'quick' }, { key: 'week', mode: 'deep' }, { key: 'program', mode: 'deep' }, { key: 'recovery', mode: 'quick' }, { key: 'plateau', mode: 'deep' },
 ] as const;
 const affordable = (m: 'quick' | 'deep') => !status.value || status.value.remaining >= ai.cost(m);
 const canSend = computed(() => draft.value.trim().length >= 2 && !busy.value && online.value && affordable(mode.value));
@@ -155,7 +156,8 @@ const close = () => { open.value = false; };
                               <div class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed" :data-role="m.role"
                                    :class="m.role === 'user' ? 'rounded-br-md bg-accent text-on-accent' : 'rounded-bl-md border border-white/10 bg-white/[0.05] text-slate-100'">
                                   <span class="sr-only">{{ m.role === 'user' ? t('ai.you') : t('ai.coach') }}: </span>
-                                  <p class="whitespace-pre-line break-words">{{ m.content }}</p>
+                                  <AiText v-if="m.role === 'assistant'" :text="m.content" />
+                                  <p v-else class="whitespace-pre-line break-words">{{ m.content }}</p>
                               </div>
                           </div>
                           <!-- Vorschläge in voller Breite unter der Antwort: in der Blase wären Tagesliste und Knopf zu gedrängt -->

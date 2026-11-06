@@ -80,7 +80,7 @@ if (!string.IsNullOrWhiteSpace(builder.Configuration["Ai:AnthropicApiKey"] ?? bu
     builder.Services.AddHttpClient<IAiClient, AnthropicAiClient>(c =>
     {
         c.BaseAddress = new Uri("https://api.anthropic.com/");
-        c.Timeout = TimeSpan.FromSeconds(120); // gründliche Antworten und Pläne brauchen teils deutlich länger
+        c.Timeout = TimeSpan.FromSeconds(180); // lange gründliche Antworten und Pläne (bis 8000 Tokens) brauchen Zeit
     });
 else
     builder.Services.AddSingleton<IAiClient, DisabledAiClient>();
