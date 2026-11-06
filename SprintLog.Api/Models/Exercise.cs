@@ -12,6 +12,12 @@ public class Exercise
 
     public TrackingType TrackingType { get; set; } = TrackingType.WeightReps;
 
+    /// <summary>Maschine mit Unterstützung (Gravitron, Dip-Maschine): eingetragenes Gewicht = Hilfe, weniger ist besser.</summary>
+    public bool IsAssisted { get; set; }
+
+    /// <summary>Einseitig (Seitstütz, Bulgarian Split Squat): Werte gelten pro Seite, beide Seiten werden trainiert.</summary>
+    public bool PerSide { get; set; }
+
     /// <summary>NULL = Standard-Übung für alle. Gesetzt = eigene Übung dieses Nutzers.</summary>
     public int? UserId { get; set; }
     public User? User { get; set; }

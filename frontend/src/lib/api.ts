@@ -62,6 +62,7 @@ export interface Api {
   get<T = unknown>(path: string): Promise<T>;
   post<T = unknown>(path: string, body?: unknown): Promise<T>;
   put<T = unknown>(path: string, body?: unknown): Promise<T>;
+  patch<T = unknown>(path: string, body?: unknown): Promise<T>;
   del<T = unknown>(path: string, body?: unknown): Promise<T>;
   /** Access-Token per Refresh-Cookie erneuern (Rotation). false = Sitzung ungültig; wirft ApiError(0) ohne Verbindung, ApiError(503) bei anhaltendem Rotations-Konflikt. */
   refreshSession(): Promise<boolean>;
@@ -209,6 +210,7 @@ export function createRefreshingApi(send: Send, read: Read, { onUnauthorized, ge
     get: (path) => request('GET', path),
     post: (path, body) => request('POST', path, body),
     put: (path, body) => request('PUT', path, body),
+    patch: (path, body) => request('PATCH', path, body),
     del: (path, body) => request('DELETE', path, body),
     refreshSession: refresh,
   };

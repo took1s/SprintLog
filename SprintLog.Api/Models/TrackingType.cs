@@ -13,5 +13,8 @@ public enum TrackingType
     DistanceTime = 1,
 
     /// <summary>Nur Dauer in Sekunden (Plank, Seilspringen, Koordinationsleiter).</summary>
-    Duration = 2
+    Duration = 2,
+
+    /// <summary>Ausdauergerät (Ergometer, Laufband, Rudergerät): Dauer, Distanz, Stufe, Watt, Puls, Trittfrequenz, kcal.</summary>
+    Cardio = 3
 }

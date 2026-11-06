@@ -8,6 +8,7 @@
 // - Gedächtnis: der Coach merkt sich Wichtiges im Konto (Server); hier eine Kopie zum Ansehen und Verwalten.
 
 import { defineStore } from 'pinia';
+import type { WorkoutOp } from '@/lib/liveWorkout';
 import { computed, ref, watch } from 'vue';
 import { locale, t } from '../i18n';
 import { exerciseName } from '../i18n/content';
@@ -39,7 +40,9 @@ export type AiAction =
   | { type: 'program'; program: AiProgramDraft; summary: string }
   | { type: 'programUpdate'; programId: number; programName: string; program: AiProgramUpdateDraft; changes: string[] }
   | { type: 'goal'; exerciseId: number; exerciseName: string; targetWeight: number; targetReps: number; targetDate: string | null; reason: string }
-  | { type: 'schedule'; trainingDays: number; matchDays: number; reason: string };
+  | { type: 'schedule'; trainingDays: number; matchDays: number; reason: string }
+  /** Änderung an der laufenden Einheit (nur im Training) - wird lokal angewendet, nichts geht an den Server. */
+  | { type: 'workout'; operations: WorkoutOp[]; changes: string[] };
 export type MemoryCategory = 'injury' | 'health' | 'goal' | 'schedule' | 'preference' | 'equipment' | 'insight' | 'other';
 export const MEMORY_CATEGORIES: readonly MemoryCategory[] = ['injury', 'health', 'goal', 'schedule', 'preference', 'equipment', 'insight', 'other'];
 export interface CoachMemory {
@@ -233,7 +236,11 @@ export const useAiStore = defineStore('ai', () => {
     busy.value = true;
     error.value = null;
     try {
-      const res = await aiPost<{ answer: string; remaining: number; actions?: AiAction[]; memory?: MemoryChange[] }>('/api/ai/ask', { question: q, context: context(), history, locale: locale.value, mode: m });
+      // Im Training sieht der Coach die laufende Einheit und darf sie (per Karte) ändern
+      const session = app.isEditing ? null : app.liveSessionForAi();
+      const res = await aiPost<{ answer: string; remaining: number; actions?: AiAction[]; memory?: MemoryChange[] }>('/api/ai/ask', {
+        question: q, context: context(), history, locale: locale.value, mode: m, ...(session ? { session } : {}),
+      });
       messages.value = [...messages.value, {
         role: 'assistant', content: res.answer, at: new Date().toISOString(), mode: m,
         actions: res.actions?.length ? res.actions : undefined, memory: res.memory?.length ? res.memory : undefined,
@@ -321,6 +328,8 @@ export const useAiStore = defineStore('ai', () => {
       } else if (action.type === 'program') {
         // Steht im Wochenplan schon etwas, bleibt er; sonst Vorschlag aus der Anzahl der Tage
         ok = await saveProgramDraft(action.program, null);
+      } else if (action.type === 'workout') {
+        ok = app.applyWorkoutChange(action.operations);
       } else if (action.type === 'goal') {
         const goals = useGoalsStore();
         goals.draft = {

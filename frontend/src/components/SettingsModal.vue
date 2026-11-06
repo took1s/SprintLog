@@ -31,7 +31,7 @@ const pickIcon = (c: AppIconChoice) => { void setAppIcon(c); };
 
 <template>
   <transition name="sheet">
-      <div v-if="settingsOpen" class="fixed inset-0 z-40 flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="settingsOpen = false">
+      <div v-if="settingsOpen" class="fixed inset-0 z-40 flex items-end justify-center bg-ink/80 sm:items-center" @click.self="settingsOpen = false">
           <div v-sheet-drag="() => (settingsOpen = false)" class="glass-panel modal-panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 sm:rounded-3xl sm:p-8" role="dialog" aria-modal="true" :aria-label="t('settings.title')">
               <div class="mb-6 flex items-start justify-between">
                   <div>

@@ -12,10 +12,12 @@ public record AiChatMessage(string? Role, string? Content);
 /// (offline-first, kennt Erholung/Wochenplan/Belastung) erstellt - der Server reicht sie nur als Daten weiter.
 /// </summary>
 /// <param name="Mode">"quick" (schnelles Modell) oder "deep" (gründliches Modell, mehr Werkzeug-Schritte).</param>
-public record AiAskInput(string? Question, string? Context, List<AiChatMessage>? History, string? Locale, string? Mode = null)
+/// <param name="Session">Laufende Einheit als kompaktes JSON (Übungen, erledigte Sätze, Vorgaben, Notizen, Studio) - nur während des Trainings.</param>
+public record AiAskInput(string? Question, string? Context, List<AiChatMessage>? History, string? Locale, string? Mode = null, string? Session = null)
 {
     public const int MaxQuestion = 1000;
     public const int MaxContext = 12_000;
+    public const int MaxSession = 8_000;
     public const int MaxHistory = 10;
     public const int MaxHistoryMessage = 2_000;
 
@@ -26,7 +28,8 @@ public record AiAskInput(string? Question, string? Context, List<AiChatMessage>?
             .AddIf(q.Length is < 2 or > MaxQuestion, "question", $"Question must be 2-{MaxQuestion} characters.")
             .AddIf(Context is { Length: > MaxContext }, "context", $"Context must not exceed {MaxContext} characters.")
             .AddIf(History is { Count: > MaxHistory }, "history", $"At most {MaxHistory} previous messages.")
-            .AddIf(Mode is not (null or "quick" or "deep"), "mode", "Mode must be quick or deep.");
+            .AddIf(Mode is not (null or "quick" or "deep"), "mode", "Mode must be quick or deep.")
+            .AddIf(Session is { Length: > MaxSession }, "session", $"Session must not exceed {MaxSession} characters.");
         if (History is not null)
             for (var i = 0; i < History.Count && i < MaxHistory; i++)
                 errors

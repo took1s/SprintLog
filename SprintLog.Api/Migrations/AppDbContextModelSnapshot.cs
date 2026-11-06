@@ -200,6 +200,9 @@ namespace SprintLog.Api.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<bool>("IsAssisted")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("MuscleGroup")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
@@ -208,6 +211,9 @@ namespace SprintLog.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)");
+
+                    b.Property<bool>("PerSide")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("TrackingType")
                         .IsRequired()
@@ -228,2112 +234,2640 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 1,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Bench Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 2,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Leg Extensions",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 3,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Leg Curls",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 4,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Calf Raises",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 5,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Hip Abduction",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 6,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Hip Adduction",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 7,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Leg Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 8,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Cable Tricep Pushdown",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 9,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Barbell Bicep Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 10,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Dumbbell Wrist Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 11,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Reverse Wrist Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 12,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Running / Sprints",
+                            PerSide = false,
                             TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 13,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Dumbbell Bicep Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 14,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Seated Cable Row",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 15,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Standing Dumbbell Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 16,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Dumbbell Skull Crusher",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 17,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Pull-ups",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 18,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Chest Press Machine",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 19,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Machine Lateral Raise",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 20,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Dips",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 21,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Seated Calf Raises",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 22,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "EZ-Bar Bicep Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 23,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Wide Grip Lat Pulldown",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 24,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Tricep Press Machine",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 25,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Overhead Tricep Extension",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 26,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Barbell Row",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 27,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Rear Delt Fly",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 28,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Close Grip Lat Pulldown",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 29,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Legs/Back",
                             Name = "Trap Bar Deadlift",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 30,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Dumbbell Bench Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 31,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Bent-Over Row",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 32,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Med Ball Wall Throw",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 33,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Bulgarian Split Squats",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 34,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Broad Jumps",
+                            PerSide = false,
                             TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 35,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Barbell Squat",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 36,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Single-Arm Dumbbell Row",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 37,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Dumbbell Squat",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 38,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Dumbbell Bent-Over Row",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 39,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Glute Bridge",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 40,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Dumbbell Shoulder Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 41,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Static Lunges",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 42,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs/Back",
                             Name = "Dumbbell Deadlift",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 43,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Hammer Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 44,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Lat Pulldown",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 45,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Chest-Supported Row",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 46,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Push-ups",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 47,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Plank",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 48,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Side Plank",
+                            PerSide = true,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 49,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Romanian Deadlift (RDL)",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 50,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Nordic Hamstring Curls",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 51,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Box Jumps",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 52,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Depth Jumps",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 53,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Russian Twists",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 54,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Cable Woodchoppers",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 55,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Hanging Leg Raises",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 56,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Agility Ladder",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 57,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Cone Shuttle Drills",
+                            PerSide = false,
                             TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 58,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Change of Direction (COD) Sprints",
+                            PerSide = false,
                             TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 59,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Incline Barbell Bench Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 60,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Incline Dumbbell Bench Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 61,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Cable Crossover",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 62,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Pec Deck Fly",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 63,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back/Legs",
                             Name = "Deadlift (Conventional)",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 64,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "T-Bar Row",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 65,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Chin-ups",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 66,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Straight-Arm Pulldown",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 67,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Back Extension",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 68,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Military Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 69,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Dumbbell Lateral Raise",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 70,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Dumbbell Front Raise",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 71,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Face Pulls",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 72,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Dumbbell Shrugs",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 73,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Front Squat",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 74,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Hack Squat",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 75,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Barbell Hip Thrust",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 76,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Walking Lunges",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 77,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Preacher Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 78,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Close-Grip Bench Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 79,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Cable Crunches",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 80,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Ab Wheel Rollout",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 81,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Crunches",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 82,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Jump Rope",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 83,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Rowing Machine",
-                            TrackingType = "DistanceTime"
+                            PerSide = false,
+                            TrackingType = "Cardio"
                         },
                         new
                         {
                             Id = 84,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Cycling (Stationary)",
-                            TrackingType = "DistanceTime"
+                            PerSide = false,
+                            TrackingType = "Cardio"
                         },
                         new
                         {
                             Id = 85,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Copenhagen Adduction",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 86,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Single-Leg Balance",
+                            PerSide = true,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 87,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Interval Run",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 88,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Repeated Shuttle Sprints",
+                            PerSide = false,
                             TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 89,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Flying Sprints",
+                            PerSide = false,
                             TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 90,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Countermovement Jump",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 91,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Lateral Bounds",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 92,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "A-Skips",
+                            PerSide = false,
                             TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 93,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Tempo Runs",
+                            PerSide = false,
                             TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 94,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Inverted Row",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 95,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Hollow Body Hold",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 96,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Pallof Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 97,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Single-Leg Romanian Deadlift",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 98,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Step-ups",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 99,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back/Legs",
                             Name = "Kettlebell Swing",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 100,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Power Clean",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 101,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Push Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 102,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Reverse Lunges",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 103,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Lateral Lunge",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 104,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Dead Bug",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 105,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Bodyweight Squat",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 106,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Warm-up Jog",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 107,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Smith Machine Squat",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 108,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Smith Machine Bench Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 109,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Shoulder Press Machine",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 110,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Machine Row",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 111,
                             Category = "Gym",
+                            IsAssisted = true,
                             MuscleGroup = "Back",
                             Name = "Assisted Pull-up Machine",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 112,
                             Category = "Gym",
+                            IsAssisted = true,
                             MuscleGroup = "Arms",
                             Name = "Assisted Dip Machine",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 113,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Lying Leg Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 114,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Glute Kickback Machine",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 115,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Hip Thrust Machine",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 116,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Pendulum Squat",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 117,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Machine Bicep Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 118,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Ab Crunch Machine",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 119,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Rotary Torso Machine",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 120,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Incline Chest Press Machine",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 121,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Cable Lateral Raise",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 122,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Cable Bicep Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 123,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Low-to-High Cable Fly",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 124,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Standing Calf Raise Machine",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 125,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Belt Squat",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 126,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Cable Glute Kickback",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 127,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Treadmill",
-                            TrackingType = "DistanceTime"
+                            PerSide = false,
+                            TrackingType = "Cardio"
                         },
                         new
                         {
                             Id = 128,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Stair Climber",
-                            TrackingType = "Duration"
+                            PerSide = false,
+                            TrackingType = "Cardio"
                         },
                         new
                         {
                             Id = 129,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Elliptical Trainer",
-                            TrackingType = "Duration"
+                            PerSide = false,
+                            TrackingType = "Cardio"
                         },
                         new
                         {
                             Id = 130,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Air Bike",
-                            TrackingType = "Duration"
+                            PerSide = false,
+                            TrackingType = "Cardio"
                         },
                         new
                         {
                             Id = 131,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Decline Bench Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 132,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Decline Dumbbell Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 133,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Dumbbell Fly",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 134,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Incline Dumbbell Fly",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 135,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "High-to-Low Cable Fly",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 136,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Dumbbell Pullover",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 137,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Pullover Machine",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 138,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Floor Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 139,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Decline Push-ups",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 140,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Diamond Push-ups",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 141,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Hammer Strength Chest Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 142,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Hammer Strength Incline Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 143,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Landmine Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 144,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Weighted Dips",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 145,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Hammer Strength Iso-Row",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 146,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Hammer Strength High Row",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 147,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Hammer Strength Pulldown",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 148,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Single-Arm Lat Pulldown",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 149,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Neutral-Grip Pull-ups",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 150,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Weighted Pull-ups",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 151,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Pendlay Row",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 152,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Seal Row",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 153,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Meadows Row",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 154,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Rack Pull",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 155,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs/Back",
                             Name = "Sumo Deadlift",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 156,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs/Back",
                             Name = "Good Morning",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 157,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Reverse Hyperextension",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 158,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Barbell Shrugs",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 159,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Superman",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 160,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Arnold Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 161,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Upright Row",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 162,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Reverse Pec Deck",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 163,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Cable Rear Delt Fly",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 164,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Cable Front Raise",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 165,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Plate Front Raise",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 166,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Y-Raise",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 167,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Smith Machine Shoulder Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 168,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Handstand Push-ups",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 169,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Concentration Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 170,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Incline Dumbbell Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 171,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Spider Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 172,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Rope Hammer Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 173,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Reverse Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 174,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Bayesian Cable Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 175,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Preacher Curl Machine",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 176,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Rope Pushdown",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 177,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Overhead Cable Extension",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 178,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Single-Arm Cable Pushdown",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 179,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "EZ-Bar Skull Crusher",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 180,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Dumbbell Kickback",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 181,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Bench Dips",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 182,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Seated Dip Machine",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 183,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Wrist Roller",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 184,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Goblet Squat",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 185,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Box Squat",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 186,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Pause Squat",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 187,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Safety Bar Squat",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 188,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Sissy Squat",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 189,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Single-Leg Leg Press",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 190,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Seated Leg Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 191,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Single-Leg Leg Extension",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 192,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Single-Leg Hip Thrust",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 193,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Cable Pull-Through",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 194,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs/Back",
                             Name = "Stiff-Leg Deadlift",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 195,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs/Back",
                             Name = "Dumbbell Romanian Deadlift",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 196,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Leg Press Calf Raise",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 197,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Tibialis Raise",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 198,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Reverse Nordic",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 199,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Spanish Squat",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 200,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Wall Sit",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 201,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Single-Leg Calf Raise",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 202,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Cable Hip Abduction",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 203,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Smith Machine Split Squat",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 204,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Glute Ham Raise",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 205,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Decline Sit-ups",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 206,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Bicycle Crunch",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 207,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "V-Ups",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 208,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Toes-to-Bar",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 209,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Captain's Chair Knee Raise",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 210,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Lying Leg Raise",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 211,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Mountain Climbers",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 212,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Bird Dog",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 213,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Landmine Rotation",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 214,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Turkish Get-up",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 215,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Hang Power Clean",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 216,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Jump Squat",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 217,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Trap Bar Jump",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 218,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Med Ball Slam",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 219,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Rotational Med Ball Throw",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 220,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Hurdle Hops",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 221,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Pogo Jumps",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 222,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Kettlebell Clean & Press",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 223,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Kettlebell Snatch",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 224,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Burpees",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 225,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Band Pull-Apart",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 226,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Band External Rotation",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 227,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Banded Lateral Walk",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 228,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Hill Sprints",
+                            PerSide = false,
                             TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 229,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Sled Push",
+                            PerSide = false,
                             TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 230,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Resisted Sprints",
+                            PerSide = false,
                             TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 231,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Acceleration Sprints",
+                            PerSide = false,
                             TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 232,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Yo-Yo Intermittent Recovery Test",
+                            PerSide = false,
                             TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 233,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Box-to-Box Runs",
+                            PerSide = false,
                             TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 234,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Fartlek",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 235,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Easy Run (Zone 2)",
+                            PerSide = false,
                             TrackingType = "DistanceTime"
                         },
                         new
                         {
                             Id = 236,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Small-Sided Game",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 237,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Rondo",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 238,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Passing Drill",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 239,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Dribbling Drill",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 240,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Finishing (Shooting)",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 241,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Ball Juggling",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 242,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Hip 90/90 Stretch",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 243,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Couch Stretch",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 244,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "World's Greatest Stretch",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 245,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Hamstring Stretch",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 246,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Hip Flexor Stretch",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 247,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Adductor Stretch",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 248,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Ankle Mobility",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 249,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Thoracic Rotation",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 250,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Cat-Cow",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 251,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Leg Swings",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 252,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Foam Rolling",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 253,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Incline Treadmill Walk",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 254,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "SkiErg",
-                            TrackingType = "Duration"
+                            PerSide = false,
+                            TrackingType = "Cardio"
                         },
                         new
                         {
                             Id = 255,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Battle Ropes",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 256,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Swimming",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 257,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Jumping Jacks",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 258,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Askling Extender",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 259,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Askling Diver",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 260,
                             Category = "Football",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Askling Glider",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 261,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Isometric Bridge Hold",
+                            PerSide = false,
                             TrackingType = "Duration"
                         },
                         new
                         {
                             Id = 262,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Swiss Ball Hamstring Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 263,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Single-Leg Glute Bridge",
+                            PerSide = true,
                             TrackingType = "WeightReps"
                         },
                         new
                         {
                             Id = 264,
                             Category = "Gym",
+                            IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Assisted Nordic Hamstring Curl",
+                            PerSide = false,
                             TrackingType = "WeightReps"
                         });
                 });
@@ -2751,6 +3285,10 @@ namespace SprintLog.Api.Migrations
                     b.Property<int?>("Goals")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Gym")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -2798,6 +3336,41 @@ namespace SprintLog.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SprintLog.Api.Models.WorkoutExerciseNote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ExerciseId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("Skipped")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("WorkoutId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExerciseId");
+
+                    b.HasIndex("WorkoutId", "ExerciseId")
+                        .IsUnique();
+
+                    b.ToTable("WorkoutExerciseNotes");
+                });
+
             modelBuilder.Entity("SprintLog.Api.Models.WorkoutSet", b =>
                 {
                     b.Property<int>("Id")
@@ -2806,18 +3379,33 @@ namespace SprintLog.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("Cadence")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Calories")
+                        .HasColumnType("integer");
+
                     b.Property<double?>("Distance")
                         .HasColumnType("double precision");
 
                     b.Property<int>("ExerciseId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("HeartRate")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("IsWarmup")
                         .HasColumnType("boolean");
+
+                    b.Property<double?>("Level")
+                        .HasColumnType("double precision");
 
                     b.Property<string>("Note")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<int?>("Power")
+                        .HasColumnType("integer");
 
                     b.Property<int?>("Reps")
                         .HasColumnType("integer");
@@ -3063,6 +3651,25 @@ namespace SprintLog.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SprintLog.Api.Models.WorkoutExerciseNote", b =>
+                {
+                    b.HasOne("SprintLog.Api.Models.Exercise", "Exercise")
+                        .WithMany()
+                        .HasForeignKey("ExerciseId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("SprintLog.Api.Models.Workout", "Workout")
+                        .WithMany("ExerciseNotes")
+                        .HasForeignKey("WorkoutId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exercise");
+
+                    b.Navigation("Workout");
+                });
+
             modelBuilder.Entity("SprintLog.Api.Models.WorkoutSet", b =>
                 {
                     b.HasOne("SprintLog.Api.Models.Exercise", "Exercise")
@@ -3110,6 +3717,8 @@ namespace SprintLog.Api.Migrations
 
             modelBuilder.Entity("SprintLog.Api.Models.Workout", b =>
                 {
+                    b.Navigation("ExerciseNotes");
+
                     b.Navigation("Sets");
                 });
 #pragma warning restore 612, 618

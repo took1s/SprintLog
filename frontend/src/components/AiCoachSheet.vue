@@ -4,6 +4,7 @@ import { computed, nextTick, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t, tn } from '@/i18n';
 import { deviceOnline, useAiStore } from '@/stores/ai';
+import { useAppStore } from '@/stores/app';
 import AiActionCard from './AiActionCard.vue';
 import AiText from './AiText.vue';
 import HoldButton from './HoldButton.vue';
@@ -12,6 +13,13 @@ import { vSheetDrag } from '@/lib/gestures';
 
 const ai = useAiStore();
 const { open, messages, busy, error, status, mode, applying, profileFilled, memory } = storeToRefs(ai);
+// Im Training: der Coach sieht die laufende Einheit und kann sie ändern
+const appStore = useAppStore();
+const { sessionActive, isEditing } = storeToRefs(appStore);
+const live = computed(() => sessionActive.value && !isEditing.value);
+const LIVE_SUGGESTIONS = [
+  { key: 'busy', mode: 'quick' }, { key: 'easy', mode: 'quick' }, { key: 'short', mode: 'quick' }, { key: 'pain', mode: 'deep' },
+] as const;
 // Geräte-Netz statt Sync-Status (der kann nach einem einzelnen Fehlschlag fälschlich "offline" melden)
 const online = deviceOnline;
 
@@ -123,11 +131,15 @@ watch(open, (o) => {
     focusStart();
   } else {
     announce.value = '';
-    const el = opener;
-    opener = null;
-    void nextTick(() => { if (el?.isConnected) el.focus({ preventScroll: true }); });
   }
 }, { immediate: true });
+
+/** Fokus erst nach der Schließ-Animation zurückgeben - vorher hängt der Body noch fest (Scroll-Sperre). */
+function restoreFocus() {
+  const el = opener;
+  opener = null;
+  if (el?.isConnected && window.matchMedia?.('(pointer: fine)').matches) el.focus({ preventScroll: true });
+}
 
 async function clearChat(confirmed = false) {
   await ai.clearChat({ confirmed });
@@ -141,13 +153,17 @@ function retry() {
   void ai.retry();
 }
 
-const close = () => { open.value = false; };
+// Tastatur zuerst schließen: sonst ändert iOS die Fenstergröße mitten in der Schließ-Animation (kurzes weißes Aufblitzen)
+const close = () => {
+  if (document.activeElement instanceof HTMLElement && panel.value?.contains(document.activeElement)) document.activeElement.blur();
+  open.value = false;
+};
 </script>
 
 <template>
-  <transition name="sheet">
+  <transition name="sheet" @after-leave="restoreFocus">
       <!-- .stop: sonst schließt der globale Escape-Handler (app.closeTopLayer) zusätzlich die Ebene darunter -->
-      <div v-if="open" class="fixed inset-0 z-[70] flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="close" @keydown.esc.stop="close">
+      <div v-if="open" class="fixed inset-0 z-[70] flex items-end justify-center bg-ink/80 sm:items-center" @click.self="close" @keydown.esc.stop="close">
           <!-- dvh statt vh: in Safari ist 92vh höher als der sichtbare Bereich, das Eingabefeld läge hinter der Toolbar -->
           <div v-sheet-drag="close" ref="panel" tabindex="-1" class="glass-panel modal-panel flex h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl outline-none sm:h-[85dvh] sm:rounded-3xl" role="dialog" aria-modal="true" aria-labelledby="ai-title" data-test="ai-chat">
               <header class="flex items-start justify-between gap-3 border-b border-white/5 px-6 pb-3 pt-6">
@@ -176,13 +192,24 @@ const close = () => { open.value = false; };
               <div ref="list" class="flex flex-1 flex-col overflow-y-auto px-6 py-4" data-test="ai-messages">
                   <!-- mt-auto: Inhalt hängt unten am Eingabefeld - Vorschläge und neue Antworten liegen im Daumenbereich -->
                   <div class="mt-auto space-y-3">
+                      <!-- Im Training: Hinweis, dass der Coach die Einheit sieht, und passende Schnellfragen -->
+                      <div v-if="live" class="rounded-2xl border border-accent/40 bg-accent/5 px-3.5 py-3" data-test="ai-live">
+                          <p class="flex items-center gap-2 text-[10px] font-bold uppercase text-accent tracking-label">
+                              <span class="live-dot" aria-hidden="true"></span>{{ t('ai.live.kicker') }}
+                          </p>
+                          <p class="mt-1 text-xs leading-relaxed text-slate-300">{{ t('ai.live.hint') }}</p>
+                          <div v-if="!busy" class="mt-2 flex flex-wrap gap-1.5">
+                              <button v-for="s in LIVE_SUGGESTIONS" :key="s.key" type="button" @click="send(t(`ai.live.suggestions.${s.key}`), s.mode)" :disabled="!online || !affordable(s.mode)"
+                                      class="min-h-[2.75rem] rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-left text-[13px] leading-snug text-slate-200 hover:border-white/20 disabled:opacity-50" :data-live-suggestion="s.key">{{ t(`ai.live.suggestions.${s.key}`) }}</button>
+                          </div>
+                      </div>
                       <template v-if="!messages.length">
                           <p class="text-sm leading-relaxed text-slate-300">{{ t('ai.empty') }}</p>
                           <button v-if="!profileFilled" type="button" @click="ai.openProfile()" class="flex min-h-[2.75rem] w-full items-center gap-3 rounded-2xl border border-accent/40 bg-accent/5 px-3.5 py-2.5 text-left text-sm leading-snug text-slate-200" data-test="ai-profile-hint">
                               <svg class="h-5 w-5 flex-shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path stroke-linecap="round" d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></svg>
                               <span>{{ t('ai.profile.hint') }}</span>
                           </button>
-                          <div class="flex flex-wrap gap-2 pt-1">
+                          <div v-if="!live" class="flex flex-wrap gap-2 pt-1">
                               <button v-for="s in SUGGESTIONS" :key="s.key" type="button" @click="send(t(`ai.suggestions.${s.key}`), s.mode)" :disabled="busy || !online || !affordable(s.mode)"
                                       class="min-h-[2.75rem] rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-left text-sm leading-snug text-slate-200 hover:border-white/20 disabled:opacity-50" :data-suggestion="s.key">{{ t(`ai.suggestions.${s.key}`) }}</button>
                           </div>

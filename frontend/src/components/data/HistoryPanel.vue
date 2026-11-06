@@ -7,10 +7,21 @@ import { storeToRefs } from 'pinia';
 import { useAppStore, badgeClass, rpeText, sessionRpeLabel, setLabel, workoutStats } from '@/stores/app';
 import { describeSet, formatDate, formatDuration, formatTime, formatWeekday } from '@/lib/format';
 import { groupSetsByExercise, workoutKey } from '@/lib/analytics';
+import type { Workout } from '@/types';
 
 const app = useAppStore();
 const { failedCount, filteredHistory, historyFilter, historyLimit, pendingCount, settings, syncing, visibleHistory } = storeToRefs(app);
 const { deleteWorkout, editWorkout, openObsidian, programNameForDay, repeatWorkout, retryEntry, setBadges, syncNow } = app;
+
+/** Notiz zu einer Übung, die auch Sätze hat ("Schmerzen · Schulter zwickt"). */
+function noteOf(w: Workout, exerciseId: number | null): string {
+  const n = w.exerciseNotes?.find((x) => x.exerciseId === exerciseId);
+  if (!n) return '';
+  const parts = [n.skipped ? t('exnote.skipped') : '', n.reason ? t(`exnote.reasons.${n.reason}`) : '', n.note ?? ''].filter(Boolean);
+  return parts.join(' · ');
+}
+/** Ausgelassene Übungen ohne einen einzigen Satz - die stehen sonst nirgends. */
+const skippedOf = (w: Workout) => (w.exerciseNotes ?? []).filter((n) => !w.sets.some((s) => s.exerciseId === n.exerciseId));
 </script>
 
 <template>
@@ -43,6 +54,9 @@ const { deleteWorkout, editWorkout, openObsidian, programNameForDay, repeatWorko
                   </div>
                   <div class="mt-1 font-mono text-[10px] text-slate-500">{{ workoutStats(w) }}</div>
                   <div v-if="w.programDayId && programNameForDay(w.programDayId)" class="mt-1 font-mono text-[10px] text-accent">📋 {{ programNameForDay(w.programDayId) }}</div>
+                  <div v-if="w.gym" class="mt-1 flex items-center gap-1 font-mono text-[10px] text-slate-400" data-test="history-gym">
+                      <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>{{ w.gym }}
+                  </div>
                   <div v-if="w.sessionRpe" class="mt-1 font-mono text-[10px] text-orange-300">{{ t('history.srpe', { value: w.sessionRpe, label: sessionRpeLabel(w.sessionRpe) }) }}</div>
                   <div v-if="w.quality" class="mt-1 font-mono text-[10px] text-emerald-400">{{ t('history.quality', { value: w.quality }) }}</div>
               </div>
@@ -67,6 +81,7 @@ const { deleteWorkout, editWorkout, openObsidian, programNameForDay, repeatWorko
           <div v-else class="space-y-3">
               <div v-for="group in groupSetsByExercise(w.sets)" :key="group.key" class="overflow-hidden rounded-xl border border-white/5 bg-black/20">
                   <div class="border-b border-white/5 bg-white/5 px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-accent">{{ exerciseName(group.exerciseId, group.name) }}</div>
+                  <p v-if="noteOf(w, group.exerciseId)" class="border-b border-white/5 px-3 py-1.5 text-[11px] leading-snug text-slate-300" data-test="history-exnote">✎ {{ noteOf(w, group.exerciseId) }}</p>
                   <div class="space-y-1 p-2">
                       <template v-for="(set, n) in group.sets" :key="set.index">
                       <div class="flex items-center justify-between rounded-lg px-2 py-2 text-sm transition-colors hover:bg-white/5">
@@ -82,6 +97,14 @@ const { deleteWorkout, editWorkout, openObsidian, programNameForDay, repeatWorko
               </div>
           </div>
 
+          <!-- Ausgelassene Übungen (ohne Sätze) mit Grund -->
+          <ul v-if="skippedOf(w).length" class="mt-3 space-y-1" data-test="history-skipped">
+              <li v-for="n in skippedOf(w)" :key="n.exerciseId" class="rounded-xl border border-orange-400/20 bg-orange-400/5 px-3 py-2 text-[11px] leading-snug">
+                  <span class="font-bold text-orange-300">{{ exerciseName(n.exerciseId) }}</span>
+                  <span class="text-slate-300"> · {{ t('workout.skippedLine', { reason: n.reason ? t(`exnote.reasons.${n.reason}`) : t('exnote.skipped') }) }}</span>
+                  <template v-if="n.note"><span class="text-slate-400"> · {{ n.note }}</span></template>
+              </li>
+          </ul>
           <p v-if="w.notes" class="mt-3 whitespace-pre-line rounded-xl border border-white/5 bg-black/20 px-3 py-2 text-xs italic text-slate-300">{{ w.notes }}</p>
           <p v-if="w.pending && w.error" class="mt-3 font-mono text-[10px] text-red-400">{{ w.error }}</p>
 

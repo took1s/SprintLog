@@ -19,7 +19,7 @@ export function exerciseName(ex: ExerciseLike | number | null | undefined, fallb
 
 /** Für Schlüssel wie "id:35" (Rekorde, PR-Ereignisse). */
 export function exerciseNameByKey(key: string, fallback?: string | null): string {
-  return key.startsWith('id:') ? exerciseName(Number(key.slice(3)), fallback) : fallback ?? '';
+  return key.startsWith('id:') ? exerciseName(Number(key.slice(3).split('@')[0]), fallback) : fallback ?? '';
 }
 
 export const muscleName = (group: string | null | undefined): string =>
@@ -29,7 +29,7 @@ export const categoryName = (type: string | null | undefined): string => (type ?
 export const goalName = (goal: string): string => tDynamic(`plan.goals.${goal}`, goal);
 export const levelName = (level: string): string => tDynamic(`plan.levels.${level}`, level);
 
-const UNIT_KEYS: Record<string, Parameters<typeof t>[0]> = { kg: 'units.kg', m: 'units.m', s: 'units.s', 'km/h': 'units.kmh', 'm/s': 'units.ms', AU: 'units.au', reps: 'units.reps' };
+const UNIT_KEYS: Record<string, Parameters<typeof t>[0]> = { kg: 'units.kg', m: 'units.m', s: 'units.s', 'km/h': 'units.kmh', 'm/s': 'units.ms', AU: 'units.au', reps: 'units.reps', km: 'units.km', W: 'units.w', min: 'units.min', bpm: 'units.bpm', rpm: 'units.rpm', kcal: 'units.kcal' };
 export const unitLabel = (unit: string): string => (UNIT_KEYS[unit] ? t(UNIT_KEYS[unit]) : unit);
 
 // ---------- Vorlagen ----------

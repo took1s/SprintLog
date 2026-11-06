@@ -14,6 +14,7 @@ public static class ExerciseEndpoints
 
         group.MapGet("/", GetAll);
         group.MapPost("/", Create);
+        group.MapPatch("/{id:int}", Update);
         group.MapDelete("/{id:int}", Delete);
     }
 
@@ -32,7 +33,7 @@ public static class ExerciseEndpoints
 
         var exercises = await query
             .OrderBy(e => e.Name)
-            .Select(e => new ExerciseDto(e.Id, e.Name, e.Category, e.MuscleGroup, e.TrackingType, e.UserId != null))
+            .Select(e => new ExerciseDto(e.Id, e.Name, e.Category, e.MuscleGroup, e.TrackingType, e.UserId != null, e.IsAssisted, e.PerSide))
             .ToListAsync(ct);
 
         return Results.Ok(exercises);
@@ -59,6 +60,8 @@ public static class ExerciseEndpoints
             Category = req.Category!,
             MuscleGroup = string.IsNullOrWhiteSpace(req.MuscleGroup) ? "Other" : req.MuscleGroup.Trim(),
             TrackingType = req.TrackingType ?? TrackingType.WeightReps,
+            IsAssisted = req.IsAssisted,
+            PerSide = req.PerSide,
             UserId = userId
         };
 
@@ -66,6 +69,23 @@ public static class ExerciseEndpoints
         await db.SaveChangesAsync(ct);
 
         return Results.Created($"/api/exercises/{exercise.Id}", ExerciseDto.From(exercise));
+    }
+
+    /// <summary>Eigenschaften einer eigenen Übung ändern; Standard-Übungen sind fest (404 wie bei fremden).</summary>
+    private static async Task<IResult> Update(int id, UpdateExerciseRequest req, HttpContext http, AppDbContext db, CancellationToken ct)
+    {
+        var userId = http.User.GetUserId();
+        if (userId is null) return Results.Unauthorized();
+
+        var exercise = await db.Exercises.FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId, ct);
+        if (exercise is null) return Results.NotFound();
+        if (req.IsAssisted == true && exercise.TrackingType != TrackingType.WeightReps)
+            return new ValidationErrors().Add("isAssisted", "Only weight exercises can be assisted.").ToResult();
+
+        if (req.IsAssisted is { } assisted) exercise.IsAssisted = assisted;
+        if (req.PerSide is { } perSide) exercise.PerSide = perSide;
+        await db.SaveChangesAsync(ct);
+        return Results.Ok(ExerciseDto.From(exercise));
     }
 
     private static async Task<IResult> Delete(int id, HttpContext http, AppDbContext db, CancellationToken ct)
@@ -88,6 +108,7 @@ public static class ExerciseEndpoints
                 detail: "Remove it from your programs first.");
 
         await db.Favorites.Where(f => f.ExerciseId == id).ExecuteDeleteAsync(ct);
+        await db.WorkoutExerciseNotes.Where(n => n.ExerciseId == id).ExecuteDeleteAsync(ct);
         db.Exercises.Remove(exercise);
         await db.SaveChangesAsync(ct);
 

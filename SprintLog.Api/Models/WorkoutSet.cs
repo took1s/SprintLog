@@ -13,6 +13,18 @@ public class WorkoutSet
     public double? Distance { get; set; } // Meter
     public double? Time { get; set; }     // Sekunden
 
+    // Ausdauergerät (TrackingType.Cardio) - alles optional, Dauer steht in Time, Distanz in Distance
+    /// <summary>Widerstandsstufe bzw. Steigung (%), wie am Gerät angezeigt.</summary>
+    public double? Level { get; set; }
+    /// <summary>Durchschnittliche Leistung in Watt.</summary>
+    public int? Power { get; set; }
+    /// <summary>Durchschnittspuls (Schläge/min).</summary>
+    public int? HeartRate { get; set; }
+    /// <summary>Trittfrequenz bzw. Schlagzahl pro Minute.</summary>
+    public int? Cadence { get; set; }
+    /// <summary>Kalorien laut Gerät.</summary>
+    public int? Calories { get; set; }
+
     /// <summary>Anstrengung des Satzes (RPE 1-10, halbe Schritte erlaubt). Optional.</summary>
     public double? Rpe { get; set; }
 

@@ -23,6 +23,8 @@ export interface WorkoutPayload {
   notes: string | null;
   programDayId: number | null;
   match?: { goals?: number | null; assists?: number | null; opponent?: string | null } | null;
+  gym?: string | null;
+  exerciseNotes?: { exerciseId: number; note: string | null; skipped: boolean; reason: string | null }[];
   sets: {
     exerciseId: number | null | undefined;
     weight: number | null;
@@ -32,6 +34,11 @@ export interface WorkoutPayload {
     rpe: number | null;
     note?: string | null;
     isWarmup: boolean;
+    level?: number | null;
+    power?: number | null;
+    heartRate?: number | null;
+    cadence?: number | null;
+    calories?: number | null;
   }[];
 }
 
@@ -47,6 +54,8 @@ export function toPayload(entry: QueueEntry): WorkoutPayload {
     notes: entry.notes ?? null,
     programDayId: entry.programDayId ?? null,
     match: entry.match ?? null,
+    gym: entry.gym?.trim() || null,
+    exerciseNotes: (entry.exerciseNotes ?? []).map((n) => ({ exerciseId: n.exerciseId, note: n.note?.trim() || null, skipped: !!n.skipped, reason: n.reason ?? null })),
     sets: entry.sets.map((s) => ({
       exerciseId: s.exerciseId,
       weight: s.weight ?? null,
@@ -56,6 +65,12 @@ export function toPayload(entry: QueueEntry): WorkoutPayload {
       rpe: s.rpe ?? null,
       isWarmup: !!s.isWarmup,
       note: s.note ?? null,
+      // Ausdauer-Kennzahlen nur, wenn vorhanden (kleinere Payloads, ältere Server ignorieren sie)
+      ...(s.level != null ? { level: s.level } : {}),
+      ...(s.power != null ? { power: s.power } : {}),
+      ...(s.heartRate != null ? { heartRate: s.heartRate } : {}),
+      ...(s.cadence != null ? { cadence: s.cadence } : {}),
+      ...(s.calories != null ? { calories: s.calories } : {}),
     })),
   };
 }
@@ -140,6 +155,8 @@ export function queueAsWorkouts(queue: readonly QueueEntry[] | null | undefined)
     op: e.op ?? 'create',
     programDayId: e.programDayId ?? null,
     match: e.match ?? null,
+    gym: e.gym ?? null,
+    exerciseNotes: e.exerciseNotes ?? [],
     pending: true,
     status: e.status,
     error: e.error ?? null,

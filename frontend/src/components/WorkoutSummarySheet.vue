@@ -62,7 +62,7 @@ const stats = computed(() => {
 
 <template>
   <transition name="sheet">
-      <div v-if="summary" class="fixed inset-0 z-[70] flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="closeSummary">
+      <div v-if="summary" class="fixed inset-0 z-[70] flex items-end justify-center bg-ink/80 sm:items-center" @click.self="closeSummary">
           <div v-sheet-drag="closeSummary" class="glass-panel modal-panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="t('summary.kicker')" data-test="workout-summary">
               <!-- Haken zeichnet sich, Funken fliegen einmal heraus (dekorativ) -->
               <div class="finish-badge relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent/15 ring-1 ring-accent/40" aria-hidden="true">

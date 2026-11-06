@@ -1524,3 +1524,161 @@ test('Progress: trend list with search, picking an exercise, bodyweight reps, ra
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('Training feedback: gym per workout, assisted machine, side plank per side, bike metrics, skip with reason', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `fb_${Date.now()}`);
+  // Vorlage aus dem "anderen" Studio: Gravitron 25 kg Hilfe x8, Seitstütz, Fahrrad, Latzug
+  await api('POST', '/api/workouts', token, {
+    clientId: crypto.randomUUID(), date: new Date(Date.now() - 3 * 86_400_000).toISOString(), workoutType: 'Gym', gym: 'Orange Gym',
+    sets: [
+      { exerciseId: 111, weight: 25, reps: 8 },
+      { exerciseId: 48, time: 30 },
+      { exerciseId: 84, time: 900, distance: 6000 },
+      { exerciseId: 44, weight: 50, reps: 10 },
+    ],
+  });
+  await page.reload();
+  await page.waitForSelector('[data-test=start-panel]');
+  await page.click('[data-test=main-tabs] [role=tab] >> nth=3');
+  await page.click('[data-subtab=history]');
+  await page.waitForSelector('[data-test=history-gym] >> text=Orange Gym');
+  await page.click('button:has-text("Perform again")');
+  await page.waitForSelector('[data-test=workout]');
+
+  // Studio: neues Studio anlegen -> gilt für diese Einheit
+  await page.click('[data-test=gym-chip]');
+  await page.waitForSelector('[data-test=gym-sheet]');
+  assert.equal(await page.locator('[data-test=gym-sheet] [data-gym="Orange Gym"]').count(), 1); // aus der Historie
+  await page.fill('[data-test=gym-input]', 'TopFit');
+  await page.click('[data-test=gym-add]');
+  await page.waitForSelector('[data-test=gym-sheet]', { state: 'detached' });
+  assert.match(await page.innerText('[data-test=gym-chip]'), /TopFit/);
+
+  // Gravitron: als "Hilfe" gekennzeichnet; 20 kg Hilfe im neuen Studio ist kein Rekord (dort gibt es noch keinen Vergleich)
+  const gravitron = page.locator('[data-block="111"]');
+  await gravitron.locator('[data-test=tag-assisted]').waitFor();
+  assert.match(await gravitron.innerText(), /assist/i);
+  await gravitron.locator('[data-test=ghost-weight]').fill('20');
+  await gravitron.locator('[data-test=log-ghost]').click();
+  await page.waitForTimeout(150);
+  assert.equal(await gravitron.locator('[data-test=set-row].set-pr').count(), 0);
+  // Zurück ins alte Studio: weniger Hilfe bei gleichen Wdh. = Rekord
+  await page.click('[data-test=gym-chip]');
+  await page.click('[data-test=gym-sheet] [data-gym="Orange Gym"]');
+  await gravitron.locator('[data-test=ghost-weight]').fill('20');
+  await gravitron.locator('[data-test=log-ghost]').click();
+  await gravitron.locator('[data-test=set-row].set-pr').waitFor();
+
+  // Seitstütz: Timer läuft pro Seite, Seitenwechsel dazwischen, geloggt wird die Zeit pro Seite
+  const plank = page.locator('[data-block="48"]');
+  assert.equal(await plank.locator('[data-test=tag-per-side]').count(), 1);
+  await plank.locator('[data-test=start-hold]').click();
+  await page.waitForSelector('[data-test=hold-side] >> text=Side 1 of 2');
+  await page.waitForTimeout(4300);
+  await page.click('[data-test=hold-done]');
+  await page.waitForSelector('[data-test=hold-phase] >> text=Switch sides');
+  await page.waitForSelector('[data-test=hold-side] >> text=Side 2 of 2');
+  await page.waitForTimeout(5600);
+  await page.click('[data-test=hold-done]');
+  await page.waitForSelector('[data-test=hold-timer]', { state: 'detached' });
+  assert.equal(await plank.locator('[data-test=set-row]').count(), 1);
+
+  // Fahrrad: Zeit als mm:ss / Minuten, Distanz in km; Watt und Puls im Detail
+  const bike = page.locator('[data-block="84"]');
+  assert.match(await bike.innerText(), /time/i);
+  await bike.locator('[data-test=ghost-time]').fill('25');
+  await bike.locator('[data-test=ghost-km]').fill('10.5');
+  await bike.locator('[data-test=ghost-km]').blur();
+  await bike.locator('[data-test=log-ghost]').click();
+  await bike.locator('[data-test=set-row] >> text=25:00').waitFor();
+  await bike.locator('[data-test=set-row]').click();
+  await page.fill('[data-test=cardio-power]', '180');
+  await page.fill('[data-test=cardio-heartRate]', '150');
+  await page.fill('[data-test=cardio-level]', '8');
+  await page.click("button.cyber-btn:has-text(\"Update\")");
+
+  // Latzug ausgelassen: Gerät besetzt
+  const lat = page.locator('[data-block="44"]');
+  await lat.locator("[aria-label=\"Exercise options\"]").click();
+  await page.click('[data-test=sheet-note]');
+  await page.waitForSelector('[data-test=note-sheet]');
+  await page.fill('[data-test=exnote-text]', 'machine busy');
+  await page.check('[data-test=exnote-skip]');
+  await page.click('[data-reason=equipment]');
+  await page.click('[data-test=exnote-save]');
+  await lat.locator('[data-test=block-skipped] >> text=Machine busy or missing').waitFor();
+
+  // Speichern -> Server hat Studio, Notiz und Ausdauerwerte
+  await page.click('[data-test=finish-workout]');
+  await page.locator('form[role=dialog] button[type=submit]').click();
+  await page.waitForSelector('[data-test=workout-summary]');
+  await page.click('[data-test=summary-done]');
+  await page.waitForFunction(async () => true);
+  let saved;
+  for (let i = 0; i < 20 && !saved; i++) {
+    const list = await api('GET', '/api/workouts/history', token);
+    saved = list.find((w) => w.gym === 'Orange Gym' && w.exerciseNotes?.length);
+    if (!saved) await new Promise((r) => setTimeout(r, 250));
+  }
+  assert.ok(saved, 'workout with notes synced');
+  assert.deepEqual(saved.exerciseNotes, [{ exerciseId: 44, note: 'machine busy', skipped: true, reason: 'equipment' }]);
+  const bikeSet = saved.sets.find((s) => s.exerciseId === 84);
+  assert.equal(bikeSet.time, 1500);
+  assert.equal(bikeSet.distance, 10500);
+  assert.equal(bikeSet.power, 180);
+  assert.equal(bikeSet.heartRate, 150);
+  assert.equal(bikeSet.level, 8);
+  const plankSet = saved.sets.find((s) => s.exerciseId === 48);
+  assert.ok(plankSet.time >= 1 && plankSet.time <= 3, `per side ${plankSet.time}`);
+  assert.equal(saved.sets.filter((s) => s.exerciseId === 111).length, 2);
+
+  // Verlauf zeigt Studio und ausgelassene Übung
+  await page.waitForSelector('[data-test=history-skipped] >> text=machine busy');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('AI during the workout: sees the live session and changes it with one tap (with undo)', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `live_${Date.now()}`);
+  await api('POST', '/api/workouts', token, {
+    clientId: crypto.randomUUID(), date: new Date(Date.now() - 86_400_000).toISOString(), workoutType: 'Gym',
+    sets: [{ exerciseId: 44, weight: 50, reps: 10 }, { exerciseId: 1, weight: 60, reps: 8 }],
+  });
+  await page.reload();
+  await page.waitForSelector('[data-test=start-panel]');
+  await page.click('[data-test=main-tabs] [role=tab] >> nth=3');
+  await page.click('[data-subtab=history]');
+  await page.click('button:has-text("Perform again")');
+  await page.waitForSelector('[data-test=workout]');
+
+  let sentSession = null;
+  page.on('request', (req) => { if (req.url().endsWith('/api/ai/ask')) sentSession = JSON.parse(req.postData() ?? '{}').session ?? null; });
+  await page.click('[data-test=workout-ai]');
+  await page.waitForSelector('[data-test=ai-live]');
+  await page.click('[data-live-suggestion=busy]');
+  await page.waitForSelector('[data-role=assistant] >> text=Live workout: 2 exercises');
+  const live = JSON.parse(sentSession);
+  assert.deepEqual(live.exercises.map((e) => e.id), [44, 1]);
+
+  // Karte: Latzug -> Kabelrudern, Planke dazu
+  const card = page.locator('[data-action=workout]');
+  await card.waitFor();
+  assert.equal(await card.locator('[data-op]').count(), 2);
+  await card.locator('[data-test=ai-action-apply]').click();
+  await page.waitForSelector('[data-test=ai-action-apply] >> text=Saved');
+  await page.click('[aria-label=Close] >> nth=-1');
+  await page.waitForSelector('[data-test=ai-chat]', { state: 'detached' });
+  await page.waitForSelector('[data-block="14"]');
+  await page.waitForSelector('[data-block="47"] [data-test=block-hint] >> text=Core finisher');
+  await page.waitForSelector('[data-block="44"]', { state: 'detached' }); // ohne Sätze: ersetzt, nicht zusätzlich
+  assert.equal(await page.locator('[data-block="14"] [data-test=ghost-weight]').inputValue(), '40');
+
+  // Rückgängig stellt den alten Stand her
+  await page.click('[data-test=toast-action]');
+  await page.waitForSelector('[data-block="44"]');
+  await page.waitForSelector('[data-block="14"]', { state: 'detached' });
+  assert.deepEqual(errors, []);
+  await context.close();
+});

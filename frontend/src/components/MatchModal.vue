@@ -14,7 +14,7 @@ const load = computed(() => (matchModal.value.rpe && Number(matchModal.value.min
 
 <template>
   <transition name="sheet">
-      <div v-if="matchModal.open" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/80 backdrop-blur-sm sm:items-center" @click.self="matchModal.open = false">
+      <div v-if="matchModal.open" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/85 sm:items-center" @click.self="matchModal.open = false">
           <form v-sheet-drag:handle="() => (matchModal.open = false)" @submit.prevent="saveMatch" class="glass-panel modal-panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 sm:rounded-3xl sm:p-8"
                 role="dialog" aria-modal="true" :aria-label="`${matchModal.editing ? t('match.editTitle') : t('match.title')} ${t('match.titleAccent')}`">
               <div class="mb-5 flex items-start justify-between">

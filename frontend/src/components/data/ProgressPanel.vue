@@ -11,21 +11,22 @@ import { renderProgressChart } from '@/lib/charts';
 import { appearance, activeScheme } from '@/lib/theme';
 import { formatClock, formatDate, formatNumber } from '@/lib/format';
 import { tap } from '@/lib/native';
-import type { MetricOption } from '@/lib/analytics';
+import { exerciseSeries, type MetricOption } from '@/lib/analytics';
+import { gymKey, isGymDependent } from '@/lib/liveWorkout';
 import {
   exerciseTrends, inRange, matchesQuery, sortTrends, sparkPoints, summarize, usefulRanges,
   type ExerciseTrend, type ProgressRange, type TrendSort,
 } from '@/lib/progress';
 
 const app = useAppStore();
-const { progress, progressMetric, progressMetrics, progressRecord, progressSeries, records, allWorkouts, clockDate } = storeToRefs(app);
+const { progress, progressMetric, progressMetrics, progressRecord, progressSeries, records, allWorkouts, clockDate, mainGym, sessionGym, exercisesById } = storeToRefs(app);
 
 // ---------- Werte lesbar machen ----------
 /** Wert + Einheit getrennt (große Zahl, kleine Einheit). Lange Dauern als m:ss. */
 function parts(value: number | null | undefined, metric: MetricOption): { value: string; unit: string } {
   if (value == null) return { value: '--', unit: '' };
   if (metric.unit === 's' && value >= 60) return { value: formatClock(Math.round(value)), unit: '' };
-  const digits = metric.unit === 'm' || metric.unit === 'reps' ? 0 : metric.unit === 's' ? 2 : metric.unit === 'kg' ? 2 : 1;
+  const digits = metric.unit === 'm' || metric.unit === 'reps' || metric.unit === 'W' ? 0 : metric.unit === 's' || metric.unit === 'kg' || metric.unit === 'km' ? 2 : 1;
   return { value: formatNumber(value, digits), unit: unitLabel(metric.unit) };
 }
 const text = (value: number | null | undefined, metric: MetricOption) => {
@@ -35,7 +36,7 @@ const text = (value: number | null | undefined, metric: MetricOption) => {
 const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 /** Schritt mit Vorzeichen in Zahlenformat der Sprache (Komma), Nachkommastellen wie beim Wert. */
 const signedValue = (n: number, metric: MetricOption) => {
-  const digits = metric.unit === 'm' || metric.unit === 'reps' ? 0 : 2;
+  const digits = metric.unit === 'm' || metric.unit === 'reps' || metric.unit === 'W' ? 0 : 2;
   const s = formatNumber(Math.abs(n), digits);
   return n > 0 ? `+${s}` : n < 0 ? `−${s}` : s;
 };
@@ -43,9 +44,37 @@ const nameOf = (tr: Pick<ExerciseTrend, 'record'>) => exerciseName(tr.record.exe
 const isField = computed(() => !!progressRecord.value && progressRecord.value.trackingType !== 'WeightReps');
 
 // ---------- Gewählte Übung ----------
-const ranges = computed(() => usefulRanges(progressSeries.value, clockDate.value));
+// Maschinen in mehreren Studios: Verlauf pro Studio (der Stapel im anderen Studio wiegt anders)
+const gymOptions = computed(() => {
+  const r = progressRecord.value;
+  if (!r?.exerciseId || !isGymDependent(exercisesById.value.get(r.exerciseId))) return [];
+  const seen = new Map<string, string>();
+  for (const w of allWorkouts.value) {
+    if (!w.sets?.some((x) => x.exerciseId === r.exerciseId)) continue;
+    const key = gymKey(w.gym, mainGym.value);
+    if (key && !seen.has(key)) seen.set(key, w.gym?.trim() || mainGym.value || key);
+  }
+  return seen.size > 1 ? [...seen.entries()].map(([key, name]) => ({ key, name })) : [];
+});
+const gymPick = ref<string | null>(null);
+const gymFilter = computed(() => {
+  const opts = gymOptions.value;
+  if (!opts.length) return null;
+  if (gymPick.value === 'all') return null;
+  if (gymPick.value && opts.some((o) => o.key === gymPick.value)) return gymPick.value;
+  // Standard: das Studio, in dem gerade trainiert wird (sonst das Hauptstudio)
+  const current = gymKey(sessionGym.value, mainGym.value);
+  return opts.some((o) => o.key === current) ? current : opts[0]!.key;
+});
+watch(() => progress.value.key, () => { gymPick.value = null; });
+const fullSeries = computed(() => {
+  const gym = gymFilter.value;
+  if (!gym) return progressSeries.value;
+  return exerciseSeries(allWorkouts.value.filter((w) => gymKey(w.gym, mainGym.value) === gym), progress.value.key, progressMetric.value.key);
+});
+const ranges = computed(() => usefulRanges(fullSeries.value, clockDate.value));
 const range = computed<ProgressRange>(() => (ranges.value.includes(progress.value.range) ? progress.value.range : 'all'));
-const series = computed(() => inRange(progressSeries.value, range.value, clockDate.value));
+const series = computed(() => inRange(fullSeries.value, range.value, clockDate.value));
 const summary = computed(() => summarize(series.value, !!progressMetric.value.lowerIsBetter));
 const headline = computed(() => parts(summary.value?.latest.value, progressMetric.value));
 const lowerIsBetter = computed(() => !!progressMetric.value.lowerIsBetter);
@@ -158,6 +187,13 @@ function toList() {
                   class="chip flex-shrink-0" :class="progressMetric.key === m.key ? 'chip-active' : 'chip-idle'" :aria-pressed="progressMetric.key === m.key">
             {{ t(`progress.metrics.${m.key}`) }}
           </button>
+        </div>
+
+        <!-- Studio (nur Maschinen, die in mehreren Studios trainiert wurden) -->
+        <div v-if="gymOptions.length" class="no-scrollbar -mx-5 mt-3 flex gap-2 overflow-x-auto px-5 sm:-mx-6 sm:px-6" data-test="progress-gyms">
+          <button type="button" class="chip flex-shrink-0" :class="!gymFilter ? 'chip-active' : 'chip-idle'" :aria-pressed="!gymFilter" @click="gymPick = 'all'">{{ t('gym.all') }}</button>
+          <button v-for="g in gymOptions" :key="g.key" type="button" class="chip flex-shrink-0" :class="gymFilter === g.key ? 'chip-active' : 'chip-idle'"
+                  :aria-pressed="gymFilter === g.key" @click="gymPick = g.key" :data-gym="g.name">{{ g.name }}</button>
         </div>
 
         <!-- Diagramm -->
