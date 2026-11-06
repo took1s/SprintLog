@@ -5,7 +5,7 @@ PWA zum Loggen von Gym- und Feldtraining (Fußball). Offline-first, ein Nutzer =
 ## Stack
 - Backend: .NET 8 Minimal API (`SprintLog.Api`), EF Core 8 + PostgreSQL (Npgsql), Migrationen laufen beim Start.
 - Frontend: Vite + Vue 3 SFC + strict TypeScript + Pinia + Tailwind (`frontend/`), Build nach `SprintLog.Api/wwwroot`.
-- Hosting: Render Free (Docker), Sentry (EU), Brevo für E-Mails.
+- Hosting: Render Free (Docker), Sentry (EU), Brevo für E-Mails, Claude-API für den KI-Coach (optional, `ANTHROPIC_API_KEY`; Werkzeuge in `Services/AiTools.cs`, Prompts in `Endpoints/AiEndpoints.cs`).
 
 ## Befehle (im Repo-Root)
 - `npm run typecheck` · `npm test` (Vitest) · `npm run build`
