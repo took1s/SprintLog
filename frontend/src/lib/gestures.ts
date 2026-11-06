@@ -208,10 +208,19 @@ export const vSheetDrag: Directive<HTMLElement, () => void> = {
  * Nach einer Halte-Geste den folgenden Klick schlucken. Bei Touch landet er dort, wo der Finger losgelassen wird -
  * und dort liegt nach der Aktion oft etwas Neues (Hintergrund des gerade geöffneten Sheets, ein anderer Knopf).
  */
-export function swallowNextClick(ms = 700): void {
-  const swallow = (e: MouseEvent) => { e.stopPropagation(); e.preventDefault(); window.removeEventListener('click', swallow, true); };
+export function swallowNextClick(): void {
+  // Nur der Klick, der direkt aufs Loslassen folgt - kommt keiner, ist der Filter kurz danach wieder weg
+  // (sonst schluckte er den nächsten echten Tipp).
+  const swallow = (e: MouseEvent) => { e.stopPropagation(); e.preventDefault(); cleanup(); };
+  const released = () => { window.setTimeout(cleanup, 60); };
+  const cleanup = () => {
+    window.removeEventListener('click', swallow, true);
+    window.removeEventListener('pointerup', released, true);
+    window.removeEventListener('pointercancel', released, true);
+  };
   window.addEventListener('click', swallow, true);
-  window.setTimeout(() => window.removeEventListener('click', swallow, true), ms);
+  window.addEventListener('pointerup', released, true);
+  window.addEventListener('pointercancel', released, true);
 }
 
 export const LONG_PRESS_MS = 450;

@@ -6,9 +6,10 @@ import { t } from '@/i18n';
 import DecimalInput from '@/components/DecimalInput.vue';
 import { POSITIONS, emptyProfile, useAiStore, type AthleteProfile } from '@/stores/ai';
 import { vSheetDrag } from '@/lib/gestures';
+import MemoryIcon from './MemoryIcon.vue';
 
 const ai = useAiStore();
-const { profile, profileOpen, profileBusy } = storeToRefs(ai);
+const { profile, profileOpen, profileBusy, memory } = storeToRefs(ai);
 const panel = ref<HTMLElement | null>(null);
 
 // Bearbeitungskopie: erst "Speichern" übernimmt
@@ -105,6 +106,14 @@ function save() {
                       <textarea v-model="form[f]" rows="2" :maxlength="f === 'equipment' ? 300 : 400" :placeholder="t(`ai.profile.placeholders.${f}`)"
                                 class="cyber-input w-full resize-none rounded-xl p-3 text-base" :data-test="`profile-${f}`"></textarea>
                   </label>
+
+                  <!-- Was der Coach sich aus Gesprächen gemerkt hat - ergänzt das Profil -->
+                  <button type="button" @click="ai.openMemory()" data-test="profile-memory"
+                          class="flex min-h-[3.25rem] w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-left text-sm font-bold text-slate-100 hover:border-accent/40">
+                      <MemoryIcon category="brain" class="h-5 w-5 flex-shrink-0 text-accent" />
+                      <span class="min-w-0 flex-1">{{ memory.length ? t('ai.memory.openCount', { n: memory.length }) : t('ai.memory.open') }}</span>
+                      <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
+                  </button>
               </div>
 
               <div class="border-t border-white/5 px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">

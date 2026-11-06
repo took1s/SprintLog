@@ -1213,3 +1213,72 @@ test('Motion: page stays put under sheets, pull down to close, long-press shortc
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('AI coach memory: remembers from the chat with undo, athlete manages it, it outlives the chat', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `mem_${Date.now()}`);
+  const hold = async (selector) => {
+    await page.locator(selector).hover();
+    await page.mouse.down();
+    await page.waitForTimeout(900);
+    await page.mouse.up();
+    await page.waitForTimeout(150); // ein Mensch tippt nicht schneller erneut
+  };
+
+  // Der Coach merkt sich etwas -> Hinweis unter der Antwort, Zähler am Gedächtnis-Knopf, Eintrag im Konto
+  await page.click('[data-test=coach-ask]');
+  await page.waitForSelector('[data-test=ai-chat]');
+  await page.fill('[data-test=ai-input]', 'Remember that I play every Sunday at 11');
+  await page.click('[data-test=ai-send]');
+  const note = page.locator('[data-test=memory-notes] [data-memory-action=saved]');
+  await note.waitFor();
+  assert.match(await note.innerText(), /Remembered:\s*I play every Sunday at 11/);
+  await page.waitForFunction(() => document.querySelector('[data-test=ai-memory]')?.getAttribute('aria-label') === 'Coach memory · 1');
+  let list = await api('GET', '/api/ai/memory', token);
+  assert.deepEqual(list.map((m) => [m.category, m.source]), [['schedule', 'ai']]);
+
+  // Rückgängig unter der zweiten Notiz
+  await page.fill('[data-test=ai-input]', 'Remember that my left knee hurts after deep squats');
+  await page.click('[data-test=ai-send]');
+  await page.locator('[data-test=memory-undo]').nth(1).click();
+  await page.waitForSelector('[data-memory-action=undone]');
+  assert.equal((await api('GET', '/api/ai/memory', token)).length, 1);
+
+  // Gedächtnis: nach Themen, selbst ergänzen, bearbeiten, löschen
+  await page.click('[data-test=ai-memory]');
+  const sheet = page.locator('[data-test=coach-memory]');
+  await sheet.waitFor();
+  await sheet.locator('[data-category=schedule] >> text=I play every Sunday at 11').waitFor();
+  await page.fill('[data-test=memory-input]', 'Prefers training in the morning');
+  await page.selectOption('[data-test=memory-category]', 'preference');
+  await page.click('[data-test=memory-submit]');
+  await sheet.locator('[data-category=preference] >> text=Prefers training in the morning').waitFor();
+  list = await api('GET', '/api/ai/memory', token);
+  const pref = list.find((m) => m.category === 'preference');
+  assert.equal(pref.source, 'user');
+  await sheet.locator(`[data-memory="${pref.id}"] [data-test=memory-edit]`).click();
+  await page.fill('[data-test=memory-edit-input]', 'Prefers training at 7 am');
+  await page.click('[data-test=memory-edit-save]');
+  await sheet.locator('text=Prefers training at 7 am').waitFor();
+  assert.equal((await api('GET', '/api/ai/memory', token)).find((m) => m.id === pref.id).content, 'Prefers training at 7 am');
+  await sheet.locator(`[data-memory="${pref.id}"] [data-test=memory-delete]`).click();
+  await sheet.locator(`[data-memory="${pref.id}"]`).waitFor({ state: 'detached' });
+  await sheet.locator('button[aria-label=Close]').click();
+  await sheet.waitFor({ state: 'detached' });
+
+  // Chat löschen: der Verlauf ist weg, das Gedächtnis bleibt im Konto
+  await hold('[data-test=ai-clear]');
+  await page.waitForSelector('[data-role=assistant]', { state: 'detached' });
+  await page.fill('[data-test=ai-input]', 'What do you know about me?');
+  await page.click('[data-test=ai-send]');
+  await page.waitForSelector('[data-role=assistant] >> text=Memory: 1 entries');
+
+  // Alles löschen nur per Gedrückthalten
+  await page.click('[data-test=ai-memory]');
+  await sheet.waitFor();
+  await hold('[data-test=memory-clear]');
+  await sheet.locator('[data-test=memory-empty]').waitFor();
+  assert.equal((await api('GET', '/api/ai/memory', token)).length, 0);
+  assert.deepEqual(errors, []);
+  await context.close();
+});

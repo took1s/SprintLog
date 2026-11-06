@@ -5,6 +5,7 @@
 //   über Werkzeuge vom Server.
 // - Vorschläge (Plan, Ziel, Wochenplan) werden nie automatisch gespeichert - nur nach Bestätigung auf der Karte.
 // - Verlauf, Analyse und Profil-Kopie bleiben lokal pro Konto und werden beim Abmelden gelöscht.
+// - Gedächtnis: der Coach merkt sich Wichtiges im Konto (Server); hier eine Kopie zum Ansehen und Verwalten.
 
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
@@ -39,7 +40,15 @@ export type AiAction =
   | { type: 'programUpdate'; programId: number; programName: string; program: AiProgramUpdateDraft; changes: string[] }
   | { type: 'goal'; exerciseId: number; exerciseName: string; targetWeight: number; targetReps: number; targetDate: string | null; reason: string }
   | { type: 'schedule'; trainingDays: number; matchDays: number; reason: string };
-export interface AiChatMessage { role: 'user' | 'assistant'; content: string; at: string; mode?: AiMode; actions?: AiAction[]; applied?: number[] }
+export type MemoryCategory = 'injury' | 'health' | 'goal' | 'schedule' | 'preference' | 'equipment' | 'insight' | 'other';
+export const MEMORY_CATEGORIES: readonly MemoryCategory[] = ['injury', 'health', 'goal', 'schedule', 'preference', 'equipment', 'insight', 'other'];
+export interface CoachMemory {
+  id: number; category: MemoryCategory; content: string; importance: 1 | 2 | 3; source: 'ai' | 'user';
+  createdAt: string; updatedAt: string; expiresAt: string | null;
+}
+/** Was der Coach in einer Antwort an seinem Gedächtnis geändert hat (Hinweis unter der Antwort). */
+export interface MemoryChange { action: 'saved' | 'updated' | 'forgotten'; id: number; category: MemoryCategory; content: string; undone?: boolean }
+export interface AiChatMessage { role: 'user' | 'assistant'; content: string; at: string; mode?: AiMode; actions?: AiAction[]; applied?: number[]; memory?: MemoryChange[] }
 
 export interface AiReportSection { area?: string; title: string; status: 'good' | 'watch' | 'risk'; points: string[] }
 export interface AiReport { headline: string; summary: string; sections: AiReportSection[]; recommendations: { title: string; why: string; action: string }[]; nextWeekFocus: string }
@@ -123,6 +132,10 @@ export const useAiStore = defineStore('ai', () => {
   /** Profil hat mindestens ein Feld - sonst weist der Chat freundlich darauf hin. */
   const profileFilled = computed(() => Object.entries(profile.value).some(([k, v]) => !['updatedAt', 'pending'].includes(k) && v != null && v !== ''));
 
+  const memory = ref<CoachMemory[]>([]);
+  const memoryOpen = ref(false);
+  const memoryLoading = ref(false);
+
   const plan = ref<{ busy: boolean; error: AiErrorCode | null; notes: string; result: { program: AiProgramDraft; summary: string; answers: PlanAnswers } | null; saving: boolean }>(
     { busy: false, error: null, notes: '', result: null, saving: false });
 
@@ -138,6 +151,8 @@ export const useAiStore = defineStore('ai', () => {
     messages.value = k ? readJson<AiChatMessage[]>(k.aiChat, []) : [];
     analysis.value = k ? readJson<AiAnalysis | null>(k.aiAnalysis, null) : null;
     profile.value = k ? { ...emptyProfile(), ...readJson<Partial<AthleteProfile>>(k.athlete, {}) } : emptyProfile();
+    memory.value = k ? readJson<CoachMemory[]>(k.aiMemory, []) : [];
+    memoryOpen.value = false;
     status.value = null;
     plan.value = { busy: false, error: null, notes: '', result: null, saving: false };
   }, { immediate: true });
@@ -164,7 +179,7 @@ export const useAiStore = defineStore('ai', () => {
   async function loadStatus() {
     if (!app.isAuthenticated || !deviceOnline.value) return;
     try { status.value = await app.api().get<AiStatus>('/api/ai/status'); } catch { /* KI bleibt ausgeblendet */ }
-    if (status.value?.enabled) void loadProfile();
+    if (status.value?.enabled) { void loadProfile(); void loadMemory(); }
   }
 
   /** Zusammenfassung der eigenen Daten zum Zeitpunkt der Frage. */
@@ -218,10 +233,15 @@ export const useAiStore = defineStore('ai', () => {
     busy.value = true;
     error.value = null;
     try {
-      const res = await aiPost<{ answer: string; remaining: number; actions?: AiAction[] }>('/api/ai/ask', { question: q, context: context(), history, locale: locale.value, mode: m });
-      messages.value = [...messages.value, { role: 'assistant', content: res.answer, at: new Date().toISOString(), mode: m, actions: res.actions?.length ? res.actions : undefined }];
+      const res = await aiPost<{ answer: string; remaining: number; actions?: AiAction[]; memory?: MemoryChange[] }>('/api/ai/ask', { question: q, context: context(), history, locale: locale.value, mode: m });
+      messages.value = [...messages.value, {
+        role: 'assistant', content: res.answer, at: new Date().toISOString(), mode: m,
+        actions: res.actions?.length ? res.actions : undefined, memory: res.memory?.length ? res.memory : undefined,
+      }];
       setRemaining(res.remaining);
       persist();
+      // Gedächtnis geändert: Liste frisch holen (Reihenfolge, Zeitstempel kommen vom Server)
+      if (res.memory?.length) void loadMemory();
     } catch (e) {
       error.value = errorCode(e);
       if (error.value === 'ai_quota' && status.value) status.value = { ...status.value, remaining: 0 };
@@ -379,6 +399,88 @@ export const useAiStore = defineStore('ai', () => {
 
   function openProfile() { profileOpen.value = true; }
 
+  // ---------- Gedächtnis des Coachs ----------
+
+  const persistMemory = () => { if (keys.value) writeJson(keys.value.aiMemory, memory.value); };
+
+  async function loadMemory() {
+    if (!app.isAuthenticated || !deviceOnline.value) return;
+    memoryLoading.value = true;
+    try {
+      memory.value = await app.api().get<CoachMemory[]>('/api/ai/memory');
+      persistMemory();
+    } catch { /* offline: Kopie bleibt */ } finally {
+      memoryLoading.value = false;
+    }
+  }
+
+  function openMemory() {
+    memoryOpen.value = true;
+    void loadMemory();
+  }
+
+  /** Fehler einheitlich melden: ohne Netz geht Verwalten nicht (das Gedächtnis lebt im Konto). */
+  function memoryError(e: unknown) {
+    useUiStore().toast(isApiError(e) && e.isNetwork ? t('ai.memory.needsConnection') : isApiError(e) ? e.message : t('ai.errors.unknown'), 'error');
+  }
+
+  async function addMemory(content: string, category: MemoryCategory, importance: 1 | 2 | 3 = 2): Promise<boolean> {
+    try {
+      const created = await app.api().post<CoachMemory>('/api/ai/memory', { content, category, importance });
+      memory.value = [created, ...memory.value.filter((m) => m.id !== created.id)];
+      persistMemory();
+      void loadMemory();
+      return true;
+    } catch (e) { memoryError(e); return false; }
+  }
+
+  async function updateMemory(entry: CoachMemory, content: string, category: MemoryCategory, importance: 1 | 2 | 3): Promise<boolean> {
+    try {
+      const saved = await app.api().put<CoachMemory>(`/api/ai/memory/${entry.id}`, { content, category, importance, expiresAt: entry.expiresAt });
+      memory.value = memory.value.map((m) => (m.id === saved.id ? saved : m));
+      persistMemory();
+      return true;
+    } catch (e) { memoryError(e); return false; }
+  }
+
+  async function forgetMemory(id: number): Promise<boolean> {
+    try {
+      await app.api().del(`/api/ai/memory/${id}`);
+    } catch (e) {
+      // Schon weg (z. B. auf einem anderen Gerät gelöscht) zählt als Erfolg
+      if (!(isApiError(e) && e.status === 404)) { memoryError(e); return false; }
+    }
+    memory.value = memory.value.filter((m) => m.id !== id);
+    persistMemory();
+    return true;
+  }
+
+  /** "Rückgängig" unter einer Antwort: gerade Gemerktes wieder vergessen. */
+  async function undoMemory(messageIndex: number, change: MemoryChange) {
+    if (change.action !== 'saved' || change.undone) return;
+    if (!(await forgetMemory(change.id))) return;
+    messages.value = messages.value.map((m, i) => (i === messageIndex && m.memory
+      ? { ...m, memory: m.memory.map((c) => (c.id === change.id ? { ...c, undone: true } : c)) }
+      : m));
+    persist();
+    useUiStore().toast(t('ai.memory.undone'), 'success');
+  }
+
+  /** confirmed: per Gedrückthalten bestätigt; sonst (Tastatur/Screenreader) mit Rückfrage. */
+  async function clearMemory(opts?: { confirmed?: boolean }): Promise<boolean> {
+    const ok = opts?.confirmed === true || await useUiStore().confirm({
+      title: t('ai.memory.clearTitle'), message: t('ai.memory.clearMessage'), confirmText: t('ai.memory.clearConfirm'), danger: true,
+    });
+    if (!ok) return false;
+    try {
+      await app.api().del('/api/ai/memory');
+      memory.value = [];
+      persistMemory();
+      useUiStore().toast(t('ai.memory.cleared'), 'success');
+      return true;
+    } catch (e) { memoryError(e); return false; }
+  }
+
   async function saveProfile(next: AthleteProfile) {
     const ui = useUiStore();
     profileBusy.value = true;
@@ -450,5 +552,6 @@ export const useAiStore = defineStore('ai', () => {
     profile, profileOpen, profileBusy, profileFilled, cost, left, deviceOnline,
     loadStatus, openChat, ask, retry, askFromElsewhere, clearChat, applyAction, generatePlan, discardPlan, acceptPlan,
     runAnalysis, loadProfile, openProfile, saveProfile, context,
+    memory, memoryOpen, memoryLoading, loadMemory, openMemory, addMemory, updateMemory, forgetMemory, undoMemory, clearMemory,
   };
 });

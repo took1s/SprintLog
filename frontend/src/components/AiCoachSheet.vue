@@ -7,10 +7,11 @@ import { deviceOnline, useAiStore } from '@/stores/ai';
 import AiActionCard from './AiActionCard.vue';
 import AiText from './AiText.vue';
 import HoldButton from './HoldButton.vue';
+import MemoryIcon from './MemoryIcon.vue';
 import { vSheetDrag } from '@/lib/gestures';
 
 const ai = useAiStore();
-const { open, messages, busy, error, status, mode, applying, profileFilled } = storeToRefs(ai);
+const { open, messages, busy, error, status, mode, applying, profileFilled, memory } = storeToRefs(ai);
 // Geräte-Netz statt Sync-Status (der kann nach einem einzelnen Fehlschlag fälschlich "offline" melden)
 const online = deviceOnline;
 
@@ -106,7 +107,8 @@ watch(() => messages.value.length, (n, prev) => {
     fresh.value = n - 1;
     // Vorschlags-Karten mit ansagen - sonst erfährt man ohne Blick auf den Bildschirm nicht, dass es etwas zu speichern gibt
     const cards = (last.actions ?? []).map((a) => t(`ai.actions.${a.type}`));
-    announce.value = [`${t('ai.coach')}: ${last.content}`, ...cards].join('. ');
+    const notes = (last.memory ?? []).map((c) => `${t(`ai.memory.${c.action}`)}: ${c.content}`);
+    announce.value = [`${t('ai.coach')}: ${last.content}`, ...notes, ...cards].join('. ');
   }
 });
 
@@ -155,6 +157,12 @@ const close = () => { open.value = false; };
                       <p v-if="status?.enabled" class="mt-0.5 font-mono text-[11px]" :class="ai.left('deep') < 1 ? 'text-orange-300' : 'text-slate-400'" data-test="ai-remaining">{{ remaining }}</p>
                   </div>
                   <div class="flex flex-shrink-0 gap-2">
+                      <!-- Gedächtnis: was sich der Coach gemerkt hat (Zahl = Einträge) -->
+                      <button type="button" @click="ai.openMemory()" class="relative flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white"
+                              :aria-label="memory.length ? t('ai.memory.openCount', { n: memory.length }) : t('ai.memory.open')" data-test="ai-memory">
+                          <MemoryIcon category="brain" class="h-5 w-5" />
+                          <span v-if="memory.length" class="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-accent px-1 font-mono text-[10px] font-bold text-on-accent" aria-hidden="true">{{ memory.length }}</span>
+                      </button>
                       <!-- Gedrückt halten löscht (Ring füllt sich); Tastatur/Screenreader bekommen die Rückfrage -->
                       <HoldButton v-if="messages.length" variant="icon" :label="t('ai.clear.button')" @confirm="clearChat(true)" @fallback="clearChat()"
                                   class="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" data-test="ai-clear">
@@ -190,6 +198,18 @@ const close = () => { open.value = false; };
                                   <p v-else class="whitespace-pre-line break-words">{{ m.content }}</p>
                               </div>
                           </div>
+                          <!-- Gedächtnis-Hinweise: was der Coach sich gerade gemerkt hat - antippen öffnet das Gedächtnis, "Rückgängig" vergisst es -->
+                          <ul v-if="m.memory?.length" class="mt-2 space-y-1.5" data-test="memory-notes">
+                              <li v-for="c in m.memory" :key="c.id" class="memory-note flex items-center gap-1 rounded-xl border border-accent/25 bg-accent/5 pl-3 pr-1 text-xs text-slate-200" :data-memory-action="c.undone ? 'undone' : c.action">
+                                  <MemoryIcon category="brain" class="h-4 w-4 flex-shrink-0 text-accent" />
+                                  <button type="button" class="min-h-[2.75rem] min-w-0 flex-1 py-1.5 pl-1 text-left leading-snug" @click="ai.openMemory()">
+                                      <span class="font-bold text-accent">{{ t(`ai.memory.${c.undone ? 'undone' : c.action}`) }}:</span>
+                                      <span class="break-words" :class="{ 'text-slate-400 line-through': c.undone || c.action === 'forgotten' }">{{ c.content }}</span>
+                                  </button>
+                                  <button v-if="c.action === 'saved' && !c.undone" type="button" @click="ai.undoMemory(i, c)" data-test="memory-undo"
+                                          class="min-h-[2.75rem] flex-shrink-0 rounded-lg px-3 text-[11px] font-bold uppercase text-slate-300 tracking-label hover:bg-white/5 hover:text-white">{{ t('ai.memory.undo') }}</button>
+                              </li>
+                          </ul>
                           <!-- Vorschläge in voller Breite unter der Antwort: in der Blase wären Tagesliste und Knopf zu gedrängt -->
                           <div v-if="m.actions?.length" class="mt-2 space-y-2">
                               <AiActionCard v-for="(a, j) in m.actions" :key="j" :action="a" :applied="!!m.applied?.includes(j)" :busy="applying === `${i}:${j}`" @apply="ai.applyAction(i, j)" />
