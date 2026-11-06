@@ -13,13 +13,18 @@ namespace SprintLog.Api.Services;
 /// Werkzeuge des KI-Coachs. Statistik-Werkzeuge rechnen exakt auf dem Server (die KI rät keine Zahlen), Vorschlags-Werkzeuge
 /// ändern nichts - sie erzeugen Karten, die der Nutzer selbst bestätigt. Alle Abfragen sind auf den eigenen Nutzer beschränkt.
 /// </summary>
-public sealed class AiTools(AppDbContext db, TimeProvider time)
+public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryService memory)
 {
     public const string ProposeProgram = "propose_program";
     public const string ProposeProgramUpdate = "propose_program_update";
     public const string ProposeGoal = "propose_goal";
     public const string ProposeSchedule = "propose_schedule";
     public const string SubmitReport = "submit_report";
+    public const string Remember = "remember";
+    public const string ForgetMemory = "forget_memory";
+
+    /// <summary>Gedächtnis-Änderungen dieser Anfrage (Hinweise im Chat). AiTools lebt pro Request.</summary>
+    public List<MemoryChangeDto> MemoryChanges { get; } = new();
     private const int MaxResultChars = 9_000;
 
     private static JsonObject Schema(string json) => JsonNode.Parse(json)!.AsObject();
@@ -112,8 +117,28 @@ public sealed class AiTools(AppDbContext db, TimeProvider time)
               "targetRpe":{"type":"number"},"restSeconds":{"type":"integer"},"note":{"type":"string"}}}}}}}}}
         """));
 
+    public static readonly AiTool RememberTool = new(Remember,
+        "Save a durable fact about the athlete to your long-term memory (kept across chats and devices; the athlete sees it and can undo or delete it). " +
+        "Save: goals and deadlines, injuries/pain and their current status, health limits, fixed schedule (team training days, match day, shifts), " +
+        "preferences (training times, likes/dislikes), equipment and facilities, how the athlete responds to training (e.g. 'knee hurts after deep squats', 'sleeps badly after late sessions'), " +
+        "decisions you agreed on (e.g. 'no heavy legs on MD-2 for the next 4 weeks'). " +
+        "Do NOT save: things already stored in the app (workouts, records, the plan, profile fields), one-off small talk, guesses, anything the athlete asks you not to keep. " +
+        "One fact per entry, short, third person, in the athlete's language; add the date for time-bound facts. Update instead of duplicating (replacesId).",
+        Schema("""
+        {"type":"object","required":["content","category"],"properties":{
+          "content":{"type":"string","description":"One fact, max 300 characters"},
+          "category":{"type":"string","enum":["injury","health","goal","schedule","preference","equipment","insight","other"]},
+          "importance":{"type":"integer","minimum":1,"maximum":3,"description":"3 = critical (injury, hard limit), 2 = important (default), 1 = minor"},
+          "expiresInDays":{"type":"integer","minimum":1,"maximum":365,"description":"Only for temporary facts (current pain, a trip, exam weeks)"},
+          "replacesId":{"type":"integer","description":"Id from coach_memory to update that entry instead of adding a new one"}}}
+        """));
+
+    public static readonly AiTool ForgetMemoryTool = new(ForgetMemory,
+        "Delete a memory entry that is wrong or no longer true (e.g. an injury has healed, the match day changed - then remember the new fact). Id from coach_memory.",
+        Schema("""{"type":"object","required":["id"],"properties":{"id":{"type":"integer"}}}"""));
+
     public static readonly IReadOnlyList<AiTool> DataTools = new[] { Programs, ExerciseHistory, PersonalRecords, TrainingSummary, LoadMetrics, WellnessTrend, MatchStats, SearchExercises };
-    public static readonly IReadOnlyList<AiTool> ChatTools = DataTools.Concat(new[] { ProposeProgramTool, ProposeProgramUpdateTool, ProposeGoalTool, ProposeScheduleTool }).ToList();
+    public static readonly IReadOnlyList<AiTool> ChatTools = DataTools.Concat(new[] { ProposeProgramTool, ProposeProgramUpdateTool, ProposeGoalTool, ProposeScheduleTool, RememberTool, ForgetMemoryTool }).ToList();
 
     // ---------- Ausführung ----------
 
@@ -136,6 +161,8 @@ public sealed class AiTools(AppDbContext db, TimeProvider time)
                 ProposeProgram => await ProgramActionAsync(userId, use.Input, 7, actions, ct),
                 ProposeGoal => await GoalActionAsync(userId, use.Input, actions, ct),
                 ProposeSchedule => ScheduleAction(use.Input, actions),
+                Remember => await RememberAsync(userId, use.Input, ct),
+                ForgetMemory => await ForgetAsync(userId, Int(use.Input, "id"), ct),
                 _ => new { error = $"Unknown tool {use.Name}" },
             };
             var json = JsonSerializer.Serialize(result, JsonOpts);
@@ -145,6 +172,32 @@ public sealed class AiTools(AppDbContext db, TimeProvider time)
         {
             return JsonSerializer.Serialize(new { error = "Tool failed: " + e.Message }, JsonOpts);
         }
+    }
+
+    // ---------- Gedächtnis ----------
+
+    private async Task<object> RememberAsync(int userId, JsonElement input, CancellationToken ct)
+    {
+        var days = Int(input, "expiresInDays");
+        DateTime? expires = days is { } d ? time.GetUtcNow().UtcDateTime.AddDays(Math.Clamp(d, 1, 365)) : null;
+        var (change, error) = await memory.RememberAsync(userId, Str(input, "content"), Str(input, "category"), Int(input, "importance") ?? 2,
+            expires, Int(input, "replacesId"), "ai", ct);
+        if (change is null) return new { error };
+        // Mehrfach in einer Antwort geändert: ein Hinweis pro Eintrag ("gemerkt" bleibt "gemerkt")
+        var i = MemoryChanges.FindIndex(c => c.Id == change.Id);
+        if (i >= 0) MemoryChanges[i] = change with { Action = MemoryChanges[i].Action == "saved" ? "saved" : change.Action };
+        else MemoryChanges.Add(change);
+        return new { ok = true, change.Id, change.Action };
+    }
+
+    private async Task<object> ForgetAsync(int userId, int? id, CancellationToken ct)
+    {
+        if (id is null) return new { error = "id is required." };
+        var change = await memory.ForgetAsync(userId, id.Value, ct);
+        if (change is null) return new { error = $"Memory #{id} not found." };
+        MemoryChanges.RemoveAll(c => c.Id == change.Id);
+        MemoryChanges.Add(change);
+        return new { ok = true, change.Id, change.Action };
     }
 
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull };

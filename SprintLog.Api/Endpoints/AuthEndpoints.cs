@@ -222,6 +222,7 @@ public static class AuthEndpoints
         await db.Favorites.Where(f => f.UserId == userId).ExecuteDeleteAsync(ct);
         await db.Programs.Where(p => p.UserId == userId).ExecuteDeleteAsync(ct); // Tage + Vorgaben per Cascade
         await db.Exercises.Where(e => e.UserId == userId).ExecuteDeleteAsync(ct);
+        await db.CoachMemories.Where(m => m.UserId == userId).ExecuteDeleteAsync(ct); // auch per Cascade - explizit zur Sicherheit
         await db.Users.Where(u => u.Id == userId).ExecuteDeleteAsync(ct);
         await tx.CommitAsync(ct);
 
