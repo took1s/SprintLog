@@ -16,6 +16,7 @@ namespace SprintLog.Api.Services;
 public sealed class AiTools(AppDbContext db, TimeProvider time)
 {
     public const string ProposeProgram = "propose_program";
+    public const string ProposeProgramUpdate = "propose_program_update";
     public const string ProposeGoal = "propose_goal";
     public const string ProposeSchedule = "propose_schedule";
     public const string SubmitReport = "submit_report";
@@ -88,8 +89,31 @@ public sealed class AiTools(AppDbContext db, TimeProvider time)
           "nextWeekFocus":{"type":"string"}}}
         """));
 
-    public static readonly IReadOnlyList<AiTool> DataTools = new[] { ExerciseHistory, PersonalRecords, TrainingSummary, WellnessTrend, MatchStats, SearchExercises };
-    public static readonly IReadOnlyList<AiTool> ChatTools = DataTools.Concat(new[] { ProposeProgramTool, ProposeGoalTool, ProposeScheduleTool }).ToList();
+    public static readonly AiTool Programs = new("get_programs",
+        "All training programs of the athlete and the full details of one (default: the active one): every day with every exercise and its prescription (sets, reps, distance/time, RPE, rest, %1RM, weekly steps, notes), the week plan, the current program week and adherence (how often each day was completed in the last 4 weeks, last date).",
+        Schema("""{"type":"object","properties":{"programId":{"type":"integer","description":"Optional; default is the active program"}}}"""));
+
+    public static readonly AiTool LoadMetrics = new("get_load_metrics",
+        "Training load monitoring (session RPE x minutes): daily loads, 7-day acute and 28-day chronic load, rolling and EWMA acute:chronic ratio, monotony and strain (Foster), week-to-week change. Use for overload / injury-risk and readiness questions.",
+        Schema("""{"type":"object","properties":{"days":{"type":"integer","description":"28-84 (default 42)"}}}"""));
+
+    public static readonly AiTool ProposeProgramUpdateTool = new(ProposeProgramUpdate,
+        "Propose changes to an EXISTING program (default: active). Send the complete new version of every day: keep dayId for days that stay (their history is kept), omit dayId for new days, leave out days to remove. The athlete sees a diff card and applies it. Call get_programs first.",
+        Schema("""
+        {"type":"object","required":["programId","days","changes"],"properties":{
+          "programId":{"type":"integer"},
+          "name":{"type":"string"},"weeks":{"type":"integer"},
+          "changes":{"type":"array","maxItems":8,"items":{"type":"string"},"description":"Short list of what changes and why, in the athlete's language"},
+          "days":{"type":"array","minItems":1,"maxItems":7,"items":{"type":"object","required":["name","exercises"],"properties":{
+            "dayId":{"type":"integer"},"name":{"type":"string"},"notes":{"type":"string"},
+            "exercises":{"type":"array","minItems":1,"maxItems":12,"items":{"type":"object","required":["exerciseId","sets"],"properties":{
+              "exerciseId":{"type":"integer"},"sets":{"type":"integer"},"repsMin":{"type":"integer"},"repsMax":{"type":"integer"},
+              "distance":{"type":"number","description":"meters"},"time":{"type":"number","description":"seconds"},
+              "targetRpe":{"type":"number"},"restSeconds":{"type":"integer"},"note":{"type":"string"}}}}}}}}}
+        """));
+
+    public static readonly IReadOnlyList<AiTool> DataTools = new[] { Programs, ExerciseHistory, PersonalRecords, TrainingSummary, LoadMetrics, WellnessTrend, MatchStats, SearchExercises };
+    public static readonly IReadOnlyList<AiTool> ChatTools = DataTools.Concat(new[] { ProposeProgramTool, ProposeProgramUpdateTool, ProposeGoalTool, ProposeScheduleTool }).ToList();
 
     // ---------- Ausführung ----------
 
@@ -100,6 +124,9 @@ public sealed class AiTools(AppDbContext db, TimeProvider time)
         {
             object result = use.Name switch
             {
+                "get_programs" => await ProgramsAsync(userId, Int(use.Input, "programId"), ct),
+                "get_load_metrics" => await LoadMetricsAsync(userId, Clamp(Int(use.Input, "days"), 28, 84, 42), ct),
+                ProposeProgramUpdate => await ProgramUpdateActionAsync(userId, use.Input, actions, ct),
                 "get_exercise_history" => await HistoryAsync(userId, Str(use.Input, "exercise") ?? string.Empty, Clamp(Int(use.Input, "weeks"), 1, 52, 12), ct),
                 "get_personal_records" => await RecordsAsync(userId, Clamp(Int(use.Input, "limit"), 1, 30, 15), ct),
                 "get_training_summary" => await SummaryAsync(userId, Clamp(Int(use.Input, "weeks"), 1, 26, 8), ct),
@@ -292,6 +319,129 @@ public sealed class AiTools(AppDbContext db, TimeProvider time)
         return found.Select(e => new { e.Id, e.Name, e.Category, e.MuscleGroup, tracking = e.TrackingType.ToString() });
     }
 
+    private async Task<object> ProgramsAsync(int userId, int? programId, CancellationToken ct)
+    {
+        var programs = await db.Programs.AsNoTracking().Where(p => p.UserId == userId)
+            .Include(p => p.Days).ThenInclude(d => d.Exercises).ThenInclude(x => x.Exercise)
+            .OrderByDescending(p => p.IsActive).ThenByDescending(p => p.CreatedAt)
+            .ToListAsync(ct);
+        if (programs.Count == 0) return new { programs = Array.Empty<object>(), note = "The athlete has no program yet." };
+
+        var list = programs.Select(p => new { p.Id, p.Name, p.Goal, p.Weeks, active = p.IsActive, template = p.TemplateKey, days = p.Days.Count });
+        var chosen = programId is { } id ? programs.FirstOrDefault(p => p.Id == id) : programs.FirstOrDefault(p => p.IsActive);
+        if (chosen is null) return new { programs = list, note = programId is null ? "No active program." : $"Program {programId} not found." };
+
+        var since = Now.AddDays(-28);
+        var dayIds = chosen.Days.Select(d => d.Id).ToList();
+        var done = await db.Workouts.AsNoTracking()
+            .Where(w => w.UserId == userId && w.ProgramDayId != null && dayIds.Contains(w.ProgramDayId.Value))
+            .Select(w => new { DayId = w.ProgramDayId!.Value, w.Date })
+            .ToListAsync(ct);
+        string Week(int bits) => string.Join(", ", Enumerable.Range(0, 7).Where(d => (bits & (1 << d)) != 0).Select(d => CultureInfo.InvariantCulture.DateTimeFormat.AbbreviatedDayNames[(d + 1) % 7]));
+        var currentWeek = chosen.StartedAt is { } start ? Math.Min(chosen.Weeks, (int)((Now - start).TotalDays / 7) + 1) : (int?)null;
+
+        static string Target(ProgramExercise x) =>
+            x.Distance is { } d ? $"{x.Sets}x{R(d, 0)}m"
+            : x.Time is { } t ? $"{x.Sets}x{R(t, 0)}s"
+            : $"{x.Sets}x{x.RepsMin}{(x.RepsMax is { } mx && mx != x.RepsMin ? $"-{mx}" : string.Empty)}";
+
+        return new
+        {
+            programs = list,
+            details = new
+            {
+                chosen.Id, chosen.Name, chosen.Goal, chosen.Weeks, active = chosen.IsActive, template = chosen.TemplateKey,
+                startedAt = chosen.StartedAt is { } s ? Day(s) : null, currentWeek, chosen.CycleWeeks, chosen.DeloadEvery,
+                weekPlan = chosen.TrainingDays == 0 && chosen.MatchDays == 0 ? "not set" : $"training: {Week(chosen.TrainingDays)}; match: {Week(chosen.MatchDays)}",
+                days = chosen.Days.OrderBy(d => d.Position).Select(d => new
+                {
+                    dayId = d.Id, d.Name, d.Notes,
+                    completedLast4Weeks = done.Count(w => w.DayId == d.Id && w.Date >= since),
+                    lastDone = done.Where(w => w.DayId == d.Id).Select(w => (DateTime?)w.Date).Max() is { } last ? Day(last) : null,
+                    exercises = d.Exercises.OrderBy(x => x.Position).Select(x => new
+                    {
+                        x.ExerciseId, name = x.Exercise.Name, tracking = x.Exercise.TrackingType.ToString(), muscle = x.Exercise.MuscleGroup,
+                        target = Target(x), x.TargetRpe, x.RestSeconds, x.PercentOf1Rm, x.ProgressionStep, x.Note,
+                        weekSteps = x.WeekSteps.Count == 0 ? null : string.Join("; ", x.WeekSteps.OrderBy(w => w.FromWeek).Select(w =>
+                            $"from week {w.FromWeek}: {w.Sets?.ToString(CultureInfo.InvariantCulture) ?? "-"} sets{(w.RepsMin is { } rm ? $" x{rm}{(w.RepsMax is { } rx && rx != rm ? $"-{rx}" : string.Empty)}" : string.Empty)}{(w.PercentOf1Rm is { } pc ? $" @{pc}%" : string.Empty)}{(w.TargetRpe is { } tr ? $" RPE {tr}" : string.Empty)}")),
+                    }),
+                }),
+            },
+        };
+    }
+
+    /// <summary>Belastungssteuerung nach Foster (sRPE x Minuten) mit rollierendem und EWMA-Verhältnis (Williams et al. 2017).</summary>
+    private async Task<object> LoadMetricsAsync(int userId, int days, CancellationToken ct)
+    {
+        var today = Now.Date;
+        var start = today.AddDays(-(days + 27)); // Vorlauf für die chronische Last
+        var sessions = await db.Workouts.AsNoTracking().Where(w => w.UserId == userId && w.Date >= start)
+            .Select(w => new { w.Date, w.SessionRpe, w.DurationSeconds, w.WorkoutType }).ToListAsync(ct);
+        var missingRpe = sessions.Count(w => w.SessionRpe is null || w.DurationSeconds is null);
+        var total = (today - start).Days + 1;
+        var daily = new double[total];
+        foreach (var w in sessions)
+        {
+            var i = (w.Date.Date - start).Days;
+            if (i >= 0 && i < total) daily[i] += (w.SessionRpe ?? 0) * (w.DurationSeconds ?? 0) / 60.0;
+        }
+
+        double Sum(int endIncl, int len) { double sum = 0; for (var i = Math.Max(0, endIncl - len + 1); i <= endIncl; i++) sum += daily[i]; return sum; }
+        double aEw = 0, cEw = 0;
+        const double la = 2.0 / (7 + 1), lc = 2.0 / (28 + 1);
+        for (var i = 0; i < total; i++) { aEw = daily[i] * la + (1 - la) * aEw; cEw = daily[i] * lc + (1 - lc) * cEw; }
+        var last = total - 1;
+        var acute = Sum(last, 7);
+        var chronicWeekly = Sum(last, 28) / 4;
+        var week = Enumerable.Range(last - 6, 7).Select(i => daily[i]).ToArray();
+        var mean = week.Average();
+        var sd = Math.Sqrt(week.Select(x => (x - mean) * (x - mean)).Average());
+        var monotony = sd > 0 ? mean / sd : (double?)null;
+
+        var weeks = Enumerable.Range(0, days / 7).Select(k =>
+        {
+            var end = last - 7 * k;
+            var load = Sum(end, 7);
+            var prev = Sum(end - 7, 7);
+            return new { weekEnding = Day(start.AddDays(end)), loadAU = R(load, 0), sessions = sessions.Count(w => (w.Date.Date - start).Days > end - 7 && (w.Date.Date - start).Days <= end), changePercent = prev > 0 ? R((load / prev - 1) * 100) : (double?)null };
+        }).ToList();
+
+        return new
+        {
+            unit = "AU = session RPE x minutes",
+            acute7dAU = R(acute, 0), chronicWeeklyAvgAU = R(chronicWeekly, 0),
+            acwrRolling = chronicWeekly > 0 ? R(acute / chronicWeekly, 2) : (double?)null,
+            acwrEwma = cEw > 0 ? R(aEw / cEw, 2) : (double?)null,
+            monotony7d = monotony is { } m ? R(m, 2) : (double?)null,
+            strain7d = monotony is { } m2 ? R(acute * m2, 0) : (double?)null,
+            sessionsWithoutRpeOrDuration = missingRpe,
+            guide = "ACWR 0.8-1.3 sweet spot, >1.5 high risk; monotony >2 means too little variation; weekly increases above ~10-15% raise risk.",
+            weeks,
+            last14Days = Enumerable.Range(last - 13, 14).Select(i => new { day = Day(start.AddDays(i)), loadAU = R(daily[i], 0) }),
+        };
+    }
+
+    /// <summary>Änderungen an einem bestehenden Programm vorschlagen (Diff-Karte im Client, angewendet per PUT /api/programs/{id}).</summary>
+    private async Task<object> ProgramUpdateActionAsync(int userId, JsonElement input, List<JsonObject> actions, CancellationToken ct)
+    {
+        var id = Int(input, "programId");
+        var program = await db.Programs.AsNoTracking().Where(p => p.UserId == userId && (id == null ? p.IsActive : p.Id == id))
+            .Include(p => p.Days).ThenInclude(d => d.Exercises).FirstOrDefaultAsync(ct);
+        if (program is null) return new { error = "Program not found. Call get_programs and use its id." };
+
+        var (draft, _) = Sanitize(input, await CatalogAsync(userId, ct), 7, program);
+        if (draft.Validate().HasErrors) return new { error = "The update is not valid (every day needs at least one catalog exercise). Fix and call again." };
+        var changes = input.TryGetProperty("changes", out var ch) && ch.ValueKind == JsonValueKind.Array
+            ? ch.EnumerateArray().Where(c => c.ValueKind == JsonValueKind.String).Select(c => Clip(c.GetString(), 200)).Where(c => c.Length > 0).Take(8).ToList()
+            : new List<string>();
+        actions.Add(new JsonObject
+        {
+            ["type"] = "programUpdate", ["programId"] = program.Id, ["programName"] = program.Name,
+            ["program"] = JsonSerializer.SerializeToNode(draft, JsonOpts), ["changes"] = JsonSerializer.SerializeToNode(changes),
+        });
+        return new { shown = true, note = "The athlete sees a diff card and decides. Summarise the key changes and the reasoning; do not repeat every exercise." };
+    }
+
     // ---------- Vorschläge (werden nur angezeigt, nie automatisch gespeichert) ----------
 
     public async Task<IReadOnlyDictionary<int, TrackingType>> CatalogAsync(int userId, CancellationToken ct) =>
@@ -341,13 +491,16 @@ public sealed class AiTools(AppDbContext db, TimeProvider time)
     /// Macht aus einem KI-Vorschlag ein gültiges <see cref="ProgramInput"/>: unbekannte Übungen fliegen raus, Werte werden in
     /// sinnvolle Grenzen gebracht, fehlende Vorgaben passend zur Erfassungsart ergänzt. Der Nutzer sieht den Plan vor dem Speichern.
     /// </summary>
-    public static (ProgramInput Program, string Summary) Sanitize(JsonElement json, IReadOnlyDictionary<int, TrackingType> exercises, int maxDays)
+    public static (ProgramInput Program, string Summary) Sanitize(JsonElement json, IReadOnlyDictionary<int, TrackingType> exercises, int maxDays, TrainingProgram? existing = null)
     {
         var days = new List<ProgramDayInput>();
+        var usedDayIds = new HashSet<int>();
         if (json.TryGetProperty("days", out var daysJson) && daysJson.ValueKind == JsonValueKind.Array)
             foreach (var d in daysJson.EnumerateArray().Take(Math.Clamp(maxDays, 1, ProgramInput.MaxDays)))
             {
                 if (d.ValueKind != JsonValueKind.Object || !d.TryGetProperty("exercises", out var xs) || xs.ValueKind != JsonValueKind.Array) continue;
+                // Bestehender Tag (nur aus genau diesem Programm, jeder höchstens einmal): Verlauf bleibt verknüpft
+                var oldDay = existing is not null && Int(d, "dayId") is { } dayId && usedDayIds.Add(dayId) ? existing.Days.FirstOrDefault(x => x.Id == dayId) : null;
                 var list = new List<ProgramExerciseInput>();
                 foreach (var x in xs.EnumerateArray())
                 {
@@ -373,19 +526,22 @@ public sealed class AiTools(AppDbContext db, TimeProvider time)
                     var rpe = Num(x, "targetRpe") is { } r ? Math.Clamp(Math.Round(r * 2) / 2, 5, 10) : (double?)null;
                     var rest = Int(x, "restSeconds") is { } s ? Math.Clamp(s, 0, 600) : (int?)null;
                     var note = Clip(Str(x, "note"), 120);
-                    list.Add(new ProgramExerciseInput(id, sets, repsMin, repsMax, distance, seconds, rpe, rest, null, null, note.Length > 0 ? note : null));
+                    // Gleiche Übung am selben Tag: Progression (Schritt, %1RM, Wochenstufen) aus dem Programm übernehmen
+                    var old = oldDay?.Exercises.FirstOrDefault(e => e.ExerciseId == id);
+                    list.Add(new ProgramExerciseInput(id, sets, repsMin, repsMax, distance, seconds, rpe, rest, old?.ProgressionStep, old?.PercentOf1Rm,
+                        note.Length > 0 ? note : old?.Note, old is { WeekSteps.Count: > 0 } ? old.WeekSteps.Select(WeekStepDto.From).ToList() : null));
                 }
                 if (list.Count == 0) continue;
                 var name = Clip(Str(d, "name"), 40);
                 var notes = Clip(Str(d, "notes"), 200);
-                days.Add(new ProgramDayInput(null, name.Length > 0 ? name : $"Day {days.Count + 1}", notes.Length > 0 ? notes : null, list));
+                days.Add(new ProgramDayInput(oldDay?.Id, name.Length > 0 ? name : oldDay?.Name ?? $"Day {days.Count + 1}", notes.Length > 0 ? notes : null, list));
             }
 
-        var goal = Str(json, "goal") is { } g && ProgramInput.AllowedGoals.Contains(g) ? g : "General";
+        var goal = Str(json, "goal") is { } g && ProgramInput.AllowedGoals.Contains(g) ? g : existing?.Goal ?? "General";
         var programName = Clip(Str(json, "name"), 60);
-        if (programName.Length < 2) programName = "AI plan";
-        var weeks = Math.Clamp(Int(json, "weeks") ?? 6, 1, 16);
-        return (new ProgramInput(programName, goal, weeks, days), Clip(Str(json, "summary"), 600));
+        if (programName.Length < 2) programName = existing?.Name ?? "AI plan";
+        var weeks = Math.Clamp(Int(json, "weeks") ?? existing?.Weeks ?? 6, 1, 16);
+        return (new ProgramInput(programName, goal, weeks, days, existing?.CycleWeeks, existing?.DeloadEvery), Clip(Str(json, "summary"), 600));
     }
 
     // ---------- JSON-Hilfen ----------

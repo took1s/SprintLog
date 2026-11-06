@@ -26,6 +26,13 @@ public class AiTests
         request.Messages.OfType<JsonObject>().Last()["content"]!.AsArray().OfType<JsonObject>()
             .First(b => (string?)b["type"] == "tool_result")["content"]!.GetValue<string>();
 
+    /// <summary>Einheit mit optionalem Plan-Tag und Session-RPE (60 Minuten).</summary>
+    private static object Session(DateTimeOffset date, int? programDayId = null, int? rpe = null) => new
+    {
+        workoutType = "Gym", clientId = Guid.NewGuid(), date, durationSeconds = 3600, sessionRpe = rpe, programDayId,
+        sets = new object[] { new { exerciseId = Seed.BenchPress, weight = 80.0, reps = 8 }, new { exerciseId = Seed.BenchPress, weight = 85.0, reps = 6 } },
+    };
+
     private static string Code(HttpResponseMessage r) =>
         r.Content.ReadFromJsonAsync<JsonElement>().GetAwaiter().GetResult().GetProperty("code").GetString()!;
 
@@ -120,7 +127,7 @@ public class AiTests
         _factory.Ai.Reply = (req, _) => req.ToolChoice is not null ? AiResponse.FromText("Fertig.") : AiResponse.FromTool("get_personal_records", new { });
         var res = await HttpAssert.JsonAsync<AiAskResponse>(HttpStatusCode.OK, await user.Client.PostAsJsonAsync("/api/ai/ask", new { question = "Rekorde?" }));
         Assert.Equal("Fertig.", res.Answer);
-        Assert.Equal(4, _factory.Ai.Requests.Count); // schnell: höchstens 4 Schritte
+        Assert.Equal(5, _factory.Ai.Requests.Count); // schnell: höchstens 5 Schritte
         Assert.Equal("none", (string?)_factory.Ai.Requests[^1].ToolChoice!["type"]);
     }
 
@@ -276,5 +283,137 @@ public class AiTests
         // Fremde Profile sind unsichtbar
         var other = await _factory.CreateUserAsync();
         Assert.Null((await HttpAssert.JsonAsync<AthleteProfileDto>(HttpStatusCode.OK, await other.Client.GetAsync("/api/profile/athlete"))).Position);
+    }
+
+    [Fact]
+    public async Task Answer_cut_off_at_the_token_limit_is_continued_seamlessly()
+    {
+        var user = await _factory.CreateUserAsync();
+        _factory.Ai.Reply = (_, n) => n switch
+        {
+            0 => AiResponse.FromText("Plan für diese Woche:\n- Montag: Kniebeuge 4x5 @ 80% 1RM\n- Diens", "max_tokens"),
+            1 => AiResponse.FromText("tag: Sprints 6x30 m\n- Donnerstag: Nordic Curls 3x6", "max_tokens"),
+            _ => AiResponse.FromText("\nNächster Schritt: Montag starten."),
+        };
+        var res = await HttpAssert.JsonAsync<AiAskResponse>(HttpStatusCode.OK, await user.Client.PostAsJsonAsync("/api/ai/ask", new { question = "Wochenplan?", mode = "deep" }));
+        Assert.Equal("Plan für diese Woche:\n- Montag: Kniebeuge 4x5 @ 80% 1RM\n- Dienstag: Sprints 6x30 m\n- Donnerstag: Nordic Curls 3x6\nNächster Schritt: Montag starten.", res.Answer);
+        Assert.Equal(3, _factory.Ai.Requests.Count);
+        // Fortsetzung ohne Werkzeuge, mit der Bitte, nahtlos weiterzuschreiben
+        Assert.Equal("none", (string?)_factory.Ai.Requests[1].ToolChoice!["type"]);
+        Assert.StartsWith("Continue exactly", (string?)_factory.Ai.Requests[1].Messages.Last()!["content"]);
+    }
+
+    [Fact]
+    public async Task Programs_tool_shows_every_day_with_exercises_and_adherence()
+    {
+        var user = await _factory.CreateUserAsync();
+        var program = await HttpAssert.JsonAsync<ProgramResponse>(HttpStatusCode.Created, await user.Client.PostAsJsonAsync("/api/programs", new
+        {
+            name = "Speed Block", goal = "Speed", weeks = 6,
+            days = new object[]
+            {
+                new { name = "MD-4 Kraft", exercises = new object[] { new { exerciseId = Seed.BenchPress, sets = 4, repsMin = 4, repsMax = 6, targetRpe = 8, percentOf1Rm = 82 } } },
+                new { name = "MD-3 Speed", exercises = new object[] { new { exerciseId = Seed.Sprints, sets = 6, distance = 30, restSeconds = 180 } } },
+            },
+        }));
+        await HttpAssert.StatusAsync(HttpStatusCode.OK, await user.Client.PostAsync($"/api/programs/{program.Id}/activate", null));
+        await HttpAssert.StatusAsync(HttpStatusCode.Created, await user.Client.PostAsJsonAsync("/api/workouts", Session(DateTimeOffset.UtcNow.AddDays(-2), programDayId: program.Days[0].Id)));
+
+        string? json = null;
+        _factory.Ai.Reply = (req, n) => n == 0 ? AiResponse.FromTool("get_programs", new { }) : AiResponse.FromText((json = ToolResult(req)) is null ? "" : "ok");
+        await HttpAssert.StatusAsync(HttpStatusCode.OK, await user.Client.PostAsJsonAsync("/api/ai/ask", new { question = "Wie ist mein Plan?" }));
+
+        var details = JsonDocument.Parse(json!).RootElement.GetProperty("details");
+        Assert.Equal("Speed Block", details.GetProperty("name").GetString());
+        Assert.True(details.GetProperty("active").GetBoolean());
+        var days = details.GetProperty("days");
+        Assert.Equal(2, days.GetArrayLength());
+        Assert.Equal(program.Days[0].Id, days[0].GetProperty("dayId").GetInt32());
+        Assert.Equal(1, days[0].GetProperty("completedLast4Weeks").GetInt32());
+        var bench = days[0].GetProperty("exercises")[0];
+        Assert.Equal("Bench Press", bench.GetProperty("name").GetString());
+        Assert.Equal("4x4-6", bench.GetProperty("target").GetString());
+        Assert.Equal(82, bench.GetProperty("percentOf1Rm").GetInt32());
+        Assert.Equal("6x30m", days[1].GetProperty("exercises")[0].GetProperty("target").GetString());
+    }
+
+    [Fact]
+    public async Task Program_update_keeps_days_and_progression_and_can_be_applied()
+    {
+        var user = await _factory.CreateUserAsync();
+        var program = await HttpAssert.JsonAsync<ProgramResponse>(HttpStatusCode.Created, await user.Client.PostAsJsonAsync("/api/programs", new
+        {
+            name = "Strength", goal = "Strength", weeks = 8, cycleWeeks = 4,
+            days = new object[]
+            {
+                new { name = "A", exercises = new object[] { new { exerciseId = Seed.BenchPress, sets = 3, repsMin = 5, repsMax = 5, progressionStep = 2.5, percentOf1Rm = 75 } } },
+                new { name = "B", exercises = new object[] { new { exerciseId = Seed.Plank, sets = 3, time = 30 } } },
+            },
+        }));
+        var other = await _factory.CreateUserAsync(); // fremdes Programm darf nicht angefasst werden
+
+        _factory.Ai.Reply = (_, n) => n == 0
+            ? AiResponse.FromTool("propose_program_update", new
+            {
+                programId = program.Id,
+                changes = new[] { "Bankdrücken auf 4 Sätze", "Tag B ersetzt durch Sprint-Tag" },
+                days = new object[]
+                {
+                    new { dayId = program.Days[0].Id, name = "A", exercises = new object[] { new { exerciseId = Seed.BenchPress, sets = 4, repsMin = 5, repsMax = 5 }, new { exerciseId = Seed.Nordic, sets = 3, repsMin = 6 } } },
+                    new { dayId = 999_999, name = "Sprint", exercises = new object[] { new { exerciseId = Seed.Sprints, sets = 6, distance = 30 } } },
+                },
+            })
+            : AiResponse.FromText("Hier ist der angepasste Plan.");
+
+        var res = await HttpAssert.JsonAsync<AiAskResponse>(HttpStatusCode.OK, await user.Client.PostAsJsonAsync("/api/ai/ask", new { question = "Pass meinen Plan an", mode = "deep" }));
+        var action = Assert.Single(res.Actions);
+        Assert.Equal("programUpdate", (string?)action["type"]);
+        Assert.Equal(program.Id, (int)action["programId"]!);
+        Assert.Equal(2, action["changes"]!.AsArray().Count);
+        var draft = action["program"]!.Deserialize<ProgramInput>(new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+        Assert.Equal(program.Days[0].Id, draft.Days![0].Id);       // Tag bleibt (Verlauf hängt daran)
+        Assert.Null(draft.Days[1].Id);                              // fremde/unbekannte Tag-ID -> neuer Tag
+        Assert.Equal(4, draft.CycleWeeks);
+        var bench = draft.Days[0].Exercises![0];
+        Assert.Equal(4, bench.Sets);
+        Assert.Equal(2.5, bench.ProgressionStep);                   // Progression übernommen
+        Assert.Equal(75, bench.PercentOf1Rm);
+
+        // Anwenden = normales PUT des Programms
+        var applied = await HttpAssert.JsonAsync<ProgramResponse>(HttpStatusCode.OK, await user.Client.PutAsJsonAsync($"/api/programs/{program.Id}", draft));
+        Assert.Equal(program.Days[0].Id, applied.Days[0].Id);
+        Assert.Equal(2, applied.Days[0].Exercises.Count);
+        Assert.Equal("Sprint", applied.Days[1].Name);
+
+        // Programm eines anderen Nutzers: Werkzeug meldet "nicht gefunden"
+        string? foreign = null;
+        _factory.Ai.Reset((req, n) => n == 0
+            ? AiResponse.FromTool("propose_program_update", new { programId = program.Id, changes = new[] { "x" }, days = new object[] { new { name = "A", exercises = new object[] { new { exerciseId = Seed.BenchPress, sets = 3, repsMin = 5 } } } } })
+            : AiResponse.FromText((foreign = ToolResult(req)) is null ? "" : "ok"));
+        var res2 = await HttpAssert.JsonAsync<AiAskResponse>(HttpStatusCode.OK, await other.Client.PostAsJsonAsync("/api/ai/ask", new { question = "Plan ändern" }));
+        Assert.Empty(res2.Actions);
+        Assert.Contains("not found", foreign);
+    }
+
+    [Fact]
+    public async Task Load_metrics_compute_acwr_monotony_and_strain()
+    {
+        var user = await _factory.CreateUserAsync();
+        for (var d = 1; d <= 20; d += 3)
+        {
+            await HttpAssert.StatusAsync(HttpStatusCode.Created, await user.Client.PostAsJsonAsync("/api/workouts", Session(DateTimeOffset.UtcNow.AddDays(-d), rpe: 6)));
+        }
+        string? json = null;
+        _factory.Ai.Reply = (req, n) => n == 0 ? AiResponse.FromTool("get_load_metrics", new { days = 28 }) : AiResponse.FromText((json = ToolResult(req)) is null ? "" : "ok");
+        await HttpAssert.StatusAsync(HttpStatusCode.OK, await user.Client.PostAsJsonAsync("/api/ai/ask", new { question = "Belastung?" }));
+
+        var m = JsonDocument.Parse(json!).RootElement;
+        Assert.Equal(4, m.GetProperty("weeks").GetArrayLength());
+        Assert.Equal(14, m.GetProperty("last14Days").GetArrayLength());
+        Assert.True(m.GetProperty("acute7dAU").GetDouble() > 0);
+        Assert.True(m.GetProperty("acwrRolling").GetDouble() > 0);
+        Assert.True(m.GetProperty("acwrEwma").GetDouble() > 0);
+        Assert.Equal(JsonValueKind.Number, m.GetProperty("monotony7d").ValueKind);
+        Assert.Equal(0, m.GetProperty("sessionsWithoutRpeOrDuration").GetInt32());
     }
 }

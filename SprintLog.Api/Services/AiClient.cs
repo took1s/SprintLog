@@ -21,8 +21,11 @@ public sealed record AiToolUse(string Id, string Name, JsonElement Input);
 
 public sealed record AiResponse(JsonArray Content, string? StopReason, int InputTokens, int OutputTokens)
 {
-    public string Text => string.Join("\n", Content.OfType<JsonObject>()
-        .Where(b => (string?)b["type"] == "text").Select(b => (string?)b["text"] ?? string.Empty)).Trim();
+    /// <summary>Text-Blöcke ungekürzt (zum Zusammensetzen von Fortsetzungen).</summary>
+    public string RawText => string.Concat(Content.OfType<JsonObject>()
+        .Where(b => (string?)b["type"] == "text").Select(b => (string?)b["text"] ?? string.Empty));
+
+    public string Text => RawText.Trim();
 
     public IReadOnlyList<AiToolUse> ToolUses => Content.OfType<JsonObject>()
         .Where(b => (string?)b["type"] == "tool_use")
@@ -31,8 +34,8 @@ public sealed record AiResponse(JsonArray Content, string? StopReason, int Input
         .ToList();
 
     /// <summary>Hilfen für Tests und Fakes.</summary>
-    public static AiResponse FromText(string text) =>
-        new(new JsonArray(new JsonObject { ["type"] = "text", ["text"] = text }), "end_turn", 0, 0);
+    public static AiResponse FromText(string text, string stopReason = "end_turn") =>
+        new(new JsonArray(new JsonObject { ["type"] = "text", ["text"] = text }), stopReason, 0, 0);
 
     public static AiResponse FromTool(string name, object input, string id = "toolu_1") =>
         new(new JsonArray(new JsonObject { ["type"] = "tool_use", ["id"] = id, ["name"] = name, ["input"] = JsonSerializer.SerializeToNode(input) }), "tool_use", 0, 0);
