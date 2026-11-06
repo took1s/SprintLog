@@ -476,7 +476,7 @@ export const en = {
     moveUp: 'Move up',
     moveDown: 'Move down',
     remove: 'Remove exercise',
-    col: { set: 'Set', previous: 'Previous', reps: 'Reps', assist: 'Assist kg', time: 'Time', km: 'km' },
+    col: { set: 'Set', previous: 'Previous', reps: 'Reps', assist: 'Assist', time: 'Time', km: 'km' },
     bw: 'BW',
     editSet: 'Edit set {n}',
     info: 'Info and technique',

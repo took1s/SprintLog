@@ -1558,7 +1558,7 @@ test('Training feedback: gym per workout, assisted machine, side plank per side,
   // Gravitron: als "Hilfe" gekennzeichnet; 20 kg Hilfe im neuen Studio ist kein Rekord (dort gibt es noch keinen Vergleich)
   const gravitron = page.locator('[data-block="111"]');
   await gravitron.locator('[data-test=tag-assisted]').waitFor();
-  assert.match(await gravitron.innerText(), /assist kg/i);
+  assert.match(await gravitron.innerText(), /assist/i);
   await gravitron.locator('[data-test=ghost-weight]').fill('20');
   await gravitron.locator('[data-test=log-ghost]').click();
   await page.waitForTimeout(150);

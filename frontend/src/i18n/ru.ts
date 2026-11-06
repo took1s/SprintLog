@@ -483,7 +483,7 @@ export const ru: Messages = {
     moveUp: 'Выше',
     moveDown: 'Ниже',
     remove: 'Убрать упражнение',
-    col: { set: 'Подх.', previous: 'Прошлый', reps: 'Повт.', assist: 'Помощь кг', time: 'Время', km: 'км' },
+    col: { set: 'Подх.', previous: 'Прошлый', reps: 'Повт.', assist: 'Помощь', time: 'Время', km: 'км' },
     bw: 'СВ',
     editSet: 'Изменить подход {n}',
     info: 'Инфо и техника',

@@ -477,7 +477,7 @@ export const de: Messages = {
     moveUp: 'Nach oben',
     moveDown: 'Nach unten',
     remove: 'Übung entfernen',
-    col: { set: 'Satz', previous: 'Vorher', reps: 'Wdh.', assist: 'Hilfe kg', time: 'Zeit', km: 'km' },
+    col: { set: 'Satz', previous: 'Vorher', reps: 'Wdh.', assist: 'Hilfe', time: 'Zeit', km: 'km' },
     bw: 'KG',
     editSet: 'Satz {n} bearbeiten',
     info: 'Info und Technik',
