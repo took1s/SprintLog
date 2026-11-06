@@ -290,7 +290,7 @@
 .data-tab svg { transition: transform 0.24s var(--ease-out); }
 .data-tab-active, .data-tab-active:hover { color: rgb(var(--c-accent-text)); }
 .data-tab-active svg { transform: translateY(-1px) scale(1.08); }
-.data-tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(8.5px, 2.7vw, 10.5px); font-weight: 700; letter-spacing: -0.02em; }
+.data-tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(8px, 2.5vw, 10px); font-weight: 700; letter-spacing: -0.02em; }
 .data-tab:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: -2px; }
 
 /* ---------- Fortschritt ---------- */
