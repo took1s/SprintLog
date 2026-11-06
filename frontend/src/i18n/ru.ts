@@ -954,7 +954,7 @@ export const ru: Messages = {
       details: 'Что меняется по дням',
       diff: {
         new: 'новый день', changed: 'изменён', removed: 'удалён', same: 'без изменений',
-        renamed: 'раньше: {name}', addedSr: 'добавлено:', removedSr: 'убрано:',
+        renamed: 'раньше: {name}', addedSr: 'добавлено:', changedSr: 'изменено:', removedSr: 'убрано:',
       },
     },
     profile: {

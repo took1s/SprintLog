@@ -102,16 +102,16 @@ const apply = () => { if (!locked.value) emit('apply'); };
               <ol class="mb-1 space-y-2" data-test="ai-diff">
                   <li v-for="(d, i) in diff" :key="i" class="rounded-xl border border-white/5 bg-black/20 p-3" :data-diff="d.status">
                       <p class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span class="break-words text-xs font-bold uppercase tracking-label" :class="d.status === 'removed' ? 'text-slate-500 line-through' : 'text-slate-200'">{{ d.name }}</span>
+                          <span class="break-words text-xs font-bold uppercase tracking-label" :class="d.status === 'removed' ? 'text-slate-400 line-through' : 'text-slate-200'">{{ d.name }}</span>
                           <span v-if="d.status !== 'same'" class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-label"
-                                :class="{ new: 'bg-emerald-400/15 text-emerald-300', changed: 'bg-orange-400/15 text-orange-300', removed: 'bg-red-500/15 text-red-300', same: '' }[d.status]">{{ t(`ai.actions.diff.${d.status}`) }}</span>
-                          <span v-else class="text-[10px] uppercase text-slate-500 tracking-label">{{ t('ai.actions.diff.same') }}</span>
+                                :class="{ new: 'border border-emerald-400/60 text-emerald-300', changed: 'border border-orange-400/60 text-orange-300', removed: 'border border-red-500/60 text-red-300', same: '' }[d.status]">{{ t(`ai.actions.diff.${d.status}`) }}</span>
+                          <span v-else class="text-[10px] uppercase text-slate-400 tracking-label">{{ t('ai.actions.diff.same') }}</span>
                       </p>
                       <p v-if="d.renamedFrom" class="mt-1 text-[11px] text-slate-400">{{ t('ai.actions.diff.renamed', { name: d.renamedFrom }) }}</p>
                       <ul v-if="d.status !== 'same'" class="mt-1.5 space-y-1 text-sm">
-                          <li v-for="(x, j) in d.added" :key="`a${j}`" class="flex gap-2 text-emerald-300"><span aria-hidden="true">+</span><span class="sr-only">{{ t('ai.actions.diff.addedSr') }}</span><span class="min-w-0 break-words">{{ prescription(x) }}</span></li>
-                          <li v-for="(x, j) in d.changed" :key="`c${j}`" class="flex gap-2 text-orange-300"><span aria-hidden="true">~</span><span class="min-w-0 break-words">{{ nameOf(x.to.exerciseId) }}: <span class="text-slate-400 line-through">{{ dose(x.from) }}</span> → {{ dose(x.to) }}</span></li>
-                          <li v-for="(x, j) in d.removed" :key="`r${j}`" class="flex gap-2 text-red-300"><span aria-hidden="true">−</span><span class="sr-only">{{ t('ai.actions.diff.removedSr') }}</span><span class="min-w-0 break-words line-through">{{ prescription(x) }}</span></li>
+                          <li v-for="(x, j) in d.added" :key="`a${j}`" class="flex gap-2 text-slate-200"><span class="font-bold text-emerald-300" aria-hidden="true">+</span><span class="sr-only">{{ t('ai.actions.diff.addedSr') }}</span><span class="min-w-0 break-words">{{ prescription(x) }}</span></li>
+                          <li v-for="(x, j) in d.changed" :key="`c${j}`" class="flex gap-2 text-slate-200"><span class="font-bold text-orange-300" aria-hidden="true">~</span><span class="sr-only">{{ t('ai.actions.diff.changedSr') }}</span><span class="min-w-0 break-words">{{ nameOf(x.to.exerciseId) }}: <span class="text-slate-400 line-through">{{ dose(x.from) }}</span> → {{ dose(x.to) }}</span></li>
+                          <li v-for="(x, j) in d.removed" :key="`r${j}`" class="flex gap-2 text-slate-200"><span class="font-bold text-red-300" aria-hidden="true">−</span><span class="sr-only">{{ t('ai.actions.diff.removedSr') }}</span><span class="min-w-0 break-words text-slate-400 line-through">{{ prescription(x) }}</span></li>
                       </ul>
                   </li>
               </ol>

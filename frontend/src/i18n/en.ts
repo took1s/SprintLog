@@ -942,7 +942,7 @@ export const en = {
       details: 'What changes per day',
       diff: {
         new: 'new day', changed: 'changed', removed: 'removed', same: 'unchanged',
-        renamed: 'was: {name}', addedSr: 'added:', removedSr: 'removed:',
+        renamed: 'was: {name}', addedSr: 'added:', changedSr: 'changed:', removedSr: 'removed:',
       },
     },
     profile: {

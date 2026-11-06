@@ -943,7 +943,7 @@ export const de: Messages = {
       details: 'Was sich pro Tag ändert',
       diff: {
         new: 'neuer Tag', changed: 'geändert', removed: 'entfernt', same: 'unverändert',
-        renamed: 'vorher: {name}', addedSr: 'hinzugefügt:', removedSr: 'entfernt:',
+        renamed: 'vorher: {name}', addedSr: 'hinzugefügt:', changedSr: 'geändert:', removedSr: 'entfernt:',
       },
     },
     profile: {
