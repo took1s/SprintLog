@@ -7,6 +7,8 @@ import { dayName, exerciseName, programName } from '@/i18n/content';
 import { useAppStore, MATCH } from '@/stores/app';
 import { formatRelative } from '@/lib/format';
 import CoachCard from './CoachCard.vue';
+import HalloweenSpider from '@/components/decor/HalloweenSpider.vue';
+import { appearance } from '@/lib/theme';
 import RecoveryCard from '@/components/RecoveryCard.vue';
 
 const app = useAppStore();
@@ -32,7 +34,8 @@ const lastCount = computed(() => new Set((lastWorkout.value?.sets ?? []).map((s)
 </script>
 
 <template>
-  <section class="glass-panel mb-6 rounded-3xl p-5" data-test="start-panel">
+  <section class="glass-panel mb-6 rounded-3xl p-5" :class="{ 'hw-card': appearance.theme === 'halloween' }" data-test="start-panel">
+      <HalloweenSpider v-if="appearance.theme === 'halloween'" />
       <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ isField ? t('start.kickerField') : t('start.kicker') }}</p>
       <h2 class="display mt-1 text-3xl text-white">{{ isField ? t('start.titleField') : t('start.title') }}</h2>
       <p v-if="startLine" class="mt-2 text-sm leading-snug text-slate-300" data-test="start-line">{{ startLine }}</p>

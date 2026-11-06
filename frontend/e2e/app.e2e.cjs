@@ -1282,3 +1282,24 @@ test('AI coach memory: remembers from the chat with undo, athlete manages it, it
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('Halloween theme: decorations are behind the content and never block taps', async () => {
+  const { page, errors, context } = await newPage();
+  await context.addInitScript(() => { if (!localStorage.getItem('sprintlog:appearance')) localStorage.setItem('sprintlog:appearance', JSON.stringify({ theme: 'halloween', scheme: 'dark' })); });
+  await register(page, `hw_${Date.now()}`);
+  await page.waitForSelector('[data-test=halloween-decor]');
+  await page.waitForSelector('[data-test=start-panel] .hw-spider');
+  // Deko fängt nichts ab: weder in der Netz-Ecke noch an der Spinne landet ein Tipp auf ihr
+  assert.equal(await page.evaluate(() => !!document.elementFromPoint(6, 6)?.closest('.hw-decor')), false);
+  const spider = await page.locator('.hw-spider').boundingBox();
+  const hit = await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('[data-test]')?.getAttribute('data-test'), [spider.x + spider.width / 2, spider.y + spider.height * 0.7]);
+  assert.equal(hit, 'start-panel');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.hw-decor')).pointerEvents), 'none');
+  // Anderes Theme -> Deko verschwindet
+  await page.evaluate(() => { localStorage.setItem('sprintlog:appearance', JSON.stringify({ theme: 'pitch', scheme: 'dark' })); });
+  await page.reload();
+  await page.waitForSelector('[data-test=start-panel]');
+  assert.equal(await page.locator('[data-test=halloween-decor]').count(), 0);
+  assert.deepEqual(errors, []);
+  await context.close();
+});

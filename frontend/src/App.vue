@@ -17,6 +17,7 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { t } from '@/i18n';
 import { useGoalsStore } from '@/stores/goals';
 import { useAiStore } from '@/stores/ai';
+import { appearance } from '@/lib/theme';
 
 // Seltener gebrauchte Teile als eigene Chunks (kleineres Start-Bundle; offline per Service-Worker-Cache verfügbar):
 // Auswertungen inkl. Chart.js, Plan, Satz-Dialog mit Animationen, Einstellungen, Editoren.
@@ -38,6 +39,8 @@ const WorkoutSummarySheet = defineAsyncComponent(() => import('@/components/Work
 const AiCoachSheet = defineAsyncComponent(() => import('@/components/AiCoachSheet.vue'));
 const AthleteProfileSheet = defineAsyncComponent(() => import('@/components/AthleteProfileSheet.vue'));
 const CoachMemorySheet = defineAsyncComponent(() => import('@/components/CoachMemorySheet.vue'));
+// Saison-Deko nur im Halloween-Theme laden
+const HalloweenDecor = defineAsyncComponent(() => import('@/components/decor/HalloweenDecor.vue'));
 
 const app = useAppStore();
 const goals = useGoalsStore();
@@ -75,6 +78,7 @@ watch(tab, (next, prev) => { tabTransition.value = ORDER.indexOf(next) >= ORDER.
   <div class="relative mx-auto w-full px-4 pt-4 sm:px-8 sm:pt-8" :class="isAuthenticated ? 'max-w-3xl pb-40' : 'max-w-5xl pb-8'">
     <div class="bg-orb-1"></div>
     <div class="bg-orb-2"></div>
+    <HalloweenDecor v-if="appearance.theme === 'halloween'" />
 
     <ToastStack />
     <UpdateBanner />
