@@ -208,7 +208,7 @@
   .heat-0 { background: rgb(var(--c-fg) / 0.05); }
   .heat-1 { background: rgb(var(--c-accent) / 0.28); }
   .heat-2 { background: rgb(var(--c-accent) / 0.5); }
-  .heat-3 { background: rgb(var(--c-accent) / 0.75); }
+  .heat-3 { background: rgb(var(--c-accent) / var(--heat3-alpha, 0.75)); }
   .heat-4 { background: rgb(var(--c-accent)); }
 }
 
@@ -226,19 +226,23 @@
   transition: transform 0.15s var(--ease-out), box-shadow 0.15s ease;
 }
 .cal-day:active { transform: scale(0.94); }
-.cal-num { font-family: var(--font-num); font-size: 13px; font-weight: 700; color: rgb(var(--c-fg) / 0.85); font-variant-numeric: tabular-nums; }
-.cal-day.is-out { opacity: 0.3; }
+.cal-num { font-family: var(--font-num); font-size: 13px; font-weight: 700; color: rgb(var(--c-fg)); font-variant-numeric: tabular-nums; }
 .cal-day.is-strong .cal-num { color: rgb(var(--c-on-accent)); }
-/* Stufe 3 (75 % Akzent): je nach Theme ist heller oder dunkler Text lesbarer - Token --heat3-text (themes.css) */
+/* Stufe 2/3: je nach Theme ist heller oder dunkler Text lesbarer - Tokens --heat2-text / --heat3-text (themes.css) */
+.cal-day.heat-2 .cal-num { color: rgb(var(--heat2-text, var(--c-fg))); }
 .cal-day.heat-3 .cal-num { color: rgb(var(--heat3-text, var(--c-on-accent))); }
-.cal-day.is-today { box-shadow: inset 0 0 0 2px rgb(var(--c-accent)); }
+/* Tage aus Nachbarmonaten: ohne Fläche, Ziffer gedämpft (aber lesbar - sie sind antippbar) */
+.cal-day.is-out { background: transparent; }
+.cal-day.is-out .cal-num { color: rgb(var(--c-subtle)); }
+.cal-day.is-out .cal-dots { opacity: 0.5; }
+.cal-day.is-today { box-shadow: inset 0 0 0 2px rgb(var(--accent-ring)); }
 .cal-day.is-today.is-strong { box-shadow: inset 0 0 0 2px rgb(var(--c-fg)); }
 .cal-day.is-selected { box-shadow: 0 0 0 2px rgb(var(--c-fg)), 0 8px 18px -8px rgb(var(--c-accent) / 0.7); transform: translateY(-1px); }
 /* Plan-Vorschau: gestrichelter Rand (Training) bzw. kleiner Ball (Spiel) */
-.cal-day.is-planned, .cal-day.is-planned-match { outline: 1.5px dashed rgb(var(--c-accent) / 0.55); outline-offset: -3px; }
+.cal-day.is-planned, .cal-day.is-planned-match { outline: 1.5px dashed rgb(var(--accent-ring) / 0.7); outline-offset: -3px; }
 .cal-day.is-planned-match { outline-color: rgb(var(--c-gold) / 0.6); }
 .cal-dots { position: absolute; bottom: 4px; left: 0; right: 0; display: flex; justify-content: center; gap: 2px; }
-.cal-dots > i { width: 4px; height: 4px; border-radius: 9999px; box-shadow: 0 0 0 1px rgb(var(--c-bg) / 0.55); }
+.cal-dots > i { width: 5px; height: 5px; border-radius: 9999px; box-shadow: 0 0 0 1.5px rgb(var(--c-surface)); }
 .cal-ball { position: absolute; bottom: 3px; width: 10px; height: 10px; color: rgb(var(--c-gold)); }
 .cal-mini-today { background: rgb(var(--c-fg) / 0.85); }
 .cal-bar { transition: height 0.4s var(--ease-out); }
@@ -252,6 +256,8 @@
 /* ---------- Theme "Neon Striker" (eigene Gestaltung): Speedlines, Mittelkreis, ein Schuss pro Sitzung ---------- */
 /* Überschriften leicht schräg = Tempo (Oswald hat keinen Kursivschnitt; Skew statt synthetischer Kursive) */
 [data-theme='striker'] .display { transform: skewX(-6deg); transform-origin: left bottom; }
+/* Tab-Leiste deckender, damit die Speedlines nicht durch die Beschriftungen laufen */
+[data-theme='striker'] .tab-container { background: rgb(var(--c-surface) / 0.85); }
 .st-decor { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
 .st-speed {
   position: absolute; top: 0; right: 0; width: min(100vw, 520px); aspect-ratio: 1 / 1; background-color: rgb(var(--c-accent) / 0.13);
@@ -263,7 +269,7 @@
   background-color: rgb(var(--c-fg) / 0.05);
   -webkit-mask: url('/deco/pitch.svg') no-repeat 50% 100% / 100% 100%; mask: url('/deco/pitch.svg') no-repeat 50% 100% / 100% 100%;
 }
-.st-shot { position: absolute; top: 132px; left: 0; display: flex; align-items: center; animation: st-shot 1.3s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.st-shot { position: absolute; top: calc(132px + env(safe-area-inset-top, 0px)); left: 0; display: flex; align-items: center; animation: st-shot 1.3s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
 .st-trail {
   width: 150px; height: 3px; border-radius: 3px; background: linear-gradient(90deg, transparent, rgb(var(--c-accent) / 0.9));
   box-shadow: 0 0 12px rgb(var(--c-accent) / 0.55);

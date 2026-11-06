@@ -48,7 +48,7 @@ const planned = (cell: GridCell) => (cell.key > todayKey.value && cell.inMonth ?
 const HEAT = ['heat-0', 'heat-1', 'heat-2', 'heat-3', 'heat-4'] as const;
 const heat = (day: CalendarDay | undefined) => HEAT[levelOf(day, maxScore.value)];
 
-const KIND_DOT: Record<CalendarKind, string> = { Gym: 'bg-accent', Football: 'bg-emerald-400', Match: 'bg-yellow-400', Hybrid: 'bg-violet-400' };
+const KIND_DOT: Record<CalendarKind, string> = { Gym: 'bar-accent', Football: 'bg-emerald-400', Match: 'bg-yellow-400', Hybrid: 'bg-violet-400' };
 
 function cellLabel(cell: GridCell) {
   const d = dayOf(cell);
@@ -187,7 +187,7 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
           <div class="grid grid-cols-7 gap-1 pb-1.5 text-center text-[10px] font-bold uppercase text-slate-400 tracking-label" aria-hidden="true">
               <span v-for="w in weekdays" :key="w">{{ w }}</span>
           </div>
-          <div class="cal-swipe overflow-hidden" @pointerdown="swipeStart" @pointerup="swipeEnd" @pointercancel="start = null">
+          <div class="cal-swipe -m-1 overflow-hidden p-1" @pointerdown="swipeStart" @pointerup="swipeEnd" @pointercancel="start = null">
               <transition :name="`cal-${dir}`" mode="out-in">
                   <div :key="`${cursor.year}-${cursor.month}`" class="grid grid-cols-7 gap-1" data-test="calendar-grid">
                       <button v-for="cell in grid" :key="cell.key" type="button" @click="pick(cell)"
@@ -212,7 +212,7 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
               <span class="flex items-center gap-1">{{ t('calendar.legend.load') }}
                   <span v-for="l in 4" :key="l" class="h-2.5 w-2.5 rounded-[3px]" :class="HEAT[l]"></span>
               </span>
-              <span class="flex items-center gap-1"><i class="h-1.5 w-1.5 rounded-full bg-accent"></i>{{ t('calendar.legend.gym') }}</span>
+              <span class="flex items-center gap-1"><i class="h-1.5 w-1.5 rounded-full bar-accent"></i>{{ t('calendar.legend.gym') }}</span>
               <span class="flex items-center gap-1"><i class="h-1.5 w-1.5 rounded-full bg-emerald-400"></i>{{ t('calendar.legend.field') }}</span>
               <span class="flex items-center gap-1"><i class="h-1.5 w-1.5 rounded-full bg-yellow-400"></i>{{ t('calendar.legend.match') }}</span>
               <span v-if="schedule?.trainingDays || schedule?.matchDays" class="flex items-center gap-1"><i class="h-2.5 w-2.5 rounded-[3px] border border-dashed border-accent/70"></i>{{ t('calendar.legend.planned') }}</span>

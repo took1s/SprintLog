@@ -135,6 +135,7 @@
 /* A · Pitch Night - Graphit, Rasen-Lime, Anzeigetafel */
 :root:not([data-scheme]),
 [data-theme='pitch'][data-scheme='dark'] {
+  --heat2-text: var(--c-on-accent); /* Kalender: Tagesziffer auf 50 % Lime */
   color-scheme: dark;
   --c-bg: 14 19 17;
   --c-surface: 22 29 26;
@@ -234,6 +235,7 @@
 }
 
 [data-theme='clean'][data-scheme='dark'] {
+  --heat3-alpha: 0.85; /* Kalender: Ziffer auf Stufe 3 lesbar (AA) */
   color-scheme: dark;
   --c-bg: 17 17 15;
   --c-surface: 28 27 24;
@@ -267,6 +269,7 @@
 
 /* C · Midnight Pro - tiefes Nachtblau, weiches Indigo, Glas */
 [data-theme='midnight'][data-scheme='dark'] {
+  --heat3-alpha: 0.85; /* Kalender: Ziffer auf Stufe 3 lesbar (AA) */
   color-scheme: dark;
   --c-bg: 9 11 20;
   --c-surface: 19 23 39;
