@@ -919,7 +919,9 @@ export const en = {
       quickHint: 'Fast, short answers',
       deepHint: 'Deeper analysis with exact numbers - uses more of the daily budget',
     },
-    left: 'Today: {quick} quick or {deep} thorough questions left',
+    left: 'Today: {quick} or {deep} left',
+    leftQuick: { one: '{n} quick', other: '{n} quick' },
+    leftDeep: { one: '{n} thorough question', other: '{n} thorough questions' },
     actions: {
       program: 'Plan proposal',
       goal: 'Goal proposal',
@@ -964,7 +966,6 @@ export const en = {
       running: 'Coach is analysing … (20-40 s)',
       generated: '{period} · {date}',
       periods: { full: 'Full analysis', week: 'Week review' },
-      again: 'Update',
       status: { good: 'On track', watch: 'Watch', risk: 'Act now' },
       recommendations: 'Top recommendations',
       focus: 'Focus next week',

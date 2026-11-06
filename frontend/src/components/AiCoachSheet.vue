@@ -2,7 +2,7 @@
 // Chat mit dem KI-Coach. Antworten sind reiner Text (kein HTML/Markdown-Rendering - sicher und CSP-konform).
 import { computed, nextTick, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import { t } from '@/i18n';
+import { t, tn } from '@/i18n';
 import { useAiStore } from '@/stores/ai';
 import { useAppStore } from '@/stores/app';
 import AiActionCard from './AiActionCard.vue';
@@ -23,6 +23,8 @@ const SUGGESTIONS = [
 const affordable = (m: 'quick' | 'deep') => !status.value || status.value.remaining >= ai.cost(m);
 const canSend = computed(() => draft.value.trim().length >= 2 && !busy.value && online.value && affordable(mode.value));
 const lastIsUnanswered = computed(() => messages.value[messages.value.length - 1]?.role === 'user');
+/** Mit Pluralformen - "1 подробных вопросов" wäre falsch, und gerade kurz vor dem Limit schaut man hin. */
+const remaining = computed(() => t('ai.left', { quick: tn('ai.leftQuick', ai.left('quick')), deep: tn('ai.leftDeep', ai.left('deep')) }));
 /** Warum gerade nichts gesendet werden kann (offline / Tageslimit) - sonst wirkt der graue Senden-Knopf kaputt. */
 const blocked = computed<'offline' | 'ai_quota' | null>(() => {
   if (!online.value) return error.value === 'offline' ? null : 'offline';
@@ -74,7 +76,11 @@ const announce = ref('');
 watch(busy, (b) => { if (b) announce.value = t('ai.thinking'); });
 watch(() => messages.value.length, (n, prev) => {
   const last = messages.value[n - 1];
-  if (n > prev && last?.role === 'assistant') announce.value = `${t('ai.coach')}: ${last.content}`;
+  if (n > prev && last?.role === 'assistant') {
+    // Vorschlags-Karten mit ansagen - sonst erfährt man ohne Blick auf den Bildschirm nicht, dass es etwas zu speichern gibt
+    const cards = (last.actions ?? []).map((a) => t(`ai.actions.${a.type}`));
+    announce.value = [`${t('ai.coach')}: ${last.content}`, ...cards].join('. ');
+  }
 });
 
 // Beim Schließen den Fokus zurück auf den auslösenden Knopf ("Спросить тренера").
@@ -110,14 +116,15 @@ const close = () => { open.value = false; };
 
 <template>
   <transition name="fade">
-      <div v-if="open" class="fixed inset-0 z-[70] flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="close" @keydown.esc="close">
+      <!-- .stop: sonst schließt der globale Escape-Handler (app.closeTopLayer) zusätzlich die Ebene darunter -->
+      <div v-if="open" class="fixed inset-0 z-[70] flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="close" @keydown.esc.stop="close">
           <!-- dvh statt vh: in Safari ist 92vh höher als der sichtbare Bereich, das Eingabefeld läge hinter der Toolbar -->
           <div ref="panel" tabindex="-1" class="glass-panel modal-panel flex h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl outline-none sm:h-[85dvh] sm:rounded-3xl" role="dialog" aria-modal="true" aria-labelledby="ai-title" data-test="ai-chat">
               <header class="flex items-start justify-between gap-3 border-b border-white/5 px-6 pb-3 pt-6">
                   <div class="min-w-0">
                       <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('ai.kicker') }}</p>
                       <h2 id="ai-title" class="display mt-1 break-words text-2xl text-white">{{ t('ai.title') }}</h2>
-                      <p v-if="status?.enabled" class="mt-0.5 font-mono text-[11px]" :class="ai.left('deep') < 1 ? 'text-orange-300' : 'text-slate-400'" data-test="ai-remaining">{{ t('ai.left', { quick: ai.left('quick'), deep: ai.left('deep') }) }}</p>
+                      <p v-if="status?.enabled" class="mt-0.5 font-mono text-[11px]" :class="ai.left('deep') < 1 ? 'text-orange-300' : 'text-slate-400'" data-test="ai-remaining">{{ remaining }}</p>
                   </div>
                   <div class="flex flex-shrink-0 gap-2">
                       <button v-if="messages.length" type="button" @click="clearChat" class="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('ai.clear.button')" data-test="ai-clear">
@@ -143,12 +150,17 @@ const close = () => { open.value = false; };
                           </div>
                       </template>
 
-                      <div v-for="(m, i) in messages" :key="i" class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
-                          <div class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed" :data-role="m.role"
-                               :class="m.role === 'user' ? 'rounded-br-md bg-accent text-on-accent' : 'rounded-bl-md border border-white/10 bg-white/[0.05] text-slate-100'">
-                              <span class="sr-only">{{ m.role === 'user' ? t('ai.you') : t('ai.coach') }}: </span>
-                              <p class="whitespace-pre-line break-words">{{ m.content }}</p>
-                              <AiActionCard v-for="(a, j) in m.actions ?? []" :key="j" :action="a" :applied="!!m.applied?.includes(j)" :busy="applying === `${i}:${j}`" @apply="ai.applyAction(i, j)" />
+                      <div v-for="(m, i) in messages" :key="i">
+                          <div class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
+                              <div class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed" :data-role="m.role"
+                                   :class="m.role === 'user' ? 'rounded-br-md bg-accent text-on-accent' : 'rounded-bl-md border border-white/10 bg-white/[0.05] text-slate-100'">
+                                  <span class="sr-only">{{ m.role === 'user' ? t('ai.you') : t('ai.coach') }}: </span>
+                                  <p class="whitespace-pre-line break-words">{{ m.content }}</p>
+                              </div>
+                          </div>
+                          <!-- Vorschläge in voller Breite unter der Antwort: in der Blase wären Tagesliste und Knopf zu gedrängt -->
+                          <div v-if="m.actions?.length" class="mt-2 space-y-2">
+                              <AiActionCard v-for="(a, j) in m.actions" :key="j" :action="a" :applied="!!m.applied?.includes(j)" :busy="applying === `${i}:${j}`" @apply="ai.applyAction(i, j)" />
                           </div>
                       </div>
 
@@ -175,15 +187,16 @@ const close = () => { open.value = false; };
 
               <form class="border-t border-white/5 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3" @submit.prevent="send()">
                   <p v-if="blocked" class="mb-2 px-1 text-xs leading-snug text-orange-300" data-test="ai-blocked">{{ t(`ai.errors.${blocked}`) }}</p>
-                  <div class="mb-2 grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-black/20 p-1" role="radiogroup" :aria-label="t('ai.mode.label')">
+                  <!-- Aktiver Modus mit klarer Kante (wie "Kein Spiel" im Plan-Builder): Gründlich kostet 4x so viel, der Zustand muss eindeutig sein -->
+                  <div class="mb-2 grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-black/20 p-1" role="radiogroup" :aria-label="t('ai.mode.label')" aria-describedby="ai-mode-hint">
                       <button v-for="m in (['quick', 'deep'] as const)" :key="m" type="button" role="radio" :aria-checked="mode === m" @click="mode = m" :title="t(`ai.mode.${m}Hint`)"
-                              class="flex min-h-[2.75rem] items-center justify-center gap-1.5 rounded-lg text-xs font-bold transition-colors"
-                              :class="mode === m ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white'" :data-test="`ai-mode-${m}`">
+                              class="flex min-h-[2.75rem] items-center justify-center gap-1.5 rounded-lg border text-xs font-bold transition-colors"
+                              :class="mode === m ? 'border-white/60 bg-white/10 text-white' : 'border-transparent text-slate-400 hover:text-white'" :data-test="`ai-mode-${m}`">
                           <svg v-if="m === 'deep'" class="h-3.5 w-3.5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3z"/></svg>
                           {{ t(`ai.mode.${m}`) }}
                       </button>
                   </div>
-                  <p class="sr-only">{{ t(`ai.mode.${mode}Hint`) }}</p>
+                  <p id="ai-mode-hint" class="sr-only">{{ t(`ai.mode.${mode}Hint`) }}</p>
                   <div class="flex items-end gap-2">
                       <label for="ai-input" class="sr-only">{{ t('ai.placeholder') }}</label>
                       <textarea id="ai-input" ref="input" v-model="draft" rows="1" maxlength="1000" enterkeyhint="send" @keydown="onKey" :placeholder="t('ai.placeholder')"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Sportler-Profil für den KI-Coach. Alle Felder optional; gespeichert wird lokal + Server (offline nachgereicht).
-import { reactive, watch } from 'vue';
+import { nextTick, reactive, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t } from '@/i18n';
 import DecimalInput from '@/components/DecimalInput.vue';
@@ -8,10 +8,31 @@ import { POSITIONS, emptyProfile, useAiStore, type AthleteProfile } from '@/stor
 
 const ai = useAiStore();
 const { profile, profileOpen, profileBusy } = storeToRefs(ai);
+const panel = ref<HTMLElement | null>(null);
 
 // Bearbeitungskopie: erst "Speichern" übernimmt
 const form = reactive<AthleteProfile>(emptyProfile());
-watch(profileOpen, (o) => { if (o) Object.assign(form, emptyProfile(), profile.value); }, { immediate: true });
+
+/**
+ * Fokus: Das Profil liegt über Chat oder Einstellungen. Ohne Fokuswechsel bliebe die Tastatur im Dialog darunter
+ * (Tab/Escape wirkten dort). Beim Schließen zurück zum Auslöser - der Profil-Hinweis im Chat verschwindet nach dem
+ * Speichern, dann auf den Dialog, in dem er stand.
+ */
+let opener: HTMLElement | null = null;
+let openerDialog: HTMLElement | null = null;
+// immediate: die Komponente wird erst beim ersten Öffnen geladen - dann ist profileOpen schon true
+watch(profileOpen, (o) => {
+  if (o) {
+    Object.assign(form, emptyProfile(), profile.value);
+    opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    openerDialog = opener?.closest<HTMLElement>('[role=dialog]') ?? null;
+    void nextTick(() => panel.value?.focus({ preventScroll: true }));
+  } else {
+    const target = opener?.isConnected ? opener : openerDialog?.isConnected ? openerDialog : null;
+    opener = openerDialog = null;
+    void nextTick(() => target?.focus({ preventScroll: true }));
+  }
+}, { immediate: true });
 
 const TEXTS = ['goals', 'injuries', 'equipment', 'notes'] as const;
 const thisYear = new Date().getFullYear();
@@ -31,8 +52,9 @@ function save() {
 
 <template>
   <transition name="fade">
-      <div v-if="profileOpen" class="fixed inset-0 z-[75] flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="close" @keydown.esc="close">
-          <form class="glass-panel modal-panel flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl" role="dialog" aria-modal="true" aria-labelledby="profile-title" data-test="athlete-profile" @submit.prevent="save">
+      <!-- .stop: der globale Escape-Handler würde sonst auch die Einstellungen darunter schließen -->
+      <div v-if="profileOpen" class="fixed inset-0 z-[75] flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="close" @keydown.esc.stop="close">
+          <form ref="panel" tabindex="-1" class="glass-panel modal-panel flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl outline-none sm:rounded-3xl" role="dialog" aria-modal="true" aria-labelledby="profile-title" data-test="athlete-profile" @submit.prevent="save">
               <div class="flex items-start justify-between gap-3 px-6 pb-3 pt-6">
                   <div class="min-w-0">
                       <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('ai.profile.kicker') }}</p>
@@ -47,7 +69,7 @@ function save() {
                       <legend class="label-xs mb-2">{{ t('ai.profile.fields.position') }}</legend>
                       <div class="flex flex-wrap gap-2" role="radiogroup" :aria-label="t('ai.profile.fields.position')">
                           <button v-for="p in POSITIONS" :key="p" type="button" role="radio" :aria-checked="form.position === p" @click="form.position = form.position === p ? null : p"
-                                  :class="form.position === p ? 'chip chip-active' : 'chip chip-idle'" :data-position="p">{{ t(`ai.profile.positions.${p}`) }}</button>
+                                  class="min-h-[2.75rem]" :class="form.position === p ? 'chip chip-active' : 'chip chip-idle'" :data-position="p">{{ t(`ai.profile.positions.${p}`) }}</button>
                       </div>
                   </fieldset>
 

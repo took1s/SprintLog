@@ -920,7 +920,9 @@ export const de: Messages = {
       quickHint: 'Schnelle, kurze Antworten',
       deepHint: 'Tiefere Analyse mit exakten Zahlen - braucht mehr vom Tagesbudget',
     },
-    left: 'Heute noch {quick} schnelle oder {deep} gründliche Fragen',
+    left: 'Heute noch {quick} oder {deep}',
+    leftQuick: { one: '{n} schnelle', other: '{n} schnelle' },
+    leftDeep: { one: '{n} gründliche Frage', other: '{n} gründliche Fragen' },
     actions: {
       program: 'Plan-Vorschlag',
       goal: 'Ziel-Vorschlag',
@@ -965,7 +967,6 @@ export const de: Messages = {
       running: 'Coach analysiert … (20-40 s)',
       generated: '{period} · {date}',
       periods: { full: 'Gesamtanalyse', week: 'Wochenbilanz' },
-      again: 'Aktualisieren',
       status: { good: 'Im Plan', watch: 'Beobachten', risk: 'Handeln' },
       recommendations: 'Wichtigste Empfehlungen',
       focus: 'Fokus nächste Woche',
