@@ -10,6 +10,9 @@ import { formatDate } from '@/lib/format';
 import { appearance, activeScheme, inSeason, setScheme, setTheme, SCHEMES, THEMES, THEME_SWATCHES } from '@/lib/theme';
 import { APP_ICON_CHOICES, appIconChoice, appIconNative, resolveAppIcon, setAppIcon, type AppIconChoice } from '@/lib/appIcon';
 import { isNative } from '@/lib/native';
+import { useAiStore, type POSITIONS } from '@/stores/ai';
+type Position = (typeof POSITIONS)[number];
+const ai = useAiStore();
 
 const app = useAppStore();
 const { deleteAccount, online, pendingCount, profile, settings, settingsOpen, syncing, user } = storeToRefs(app);
@@ -38,6 +41,15 @@ const pickIcon = (c: AppIconChoice) => { void setAppIcon(c); };
                   </div>
                   <button @click="settingsOpen = false" class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>
               </div>
+
+              <button v-if="ai.enabled" type="button" @click="ai.openProfile()" class="mb-6 flex min-h-[3.25rem] w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-left hover:border-white/20" data-test="settings-profile">
+                  <svg class="h-5 w-5 flex-shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path stroke-linecap="round" d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></svg>
+                  <span class="min-w-0 flex-1">
+                      <span class="block font-bold text-white">{{ t('ai.profile.open') }}</span>
+                      <span class="block truncate text-xs text-slate-400">{{ ai.profileFilled ? [ai.profile.position ? t(`ai.profile.positions.${ai.profile.position as Position}`) : null, ai.profile.level].filter(Boolean).join(' · ') || t('ai.profile.intro') : t('ai.profile.hint') }}</span>
+                  </span>
+                  <span class="text-slate-400" aria-hidden="true">›</span>
+              </button>
 
               <h4 class="label-xs mb-3 text-accent">{{ t('appearance.title') }}</h4>
               <div class="mb-3 grid grid-cols-2 gap-2" role="radiogroup" :aria-label="t('appearance.theme')">

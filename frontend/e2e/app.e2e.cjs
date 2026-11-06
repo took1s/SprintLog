@@ -924,8 +924,8 @@ test('AI coach: chat with context and history, errors with retry, plan from the 
   await page.click('[data-test=coach-ask]');
   await page.waitForSelector('[data-test=ai-chat]');
   await page.click('[data-suggestion=today]');
-  await page.waitForSelector('[data-role=assistant] >> text=Mock coach (en)');
-  assert.match(await page.innerText('[data-test=ai-remaining]'), /29 questions left/);
+  await page.waitForSelector('[data-role=assistant] >> text=Mock coach (en, quick)');
+  assert.match(await page.innerText('[data-test=ai-remaining]'), /59 quick or 14 thorough/);
   await page.fill('[data-test=ai-input]', 'And tomorrow?');
   await page.keyboard.press('Enter');
   await page.waitForSelector('[data-role=assistant] >> text=History: 2 messages');
@@ -966,6 +966,83 @@ test('AI coach: chat with context and history, errors with retry, plan from the 
   assert.equal(program.days.length, 3);
   assert.equal(program.matchDays, 64);
   assert.equal(program.trainingDays & 32, 0);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('AI coach pro: athlete profile, thorough mode with proposal cards, AI analysis', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `aipro_${Date.now()}`);
+
+  // Sportler-Profil über die Einstellungen
+  await page.click('button[aria-label=Settings]');
+  await page.click('[data-test=settings-profile]');
+  await page.waitForSelector('[data-test=athlete-profile]');
+  await page.click('[data-position=winger]');
+  await page.fill('[data-test=profile-height]', '180');
+  await page.fill('[data-test=profile-weight]', '76,5');
+  await page.fill('[data-test=profile-injuries]', 'Hamstring strain in August');
+  await page.click('[data-test=profile-save]');
+  await page.waitForSelector('[data-test=athlete-profile]', { state: 'detached' });
+  const profile = await api('GET', '/api/profile/athlete', token);
+  assert.equal(profile.position, 'winger');
+  assert.equal(profile.weightKg, 76.5);
+  assert.equal(profile.injuries, 'Hamstring strain in August');
+  await page.keyboard.press('Escape');
+  await page.click('[aria-label=Close] >> nth=0').catch(() => {});
+
+  // Gründlicher Modus: Antwort mit Vorschlags-Karten (Ziel, Plan) - gespeichert erst per Knopf
+  await page.click('[data-test=coach-ask]');
+  await page.waitForSelector('[data-test=ai-chat]');
+  assert.equal(await page.locator('[data-test=ai-profile-hint]').count(), 0);
+  await page.click('[data-test=ai-mode-deep]');
+  await page.fill('[data-test=ai-input]', 'Give me a goal and a plan');
+  await page.click('[data-test=ai-send]');
+  await page.waitForSelector('[data-role=assistant] >> text=Mock coach (en, deep)');
+  await page.waitForSelector('[data-role=assistant] >> text=Position: winger');
+  assert.equal((await api('GET', '/api/goals', token)).length, 0, 'nothing saved before confirming');
+  await page.click('[data-action=goal] [data-test=ai-action-apply]');
+  await page.waitForSelector('[data-action=goal] >> text=Saved');
+  const [goal] = await api('GET', '/api/goals', token);
+  assert.equal(goal.exerciseId, 1);
+  assert.equal(goal.targetWeight, 95);
+  assert.equal(goal.targetReps, 3);
+
+  await page.click('[data-action=program] [data-test=ai-action-apply]');
+  await page.waitForSelector('[data-action=program] >> text=Saved');
+  let [program] = await api('GET', '/api/programs', token);
+  assert.equal(program.name, 'Chat Plan');
+  assert.equal(program.isActive, true);
+
+  // Wochenplan-Karte gilt für das aktive Programm
+  await page.fill('[data-test=ai-input]', 'Change my week plan');
+  await page.click('[data-test=ai-send]');
+  await page.waitForSelector('[data-action=schedule]');
+  await page.click('[data-action=schedule] [data-test=ai-action-apply]');
+  await page.waitForSelector('[data-action=schedule] >> text=Saved');
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    [program] = await api('GET', '/api/programs', token);
+    if (program.matchDays === 64) break;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  assert.equal(program.matchDays, 64);
+  assert.equal(program.trainingDays, 1 | 4 | 16);
+  await page.click('[aria-label=Close] >> nth=-1');
+
+  // KI-Analyse im Datenbereich
+  await page.click('nav >> text=DATA');
+  await page.click('[data-subtab=ai]');
+  await page.click('[data-test=ai-analysis-full]');
+  await page.waitForSelector('[data-test=ai-report-headline] >> text=Strength is rising');
+  assert.equal(await page.locator('[data-status=risk]').count(), 1);
+  // Bleibt nach Neuladen, "Besprechen" öffnet den Chat im gründlichen Modus
+  await page.reload();
+  await page.click('nav >> text=DATA');
+  await page.click('[data-subtab=ai]');
+  await page.waitForSelector('[data-test=ai-report]');
+  await page.click('[data-test=ai-discuss]');
+  await page.waitForSelector('[data-test=ai-chat] [data-role=assistant] >> text=Mock coach (en, deep)');
   assert.deepEqual(errors, []);
   await context.close();
 });

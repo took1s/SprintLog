@@ -8,11 +8,14 @@ public class AiOptions
 {
     public string ApiKey { get; set; } = string.Empty;
 
-    /// <summary>Schnell und günstig - für kurze Coach-Antworten und Pläne ausreichend.</summary>
+    /// <summary>Schnelle, günstige Antworten im Chat.</summary>
     public string Model { get; set; } = "claude-haiku-5-5";
 
-    /// <summary>Anfragen pro Nutzer und Tag (Schutz vor Kostenexplosion, z. B. durch eine Schleife im Client).</summary>
-    public int DailyLimit { get; set; } = 30;
+    /// <summary>Gründliche Arbeit: Analyse, Pläne, Wochenbilanz und "Gründlich"-Fragen.</summary>
+    public string DeepModel { get; set; } = "claude-sonnet-5-5";
+
+    /// <summary>Einheiten pro Nutzer und Tag (schnelle Frage 1, gründliche 4, Plan/Analyse 6).</summary>
+    public int DailyLimit { get; set; } = 60;
 
     public bool Enabled => !string.IsNullOrWhiteSpace(ApiKey);
 }

@@ -35,6 +35,7 @@ const HoldTimer = defineAsyncComponent(() => import('@/components/workout/HoldTi
 const PlanBuilderSheet = defineAsyncComponent(() => import('@/components/PlanBuilderSheet.vue'));
 const WorkoutSummarySheet = defineAsyncComponent(() => import('@/components/WorkoutSummarySheet.vue'));
 const AiCoachSheet = defineAsyncComponent(() => import('@/components/AiCoachSheet.vue'));
+const AthleteProfileSheet = defineAsyncComponent(() => import('@/components/AthleteProfileSheet.vue'));
 
 const app = useAppStore();
 const goals = useGoalsStore();
@@ -42,7 +43,7 @@ const aiStore = useAiStore();
 const { booting, isAuthenticated, tab, authMode, sessionActive } = storeToRefs(app);
 
 /** Dialog-Chunks erst beim ersten Öffnen laden - danach bleiben sie gemountet (Schließen-Animation bleibt erhalten). */
-const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, hold: false, builder: false, summary: false, ai: false });
+const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, hold: false, builder: false, summary: false, ai: false, profile: false });
 watchEffect(() => {
   if (app.setModal.open) used.set = true;
   if (app.customModal.open) used.custom = true;
@@ -56,6 +57,7 @@ watchEffect(() => {
   if (app.planBuilder.open) used.builder = true;
   if (app.summary) used.summary = true;
   if (aiStore.open) used.ai = true;
+  if (aiStore.profileOpen) used.profile = true;
 });
 
 onMounted(() => { void app.init(); });
@@ -107,6 +109,7 @@ onMounted(() => { void app.init(); });
       <PlanBuilderSheet v-if="used.builder" />
       <WorkoutSummarySheet v-if="used.summary" />
       <AiCoachSheet v-if="used.ai" />
+      <AthleteProfileSheet v-if="used.profile" />
     </template>
 
     <RecoveryCodesModal v-if="used.codes" />

@@ -22,6 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<AuthToken> AuthTokens => Set<AuthToken>();
     public DbSet<WellnessEntry> Wellness => Set<WellnessEntry>();
     public DbSet<LiftGoal> Goals => Set<LiftGoal>();
+    public DbSet<AthleteProfile> AthleteProfiles => Set<AthleteProfile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -111,6 +112,19 @@ public class AppDbContext : DbContext
             e.HasIndex(w => new { w.UserId, w.Date }).IsUnique();
             e.Property(w => w.Note).HasMaxLength(200);
             e.HasOne<User>().WithMany().HasForeignKey(w => w.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AthleteProfile>(e =>
+        {
+            e.ToTable("AthleteProfiles");
+            e.HasKey(p => p.UserId);
+            e.Property(p => p.Position).HasMaxLength(20);
+            e.Property(p => p.Level).HasMaxLength(60);
+            e.Property(p => p.Goals).HasMaxLength(400);
+            e.Property(p => p.Injuries).HasMaxLength(400);
+            e.Property(p => p.Equipment).HasMaxLength(300);
+            e.Property(p => p.Notes).HasMaxLength(400);
+            e.HasOne<User>().WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<LiftGoal>(e =>

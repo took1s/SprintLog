@@ -2220,3 +2220,37 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261105235725_V16AthleteProfile') THEN
+    CREATE TABLE "AthleteProfiles" (
+        "UserId" integer NOT NULL,
+        "Position" character varying(20),
+        "BirthYear" integer,
+        "HeightCm" integer,
+        "WeightKg" double precision,
+        "Level" character varying(60),
+        "Goals" character varying(400),
+        "Injuries" character varying(400),
+        "Equipment" character varying(300),
+        "SessionMinutes" integer,
+        "Notes" character varying(400),
+        "UpdatedAt" timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_AthleteProfiles" PRIMARY KEY ("UserId"),
+        CONSTRAINT "FK_AthleteProfiles_Users_UserId" FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261105235725_V16AthleteProfile') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261105235725_V16AthleteProfile', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
