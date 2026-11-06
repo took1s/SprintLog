@@ -280,9 +280,6 @@ input[type="number"] { -moz-appearance: textfield; }
   background-size: 250% 100%; background-repeat: no-repeat;
 }
 
-/* Lange Listen: Karten außerhalb des Bildschirms werden nicht gerendert (Katalog mit über 250 Übungen) */
-.catalog-card { content-visibility: auto; contain-intrinsic-size: auto 104px; }
-
 /* KI-Chat: neue Nachricht gleitet herein; Antwort baut sich Block für Block auf, Karten folgen */
 .msg-enter-active { transition: opacity 0.3s ease, transform 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
 .msg-enter-from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.98); }

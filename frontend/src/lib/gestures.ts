@@ -204,6 +204,16 @@ export const vSheetDrag: Directive<HTMLElement, () => void> = {
 // Lange drücken
 // ---------------------------------------------------------------------
 
+/**
+ * Nach einer Halte-Geste den folgenden Klick schlucken. Bei Touch landet er dort, wo der Finger losgelassen wird -
+ * und dort liegt nach der Aktion oft etwas Neues (Hintergrund des gerade geöffneten Sheets, ein anderer Knopf).
+ */
+export function swallowNextClick(ms = 700): void {
+  const swallow = (e: MouseEvent) => { e.stopPropagation(); e.preventDefault(); window.removeEventListener('click', swallow, true); };
+  window.addEventListener('click', swallow, true);
+  window.setTimeout(() => window.removeEventListener('click', swallow, true), ms);
+}
+
 export const LONG_PRESS_MS = 450;
 
 interface PressState { handler: () => void; timer: number; x: number; y: number; fired: boolean; cleanup: () => void }
@@ -218,16 +228,18 @@ export const vLongPress: Directive<HTMLElement, () => void> = {
     const s: PressState = { handler: binding.value, timer: 0, x: 0, y: 0, fired: false, cleanup: () => {} };
     const cancel = () => { window.clearTimeout(s.timer); s.timer = 0; el.removeAttribute('data-pressing'); };
     const down = (e: PointerEvent) => {
+      s.fired = false; // jede neue Berührung beginnt frisch (sonst schluckte touchend den nächsten normalen Tipp)
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       // Eigene Knöpfe in der Karte (Favorit, +) behalten ihr normales Verhalten
       const inner = e.target instanceof Element ? e.target.closest('button, a, input, select, textarea, [role="button"]') : null;
       if (inner && inner !== el && el.contains(inner)) return;
-      s.fired = false; s.x = e.clientX; s.y = e.clientY;
+      s.x = e.clientX; s.y = e.clientY;
       el.setAttribute('data-pressing', '');
       s.timer = window.setTimeout(() => {
         s.timer = 0; s.fired = true;
         el.removeAttribute('data-pressing');
         tap();
+        swallowNextClick();
         s.handler();
       }, LONG_PRESS_MS);
     };
@@ -235,6 +247,8 @@ export const vLongPress: Directive<HTMLElement, () => void> = {
     // Nach dem Auslösen den Klick (und das Kontextmenü) schlucken
     const click = (e: MouseEvent) => { if (s.fired) { e.stopImmediatePropagation(); e.preventDefault(); s.fired = false; } };
     const menu = (e: Event) => { if (s.timer || s.fired) e.preventDefault(); };
+    // Touch: touchend geht immer an das Startelement - hier lässt sich der Klick ganz verhindern
+    const touchEnd = (e: TouchEvent) => { if (s.fired && e.cancelable) { e.preventDefault(); s.fired = false; } };
     el.addEventListener('pointerdown', down);
     el.addEventListener('pointermove', move);
     el.addEventListener('pointerup', cancel);
@@ -242,6 +256,7 @@ export const vLongPress: Directive<HTMLElement, () => void> = {
     el.addEventListener('pointerleave', cancel);
     el.addEventListener('click', click, { capture: true });
     el.addEventListener('contextmenu', menu);
+    el.addEventListener('touchend', touchEnd, { passive: false });
     el.classList.add('long-pressable');
     s.cleanup = () => {
       cancel();
@@ -252,6 +267,7 @@ export const vLongPress: Directive<HTMLElement, () => void> = {
       el.removeEventListener('pointerleave', cancel);
       el.removeEventListener('click', click, { capture: true });
       el.removeEventListener('contextmenu', menu);
+      el.removeEventListener('touchend', touchEnd);
     };
     presses.set(el, s);
   },

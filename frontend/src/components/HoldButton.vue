@@ -5,6 +5,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { t } from '@/i18n';
 import { tap } from '@/lib/native';
+import { swallowNextClick } from '@/lib/gestures';
 
 const props = withDefaults(defineProps<{ label: string; variant?: 'text' | 'icon'; duration?: number }>(), { variant: 'text', duration: 700 });
 const emit = defineEmits<{ confirm: []; fallback: [] }>();
@@ -30,6 +31,8 @@ function down(e: PointerEvent) {
     done = true;
     holding.value = false;
     tap();
+    // Der Knopf verschwindet meist mit der Aktion - der Klick beim Loslassen darf nichts darunter treffen
+    swallowNextClick();
     emit('confirm');
   }, props.duration);
 }
