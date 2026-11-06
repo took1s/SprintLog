@@ -212,7 +212,9 @@ Statt der Mock-API kann auch die echte API laufen (`dotnet run`, ebenfalls Port 
 | `Logging__Format` | nein | `json` = Logs als kompaktes JSON (für Log-Dienste), sonst lesbarer Text |
 | `ANTHROPIC_API_KEY` | nein | API-Key aus der [Claude Console](https://platform.claude.com) für den KI-Coach (Chat, Pläne, Analyse). Ohne Key: keine KI-Knöpfe, der regelbasierte Coach bleibt |
 | `Ai__Model` / `Ai__DeepModel` | nein | Modell für schnelle Antworten bzw. gründliche Antworten, Pläne und Analyse (Standard: `claude-haiku-5-5` / `claude-sonnet-5-5`) |
-| `Ai__DailyLimit` | nein | KI-Einheiten pro Nutzer und Tag: schnelle Frage 1, gründliche 4, Plan/Analyse 6 (Standard: 60) |
+| `Ai__DailyLimit` | nein | KI-Einheiten pro Nutzer und Tag: schnelle Frage 1, gründliche 4, Plan/Analyse 6 (Standard: 12) |
+| `Ai__Owners` | nein | Benutzernamen mit großem KI-Kontingent, durch Komma getrennt (z. B. dein eigenes Konto) |
+| `Ai__OwnerDailyLimit` | nein | Tageskontingent dieser Konten (Standard: 60) |
 
 In der Cloud (Render) werden die Werte im Dashboard unter *Environment* hinterlegt.
 

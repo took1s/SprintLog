@@ -73,6 +73,10 @@ builder.Services.AddOptions<AiOptions>().Configure<IConfiguration>((options, con
     options.Model = config["Ai:Model"] ?? options.Model;
     options.DeepModel = config["Ai:DeepModel"] ?? options.DeepModel;
     options.DailyLimit = config.GetValue("Ai:DailyLimit", options.DailyLimit);
+    options.OwnerDailyLimit = config.GetValue("Ai:OwnerDailyLimit", options.OwnerDailyLimit);
+    // Benutzernamen (nicht E-Mails), weil der Name im Token steht und sich nicht ändern lässt
+    foreach (var name in (config["Ai:Owners"] ?? string.Empty).Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        options.Owners.Add(name);
 });
 builder.Services.AddSingleton<AiQuota>();
 builder.Services.AddScoped<AiTools>();

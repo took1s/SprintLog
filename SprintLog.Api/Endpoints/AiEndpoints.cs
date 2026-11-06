@@ -37,7 +37,8 @@ public static class AiEndpoints
     {
         var userId = http.User.GetUserId();
         if (userId is null) return Results.Unauthorized();
-        return Results.Ok(new AiStatusResponse(ai.IsEnabled, ai.IsEnabled ? quota.Remaining(userId.Value) : 0, quota.Limit, Costs));
+        var limit = quota.LimitFor(http.User);
+        return Results.Ok(new AiStatusResponse(ai.IsEnabled, ai.IsEnabled ? quota.Remaining(userId.Value, limit) : 0, limit, Costs));
     }
 
     private static async Task<IResult> Ask(AiAskInput input, HttpContext http, IAiClient ai, AiQuota quota, AiTools tools, AppDbContext db,
@@ -50,7 +51,8 @@ public static class AiEndpoints
         if (errors.HasErrors) return errors.ToResult();
         var deep = input.Mode == "deep";
         var cost = Costs[deep ? "deep" : "quick"];
-        if (!quota.TryTake(userId.Value, cost)) return Error(new AiException("ai_quota", HttpStatusCode.TooManyRequests));
+        var limit = quota.LimitFor(http.User);
+        if (!quota.TryTake(userId.Value, cost, limit)) return Error(new AiException("ai_quota", HttpStatusCode.TooManyRequests));
 
         var messages = new JsonArray();
         foreach (var m in Normalize((input.History ?? new()).Select(h => (h.Role!, h.Content!.Trim())).Append(("user", input.Question!.Trim()))))
@@ -64,7 +66,7 @@ public static class AiEndpoints
             var model = deep ? options.Value.DeepModel : options.Value.Model;
             var run = await RunAsync(ai, tools, userId.Value, model, system, messages, AiTools.ChatTools, deep ? 6000 : 2500, deep ? 8 : 5, null, logs, ct);
             var answer = string.IsNullOrWhiteSpace(run.Text) ? throw new AiException("ai_empty", HttpStatusCode.BadGateway) : run.Text;
-            return Results.Ok(new AiAskResponse(answer, quota.Remaining(userId.Value), run.Actions, tools.MemoryChanges));
+            return Results.Ok(new AiAskResponse(answer, quota.Remaining(userId.Value, limit), run.Actions, tools.MemoryChanges));
         }
         catch (AiException e)
         {
@@ -82,7 +84,8 @@ public static class AiEndpoints
         var errors = input.Validate();
         if (errors.HasErrors) return errors.ToResult();
         var cost = Costs["plan"];
-        if (!quota.TryTake(userId.Value, cost)) return Error(new AiException("ai_quota", HttpStatusCode.TooManyRequests));
+        var limit = quota.LimitFor(http.User);
+        if (!quota.TryTake(userId.Value, cost, limit)) return Error(new AiException("ai_quota", HttpStatusCode.TooManyRequests));
 
         try
         {
@@ -111,7 +114,7 @@ public static class AiEndpoints
 
             var (program, summary) = AiTools.Sanitize(json, catalog.ToDictionary(e => e.Id, e => e.TrackingType), a.DaysPerWeek);
             if (program.Validate().HasErrors) throw new AiException("ai_bad_plan", HttpStatusCode.BadGateway);
-            return Results.Ok(new AiPlanResponse(program, summary, quota.Remaining(userId.Value)));
+            return Results.Ok(new AiPlanResponse(program, summary, quota.Remaining(userId.Value, limit)));
         }
         catch (AiException e)
         {
@@ -129,7 +132,8 @@ public static class AiEndpoints
         var errors = input.Validate();
         if (errors.HasErrors) return errors.ToResult();
         var cost = Costs["analysis"];
-        if (!quota.TryTake(userId.Value, cost)) return Error(new AiException("ai_quota", HttpStatusCode.TooManyRequests));
+        var limit = quota.LimitFor(http.User);
+        if (!quota.TryTake(userId.Value, cost, limit)) return Error(new AiException("ai_quota", HttpStatusCode.TooManyRequests));
 
         try
         {
@@ -142,7 +146,7 @@ public static class AiEndpoints
             var run = await RunAsync(ai, tools, userId.Value, options.Value.DeepModel, AnalysisSystem(profile, remembered, input.Context, input.Locale, time),
                 messages, AiTools.DataTools.Append(AiTools.SubmitReportTool).ToList(), 6000, 8, AiTools.SubmitReport, logs, ct);
             if (run.Final is not { } report) throw new AiException("ai_empty", HttpStatusCode.BadGateway);
-            return Results.Ok(new AiAnalysisResponse(JsonSerializer.SerializeToNode(report)!.AsObject(), time.GetUtcNow().UtcDateTime, quota.Remaining(userId.Value)));
+            return Results.Ok(new AiAnalysisResponse(JsonSerializer.SerializeToNode(report)!.AsObject(), time.GetUtcNow().UtcDateTime, quota.Remaining(userId.Value, limit)));
         }
         catch (AiException e)
         {

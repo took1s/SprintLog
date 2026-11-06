@@ -132,6 +132,27 @@ public class AiTests
     }
 
     [Fact]
+    public async Task Owner_gets_the_larger_quota_and_others_stay_small()
+    {
+        // Name aus Ai:Owners, Groß/klein egal -> großes Kontingent
+        var owner = await _factory.CreateUserAsync(SprintLogApiFactory.OwnerUsername.ToLowerInvariant());
+        var status = await HttpAssert.JsonAsync<AiStatusResponse>(HttpStatusCode.OK, await owner.Client.GetAsync("/api/ai/status"));
+        Assert.Equal(40, status.DailyLimit);
+        Assert.Equal(40, status.Remaining);
+
+        _factory.Ai.Reply = (_, _) => AiResponse.FromText("ok");
+        for (var i = 0; i < 4; i++) // 16 Einheiten - mehr als ein normales Konto (12) am Tag hat
+            Assert.Equal(HttpStatusCode.OK, (await owner.Client.PostAsJsonAsync("/api/ai/ask", new { question = "Frage " + i, mode = "deep" })).StatusCode);
+        status = await HttpAssert.JsonAsync<AiStatusResponse>(HttpStatusCode.OK, await owner.Client.GetAsync("/api/ai/status"));
+        Assert.Equal(24, status.Remaining);
+
+        // Ähnlicher Name ist kein Inhaber
+        var other = await _factory.CreateUserAsync(SprintLogApiFactory.OwnerUsername + "2");
+        status = await HttpAssert.JsonAsync<AiStatusResponse>(HttpStatusCode.OK, await other.Client.GetAsync("/api/ai/status"));
+        Assert.Equal(12, status.DailyLimit);
+    }
+
+    [Fact]
     public async Task Quota_is_enforced_and_failed_calls_are_refunded()
     {
         var user = await _factory.CreateUserAsync();
