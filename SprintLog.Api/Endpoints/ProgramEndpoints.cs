@@ -155,7 +155,9 @@ public static class ProgramEndpoints
         var program = await db.Programs.FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId, ct);
         if (program is null) return Results.NotFound();
 
-        await DeactivateAll(db, userId.Value, ct);
+        // Das Programm selbst ausnehmen: ExecuteUpdate läuft am Change-Tracker vorbei - beim Neustart des aktiven Programms
+        // stünde IsActive im Tracker schon auf true, "= true" wäre keine Änderung und es bliebe in der DB deaktiviert.
+        await DeactivateAll(db, userId.Value, ct, exceptId: id);
         program.IsActive = true;
         program.StartedAt = time.GetUtcNow().UtcDateTime; // Neustart: Woche 1 beginnt jetzt
         await db.SaveChangesAsync(ct);
@@ -205,8 +207,8 @@ public static class ProgramEndpoints
 
     // ---------- Helfer ----------
 
-    private static Task DeactivateAll(AppDbContext db, int userId, CancellationToken ct) =>
-        db.Programs.Where(p => p.UserId == userId && p.IsActive)
+    private static Task DeactivateAll(AppDbContext db, int userId, CancellationToken ct, int? exceptId = null) =>
+        db.Programs.Where(p => p.UserId == userId && p.IsActive && p.Id != exceptId)
             .ExecuteUpdateAsync(s => s.SetProperty(p => p.IsActive, false), ct);
 
     private static ProgramDay NewDay(ProgramDayInput d, int position) => new()

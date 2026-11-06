@@ -92,6 +92,19 @@ public class ProgramTests
     }
 
     [Fact]
+    public async Task Activating_the_active_program_again_restarts_it_and_keeps_it_active()
+    {
+        var user = await _factory.CreateUserAsync();
+        var a = await HttpAssert.JsonAsync<ProgramResponse>(HttpStatusCode.Created, await user.Client.PostAsJsonAsync("/api/programs", CustomProgram("Plan A")));
+        Assert.True(a.IsActive);
+
+        var restarted = await HttpAssert.JsonAsync<ProgramResponse>(HttpStatusCode.OK, await user.Client.PostAsync($"/api/programs/{a.Id}/activate", null));
+        Assert.True(restarted.IsActive);
+        Assert.True(restarted.StartedAt >= a.StartedAt);
+        Assert.True((await ProgramsAsync(user)).Single().IsActive);
+    }
+
+    [Fact]
     public async Task Update_keeps_existing_day_ids_so_workouts_stay_linked()
     {
         var user = await _factory.CreateUserAsync();
