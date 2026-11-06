@@ -12,7 +12,8 @@
 @tailwind utilities;
 
 @layer base {
-  html { -webkit-text-size-adjust: 100%; }
+  /* Auch der Wurzel-Hintergrund in Themenfarbe: Lücken beim Ein-/Ausblenden der Tastatur oder beim Zurückscrollen bleiben dunkel statt weiß */
+  html { -webkit-text-size-adjust: 100%; background-color: rgb(var(--c-bg)); }
 
   /*
    * Kein Doppeltipp-Zoom (iOS Safari zoomt sonst, wenn man im Gym schnell mehrmals tippt, z. B. auf ✓ oder Stepper).

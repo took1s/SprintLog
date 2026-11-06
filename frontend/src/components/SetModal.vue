@@ -33,7 +33,7 @@ const modalTechnique = computed(() => {
 
 <template>
   <transition name="sheet">
-      <div v-if="setModal.open && modalEx" class="fixed inset-0 z-40 flex items-end justify-center bg-ink/60 backdrop-blur-sm sm:items-center" @click.self="closeSetModal">
+      <div v-if="setModal.open && modalEx" class="fixed inset-0 z-40 flex items-end justify-center bg-ink/70 sm:items-center" @click.self="closeSetModal">
           <div v-sheet-drag:handle="closeSetModal" class="glass-panel modal-panel relative max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 sm:rounded-3xl sm:p-8" role="dialog" aria-modal="true" :aria-label="exerciseName(modalEx)">
               <div class="mb-6 flex items-start justify-between gap-3">
                   <div class="min-w-0">

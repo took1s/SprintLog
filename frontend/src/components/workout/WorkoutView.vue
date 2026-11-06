@@ -354,7 +354,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
       <!-- Aktions-Sheet einer Übung: liegt über allem (Teleport), damit kein anderer Block es verdeckt -->
       <Teleport to="body">
           <transition name="sheet">
-              <div v-if="sheetBlock" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 backdrop-blur-sm sm:items-center" @click.self="sheetFor = null" data-test="block-sheet">
+              <div v-if="sheetBlock" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/70 sm:items-center" @click.self="sheetFor = null" data-test="block-sheet">
                   <div v-sheet-drag="() => (sheetFor = null)" class="glass-panel modal-panel w-full max-w-md overflow-hidden rounded-t-3xl pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="exerciseName(sheetBlock.exercise)">
                       <div class="px-6 pb-2 pt-6">
                           <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ muscleName(sheetBlock.exercise.muscleGroup) }} · {{ tn('units.sets', sheetBlock.sets.length) }}</p>

@@ -82,7 +82,7 @@ function finish(complete: boolean) {
 
 <template>
   <transition name="fade">
-      <div v-if="holdTimer && ex" class="fixed inset-0 z-[65] flex flex-col items-center justify-center bg-ink/95 px-6 backdrop-blur-md" role="dialog" aria-modal="true" :aria-label="exerciseName(ex)" data-test="hold-timer">
+      <div v-if="holdTimer && ex" class="fixed inset-0 z-[65] flex flex-col items-center justify-center bg-ink/95 px-6" role="dialog" aria-modal="true" :aria-label="exerciseName(ex)" data-test="hold-timer">
           <!-- Phasenwechsel ansagen (Bereit / Halten / Pause) - nicht jede Sekunde, das wäre für VoiceOver Dauerfeuer -->
           <p class="text-[11px] font-bold uppercase text-accent tracking-label" aria-live="polite">{{ leadLeft > 0 ? t('hold.getReady') : holdTimer.pausedAt ? t('hold.paused') : t('hold.hold') }}</p>
           <h2 class="display mt-2 max-w-xs break-words text-center text-2xl text-white">{{ exerciseName(ex) }}</h2>

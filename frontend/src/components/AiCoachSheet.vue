@@ -123,11 +123,15 @@ watch(open, (o) => {
     focusStart();
   } else {
     announce.value = '';
-    const el = opener;
-    opener = null;
-    void nextTick(() => { if (el?.isConnected) el.focus({ preventScroll: true }); });
   }
 }, { immediate: true });
+
+/** Fokus erst nach der Schließ-Animation zurückgeben - vorher hängt der Body noch fest (Scroll-Sperre). */
+function restoreFocus() {
+  const el = opener;
+  opener = null;
+  if (el?.isConnected && window.matchMedia?.('(pointer: fine)').matches) el.focus({ preventScroll: true });
+}
 
 async function clearChat(confirmed = false) {
   await ai.clearChat({ confirmed });
@@ -141,13 +145,17 @@ function retry() {
   void ai.retry();
 }
 
-const close = () => { open.value = false; };
+// Tastatur zuerst schließen: sonst ändert iOS die Fenstergröße mitten in der Schließ-Animation (kurzes weißes Aufblitzen)
+const close = () => {
+  if (document.activeElement instanceof HTMLElement && panel.value?.contains(document.activeElement)) document.activeElement.blur();
+  open.value = false;
+};
 </script>
 
 <template>
-  <transition name="sheet">
+  <transition name="sheet" @after-leave="restoreFocus">
       <!-- .stop: sonst schließt der globale Escape-Handler (app.closeTopLayer) zusätzlich die Ebene darunter -->
-      <div v-if="open" class="fixed inset-0 z-[70] flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="close" @keydown.esc.stop="close">
+      <div v-if="open" class="fixed inset-0 z-[70] flex items-end justify-center bg-ink/80 sm:items-center" @click.self="close" @keydown.esc.stop="close">
           <!-- dvh statt vh: in Safari ist 92vh höher als der sichtbare Bereich, das Eingabefeld läge hinter der Toolbar -->
           <div v-sheet-drag="close" ref="panel" tabindex="-1" class="glass-panel modal-panel flex h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl outline-none sm:h-[85dvh] sm:rounded-3xl" role="dialog" aria-modal="true" aria-labelledby="ai-title" data-test="ai-chat">
               <header class="flex items-start justify-between gap-3 border-b border-white/5 px-6 pb-3 pt-6">

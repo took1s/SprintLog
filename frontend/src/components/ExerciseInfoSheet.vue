@@ -44,7 +44,7 @@ function goal() {
 
 <template>
   <transition name="sheet">
-      <div v-if="ex" class="fixed inset-0 z-[60] flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="closeExerciseInfo">
+      <div v-if="ex" class="fixed inset-0 z-[60] flex items-end justify-center bg-ink/80 sm:items-center" @click.self="closeExerciseInfo">
           <div v-sheet-drag="closeExerciseInfo" class="glass-panel modal-panel flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="exerciseName(ex)" data-test="exercise-info">
               <div class="flex items-start justify-between gap-3 px-6 pb-3 pt-6">
                   <div class="min-w-0">

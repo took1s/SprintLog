@@ -11,7 +11,7 @@ const { saveCustomExercise } = app;
 
 <template>
   <transition name="sheet">
-      <div v-if="customModal.open" class="fixed inset-0 z-40 flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="customModal.open = false">
+      <div v-if="customModal.open" class="fixed inset-0 z-40 flex items-end justify-center bg-ink/80 sm:items-center" @click.self="customModal.open = false">
           <form v-sheet-drag:handle="() => (customModal.open = false)" @submit.prevent="saveCustomExercise" class="glass-panel modal-panel w-full max-w-md rounded-t-3xl p-6 sm:rounded-3xl sm:p-8" role="dialog" aria-modal="true" :aria-label="t('catalog.customExercise')">
               <div class="mb-6 flex items-start justify-between">
                   <div>

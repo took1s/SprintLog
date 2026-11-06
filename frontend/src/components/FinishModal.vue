@@ -11,7 +11,7 @@ const { confirmFinish } = app;
 
 <template>
   <transition name="sheet">
-      <div v-if="finishModal.open" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/80 backdrop-blur-sm sm:items-center" @click.self="finishModal.open = false">
+      <div v-if="finishModal.open" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/85 sm:items-center" @click.self="finishModal.open = false">
           <form v-sheet-drag:handle="() => (finishModal.open = false)" @submit.prevent="confirmFinish" class="glass-panel modal-panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 sm:rounded-3xl sm:p-8" role="dialog" aria-modal="true" :aria-label="isEditing ? `${t('finish.titleSave')} ${t('finish.titleSaveAccent')}` : `${t('finish.titleFinish')} ${t('finish.titleAccent')}`">
               <div class="mb-5 flex items-start justify-between">
                   <div>
