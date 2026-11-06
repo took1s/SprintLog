@@ -29,7 +29,7 @@ export const categoryName = (type: string | null | undefined): string => (type ?
 export const goalName = (goal: string): string => tDynamic(`plan.goals.${goal}`, goal);
 export const levelName = (level: string): string => tDynamic(`plan.levels.${level}`, level);
 
-const UNIT_KEYS: Record<string, Parameters<typeof t>[0]> = { kg: 'units.kg', m: 'units.m', s: 'units.s', 'km/h': 'units.kmh', 'm/s': 'units.ms', AU: 'units.au' };
+const UNIT_KEYS: Record<string, Parameters<typeof t>[0]> = { kg: 'units.kg', m: 'units.m', s: 'units.s', 'km/h': 'units.kmh', 'm/s': 'units.ms', AU: 'units.au', reps: 'units.reps' };
 export const unitLabel = (unit: string): string => (UNIT_KEYS[unit] ? t(UNIT_KEYS[unit]) : unit);
 
 // ---------- Vorlagen ----------

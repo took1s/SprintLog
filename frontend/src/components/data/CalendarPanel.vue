@@ -187,7 +187,7 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
           <div class="grid grid-cols-7 gap-1 pb-1.5 text-center text-[10px] font-bold uppercase text-slate-400 tracking-label" aria-hidden="true">
               <span v-for="w in weekdays" :key="w">{{ w }}</span>
           </div>
-          <div class="cal-swipe -m-1 overflow-hidden p-1" @pointerdown="swipeStart" @pointerup="swipeEnd" @pointercancel="start = null">
+          <div data-own-swipe class="cal-swipe -m-1 overflow-hidden p-1" @pointerdown="swipeStart" @pointerup="swipeEnd" @pointercancel="start = null">
               <transition :name="`cal-${dir}`" mode="out-in">
                   <div :key="`${cursor.year}-${cursor.month}`" class="grid grid-cols-7 gap-1" data-test="calendar-grid">
                       <button v-for="cell in grid" :key="cell.key" type="button" @click="pick(cell)"
@@ -243,7 +243,7 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
       </div>
 
       <!-- ===== Jahr ===== -->
-      <div v-else class="mt-4 cal-swipe" @pointerdown="swipeStart" @pointerup="swipeEnd" @pointercancel="start = null">
+      <div v-else data-own-swipe class="mt-4 cal-swipe" @pointerdown="swipeStart" @pointerup="swipeEnd" @pointercancel="start = null">
           <transition :name="`cal-${dir}`" mode="out-in">
               <div :key="cursor.year">
                   <!-- Einheiten je Monat -->

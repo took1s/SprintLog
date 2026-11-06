@@ -42,6 +42,7 @@ import { coachToday, regionsOf } from '../lib/coach';
 import { recommendPlans, scheduleFor, type PlanAnswers } from '../lib/planBuilder';
 import { regionOf } from '../lib/recovery';
 import { isLocalExerciseId, localExerciseId, mergeExercises, queueHasLocalExercises, remapIds, remapKeys, remapQueue, remapSets } from '../lib/offlineExercises';
+import type { ProgressRange } from '../lib/progress';
 import { t, tn, tDynamic, intlLocale, textIn, loadAllLocales, SUPPORTED_LOCALES } from '../i18n';
 import { templateText, exerciseName as trExerciseName, dayName as trDayName, programName as trProgramName } from '../i18n/content';
 
@@ -274,7 +275,7 @@ export const useAppStore = defineStore('app', () => {
   // Auswertungen
   const historyFilter = ref<'all' | 'Gym' | 'Football' | 'Hybrid' | 'Match'>('all');
   const historyLimit = ref(20);
-  const progress = ref({ key: '', metric: '' });
+  const progress = ref<{ key: string; metric: string; range: ProgressRange }>({ key: '', metric: '', range: 'all' });
   const weeklyMetric = ref<WeeklyMetric>('volume');
   const selectedDay = ref<string | null>(null);
 
@@ -606,7 +607,7 @@ export const useAppStore = defineStore('app', () => {
 
   const progressOptions = computed(() => [...records.value.values()].filter((r) => r.sessions > 0).sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')));
   const progressRecord = computed(() => records.value.get(progress.value.key) ?? null);
-  const progressMetrics = computed<MetricOption[]>(() => metricsFor(progressRecord.value?.trackingType));
+  const progressMetrics = computed<MetricOption[]>(() => metricsFor(progressRecord.value?.trackingType, (progressRecord.value?.maxWeight?.value ?? 0) > 0));
   const progressMetric = computed<MetricOption>(() => progressMetrics.value.find((m) => m.key === progress.value.metric) ?? progressMetrics.value[0]);
   const progressSeries = computed(() => (progressRecord.value ? exerciseSeries(allWorkouts.value, progress.value.key, progressMetric.value.key) : []));
   const progressDelta = computed(() => {
@@ -2375,7 +2376,11 @@ export const useAppStore = defineStore('app', () => {
     if (value === 'Plan' && online.value) void loadPrograms();
     if (value === 'Data' && online.value) void loadHistory();
   });
-  watch(() => progress.value.key, () => { progress.value.metric = progressMetrics.value[0]?.key ?? ''; });
+  // Neue Übung: erste Kennzahl, zu der es auch Werte gibt (Weitsprung ohne Zeit -> Distanz statt leerem Tempo)
+  watch(() => progress.value.key, (key) => {
+    const options = progressMetrics.value;
+    progress.value.metric = (options.find((m) => exerciseSeries(allWorkouts.value, key, m.key).length > 0) ?? options[0])?.key ?? '';
+  });
 
   let started = false;
   /** Einmalig beim Mount der App: Listener, Takte, Service Worker, gespeicherte Anmeldung. */

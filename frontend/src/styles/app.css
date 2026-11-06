@@ -253,6 +253,98 @@
 .cal-prev-enter-from { opacity: 0; transform: translate3d(-20px, 0, 0); }
 .cal-prev-leave-to { opacity: 0; transform: translate3d(12px, 0, 0); }
 
+/* ---------- Segmentleisten zum Durchziehen (lib/scrub.ts) ---------- */
+/* Horizontal gehört die Geste der Leiste, vertikal darf die Seite weiter scrollen; kein iOS-Textmenü beim Halten */
+.scrub-bar, .scrub-bar * { touch-action: pan-y pinch-zoom; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.scrub-bar.is-scrubbing .tab-indicator, .scrub-bar.is-scrubbing .data-tab-marker { transition: none; scale: 1.03 1.06; }
+.scrub-bar.is-scrubbing .tab-btn, .scrub-bar.is-scrubbing .data-tab { transition-duration: 0.08s; }
+
+/* Datenbereich: Leiste klebt oben (unter der Notch), Hintergrund erst wenn sie klebt */
+.data-tabs {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30;
+  margin: 0 -1rem 1.5rem; padding: 0.5rem;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+@media (min-width: 640px) { .data-tabs { margin-left: -2rem; margin-right: -2rem; padding-left: 2rem; padding-right: 2rem; } }
+.data-tabs.is-stuck {
+  /* Fast deckend statt Blur: billig zu zeichnen beim Scrollen, und kein Inhalt scheint durch die Beschriftung */
+  background: rgb(var(--c-bg));
+  /* Streifen unter der Notch mit abdecken, damit dort kein Inhalt durchscheint */
+  box-shadow: 0 calc(-1 * env(safe-area-inset-top, 0px)) 0 0 rgb(var(--c-bg)), 0 10px 24px -18px rgb(0 0 0 / 0.6);
+}
+.data-tabbar {
+  position: relative; display: grid; padding: 4px; border-radius: var(--r-xl);
+  background: rgb(var(--c-well) / 0.08); border: var(--border-w) solid rgb(var(--c-fg) / 0.06);
+}
+.data-tab-marker {
+  position: absolute; top: 4px; bottom: 4px; left: 4px; border-radius: calc(var(--r-xl) - 4px);
+  background: rgb(var(--c-accent) / 0.16); box-shadow: inset 0 0 0 1.5px rgb(var(--accent-ring) / 0.75);
+  transition: transform 0.24s var(--ease-out);
+}
+.data-tab {
+  position: relative; display: flex; min-height: 3.25rem; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  padding: 6px 2px; border-radius: calc(var(--r-xl) - 4px); color: rgb(var(--c-subtle));
+  transition: color 0.2s ease;
+}
+.data-tab:hover { color: rgb(var(--c-fg)); }
+.data-tab svg { transition: transform 0.24s var(--ease-out); }
+.data-tab-active, .data-tab-active:hover { color: rgb(var(--c-accent-text)); }
+.data-tab-active svg { transform: translateY(-1px) scale(1.08); }
+.data-tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(8px, 2.5vw, 10px); font-weight: 700; letter-spacing: -0.02em; }
+.data-tab:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: -2px; }
+
+/* ---------- Fortschritt ---------- */
+.prog-title { border-radius: var(--r-lg, 12px); }
+.prog-title:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: 4px; }
+.prog-count {
+  flex-shrink: 0; border-radius: 9999px; padding: 4px 10px; font-size: 10px; font-weight: 700; white-space: nowrap;
+  color: rgb(var(--c-muted)); background: rgb(var(--c-fg) / 0.05); border: var(--border-w) solid rgb(var(--c-fg) / 0.06);
+}
+.prog-delta {
+  display: inline-flex; align-items: center; gap: 4px; margin-bottom: 3px; border-radius: 9999px; padding: 4px 9px;
+  font-family: var(--font-num, ui-monospace, monospace); font-size: 12px; font-weight: 800;
+  color: rgb(var(--c-muted)); background: rgb(var(--c-fg) / 0.06);
+}
+.prog-delta.is-up { color: rgb(var(--c-success-text)); background: rgb(var(--c-success) / 0.14); }
+.prog-delta.is-down { color: rgb(var(--c-danger-text)); background: rgb(var(--c-danger) / 0.14); }
+.prog-best-tag {
+  margin-left: 6px; display: inline-block; vertical-align: 1px; border-radius: 9999px; padding: 1px 7px;
+  font-family: var(--font-body); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: var(--label-tracking);
+  color: rgb(var(--c-gold-text)); background: rgb(var(--c-gold) / 0.14);
+}
+.prog-range {
+  display: flex; gap: 2px; padding: 3px; border-radius: 9999px;
+  background: rgb(var(--c-well) / 0.08); border: var(--border-w) solid rgb(var(--c-fg) / 0.06);
+}
+.prog-range-btn {
+  flex: 1; min-height: 2.25rem; border-radius: 9999px; font-size: 11px; font-weight: 800; color: rgb(var(--c-subtle));
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.prog-range-btn:hover { color: rgb(var(--c-fg)); }
+.prog-range-btn.is-active { background: rgb(var(--c-accent)); color: rgb(var(--c-on-accent)); box-shadow: inset 0 0 0 1.5px rgb(var(--accent-ring)); }
+.prog-stat { border-radius: 14px; padding: 10px 12px; background: rgb(var(--c-well) / 0.06); border: var(--border-w) solid rgb(var(--c-fg) / 0.05); min-width: 0; }
+.prog-stat-value { margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-num, ui-monospace, monospace); font-size: 14px; font-weight: 900; color: rgb(var(--c-fg)); font-variant-numeric: tabular-nums; }
+.prog-stat-sub { margin-top: 2px; min-height: 14px; font-size: 10px; color: rgb(var(--c-subtle)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prog-recent > li + li { border-top: var(--border-w) solid rgb(var(--c-fg) / 0.06); }
+.prog-row {
+  display: flex; width: 100%; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; text-align: left;
+  border: var(--border-w) solid transparent; transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.prog-row:hover { background: rgb(var(--c-fg) / 0.04); }
+.prog-row:active { background: rgb(var(--c-fg) / 0.07); }
+.prog-row.is-active { background: rgb(var(--c-accent) / 0.1); border-color: rgb(var(--accent-ring) / 0.5); }
+.prog-row:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: 1px; }
+.prog-spark { width: 64px; height: 24px; flex-shrink: 0; overflow: visible; }
+
+/* Inhalt: seitlich wischen wechselt den Abschnitt (waagrechte Scroller behalten ihre Geste) */
+.swipe-nav, .swipe-nav * { touch-action: pan-y pinch-zoom; }
+.swipe-nav .overflow-x-auto, .swipe-nav .overflow-x-auto * { touch-action: manipulation; }
+.dnext-enter-active, .dprev-enter-active { transition: opacity 0.18s ease, transform 0.22s var(--ease-out); }
+.dnext-leave-active, .dprev-leave-active { transition: opacity 0.09s ease; }
+.dnext-enter-from { opacity: 0; transform: translate3d(18px, 0, 0); }
+.dprev-enter-from { opacity: 0; transform: translate3d(-18px, 0, 0); }
+.dnext-leave-to, .dprev-leave-to { opacity: 0; }
+
 /* ---------- Theme "Neon Striker" (eigene Gestaltung): Speedlines, Mittelkreis, ein Schuss pro Sitzung ---------- */
 /* Überschriften leicht schräg = Tempo (Oswald hat keinen Kursivschnitt; Skew statt synthetischer Kursive) */
 [data-theme='striker'] .display { transform: skewX(-6deg); transform-origin: left bottom; }

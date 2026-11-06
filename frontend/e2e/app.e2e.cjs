@@ -133,11 +133,11 @@ test('register, log gym + field sets, finish -> stored on server with client dat
   assert.ok(history[0].clientId, 'clientId sent for idempotency');
 
   // Auswertungen inkl. Chart.js laufen unter der strikten CSP (Verstöße wären Konsolenfehler).
-  await page.click('button.subtab:text-is("Overview")');
+  await page.click('[data-subtab=overview]');
   await page.waitForSelector('canvas[aria-label="Weekly totals chart"]');
-  await page.click('button.subtab:text-is("Progress")');
+  await page.click('[data-subtab=progress]');
   await page.waitForSelector('canvas[aria-label="Progress chart"]');
-  await page.click('button.subtab:text-is("Calendar")');
+  await page.click('[data-subtab=calendar]');
   await page.waitForSelector('[data-test=calendar-grid] [data-level="4"]'); // heutiger Tag mit den beiden Einheiten
   assert.equal(await page.evaluate(() => window.__cspViolations?.length ?? 0), 0, 'no CSP violations');
   assert.deepEqual(errors, []);
@@ -1415,6 +1415,112 @@ test('Neon Striker theme: selectable in settings, decor behind content, shot onl
   await page.waitForTimeout(1500);
   assert.equal(await page.locator('.st-shot').count(), 0);
   assert.equal(await page.locator('[data-test=halloween-decor]').count(), 0);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('Tabs: hold and slide across the main bar and the data bar, swipe between data sections', async () => {
+  const { page, errors, context } = await newPage();
+  await register(page, `scrub_${Date.now()}`);
+  const active = () => page.evaluate(() => [...document.querySelectorAll('[data-test=main-tabs] [role=tab]')].findIndex((b) => b.getAttribute('aria-selected') === 'true'));
+  const slide = async (selector, from, to, count, { hold = 0 } = {}) => {
+    const box = await page.locator(selector).boundingBox();
+    const seg = (box.width - 8) / count;
+    const x = (i) => box.x + 4 + seg * (i + 0.5);
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x(from), y);
+    await page.mouse.down();
+    if (hold) await page.waitForTimeout(hold);
+    await page.mouse.move(x(to), y, { steps: 10 });
+    await page.mouse.up();
+  };
+  // Ziehen von "Gym" bis "Data": Wechsel erst beim Loslassen, dann genau einmal
+  await slide('[data-test=main-tabs]', 0, 3, 4);
+  await page.waitForSelector('[data-test=data-tabs]');
+  assert.equal(await active(), 3);
+  // Halten ohne Bewegung, dann zurück zu "Field"
+  await slide('[data-test=main-tabs]', 3, 1, 4, { hold: 300 });
+  await page.waitForFunction(() => document.querySelectorAll('[data-test=main-tabs] [role=tab]')[1].getAttribute('aria-selected') === 'true');
+  // Normales Antippen funktioniert danach sofort wieder
+  await page.waitForTimeout(150);
+  await page.click('[data-test=main-tabs] [role=tab] >> nth=3');
+  assert.equal(await active(), 3);
+
+  // Datenleiste: von "Overview" bis "Calendar" ziehen
+  const n = await page.locator('[data-test=data-tabs] [role=tab]').count();
+  await slide('[data-test=data-tabs]', 0, n - 1, n);
+  await page.waitForSelector('[data-subtab=calendar][aria-selected=true]');
+  assert.equal(await page.getAttribute('[data-test=data-tabs]', 'aria-label'), 'Data sections - hold and slide to switch');
+  assert.deepEqual(errors, []);
+  await context.close();
+
+  // Wischen braucht Touch: eigenes Gerät mit Touch-Ereignissen über CDP
+  const touch = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, locale: 'en-US' });
+  const tp = await touch.newPage();
+  const terr = [];
+  tp.on('pageerror', (e) => terr.push(e.message));
+  await register(tp, `swipe_${Date.now()}`);
+  await tp.tap('[data-test=main-tabs] [role=tab] >> nth=3');
+  await tp.waitForSelector('[data-subtab=overview][aria-selected=true]');
+  const cdp = await touch.newCDPSession(tp);
+  const swipe = async (x1, x2, y) => {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x1, y }] });
+    for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x1 + ((x2 - x1) * i) / 8, y }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  };
+  const y = (await tp.locator('[data-test=data-content]').boundingBox()).y + 40;
+  await swipe(320, 100, y); // nach links = nächster Abschnitt
+  await tp.waitForSelector('[data-subtab=overview][aria-selected=false]');
+  const after = await tp.getAttribute('[data-test=data-tabs] [aria-selected=true]', 'data-subtab');
+  assert.notEqual(after, 'overview');
+  await swipe(80, 320, y); // zurück
+  await tp.waitForSelector('[data-subtab=overview][aria-selected=true]');
+  await swipe(200, 205, y); // Zittern wechselt nichts
+  await tp.waitForTimeout(300);
+  assert.equal(await tp.getAttribute('[data-test=data-tabs] [aria-selected=true]', 'data-subtab'), 'overview');
+  assert.deepEqual(terr, []);
+  await touch.close();
+});
+
+test('Progress: trend list with search, picking an exercise, bodyweight reps, ranges', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `prog_${Date.now()}`);
+  const now = Date.now();
+  const at = (daysAgo) => new Date(now - daysAgo * 86_400_000).toISOString();
+  const post = (daysAgo, sets) => api('POST', '/api/workouts', token, { clientId: crypto.randomUUID(), date: at(daysAgo), workoutType: 'Gym', durationSeconds: 3600, sessionRpe: 7, sets });
+  const bench = (w) => ({ exerciseId: 1, exerciseName: 'Bench Press', weight: w, reps: 5, clientId: crypto.randomUUID() });
+  const pull = (r) => ({ exerciseId: 17, exerciseName: 'Pull-ups', weight: 0, reps: r, clientId: crypto.randomUUID() });
+  await post(200, [bench(80), pull(6)]);
+  await post(20, [bench(90), pull(8)]);
+  await post(10, [bench(95), pull(10)]);
+  await post(2, [bench(92.5), pull(12)]);
+  await page.reload();
+  await page.waitForSelector('[data-test=start-panel]');
+  await page.click('[data-test=main-tabs] [role=tab] >> nth=3');
+  await page.click('[data-subtab=progress]');
+  await page.waitForSelector('[data-test=progress-hero] canvas');
+
+  // Standard: meistgeloggte Übung; Bench: aktueller Wert, Bestwert separat
+  const list = page.locator('[data-test=progress-list]');
+  assert.equal(await list.locator('[data-exercise]').count(), 2);
+  await list.locator('[data-exercise="id:1"]').click();
+  await page.waitForFunction(() => document.querySelector('[data-test=progress-name]')?.textContent.includes('Bench'));
+  assert.match(await page.innerText('[data-test=progress-latest]'), /^92\.5\s*kg$/);
+  assert.match(await page.innerText('[data-test=progress-hero]'), /Best 95 kg/);
+  assert.equal(await page.locator('[data-test=progress-recent] li').count(), 4);
+  // Zeitraum 1M lässt den alten Wert weg
+  await page.click('[data-range="1m"]');
+  await page.waitForFunction(() => document.querySelectorAll('[data-test=progress-recent] li').length === 3);
+
+  // Klimmzüge ohne Zusatzgewicht: Wiederholungen statt leerem Gewichtsdiagramm
+  await page.fill('[data-test=progress-search]', 'pull');
+  assert.equal(await list.locator('[data-exercise]').count(), 1);
+  await list.locator('[data-exercise="id:17"]').click();
+  await page.waitForFunction(() => document.querySelector('[data-test=progress-name]')?.textContent.includes('Pull'));
+  assert.match(await page.innerText('[data-test=progress-latest]'), /^12\s*reps$/);
+  assert.equal(await page.locator('[data-test=progress-hero] canvas').count(), 1);
+  await page.fill('[data-test=progress-search]', 'zzz');
+  await page.waitForSelector('text=No exercise matches.');
   assert.deepEqual(errors, []);
   await context.close();
 });

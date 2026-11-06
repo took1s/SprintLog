@@ -57,6 +57,8 @@ public sealed class SprintLogApiFactory : WebApplicationFactory<Program>, IAsync
             ["RateLimiting:AuthPermitLimit"] = "10000",
             ["RateLimiting:AiPermitLimit"] = "10000",
             ["Ai:DailyLimit"] = "12",
+            ["Ai:OwnerDailyLimit"] = "40",
+            ["Ai:Owners"] = OwnerUsername + ", Zweiter_Inhaber",
             ["App:PublicUrl"] = PublicUrl
         }));
         // E-Mails landen in einem Postfach im Speicher statt bei Brevo.
@@ -71,6 +73,9 @@ public sealed class SprintLogApiFactory : WebApplicationFactory<Program>, IAsync
     }
 
     public const string PublicUrl = "https://sprintlog.test";
+
+    /// <summary>Konto mit dem großen KI-Kontingent (Ai:Owners).</summary>
+    public const string OwnerUsername = "Coach_Owner";
 
     /// <summary>Gefälschter KI-Client (Antwort pro Test setzbar).</summary>
     public FakeAiClient Ai { get; } = new();

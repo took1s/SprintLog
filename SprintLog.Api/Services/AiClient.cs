@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
@@ -153,27 +154,30 @@ public sealed class AnthropicAiClient : IAiClient
 /// <summary>
 /// Tageskontingent pro Nutzer in Einheiten (schnelle Frage 1, gründliche Antwort und Pläne mehr) - im Speicher, nach einem
 /// Neustart beginnt es neu; der Kontostand bei Anthropic ist die harte Grenze. Schützt vor Schleifen und hält Kosten planbar.
+/// Inhaber (Ai:Owners) bekommen ein größeres Kontingent als alle anderen Konten.
 /// </summary>
 public sealed class AiQuota(IOptions<AiOptions> options, TimeProvider time)
 {
     private readonly ConcurrentDictionary<int, (DateOnly Day, int Used)> _used = new();
 
-    public int Limit => Math.Max(1, options.Value.DailyLimit);
+    /// <summary>Tageslimit für diesen Nutzer (Inhaber oder normales Konto).</summary>
+    public int LimitFor(ClaimsPrincipal user) =>
+        Math.Max(1, options.Value.IsOwner(user.FindFirstValue(ClaimTypes.Name)) ? options.Value.OwnerDailyLimit : options.Value.DailyLimit);
 
     private DateOnly Today => DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime);
 
-    public int Remaining(int userId) =>
-        _used.TryGetValue(userId, out var u) && u.Day == Today ? Math.Max(0, Limit - u.Used) : Limit;
+    public int Remaining(int userId, int limit) =>
+        _used.TryGetValue(userId, out var u) && u.Day == Today ? Math.Max(0, limit - u.Used) : limit;
 
-    /// <summary>Bucht <paramref name="cost"/> Einheiten, wenn genug übrig ist.</summary>
-    public bool TryTake(int userId, int cost)
+    /// <summary>Bucht <paramref name="cost"/> Einheiten, wenn bis <paramref name="limit"/> genug übrig ist.</summary>
+    public bool TryTake(int userId, int cost, int limit)
     {
         var today = Today;
         while (true)
         {
             var current = _used.GetOrAdd(userId, (today, 0));
             var used = current.Day == today ? current.Used : 0;
-            if (used + cost > Limit) return false;
+            if (used + cost > limit) return false;
             if (_used.TryUpdate(userId, (today, used + cost), current)) return true;
         }
     }
