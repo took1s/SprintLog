@@ -51,7 +51,7 @@ function save() {
                       </div>
                   </fieldset>
 
-                  <div class="grid grid-cols-3 gap-2">
+                  <div class="grid grid-cols-3 items-end gap-2">
                       <label class="block">
                           <span class="label-xs mb-1.5 block">{{ t('ai.profile.fields.height') }}</span>
                           <DecimalInput v-model="form.heightCm" integer class="cyber-input w-full rounded-xl px-3 py-2.5 text-base" data-test="profile-height" />
@@ -66,7 +66,7 @@ function save() {
                       </label>
                   </div>
 
-                  <div class="grid grid-cols-[minmax(0,1fr)_7rem] gap-2">
+                  <div class="grid grid-cols-[minmax(0,1fr)_7rem] items-end gap-2">
                       <label class="block">
                           <span class="label-xs mb-1.5 block">{{ t('ai.profile.fields.level') }}</span>
                           <input v-model="form.level" maxlength="60" :placeholder="t('ai.profile.placeholders.level')" class="cyber-input w-full rounded-xl px-3 py-2.5 text-base" data-test="profile-level">

@@ -941,7 +941,7 @@ export const en = {
       positions: { goalkeeper: 'Goalkeeper', defender: 'Centre-back', fullback: 'Full-back', midfielder: 'Midfield', winger: 'Winger', striker: 'Striker' },
       fields: {
         position: 'Position', birthYear: 'Year of birth', height: 'Height (cm)', weight: 'Weight (kg)', level: 'Level / league',
-        goals: 'Goals', injuries: 'Injuries & history', equipment: 'Equipment', sessionMinutes: 'Time per session (min)', notes: 'Anything else',
+        goals: 'Goals', injuries: 'Injuries & history', equipment: 'Equipment', sessionMinutes: 'Min. per session', notes: 'Anything else',
       },
       placeholders: {
         level: 'e.g. Kreisliga, U19 Bezirksliga',

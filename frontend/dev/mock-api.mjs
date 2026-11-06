@@ -419,7 +419,7 @@ async function handleApi(req, res, url) {
       if (lower.includes('goal') || lower.includes('цель') || lower.includes('ziel')) {
         actions.push({ type: 'goal', exerciseId: 1, exerciseName: 'Bench Press', targetWeight: 95, targetReps: 3, targetDate: null, reason: 'Steady progress over the last weeks.' });
       }
-      if (lower.includes('plan')) {
+      if (lower.includes('plan') || lower.includes('план ') || lower.endsWith('план')) {
         const target = (e) => (e.trackingType === 'DistanceTime' ? { distance: 30 } : e.trackingType === 'Duration' ? { time: 40 } : { repsMin: 6, repsMax: 8 });
         const pool = [12, 50, 1, 47].map((id) => visible(user.id).find((e) => e.id === id)).filter(Boolean);
         actions.push({ type: 'program', summary: 'Two days around your match.', program: { name: 'Chat Plan', goal: 'Speed', weeks: 6, days: ['A', 'B'].map((n) => ({ id: null, name: `Day ${n}`, notes: null, exercises: pool.map((e) => ({ exerciseId: e.id, sets: 3, ...target(e) })) })) } });

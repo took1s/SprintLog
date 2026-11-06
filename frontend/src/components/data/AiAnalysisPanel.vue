@@ -47,7 +47,7 @@ const discuss = () => { void ai.askFromElsewhere(t('ai.analysis.discussQuestion'
                       class="flex min-h-[3.5rem] flex-col items-center justify-center rounded-xl px-2 py-2 text-sm font-bold" :class="p === 'full' ? 'btn-primary' : 'btn-secondary'" :data-test="`ai-analysis-${p}`">
                   <span class="flex items-center gap-2">
                       <span v-if="analysisBusy === p" class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none" aria-hidden="true"></span>
-                      {{ analysis?.period === p ? t('ai.analysis.again') + ' · ' : '' }}{{ p === 'full' ? t('ai.analysis.runFull') : t('ai.analysis.runWeek') }}
+                      {{ p === 'full' ? t('ai.analysis.runFull') : t('ai.analysis.runWeek') }}
                   </span>
                   <span class="text-[10px] font-normal opacity-80">{{ p === 'full' ? t('ai.analysis.fullHint') : t('ai.analysis.weekHint') }}</span>
               </button>

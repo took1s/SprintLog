@@ -953,7 +953,7 @@ export const ru: Messages = {
       positions: { goalkeeper: 'Вратарь', defender: 'Центральный защитник', fullback: 'Крайний защитник', midfielder: 'Полузащита', winger: 'Вингер', striker: 'Нападающий' },
       fields: {
         position: 'Позиция', birthYear: 'Год рождения', height: 'Рост (см)', weight: 'Вес (кг)', level: 'Уровень / лига',
-        goals: 'Цели', injuries: 'Травмы и история', equipment: 'Инвентарь', sessionMinutes: 'Время на тренировку (мин)', notes: 'Другое',
+        goals: 'Цели', injuries: 'Травмы и история', equipment: 'Инвентарь', sessionMinutes: 'Минут на трен.', notes: 'Другое',
       },
       placeholders: {
         level: 'например, Kreisliga, U19 Bezirksliga',

@@ -942,7 +942,7 @@ export const de: Messages = {
       positions: { goalkeeper: 'Torwart', defender: 'Innenverteidiger', fullback: 'Außenverteidiger', midfielder: 'Mittelfeld', winger: 'Flügel', striker: 'Sturm' },
       fields: {
         position: 'Position', birthYear: 'Geburtsjahr', height: 'Größe (cm)', weight: 'Gewicht (kg)', level: 'Niveau / Liga',
-        goals: 'Ziele', injuries: 'Verletzungen & Vorgeschichte', equipment: 'Geräte', sessionMinutes: 'Zeit pro Einheit (Min.)', notes: 'Sonstiges',
+        goals: 'Ziele', injuries: 'Verletzungen & Vorgeschichte', equipment: 'Geräte', sessionMinutes: 'Min. pro Einheit', notes: 'Sonstiges',
       },
       placeholders: {
         level: 'z. B. Kreisliga, U19 Bezirksliga',
