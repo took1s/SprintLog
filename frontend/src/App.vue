@@ -41,6 +41,7 @@ const AthleteProfileSheet = defineAsyncComponent(() => import('@/components/Athl
 const CoachMemorySheet = defineAsyncComponent(() => import('@/components/CoachMemorySheet.vue'));
 // Saison-Deko nur im Halloween-Theme laden
 const HalloweenDecor = defineAsyncComponent(() => import('@/components/decor/HalloweenDecor.vue'));
+const StrikerDecor = defineAsyncComponent(() => import('@/components/decor/StrikerDecor.vue'));
 
 const app = useAppStore();
 const goals = useGoalsStore();
@@ -75,6 +76,7 @@ onMounted(() => { void app.init(); });
     <div class="bg-orb-1"></div>
     <div class="bg-orb-2"></div>
     <HalloweenDecor v-if="appearance.theme === 'halloween'" />
+    <StrikerDecor v-else-if="appearance.theme === 'striker'" />
 
     <ToastStack />
     <UpdateBanner />

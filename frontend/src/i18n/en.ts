@@ -600,6 +600,7 @@ export const en = {
       clean: { name: 'Clean Pro', description: 'Calm and bright, orange accent' },
       midnight: { name: 'Midnight Pro', description: 'Deep blue, soft glass' },
       mono: { name: 'Mono Athlete', description: 'Black and white, one red' },
+      striker: { name: 'Neon Striker', description: 'Electric blue under the floodlights, speed lines' },
       halloween: { name: 'Halloween Night', description: 'Pumpkin orange on violet night' },
     },
   },

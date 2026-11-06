@@ -138,7 +138,7 @@ test('register, log gym + field sets, finish -> stored on server with client dat
   await page.click('button.subtab:text-is("Progress")');
   await page.waitForSelector('canvas[aria-label="Progress chart"]');
   await page.click('button.subtab:text-is("Calendar")');
-  await page.waitForSelector('text=Activity');
+  await page.waitForSelector('[data-test=calendar-grid] [data-level="4"]'); // heutiger Tag mit den beiden Einheiten
   assert.equal(await page.evaluate(() => window.__cspViolations?.length ?? 0), 0, 'no CSP violations');
   assert.deepEqual(errors, []);
   await context.close();
@@ -1393,6 +1393,28 @@ test('Calendar: month grid with load and kinds, browse months and years, open a 
   assert.equal(await cal.locator('[data-stat=sessions]').innerText(), '1');
   await cal.locator('[data-month="2"]').click();
   await cal.locator(`[data-day="${y - 1}-03-10"]:not([data-level="0"])`).waitFor(); // Stufe relativ zum stärksten Tag
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('Neon Striker theme: selectable in settings, decor behind content, shot only once per session', async () => {
+  const { page, errors, context } = await newPage();
+  await register(page, `st_${Date.now()}`);
+  await page.click('button[aria-label=Settings]');
+  await page.click('[data-theme-option=striker]');
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'striker');
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('[data-test=striker-decor]');
+  await page.waitForSelector('[data-test=start-panel].st-card');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.st-decor')).pointerEvents), 'none');
+  assert.equal(await page.evaluate(() => !!document.elementFromPoint(window.innerWidth - 6, 6)?.closest('.st-decor')), false);
+  // Schuss: einmal pro Sitzung (nach dem Neuladen nicht wieder)
+  await page.waitForSelector('.st-shot', { timeout: 3000 });
+  await page.reload();
+  await page.waitForSelector('[data-test=striker-decor]');
+  await page.waitForTimeout(1500);
+  assert.equal(await page.locator('.st-shot').count(), 0);
+  assert.equal(await page.locator('[data-test=halloween-decor]').count(), 0);
   assert.deepEqual(errors, []);
   await context.close();
 });

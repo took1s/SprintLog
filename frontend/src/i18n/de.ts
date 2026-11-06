@@ -601,6 +601,7 @@ export const de: Messages = {
       clean: { name: 'Clean Pro', description: 'Ruhig und hell, Orange-Akzent' },
       midnight: { name: 'Midnight Pro', description: 'Tiefes Blau, weiches Glas' },
       mono: { name: 'Mono Athlete', description: 'Schwarz-Weiß, ein Rot' },
+      striker: { name: 'Neon Striker', description: 'Elektrisches Blau unter Flutlicht, Speedlines' },
       halloween: { name: 'Halloween Night', description: 'Kürbis-Orange auf violetter Nacht' },
     },
   },

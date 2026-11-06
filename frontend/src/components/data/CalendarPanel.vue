@@ -194,7 +194,7 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
                               class="cal-day" :class="[
                                   heat(dayOf(cell)),
                                   { 'is-out': !cell.inMonth, 'is-today': cell.key === todayKey, 'is-selected': selectedDay === cell.key,
-                                    'is-strong': levelOf(dayOf(cell), maxScore) >= 3, 'is-planned': planned(cell) === 'training', 'is-planned-match': planned(cell) === 'match' }]"
+                                    'is-strong': levelOf(dayOf(cell), maxScore) === 4, 'is-planned': planned(cell) === 'training', 'is-planned-match': planned(cell) === 'match' }]"
                               :aria-label="cellLabel(cell)" :aria-pressed="selectedDay === cell.key" :aria-current="cell.key === todayKey ? 'date' : undefined"
                               :data-day="cell.key" :data-level="levelOf(dayOf(cell), maxScore)">
                           <span class="cal-num">{{ cell.date.getDate() }}</span>

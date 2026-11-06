@@ -607,6 +607,7 @@ export const ru: Messages = {
       clean: { name: 'Clean Pro', description: 'Спокойный и светлый, оранжевый акцент' },
       midnight: { name: 'Midnight Pro', description: 'Глубокий синий, мягкое стекло' },
       mono: { name: 'Mono Athlete', description: 'Чёрно-белый, один красный' },
+      striker: { name: 'Neon Striker', description: 'Электрический синий под прожекторами, линии скорости' },
       halloween: { name: 'Halloween Night', description: 'Тыквенный оранжевый на фиолетовой ночи' },
     },
   },
