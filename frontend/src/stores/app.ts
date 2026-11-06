@@ -79,7 +79,7 @@ export const SESSION_RPE = Object.freeze([
 export type Tab = 'Gym' | 'Football' | 'Plan' | 'Data';
 /** Workout-Typ eines Spiels (ohne Sätze). */
 export const MATCH = 'Match';
-export type DataTab = 'overview' | 'history' | 'progress' | 'records' | 'calendar';
+export type DataTab = 'overview' | 'ai' | 'history' | 'progress' | 'records' | 'calendar';
 export type SortMode = 'fav' | 'freq' | 'recent' | 'az' | 'za';
 
 // ---------- Typen der laufenden Einheit ----------
@@ -765,6 +765,8 @@ export const useAppStore = defineStore('app', () => {
       remove(k.wellness);
       remove(k.goals);
       remove(k.aiChat); // Gespräche mit dem KI-Coach sind privat (geteilte Geräte)
+      remove(k.aiAnalysis);
+      remove(k.athlete);
     }
     goalsStore.clear();
     removeLegacyToken();

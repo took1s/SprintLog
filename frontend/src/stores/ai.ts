@@ -1,12 +1,14 @@
-// KI-Coach (Claude über den eigenen Server): Chat mit dem Coach und Trainingspläne von der KI.
+// KI-Coach (Claude über den eigenen Server): Chat (schnell/gründlich) mit Vorschlags-Karten, Pläne, Analyse, Sportler-Profil.
 //
 // - Der API-Key liegt nur auf dem Server. Ohne Key meldet /api/ai/status enabled=false und die App zeigt keine KI-Knöpfe.
-// - Mitgeschickt wird eine kompakte Zusammenfassung der eigenen Daten (lib/aiContext.ts), keine Rohdaten.
-// - Der Verlauf bleibt lokal auf dem Gerät (pro Konto) und wird beim Abmelden gelöscht.
+// - Mitgeschickt werden Profil + eine kompakte Zusammenfassung (lib/aiContext.ts); exakte Statistiken holt sich die KI
+//   über Werkzeuge vom Server.
+// - Vorschläge (Plan, Ziel, Wochenplan) werden nie automatisch gespeichert - nur nach Bestätigung auf der Karte.
+// - Verlauf, Analyse und Profil-Kopie bleiben lokal pro Konto und werden beim Abmelden gelöscht.
 
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
-import { locale, t, tDynamic } from '../i18n';
+import { locale, t } from '../i18n';
 import { exerciseName } from '../i18n/content';
 import { isApiError } from '../lib/api';
 import { buildAiContext } from '../lib/aiContext';
@@ -19,27 +21,53 @@ import { useAppStore } from './app';
 import { useGoalsStore } from './goals';
 import { useUiStore } from './ui';
 
-export interface AiChatMessage { role: 'user' | 'assistant'; content: string; at: string }
-export interface AiStatus { enabled: boolean; remaining: number; dailyLimit: number }
+export type AiMode = 'quick' | 'deep';
+export interface AiStatus { enabled: boolean; remaining: number; dailyLimit: number; costs?: Partial<Record<'quick' | 'deep' | 'plan' | 'analysis', number>> }
 export interface AiProgramDraft {
   name: string;
   goal: string;
   weeks: number;
   days: { name: string; notes?: string | null; exercises: { exerciseId: number; sets: number; repsMin?: number | null; repsMax?: number | null; distance?: number | null; time?: number | null; targetRpe?: number | null; restSeconds?: number | null; note?: string | null }[] }[];
 }
-export type AiErrorCode = 'ai_disabled' | 'ai_quota' | 'ai_no_credit' | 'ai_key_invalid' | 'ai_busy' | 'ai_unavailable' | 'ai_bad_plan' | 'ai_empty' | 'offline' | 'unknown';
+export type AiAction =
+  | { type: 'program'; program: AiProgramDraft; summary: string }
+  | { type: 'goal'; exerciseId: number; exerciseName: string; targetWeight: number; targetReps: number; targetDate: string | null; reason: string }
+  | { type: 'schedule'; trainingDays: number; matchDays: number; reason: string };
+export interface AiChatMessage { role: 'user' | 'assistant'; content: string; at: string; mode?: AiMode; actions?: AiAction[]; applied?: number[] }
+
+export interface AiReportSection { area?: string; title: string; status: 'good' | 'watch' | 'risk'; points: string[] }
+export interface AiReport { headline: string; summary: string; sections: AiReportSection[]; recommendations: { title: string; why: string; action: string }[]; nextWeekFocus: string }
+export interface AiAnalysis { report: AiReport; generatedAt: string; period: 'full' | 'week' }
+
+export interface AthleteProfile {
+  position: string | null; birthYear: number | null; heightCm: number | null; weightKg: number | null; level: string | null;
+  goals: string | null; injuries: string | null; equipment: string | null; sessionMinutes: number | null; notes: string | null;
+  updatedAt?: string | null;
+  /** Nur lokal: Änderung noch nicht beim Server. */
+  pending?: boolean;
+}
+export const emptyProfile = (): AthleteProfile => ({ position: null, birthYear: null, heightCm: null, weightKg: null, level: null, goals: null, injuries: null, equipment: null, sessionMinutes: null, notes: null });
+export const POSITIONS = ['goalkeeper', 'defender', 'fullback', 'midfielder', 'winger', 'striker'] as const;
+
+export type AiErrorCode = 'ai_disabled' | 'ai_quota' | 'ai_rate' | 'ai_no_credit' | 'ai_key_invalid' | 'ai_model' | 'ai_busy' | 'ai_unavailable' | 'ai_bad_plan' | 'ai_empty' | 'offline' | 'unknown';
 
 const MAX_STORED = 40;
 /** Wie viele frühere Nachrichten als Gesprächsverlauf mitgehen (Kosten vs. Zusammenhang). */
 const HISTORY = 8;
-const CODES: readonly AiErrorCode[] = ['ai_disabled', 'ai_quota', 'ai_no_credit', 'ai_key_invalid', 'ai_busy', 'ai_unavailable', 'ai_bad_plan', 'ai_empty'];
+const CODES: readonly AiErrorCode[] = ['ai_disabled', 'ai_quota', 'ai_no_credit', 'ai_key_invalid', 'ai_model', 'ai_busy', 'ai_unavailable', 'ai_bad_plan', 'ai_empty'];
+const DEFAULT_COSTS = { quick: 1, deep: 4, plan: 6, analysis: 6 } as const;
+const MODE_KEY = 'sprintlog:aiMode';
 
 function errorCode(e: unknown): AiErrorCode {
   if (!isApiError(e)) return 'unknown';
   if (e.isNetwork) return 'offline';
-  if (e.status === 429) return 'ai_quota';
-  return CODES.find((c) => e.message.startsWith(c)) ?? 'unknown';
+  const code = CODES.find((c) => e.message.startsWith(c));
+  if (code) return code;
+  // 429 ohne Code: allgemeines Rate-Limit (zu viele Anfragen pro Minute), nicht das Tageskontingent
+  return e.status === 429 ? 'ai_rate' : 'unknown';
 }
+
+const readMode = (): AiMode => { try { return localStorage.getItem(MODE_KEY) === 'deep' ? 'deep' : 'quick'; } catch { return 'quick'; } };
 
 /** Coach-Gründe als kurzer englischer Text für die Zusammenfassung. */
 function reasonText(r: Reason): string {
@@ -59,24 +87,46 @@ export const useAiStore = defineStore('ai', () => {
   const messages = ref<AiChatMessage[]>([]);
   const busy = ref(false);
   const error = ref<AiErrorCode | null>(null);
+  const mode = ref<AiMode>(readMode());
+  watch(mode, (m) => { try { localStorage.setItem(MODE_KEY, m); } catch { /* privat */ } });
+  /** Aktion auf einer Karte läuft gerade ("<Nachricht>:<Karte>"). */
+  const applying = ref<string | null>(null);
+
+  const analysis = ref<AiAnalysis | null>(null);
+  const analysisBusy = ref<'full' | 'week' | null>(null);
+  const analysisError = ref<AiErrorCode | null>(null);
+
+  const profile = ref<AthleteProfile>(emptyProfile());
+  const profileOpen = ref(false);
+  const profileBusy = ref(false);
+  /** Profil hat mindestens ein Feld - sonst weist der Chat freundlich darauf hin. */
+  const profileFilled = computed(() => Object.entries(profile.value).some(([k, v]) => !['updatedAt', 'pending'].includes(k) && v != null && v !== ''));
 
   const plan = ref<{ busy: boolean; error: AiErrorCode | null; notes: string; result: { program: AiProgramDraft; summary: string; answers: PlanAnswers } | null; saving: boolean }>(
     { busy: false, error: null, notes: '', result: null, saving: false });
 
   const enabled = computed(() => !!status.value?.enabled);
-  const storageKey = computed(() => (app.user?.userId ? userKeys(app.user.userId).aiChat : null));
+  const keys = computed(() => (app.user?.userId ? userKeys(app.user.userId) : null));
+  const storageKey = computed(() => keys.value?.aiChat ?? null);
+  const cost = (k: keyof typeof DEFAULT_COSTS) => status.value?.costs?.[k] ?? DEFAULT_COSTS[k];
+  /** Wie viele Anfragen der Art heute noch gehen. */
+  const left = (k: keyof typeof DEFAULT_COSTS) => (status.value ? Math.floor(status.value.remaining / cost(k)) : 0);
 
-  // Konto gewechselt / abgemeldet: Verlauf des richtigen Kontos laden
-  watch(storageKey, (k) => {
-    messages.value = k ? readJson<AiChatMessage[]>(k, []) : [];
+  // Konto gewechselt / abgemeldet: Daten des richtigen Kontos laden
+  watch(keys, (k) => {
+    messages.value = k ? readJson<AiChatMessage[]>(k.aiChat, []) : [];
+    analysis.value = k ? readJson<AiAnalysis | null>(k.aiAnalysis, null) : null;
+    profile.value = k ? { ...emptyProfile(), ...readJson<Partial<AthleteProfile>>(k.athlete, {}) } : emptyProfile();
     status.value = null;
     plan.value = { busy: false, error: null, notes: '', result: null, saving: false };
   }, { immediate: true });
   const persist = () => { if (storageKey.value) writeJson(storageKey.value, messages.value.slice(-MAX_STORED)); };
+  const setRemaining = (n: number) => { if (status.value) status.value = { ...status.value, remaining: n }; };
 
   async function loadStatus() {
     if (!app.isAuthenticated || !app.online) return;
     try { status.value = await app.api().get<AiStatus>('/api/ai/status'); } catch { /* KI bleibt ausgeblendet */ }
+    if (status.value?.enabled) void loadProfile();
   }
 
   /** Zusammenfassung der eigenen Daten zum Zeitpunkt der Frage. */
@@ -124,14 +174,15 @@ export const useAiStore = defineStore('ai', () => {
     if (q.length < 2 || busy.value) return;
     if (!app.online) { error.value = 'offline'; return; }
     const history = messages.value.slice(-HISTORY).map(({ role, content }) => ({ role, content: content.slice(0, 2000) }));
-    messages.value = [...messages.value, { role: 'user', content: q, at: new Date().toISOString() }];
+    const m = mode.value;
+    messages.value = [...messages.value, { role: 'user', content: q, at: new Date().toISOString(), mode: m }];
     persist();
     busy.value = true;
     error.value = null;
     try {
-      const res = await app.api().post<{ answer: string; remaining: number }>('/api/ai/ask', { question: q, context: context(), history, locale: locale.value });
-      messages.value = [...messages.value, { role: 'assistant', content: res.answer, at: new Date().toISOString() }];
-      if (status.value) status.value = { ...status.value, remaining: res.remaining };
+      const res = await app.api().post<{ answer: string; remaining: number; actions?: AiAction[] }>('/api/ai/ask', { question: q, context: context(), history, locale: locale.value, mode: m });
+      messages.value = [...messages.value, { role: 'assistant', content: res.answer, at: new Date().toISOString(), mode: m, actions: res.actions?.length ? res.actions : undefined }];
+      setRemaining(res.remaining);
       persist();
     } catch (e) {
       error.value = errorCode(e);
@@ -146,7 +197,146 @@ export const useAiStore = defineStore('ai', () => {
     const last = messages.value[messages.value.length - 1];
     if (!last || last.role !== 'user') return;
     messages.value = messages.value.slice(0, -1);
+    if (last.mode) mode.value = last.mode;
     await ask(last.content);
+  }
+
+  /** Chat öffnen und direkt eine Frage stellen (z. B. "Mit dem Coach besprechen" aus der Analyse). */
+  async function askFromElsewhere(question: string, m: AiMode = 'deep') {
+    openChat();
+    mode.value = m;
+    await ask(question);
+  }
+
+  // ---------- Vorschlags-Karten ----------
+
+  /** Programm speichern, aktivieren und optional den Wochenplan setzen (Plan-Builder und Chat-Karten). */
+  async function saveProgramDraft(draft: AiProgramDraft, schedule: { trainingDays: number; matchDays: number } | null): Promise<boolean> {
+    const ui = useUiStore();
+    if (!app.online) { ui.toast(t('plan.toast.needsConnection'), 'error'); return false; }
+    if (app.activeProgram) {
+      const ok = await ui.confirm({ title: t('plan.confirm.switchTitle'), message: t('plan.confirm.switchMessage', { name: app.activeProgram.name }), confirmText: t('common.start') });
+      if (!ok) return false;
+    }
+    try {
+      const created = await app.api().post<TrainingProgram>('/api/programs', draft);
+      if (!created.isActive) await app.api().post(`/api/programs/${created.id}/activate`);
+      await app.loadPrograms();
+      const active = app.activeProgram;
+      if (schedule && active?.id === created.id) await app.setSchedule(active, schedule);
+      ui.toast(t('plan.toast.started', { name: created.name }), 'success');
+      return true;
+    } catch (e) {
+      ui.toast(isApiError(e) && e.isNetwork ? t('plan.toast.needsConnection') : t('ai.errors.unknown'), 'error');
+      return false;
+    }
+  }
+
+  /** Karte aus dem Chat übernehmen. Erst hier wird gespeichert - die KI selbst ändert nichts. */
+  async function applyAction(messageIndex: number, actionIndex: number) {
+    const msg = messages.value[messageIndex];
+    const action = msg?.actions?.[actionIndex];
+    const key = `${messageIndex}:${actionIndex}`;
+    if (!msg || !action || applying.value || msg.applied?.includes(actionIndex)) return;
+    const ui = useUiStore();
+    applying.value = key;
+    try {
+      let ok = false;
+      if (action.type === 'program') {
+        // Steht im Wochenplan schon etwas, bleibt er; sonst Vorschlag aus der Anzahl der Tage
+        ok = await saveProgramDraft(action.program, null);
+      } else if (action.type === 'goal') {
+        const goals = useGoalsStore();
+        goals.draft = {
+          open: false, exerciseId: action.exerciseId, targetWeight: action.targetWeight, targetReps: action.targetReps, increment: 2.5,
+          startE1RM: goals.estimateFor(action.exerciseId), targetDate: action.targetDate ?? '', editing: !!goals.byExercise.get(action.exerciseId), busy: false,
+        };
+        await goals.saveGoal();
+        ok = true;
+      } else {
+        const active = app.activeProgram;
+        if (!active) { ui.toast(t('ai.actions.noProgram'), 'error'); return; }
+        await app.setSchedule(active, { trainingDays: action.trainingDays, matchDays: action.matchDays });
+        ui.toast(t('ai.actions.scheduleSaved'), 'success');
+        ok = true;
+      }
+      if (ok) {
+        messages.value = messages.value.map((m, i) => (i === messageIndex ? { ...m, applied: [...(m.applied ?? []), actionIndex] } : m));
+        persist();
+      }
+    } finally {
+      applying.value = null;
+    }
+  }
+
+  // ---------- Analyse ----------
+
+  async function runAnalysis(period: 'full' | 'week') {
+    if (analysisBusy.value) return;
+    if (!app.online) { analysisError.value = 'offline'; return; }
+    analysisBusy.value = period;
+    analysisError.value = null;
+    try {
+      const res = await app.api().post<{ report: AiReport; generatedAt: string; remaining: number }>('/api/ai/analysis', { context: context(), locale: locale.value, period });
+      analysis.value = { report: res.report, generatedAt: res.generatedAt, period };
+      if (keys.value) writeJson(keys.value.aiAnalysis, analysis.value);
+      setRemaining(res.remaining);
+    } catch (e) {
+      analysisError.value = errorCode(e);
+    } finally {
+      analysisBusy.value = null;
+    }
+  }
+
+  // ---------- Sportler-Profil (offline-first wie die Ziele) ----------
+
+  const persistProfile = () => { if (keys.value) writeJson(keys.value.athlete, profile.value); };
+
+  async function pushProfile(): Promise<boolean> {
+    if (!profile.value.pending || !app.online) return false;
+    const { pending: _pending, updatedAt: _updated, ...body } = profile.value;
+    try {
+      const saved = await app.api().put<AthleteProfile>('/api/profile/athlete', body);
+      profile.value = { ...emptyProfile(), ...saved, pending: false };
+      persistProfile();
+      return true;
+    } catch (e) {
+      if (isApiError(e) && !e.isNetwork && !e.isRetryable) {
+        // Vom Server abgelehnt: lokale Änderung verwerfen statt ewig zu wiederholen
+        profile.value = { ...profile.value, pending: false };
+        persistProfile();
+        throw e;
+      }
+      return false;
+    }
+  }
+
+  async function loadProfile() {
+    if (!app.isAuthenticated || !app.online) return;
+    try {
+      if (profile.value.pending) { await pushProfile(); return; }
+      const fresh = await app.api().get<AthleteProfile>('/api/profile/athlete');
+      profile.value = { ...emptyProfile(), ...fresh };
+      persistProfile();
+    } catch { /* offline: lokale Kopie bleibt */ }
+  }
+
+  function openProfile() { profileOpen.value = true; }
+
+  async function saveProfile(next: AthleteProfile) {
+    const ui = useUiStore();
+    profileBusy.value = true;
+    profile.value = { ...next, pending: true };
+    persistProfile();
+    try {
+      const synced = await pushProfile();
+      ui.toast(t(synced ? 'ai.profile.saved' : 'ai.profile.savedOffline'), 'success');
+      profileOpen.value = false;
+    } catch (e) {
+      ui.toast(isApiError(e) ? e.message : t('ai.errors.unknown'), 'error');
+    } finally {
+      profileBusy.value = false;
+    }
   }
 
   async function clearChat() {
@@ -185,29 +375,23 @@ export const useAiStore = defineStore('ai', () => {
   async function acceptPlan(): Promise<boolean> {
     const pl = plan.value;
     if (!pl.result || pl.saving) return false;
-    const ui = useUiStore();
-    if (app.activeProgram) {
-      const ok = await ui.confirm({ title: t('plan.confirm.switchTitle'), message: t('plan.confirm.switchMessage', { name: app.activeProgram.name }), confirmText: t('common.start') });
-      if (!ok) return false;
-    }
     pl.saving = true;
     try {
-      const created = await app.api().post<TrainingProgram>('/api/programs', pl.result.program);
-      if (!created.isActive) await app.api().post(`/api/programs/${created.id}/activate`);
-      await app.loadPrograms();
-      const active = app.activeProgram;
-      if (active?.id === created.id) await app.setSchedule(active, scheduleFor(pl.result.answers));
-      ui.toast(t('plan.toast.started', { name: created.name }), 'success');
-      plan.value = { busy: false, error: null, notes: '', result: null, saving: false };
-      app.planBuilder.open = false;
-      return true;
-    } catch (e) {
-      ui.toast(isApiError(e) && e.isNetwork ? t('plan.toast.needsConnection') : tDynamic('ai.errors.unknown', 'Error'), 'error');
-      return false;
+      const ok = await saveProgramDraft(pl.result.program, scheduleFor(pl.result.answers));
+      if (ok) {
+        plan.value = { busy: false, error: null, notes: '', result: null, saving: false };
+        app.planBuilder.open = false;
+      }
+      return ok;
     } finally {
       pl.saving = false;
     }
   }
 
-  return { status, enabled, open, messages, busy, error, plan, loadStatus, openChat, ask, retry, clearChat, generatePlan, discardPlan, acceptPlan, context };
+  return {
+    status, enabled, open, messages, busy, error, mode, applying, plan, analysis, analysisBusy, analysisError,
+    profile, profileOpen, profileBusy, profileFilled, cost, left,
+    loadStatus, openChat, ask, retry, askFromElsewhere, clearChat, applyAction, generatePlan, discardPlan, acceptPlan,
+    runAnalysis, loadProfile, openProfile, saveProfile, context,
+  };
 });

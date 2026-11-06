@@ -53,7 +53,8 @@ async function parseError(response: Response): Promise<ApiError> {
       message = body.detail && body.title ? `${body.title} ${body.detail}` : body.title || body.detail || body.message || message;
     }
   } catch { /* kein JSON */ }
-  if (response.status === 429) message = t('common.tooManyAttempts');
+  // KI-Tageskontingent (Code "ai_quota") nicht mit dem allgemeinen Rate-Limit verwechseln
+  if (response.status === 429 && !message.startsWith('ai_')) message = t('common.tooManyAttempts');
   return new ApiError(response.status, message, fields);
 }
 

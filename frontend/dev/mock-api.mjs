@@ -377,36 +377,95 @@ async function handleApi(req, res, url) {
   }
 
   // ---- Kraft-Ziele (pro Übung)
+  // ---------- Sportler-Profil ----------
+  if (path === '/api/profile/athlete') {
+    db.athlete ??= {};
+    const empty = { position: null, birthYear: null, heightCm: null, weightKg: null, level: null, goals: null, injuries: null, equipment: null, sessionMinutes: null, notes: null, updatedAt: null };
+    if (method === 'GET') return json(res, 200, db.athlete[user.id] ?? empty);
+    if (method === 'PUT') {
+      const body = await readBody(req);
+      const positions = ['goalkeeper', 'defender', 'fullback', 'midfielder', 'winger', 'striker'];
+      if (body.position != null && !positions.includes(body.position)) return problem(res, 400, 'Validation failed', { position: ['Unknown position.'] });
+      if (body.heightCm != null && (body.heightCm < 120 || body.heightCm > 230)) return problem(res, 400, 'Validation failed', { heightCm: ['Height must be 120-230 cm.'] });
+      const clean = (v) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+      db.athlete[user.id] = { ...empty, ...body, level: clean(body.level), goals: clean(body.goals), injuries: clean(body.injuries), equipment: clean(body.equipment), notes: clean(body.notes), updatedAt: new Date().toISOString() };
+      return json(res, 200, db.athlete[user.id]);
+    }
+  }
+
   // ---------- KI-Coach (wie /api/ai in der echten API, mit festen Antworten statt Claude) ----------
   if (path.startsWith('/api/ai/')) {
-    const limit = 30;
+    const limit = 60;
+    const costs = { quick: 1, deep: 4, plan: 6, analysis: 6 };
     db.aiUsed ??= {};
     const used = db.aiUsed[user.id] ?? 0;
-    if (method === 'GET' && path === '/api/ai/status') return json(res, 200, { enabled: process.env.MOCK_AI !== '0', remaining: Math.max(0, limit - used), dailyLimit: limit });
+    const quota = () => json(res, 429, { title: 'ai_quota', status: 429, code: 'ai_quota' });
+    if (method === 'GET' && path === '/api/ai/status') return json(res, 200, { enabled: process.env.MOCK_AI !== '0', remaining: Math.max(0, limit - used), dailyLimit: limit, costs });
     if (process.env.MOCK_AI === '0') return json(res, 503, { title: 'ai_disabled', status: 503, code: 'ai_disabled' });
     const body = await readBody(req);
+    const profile = db.athlete?.[user.id];
     if (method === 'POST' && path === '/api/ai/ask') {
       const q = String(body.question ?? '').trim();
+      const mode = body.mode === 'deep' ? 'deep' : 'quick';
       if (q.length < 2) return problem(res, 400, 'Validation failed', { question: ['Question must be 2-1000 characters.'] });
-      if (used + 1 > limit) return json(res, 429, { title: 'ai_quota', status: 429, code: 'ai_quota' });
+      if (used + costs[mode] > limit) return quota();
       if (q.toLowerCase().includes('fail')) return json(res, 503, { title: 'ai_busy', status: 503, code: 'ai_busy' });
-      db.aiUsed[user.id] = used + 1;
+      db.aiUsed[user.id] = used + costs[mode];
       await new Promise((r) => setTimeout(r, 300));
       const ctx = String(body.context ?? '');
       const today = (ctx.match(/Today is a (\w+) day/) ?? [])[1] ?? 'unknown';
-      const answer = `Mock coach (${body.locale}): today is a ${today} day.\n- Keep it light if your legs are not recovered.\n- History: ${(body.history ?? []).length} messages.`;
-      return json(res, 200, { answer, remaining: limit - used - 1 });
+      const actions = [];
+      const lower = q.toLowerCase();
+      if (lower.includes('goal') || lower.includes('цель') || lower.includes('ziel')) {
+        actions.push({ type: 'goal', exerciseId: 1, exerciseName: 'Bench Press', targetWeight: 95, targetReps: 3, targetDate: null, reason: 'Steady progress over the last weeks.' });
+      }
+      if (lower.includes('plan')) {
+        const target = (e) => (e.trackingType === 'DistanceTime' ? { distance: 30 } : e.trackingType === 'Duration' ? { time: 40 } : { repsMin: 6, repsMax: 8 });
+        const pool = [12, 50, 1, 47].map((id) => visible(user.id).find((e) => e.id === id)).filter(Boolean);
+        actions.push({ type: 'program', summary: 'Two days around your match.', program: { name: 'Chat Plan', goal: 'Speed', weeks: 6, days: ['A', 'B'].map((n) => ({ id: null, name: `Day ${n}`, notes: null, exercises: pool.map((e) => ({ exerciseId: e.id, sets: 3, ...target(e) })) })) } });
+      }
+      if (lower.includes('week') || lower.includes('недел') || lower.includes('woche')) {
+        actions.push({ type: 'schedule', trainingDays: 1 | 4 | 16, matchDays: 64, reason: 'Rest before and after the match.' });
+      }
+      const answer = `Mock coach (${body.locale}, ${mode}): today is a ${today} day.\n- Position: ${profile?.position ?? 'unknown'}.\n- History: ${(body.history ?? []).length} messages.`;
+      return json(res, 200, { answer, remaining: limit - used - costs[mode], actions });
     }
     if (method === 'POST' && path === '/api/ai/plan') {
-      if (used + 3 > limit) return json(res, 429, { title: 'ai_quota', status: 429, code: 'ai_quota' });
-      db.aiUsed[user.id] = used + 3;
+      if (used + costs.plan > limit) return quota();
+      db.aiUsed[user.id] = used + costs.plan;
       await new Promise((r) => setTimeout(r, 300));
       const n = Math.min(6, Math.max(1, Number(body.answers?.daysPerWeek) || 3));
       const pick = (id) => visible(user.id).find((e) => e.id === id);
       const pool = [12, 50, 1, 47, 34].map(pick).filter(Boolean);
       const target = (e) => (e.trackingType === 'DistanceTime' ? { distance: 30 } : e.trackingType === 'Duration' ? { time: 40 } : { repsMin: 6, repsMax: 8 });
       const days = Array.from({ length: n }, (_, i) => ({ id: null, name: `AI ${String.fromCharCode(65 + i)}`, notes: null, exercises: pool.slice(0, 4).map((e) => ({ exerciseId: e.id, sets: 3, ...target(e) })) }));
-      return json(res, 200, { program: { name: 'AI Football Plan', goal: 'Speed', weeks: 6, days }, summary: `Built for ${n} days around your match.${body.notes ? ` Notes: ${String(body.notes).slice(0, 60)}` : ''}`, remaining: limit - used - 3 });
+      return json(res, 200, { program: { name: 'AI Football Plan', goal: 'Speed', weeks: 6, days }, summary: `Built for ${n} days around your match.${body.notes ? ` Notes: ${String(body.notes).slice(0, 60)}` : ''}`, remaining: limit - used - costs.plan });
+    }
+    if (method === 'POST' && path === '/api/ai/analysis') {
+      if (used + costs.analysis > limit) return quota();
+      db.aiUsed[user.id] = used + costs.analysis;
+      await new Promise((r) => setTimeout(r, 300));
+      const week = body.period === 'week';
+      const sessions = db.workouts.filter((w) => w.userId === user.id).length;
+      return json(res, 200, {
+        report: {
+          headline: week ? 'Solid week, sprint volume too low.' : 'Strength is rising, recovery needs attention.',
+          summary: `${sessions} sessions logged. Load is in the optimal range, sleep dropped below 7 h on 3 days.`,
+          sections: [
+            { area: 'load', title: 'Load', status: 'good', points: ['Acute:chronic 1.08 - optimal range', '3 sessions per week on average'] },
+            { area: 'strength', title: 'Strength', status: 'good', points: ['Bench press e1RM +6% in 6 weeks'] },
+            { area: 'speed', title: 'Speed', status: 'watch', points: ['Only 1 sprint session in 2 weeks'] },
+            { area: 'recovery', title: 'Recovery', status: 'risk', points: ['Sleep under 7 h on 3 of 7 days', 'Muscle soreness 2/5 after matches'] },
+          ],
+          recommendations: [
+            { title: 'Sprint twice a week', why: 'Max speed needs exposure.', action: 'Tue + Thu: 6x30 m, full rest' },
+            { title: 'Sleep 8 h before matches', why: 'Recovery is the main risk.', action: 'Lights out by 23:00 Fri + Sat' },
+          ],
+          nextWeekFocus: 'Two sprint sessions and 8 h sleep before the match.',
+        },
+        generatedAt: new Date().toISOString(),
+        remaining: limit - used - costs.analysis,
+      });
     }
     return problem(res, 404, 'Not Found');
   }
