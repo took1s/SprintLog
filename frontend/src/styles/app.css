@@ -179,7 +179,7 @@
     position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / 4);
     border-radius: calc(var(--r-xl) - 5px); background: rgb(var(--c-accent));
     box-shadow: inset 0 0 0 1.5px rgb(var(--accent-ring)), var(--glow);
-    transition: transform 0.42s cubic-bezier(0.34, 1.25, 0.64, 1);
+    transition: transform 0.22s var(--ease-out);
   }
   .tab-active { color: rgb(var(--c-on-accent)); }
   .tab-active:hover { color: rgb(var(--c-on-accent)); }
@@ -225,11 +225,13 @@ input[type="number"] { -moz-appearance: textfield; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 /* ---------- Sheets: Hintergrund blendet ein, das Panel gleitet mit iOS-Kurve von unten (ab sm: leicht skaliert) ----------
    visibility steht nur in der Liste, damit Vue auf die längere Panel-Bewegung wartet (es misst nur das äußere Element). */
-.sheet-enter-active { transition: opacity 0.3s ease, visibility 0.46s; }
+.sheet-enter-active { transition: opacity 0.26s ease, visibility 0.34s; }
 .sheet-leave-active { transition: opacity 0.24s ease 0.04s, visibility 0.3s; }
 .sheet-enter-from, .sheet-leave-to { opacity: 0; }
-.sheet-enter-active > [aria-modal] { transition: transform 0.46s cubic-bezier(0.32, 0.72, 0, 1); }
-.sheet-leave-active > [aria-modal] { transition: transform 0.28s cubic-bezier(0.4, 0, 1, 1); }
+.sheet-enter-active > [aria-modal] { transition: transform 0.34s var(--ease-out); }
+.sheet-leave-active > [aria-modal] { transition: transform 0.28s var(--ease-in); }
+/* Was gerade verschwindet, fängt keine Tipps mehr ab (z. B. das nächste ✓ direkt nach dem Schließen) */
+.sheet-leave-active, .pop-leave-active { pointer-events: none; }
 .sheet-enter-from > [aria-modal], .sheet-leave-to > [aria-modal] { transform: translate3d(0, 100%, 0); }
 @media (min-width: 640px) {
   .sheet-enter-from > [aria-modal], .sheet-leave-to > [aria-modal] { transform: translate3d(0, 16px, 0) scale(0.97); }
@@ -238,24 +240,24 @@ input[type="number"] { -moz-appearance: textfield; }
 .pop-enter-active { transition: opacity 0.2s ease, visibility 0.32s; }
 .pop-leave-active { transition: opacity 0.16s ease, visibility 0.16s; }
 .pop-enter-from, .pop-leave-to { opacity: 0; }
-.pop-enter-active > [aria-modal] { transition: transform 0.32s cubic-bezier(0.34, 1.4, 0.64, 1); }
-.pop-leave-active > [aria-modal] { transition: transform 0.16s ease-in; }
+.pop-enter-active > [aria-modal] { transition: transform 0.26s var(--ease-out); }
+.pop-leave-active > [aria-modal] { transition: transform 0.16s var(--ease-in); }
 .pop-enter-from > [aria-modal] { transform: scale(0.92); }
 .pop-leave-to > [aria-modal] { transform: scale(0.97); }
 
 /* Tabwechsel: Inhalt kommt aus der Richtung des Tabs (rechts = weiter, links = zurück) */
-.tab-next-enter-active, .tab-prev-enter-active { transition: opacity 0.22s ease, transform 0.32s cubic-bezier(0.22, 1, 0.36, 1); }
-.tab-next-leave-active, .tab-prev-leave-active { transition: opacity 0.12s ease, transform 0.12s ease-in; }
-.tab-next-enter-from { opacity: 0; transform: translate3d(28px, 0, 0); }
-.tab-next-leave-to { opacity: 0; transform: translate3d(-14px, 0, 0); }
-.tab-prev-enter-from { opacity: 0; transform: translate3d(-28px, 0, 0); }
-.tab-prev-leave-to { opacity: 0; transform: translate3d(14px, 0, 0); }
+.tab-next-enter-active, .tab-prev-enter-active { transition: opacity 0.16s ease, transform 0.22s var(--ease-out); }
+.tab-next-leave-active, .tab-prev-leave-active { transition: opacity 0.1s ease, transform 0.1s var(--ease-in); }
+.tab-next-enter-from { opacity: 0; transform: translate3d(16px, 0, 0); }
+.tab-next-leave-to { opacity: 0; transform: translate3d(-8px, 0, 0); }
+.tab-prev-enter-from { opacity: 0; transform: translate3d(-16px, 0, 0); }
+.tab-prev-leave-to { opacity: 0; transform: translate3d(8px, 0, 0); }
 
 /* Gedrückt halten (HoldButton): Füllung bzw. Ring laufen linear voll, beim Loslassen schnell zurück */
 .hold-btn { -webkit-touch-callout: none; touch-action: manipulation; }
-.hold-fill { transform: scaleX(0); transition-property: transform; transition-timing-function: linear; }
+.hold-fill { transform: scaleX(0); transition-property: transform; transition-duration: var(--hold-ms, 220ms); transition-timing-function: linear; }
 .is-holding .hold-fill { transform: scaleX(1); }
-.hold-ring { stroke-dasharray: 100; stroke-dashoffset: 100; transition-property: stroke-dashoffset; transition-timing-function: linear; }
+.hold-ring { stroke-dasharray: 100; stroke-dashoffset: 100; transition-property: stroke-dashoffset; transition-duration: var(--hold-ms, 220ms); transition-timing-function: linear; }
 .is-holding .hold-ring { stroke-dashoffset: 0; }
 
 /* Satz geloggt: Zeile leuchtet kurz auf, das Häkchen springt; Rekord mit goldenem Schimmer */
@@ -277,16 +279,16 @@ input[type="number"] { -moz-appearance: textfield; }
 .set-pr {
   animation: pr-shine 1.3s ease-out;
   background-image: linear-gradient(100deg, transparent 30%, rgb(var(--c-gold) / 0.35) 50%, transparent 70%);
-  background-size: 250% 100%; background-repeat: no-repeat;
+  background-size: 250% 100%; background-repeat: no-repeat; background-position: -120% 0; /* Endstand: Schimmer außerhalb */
 }
 
 /* KI-Chat: neue Nachricht gleitet herein; Antwort baut sich Block für Block auf, Karten folgen */
-.msg-enter-active { transition: opacity 0.3s ease, transform 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
+.msg-enter-active { transition: opacity 0.3s ease, transform 0.42s var(--ease-out); }
 .msg-enter-from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.98); }
 .msg-leave-active { transition: opacity 0.15s ease; }
 .msg-leave-to { opacity: 0; }
 @keyframes rise-in { from { opacity: 0; transform: translate3d(0, 8px, 0); } to { opacity: 1; transform: none; } }
-.msg-fresh [data-test=ai-text] > * { animation: rise-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.msg-fresh [data-test=ai-text] > * { animation: rise-in 0.4s var(--ease-out) both; }
 .msg-fresh [data-test=ai-text] > :nth-child(2) { animation-delay: 140ms; }
 .msg-fresh [data-test=ai-text] > :nth-child(3) { animation-delay: 210ms; }
 .msg-fresh [data-test=ai-text] > :nth-child(4) { animation-delay: 280ms; }
@@ -294,7 +296,7 @@ input[type="number"] { -moz-appearance: textfield; }
 .msg-fresh [data-test=ai-text] > :nth-child(6) { animation-delay: 420ms; }
 .msg-fresh [data-test=ai-text] > :nth-child(7) { animation-delay: 490ms; }
 .msg-fresh [data-test=ai-text] > :nth-child(8) { animation-delay: 560ms; }
-.msg-fresh .ai-card { animation: rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both; }
+.msg-fresh .ai-card { animation: rise-in 0.5s var(--ease-out) 0.35s both; }
 
 /* Training gespeichert: Haken zeichnet sich, Funken fliegen heraus, Erholungs-Balken wachsen */
 @keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
@@ -310,7 +312,7 @@ input[type="number"] { -moz-appearance: textfield; }
 .finish-burst > i {
   --c: var(--c-accent);
   position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 9999px;
-  background: rgb(var(--c)); opacity: 0; animation: spark 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
+  background: rgb(var(--c)); opacity: 0; animation: spark 0.7s var(--ease-out) 0.5s both;
 }
 .finish-burst > i:nth-child(1) { --a: 0deg;  }
 .finish-burst > i:nth-child(2) { --a: 30deg; --c: var(--c-gold); }
@@ -324,7 +326,7 @@ input[type="number"] { -moz-appearance: textfield; }
 .finish-burst > i:nth-child(10) { --a: 270deg; --c: var(--c-gold); }
 .finish-burst > i:nth-child(11) { --a: 300deg;  }
 .finish-burst > i:nth-child(12) { --a: 330deg; --c: var(--c-gold); }
-.bar-grow { transform-origin: left; animation: grow-x 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both; }
+.bar-grow { transform-origin: left; animation: grow-x 0.9s var(--ease-out) 0.3s both; }
 
 /* Griff oben am Sheet (nur Handy) - zeigt, dass man es nach unten wegziehen kann */
 [data-sheet] { position: relative; }
@@ -337,7 +339,9 @@ input[type="number"] { -moz-appearance: textfield; }
 
 /* Lange drücken: Karte sinkt leicht ein, bevor die Schnellaktion kommt; kein iOS-Textmenü */
 .long-pressable { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
-.long-pressable[data-pressing] { transform: scale(0.97); transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) !important; }
+@media (prefers-reduced-motion: no-preference) {
+  .long-pressable[data-pressing] { transform: scale(0.97); transition: transform 0.45s var(--ease-out) !important; }
+}
 
 .slide-up-enter-active, .slide-up-leave-active { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s; }
 .slide-up-enter-from, .slide-up-leave-to { transform: translateY(30px) scale(0.98); opacity: 0; }
@@ -349,7 +353,12 @@ input[type="number"] { -moz-appearance: textfield; }
 
 @media (prefers-reduced-motion: reduce) {
   /* Endlos-Animationen (Spinner, Puls) einmal statt flackernd im 0,01-ms-Takt */
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important;
+    animation-delay: 0s !important; transition-delay: 0s !important;
+  }
+  /* Fortschritt beim Gedrückthalten ist Information, keine Deko - bleibt sichtbar */
+  .is-holding .hold-fill, .is-holding .hold-ring { transition-duration: var(--hold-ms) !important; }
 }
 
 /* ---------- Übungsfigur (figure.ts) - außerhalb von @layer, damit nichts entfernt wird ---------- */

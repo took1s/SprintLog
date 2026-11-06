@@ -35,7 +35,7 @@ export function velocityOf(samples: readonly { t: number; y: number }[]): number
 
 /** Kopfbereich, aus dem man immer ziehen kann (Griff, Titel). */
 const HANDLE = 64;
-const SPRING = 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1)';
+const SPRING = 'transform 0.34s var(--ease-out)';
 const NO_DRAG = 'input, textarea, select, [contenteditable="true"], [data-no-sheet-drag], .touch-none';
 const desktop = () => window.matchMedia('(min-width: 640px)').matches;
 
@@ -118,7 +118,7 @@ function release(panel: HTMLElement, s: DragState, mouse = false) {
   panel.style.willChange = '';
   const overlay = panel.parentElement;
   if (shouldDismiss(s.dy, velocityOf(s.samples), panel.offsetHeight)) {
-    panel.style.transition = 'transform 0.26s cubic-bezier(0.4, 0, 1, 1)';
+    panel.style.transition = 'transform 0.26s var(--ease-in)';
     panel.style.transform = 'translate3d(0, 100%, 0)';
     s.close();
     // Schließen abgelehnt (z. B. Rückfrage)? Dann zurückfedern statt unsichtbar offen zu bleiben

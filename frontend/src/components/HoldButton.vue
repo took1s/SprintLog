@@ -17,7 +17,8 @@ let hintTimer = 0;
 let done = false;
 let pressed = false;
 
-const fill = computed(() => ({ transitionDuration: holding.value ? `${props.duration}ms` : '220ms' }));
+// Als Variable: auch bei "Bewegung reduzieren" läuft der Fortschritt sichtbar mit (app.css)
+const fill = computed(() => ({ '--hold-ms': holding.value ? `${props.duration}ms` : '220ms' }));
 
 function down(e: PointerEvent) {
   if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -76,6 +77,8 @@ onBeforeUnmount(() => { window.clearTimeout(timer); window.clearTimeout(hintTime
       </template>
       <template v-else>
           <span class="hold-fill pointer-events-none absolute inset-0 origin-left bg-red-500/15" :style="fill" aria-hidden="true"></span>
+          <!-- Kräftige Linie unten: die Tönung allein hat zu wenig Kontrast -->
+          <span class="hold-fill pointer-events-none absolute inset-x-0 bottom-0 h-[3px] origin-left bg-red-500" :style="fill" aria-hidden="true"></span>
           <span class="relative">{{ hint ? t('gesture.holdHint') : label }}</span>
       </template>
   </button>

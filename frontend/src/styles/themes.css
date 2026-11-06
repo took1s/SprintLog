@@ -21,6 +21,9 @@
 
 :root,
 [data-theme='pitch'] {
+  /* Bewegung: eine Kurve für alles, was ankommt, eine für alles, was geht (Sheets, Tabs, Marker) */
+  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --font-body: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-display: 'Oswald Variable', 'Arial Narrow', 'Inter Variable', sans-serif;
   --font-num: 'Oswald Variable', 'Inter Variable', sans-serif;
