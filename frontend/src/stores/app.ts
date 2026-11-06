@@ -217,6 +217,11 @@ export const useAppStore = defineStore('app', () => {
 
   // Verbindung / Sync
   const online = ref(typeof navigator === 'undefined' ? true : navigator.onLine);
+  /**
+   * Erfolgreiche Antwort = online - außer das Gerät meldet gerade "offline": eine Antwort, die kurz vor dem
+   * Netzverlust unterwegs war, darf den Offline-Status nicht wieder überschreiben (Rennen, in E2E-Tests sichtbar).
+   */
+  const markOnline = () => { online.value = typeof navigator === 'undefined' || navigator.onLine !== false; };
   const syncing = ref(false);
   const updateWorker = ref<ServiceWorker | null>(null);
 
@@ -725,7 +730,7 @@ export const useAppStore = defineStore('app', () => {
   /** Beim Start: Sitzung erneuern (gleitende 30 Tage). Offline bleibt man angemeldet und arbeitet lokal. */
   async function refreshSession() {
     try {
-      if (await client.refreshSession()) online.value = true;
+      if (await client.refreshSession()) markOnline();
       else handleUnauthorized();
     } catch (e) {
       if (isNetworkError(e)) online.value = false;
@@ -846,7 +851,7 @@ export const useAppStore = defineStore('app', () => {
       // Noch nicht synchronisierte eigene Übungen (offline angelegt) behalten
       exercises.value = mergeExercises(await api().get<Exercise[]>('/api/exercises'), exercises.value);
       writeJson(keys.value!.exercises, exercises.value);
-      online.value = true;
+      markOnline();
       enrichSession();
     } catch (e) {
       if (isNetworkError(e)) online.value = false;
@@ -870,7 +875,7 @@ export const useAppStore = defineStore('app', () => {
       history.value = since ? mergeChanges(history.value, changes) : sortHistory(changes.workouts);
       writeJson(k.history, history.value);
       writeJson(k.historyToken, changes.token);
-      online.value = true;
+      markOnline();
       return true;
     } catch (e) {
       if (isNetworkError(e)) online.value = false;
@@ -1034,7 +1039,7 @@ export const useAppStore = defineStore('app', () => {
       persistQueue();
       if (changedDuringSync.some((q) => q.status === QueueStatus.Pending)) queueMicrotask(() => { void syncNow({ reload }); });
 
-      if (result.synced > 0) online.value = true;
+      if (result.synced > 0) markOnline();
       if (result.stoppedBy === 'network') online.value = false;
       if (result.stoppedBy === 'auth') handleUnauthorized();
       const newlyFailed = result.queue.filter((q) => q.status === QueueStatus.Failed && !before.find((b) => b.clientId === q.clientId && b.status === QueueStatus.Failed));

@@ -167,7 +167,7 @@ export const useAiStore = defineStore('ai', () => {
     for (let attempt = 0; ; attempt++) {
       try {
         const res = await app.api().post<T>(path, body);
-        app.online = true;
+        app.online = navigator.onLine !== false; // wie markOnline(): echter Netzverlust hat Vorrang
         return res;
       } catch (e) {
         if (!(isApiError(e) && e.isNetwork) || attempt >= RETRY_DELAYS.length || !deviceOnline.value) throw e;
