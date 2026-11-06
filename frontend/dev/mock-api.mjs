@@ -394,6 +394,48 @@ async function handleApi(req, res, url) {
   }
 
   // ---------- KI-Coach (wie /api/ai in der echten API, mit festen Antworten statt Claude) ----------
+  // ---------- Gedächtnis des KI-Coachs (wie /api/ai/memory) ----------
+  if (path === '/api/ai/memory' || path.startsWith('/api/ai/memory/')) {
+    db.memory ??= [];
+    db.nextMemoryId ??= 1;
+    const CATS = ['injury', 'health', 'goal', 'schedule', 'preference', 'equipment', 'insight', 'other'];
+    const own = () => db.memory.filter((m) => m.userId === user.id && (!m.expiresAt || new Date(m.expiresAt) > new Date()));
+    const sorted = () => own().sort((a, b) => b.importance - a.importance || b.updatedAt.localeCompare(a.updatedAt) || b.id - a.id);
+    const out = ({ userId: _u, ...m }) => m;
+    const idMatch = path.match(/^\/api\/ai\/memory\/(\d+)$/);
+    if (method === 'GET' && path === '/api/ai/memory') return json(res, 200, sorted().map(out));
+    if (method === 'DELETE' && path === '/api/ai/memory') { db.memory = db.memory.filter((m) => m.userId !== user.id); return noContent(res); }
+    if ((method === 'POST' && path === '/api/ai/memory') || (method === 'PUT' && idMatch)) {
+      const body = await readBody(req);
+      const content = String(body.content ?? '').trim();
+      const errors = {};
+      if (content.length < 3 || content.length > 300) errors.content = ['Content must be 3-300 characters.'];
+      if (!CATS.includes(body.category)) errors.category = ['Unknown category.'];
+      if (body.importance != null && ![1, 2, 3].includes(body.importance)) errors.importance = ['Importance must be 1-3.'];
+      if (Object.keys(errors).length) return problem(res, 400, 'One or more validation errors occurred.', errors);
+      const now = new Date().toISOString();
+      if (idMatch) {
+        const m = db.memory.find((x) => x.id === Number(idMatch[1]) && x.userId === user.id);
+        if (!m) return problem(res, 404, 'Not Found');
+        Object.assign(m, { content, category: body.category, importance: body.importance ?? m.importance, expiresAt: body.expiresAt ?? null, source: 'user', updatedAt: now });
+        return json(res, 200, out(m));
+      }
+      const norm = (x) => x.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+      const dup = own().find((m) => norm(m.content) === norm(content));
+      if (!dup && own().length >= 60) return problem(res, 409, 'Memory is full.');
+      const m = dup ?? { id: db.nextMemoryId++, userId: user.id, createdAt: now };
+      Object.assign(m, { content, category: body.category, importance: body.importance ?? 2, source: 'user', expiresAt: body.expiresAt ?? null, updatedAt: now });
+      if (!dup) db.memory.push(m);
+      return json(res, 201, out(m));
+    }
+    if (method === 'DELETE' && idMatch) {
+      const before = db.memory.length;
+      db.memory = db.memory.filter((m) => !(m.id === Number(idMatch[1]) && m.userId === user.id));
+      return db.memory.length === before ? problem(res, 404, 'Not Found') : noContent(res);
+    }
+    return problem(res, 404, 'Not Found');
+  }
+
   if (path.startsWith('/api/ai/')) {
     const limit = 60;
     const costs = { quick: 1, deep: 4, plan: 6, analysis: 6 };
@@ -441,11 +483,27 @@ async function handleApi(req, res, url) {
         actions.push({ type: 'schedule', trainingDays: 1 | 4 | 16, matchDays: 64, reason: 'Rest before and after the match.' });
       }
       let answer = `Mock coach (${body.locale}, ${mode}): today is a ${today} day.\n- Position: ${profile?.position ?? 'unknown'}.\n- History: ${(body.history ?? []).length} messages.`;
+      // Gedächtnis wie das Werkzeug "remember": "Remember that ..." / "Запомни, что ..." / "Merk dir, dass ..."
+      const memoryChanges = [];
+      const rem = q.match(/^(?:remember(?: that)?|запомни(?:,? что)?|merk dir(?:,? dass)?)\s*[:,]?\s*(.+)$/i);
+      if (rem) {
+        db.memory ??= [];
+        db.nextMemoryId ??= 1;
+        const content = rem[1].trim().replace(/^./, (c) => c.toUpperCase()).slice(0, 300);
+        const category = /sunday|воскрес|sonntag|monday|понедел|montag/i.test(content) ? 'schedule' : /knee|колен|knie|pain|боль|schmerz/i.test(content) ? 'injury' : 'other';
+        const now = new Date().toISOString();
+        const m = { id: db.nextMemoryId++, userId: user.id, content, category, importance: category === 'injury' ? 3 : 2, source: 'ai', createdAt: now, updatedAt: now, expiresAt: null };
+        db.memory.push(m);
+        memoryChanges.push({ action: 'saved', id: m.id, category, content });
+        answer += '\n- Noted.';
+      }
+      const memoryCount = (db.memory ?? []).filter((m) => m.userId === user.id).length;
+      answer += `\n- Memory: ${memoryCount} entries.`;
       // Lange, gegliederte Antwort wie vom echten Modell (Lesbarkeit, Screenshots)
       if (/long|подробн|ausführlich/.test(lower)) {
         answer += '\n\nLoad this week:\n- ACWR 1.12 (rolling), 1.08 (EWMA) - in the 0.8-1.3 range\n- Monotony 1.4 - fine\n\nPlan for today:\n1. Warm-up 15 min, A-skips, strides\n2. Sprints 6x30 m at >95 %, 2-3 min rest\n3. Nordic curls 3x5, slow eccentric\n\nRecovery: 8+ h sleep, 1.6-2.2 g/kg protein, carbs the evening before the match. **End of answer.**';
       }
-      return json(res, 200, { answer, remaining: limit - used - costs[mode], actions });
+      return json(res, 200, { answer, remaining: limit - used - costs[mode], actions, memory: memoryChanges });
     }
     if (method === 'POST' && path === '/api/ai/plan') {
       if (used + costs.plan > limit) return quota();

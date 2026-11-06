@@ -767,6 +767,7 @@ export const useAppStore = defineStore('app', () => {
       remove(k.aiChat); // Gespräche mit dem KI-Coach sind privat (geteilte Geräte)
       remove(k.aiAnalysis);
       remove(k.athlete);
+      remove(k.aiMemory); // Gedächtnis des Coachs: Kopie auf dem Gerät (das Original bleibt im Konto)
     }
     goalsStore.clear();
     removeLegacyToken();

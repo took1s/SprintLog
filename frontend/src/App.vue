@@ -17,6 +17,7 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { t } from '@/i18n';
 import { useGoalsStore } from '@/stores/goals';
 import { useAiStore } from '@/stores/ai';
+import { appearance } from '@/lib/theme';
 
 // Seltener gebrauchte Teile als eigene Chunks (kleineres Start-Bundle; offline per Service-Worker-Cache verfügbar):
 // Auswertungen inkl. Chart.js, Plan, Satz-Dialog mit Animationen, Einstellungen, Editoren.
@@ -37,6 +38,9 @@ const PlanBuilderSheet = defineAsyncComponent(() => import('@/components/PlanBui
 const WorkoutSummarySheet = defineAsyncComponent(() => import('@/components/WorkoutSummarySheet.vue'));
 const AiCoachSheet = defineAsyncComponent(() => import('@/components/AiCoachSheet.vue'));
 const AthleteProfileSheet = defineAsyncComponent(() => import('@/components/AthleteProfileSheet.vue'));
+const CoachMemorySheet = defineAsyncComponent(() => import('@/components/CoachMemorySheet.vue'));
+// Saison-Deko nur im Halloween-Theme laden
+const HalloweenDecor = defineAsyncComponent(() => import('@/components/decor/HalloweenDecor.vue'));
 
 const app = useAppStore();
 const goals = useGoalsStore();
@@ -44,7 +48,7 @@ const aiStore = useAiStore();
 const { booting, isAuthenticated, tab, authMode, sessionActive } = storeToRefs(app);
 
 /** Dialog-Chunks erst beim ersten Öffnen laden - danach bleiben sie gemountet (Schließen-Animation bleibt erhalten). */
-const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, hold: false, builder: false, summary: false, ai: false, profile: false });
+const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, hold: false, builder: false, summary: false, ai: false, profile: false, memory: false });
 watchEffect(() => {
   if (app.setModal.open) used.set = true;
   if (app.customModal.open) used.custom = true;
@@ -59,6 +63,7 @@ watchEffect(() => {
   if (app.summary) used.summary = true;
   if (aiStore.open) used.ai = true;
   if (aiStore.profileOpen) used.profile = true;
+  if (aiStore.memoryOpen) used.memory = true;
 });
 
 onMounted(() => { void app.init(); });
@@ -73,6 +78,7 @@ watch(tab, (next, prev) => { tabTransition.value = ORDER.indexOf(next) >= ORDER.
   <div class="relative mx-auto w-full px-4 pt-4 sm:px-8 sm:pt-8" :class="isAuthenticated ? 'max-w-3xl pb-40' : 'max-w-5xl pb-8'">
     <div class="bg-orb-1"></div>
     <div class="bg-orb-2"></div>
+    <HalloweenDecor v-if="appearance.theme === 'halloween'" />
 
     <ToastStack />
     <UpdateBanner />
@@ -119,6 +125,7 @@ watch(tab, (next, prev) => { tabTransition.value = ORDER.indexOf(next) >= ORDER.
       <WorkoutSummarySheet v-if="used.summary" />
       <AiCoachSheet v-if="used.ai" />
       <AthleteProfileSheet v-if="used.profile" />
+      <CoachMemorySheet v-if="used.memory" />
     </template>
 
     <RecoveryCodesModal v-if="used.codes" />

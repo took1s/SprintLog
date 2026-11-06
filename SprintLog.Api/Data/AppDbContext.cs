@@ -23,6 +23,7 @@ public class AppDbContext : DbContext
     public DbSet<WellnessEntry> Wellness => Set<WellnessEntry>();
     public DbSet<LiftGoal> Goals => Set<LiftGoal>();
     public DbSet<AthleteProfile> AthleteProfiles => Set<AthleteProfile>();
+    public DbSet<CoachMemory> CoachMemories => Set<CoachMemory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -125,6 +126,16 @@ public class AppDbContext : DbContext
             e.Property(p => p.Equipment).HasMaxLength(300);
             e.Property(p => p.Notes).HasMaxLength(400);
             e.HasOne<User>().WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CoachMemory>(e =>
+        {
+            e.ToTable("CoachMemories", t => t.HasCheckConstraint("CK_CoachMemories_Importance", "\"Importance\" BETWEEN 1 AND 3"));
+            e.Property(m => m.Category).HasMaxLength(20);
+            e.Property(m => m.Content).HasMaxLength(300);
+            e.Property(m => m.Source).HasMaxLength(10);
+            e.HasIndex(m => new { m.UserId, m.UpdatedAt });
+            e.HasOne<User>().WithMany().HasForeignKey(m => m.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<LiftGoal>(e =>

@@ -115,6 +115,54 @@ namespace SprintLog.Api.Migrations
                     b.ToTable("AuthTokens");
                 });
 
+            modelBuilder.Entity("SprintLog.Api.Models.CoachMemory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Importance")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "UpdatedAt");
+
+                    b.ToTable("CoachMemories", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CoachMemories_Importance", "\"Importance\" BETWEEN 1 AND 3");
+                        });
+                });
+
             modelBuilder.Entity("SprintLog.Api.Models.DeletedWorkout", b =>
                 {
                     b.Property<long>("Id")
@@ -2808,6 +2856,15 @@ namespace SprintLog.Api.Migrations
                 });
 
             modelBuilder.Entity("SprintLog.Api.Models.AuthToken", b =>
+                {
+                    b.HasOne("SprintLog.Api.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SprintLog.Api.Models.CoachMemory", b =>
                 {
                     b.HasOne("SprintLog.Api.Models.User", null)
                         .WithMany()

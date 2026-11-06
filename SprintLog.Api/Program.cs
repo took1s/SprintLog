@@ -76,6 +76,7 @@ builder.Services.AddOptions<AiOptions>().Configure<IConfiguration>((options, con
 });
 builder.Services.AddSingleton<AiQuota>();
 builder.Services.AddScoped<AiTools>();
+builder.Services.AddScoped<CoachMemoryService>();
 if (!string.IsNullOrWhiteSpace(builder.Configuration["Ai:AnthropicApiKey"] ?? builder.Configuration["ANTHROPIC_API_KEY"]))
     builder.Services.AddHttpClient<IAiClient, AnthropicAiClient>(c =>
     {
@@ -289,6 +290,7 @@ app.MapGoalEndpoints();
 app.MapMonitoringEndpoints();
 app.MapAiEndpoints();
 app.MapProfileEndpoints();
+app.MapMemoryEndpoints();
 
 var monitoring = app.Services.GetRequiredService<MonitoringOptions>();
 app.Logger.LogInformation("SprintLog {Release} started ({Environment}). Sentry: {Sentry}, browser errors: {Browser}, e-mail: {Email}",
