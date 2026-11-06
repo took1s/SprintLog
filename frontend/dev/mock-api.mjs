@@ -419,7 +419,20 @@ async function handleApi(req, res, url) {
       if (lower.includes('goal') || lower.includes('цель') || lower.includes('ziel')) {
         actions.push({ type: 'goal', exerciseId: 1, exerciseName: 'Bench Press', targetWeight: 95, targetReps: 3, targetDate: null, reason: 'Steady progress over the last weeks.' });
       }
-      if (lower.includes('plan') || lower.includes('план ') || lower.endsWith('план')) {
+      const active = db.programs.find((x) => x.userId === user.id && x.isActive);
+      const wantsUpdate = /change|измени|поменяй|änder|anpass/.test(lower);
+      if (wantsUpdate && active) {
+        // Plan-Änderung wie propose_program_update: Tage behalten ihre id, ein Tag wird geändert, einer kommt dazu
+        const days = active.days.map((d, i) => ({
+          id: d.id, name: d.name, notes: d.notes,
+          exercises: d.exercises.map(({ exerciseId, sets, repsMin, repsMax, distance, time, targetRpe, restSeconds, note }, j) =>
+            ({ exerciseId, sets: i === 0 && j === 0 ? sets + 1 : sets, repsMin, repsMax, distance, time, targetRpe: i === 0 && j === 0 ? 8 : targetRpe, restSeconds, note }))
+            .filter((_, j, all) => !(i === active.days.length - 1 && all.length > 1 && j === all.length - 1)),
+        }));
+        const extra = [47, 1].map((id) => visible(user.id).find((e) => e.id === id)).find(Boolean);
+        if (extra) days.push({ id: null, name: 'Recovery', notes: null, exercises: [{ exerciseId: extra.id, sets: 2, ...(extra.trackingType === 'Duration' ? { time: 30 } : extra.trackingType === 'DistanceTime' ? { distance: 30 } : { repsMin: 8, repsMax: 10 }) }] });
+        actions.push({ type: 'programUpdate', programId: active.id, programName: active.name, program: { name: active.name, goal: active.goal, weeks: active.weeks, days }, changes: ['Day 1: +1 set on the first exercise, RPE 8', 'New recovery day'] });
+      } else if (lower.includes('plan') || lower.includes('план ') || lower.endsWith('план')) {
         const target = (e) => (e.trackingType === 'DistanceTime' ? { distance: 30 } : e.trackingType === 'Duration' ? { time: 40 } : { repsMin: 6, repsMax: 8 });
         const pool = [12, 50, 1, 47].map((id) => visible(user.id).find((e) => e.id === id)).filter(Boolean);
         actions.push({ type: 'program', summary: 'Two days around your match.', program: { name: 'Chat Plan', goal: 'Speed', weeks: 6, days: ['A', 'B'].map((n) => ({ id: null, name: `Day ${n}`, notes: null, exercises: pool.map((e) => ({ exerciseId: e.id, sets: 3, ...target(e) })) })) } });
@@ -427,7 +440,11 @@ async function handleApi(req, res, url) {
       if (lower.includes('week') || lower.includes('недел') || lower.includes('woche')) {
         actions.push({ type: 'schedule', trainingDays: 1 | 4 | 16, matchDays: 64, reason: 'Rest before and after the match.' });
       }
-      const answer = `Mock coach (${body.locale}, ${mode}): today is a ${today} day.\n- Position: ${profile?.position ?? 'unknown'}.\n- History: ${(body.history ?? []).length} messages.`;
+      let answer = `Mock coach (${body.locale}, ${mode}): today is a ${today} day.\n- Position: ${profile?.position ?? 'unknown'}.\n- History: ${(body.history ?? []).length} messages.`;
+      // Lange, gegliederte Antwort wie vom echten Modell (Lesbarkeit, Screenshots)
+      if (/long|подробн|ausführlich/.test(lower)) {
+        answer += '\n\nLoad this week:\n- ACWR 1.12 (rolling), 1.08 (EWMA) - in the 0.8-1.3 range\n- Monotony 1.4 - fine\n\nPlan for today:\n1. Warm-up 15 min, A-skips, strides\n2. Sprints 6x30 m at >95 %, 2-3 min rest\n3. Nordic curls 3x5, slow eccentric\n\nRecovery: 8+ h sleep, 1.6-2.2 g/kg protein, carbs the evening before the match. **End of answer.**';
+      }
       return json(res, 200, { answer, remaining: limit - used - costs[mode], actions });
     }
     if (method === 'POST' && path === '/api/ai/plan') {

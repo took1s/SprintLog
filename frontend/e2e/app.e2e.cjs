@@ -1046,3 +1046,61 @@ test('AI coach pro: athlete profile, thorough mode with proposal cards, AI analy
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('AI coach expert: edits the plan in chat with a day-by-day diff, retries a dropped request, structured long answers', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `aiexp_${Date.now()}`);
+  const created = await api('POST', '/api/programs', token, { name: 'Speed Block', goal: 'Speed', weeks: 6, days: [
+    { name: 'Day A', exercises: [{ exerciseId: 1, sets: 4, repsMin: 5, repsMax: 5 }, { exerciseId: 12, sets: 6, distance: 30 }] },
+    { name: 'Day B', exercises: [{ exerciseId: 50, sets: 3, repsMin: 5, repsMax: 5 }, { exerciseId: 12, sets: 4, distance: 20 }] },
+  ] });
+  const [dayA, dayB] = created.days;
+  await page.reload();
+  await page.waitForSelector('[data-test=start-panel]');
+
+  // Die erste Anfrage reißt ab (Funkloch nach dem Aufwachen) - die App wiederholt selbst, kein "kein Internet"
+  let calls = 0;
+  await page.route('**/api/ai/ask', (route) => (calls++ === 0 ? route.abort('connectionreset') : route.continue()));
+  await page.click('[data-test=coach-ask]');
+  await page.waitForSelector('[data-test=ai-chat]');
+  await page.fill('[data-test=ai-input]', 'Change my plan and explain it long');
+  await page.click('[data-test=ai-send]');
+  await page.waitForSelector('[data-role=assistant] >> text=Mock coach (en, deep)');
+  assert.equal(calls, 2);
+  assert.equal(await page.locator('[data-error]').count(), 0);
+  await page.unroute('**/api/ai/ask');
+
+  // Lange Antwort vollständig und gegliedert (Überschriften, nummerierte Schritte, kein Markdown)
+  const answer = page.locator('[data-role=assistant] [data-test=ai-text]').last();
+  assert.equal(await answer.locator('[role=heading]').count(), 2);
+  assert.equal(await answer.locator('ol > li').count(), 3);
+  const text = await answer.innerText();
+  assert.match(text, /End of answer\.\s*$/);
+  assert.doesNotMatch(text, /\*\*/);
+
+  // Plan-Änderung als Karte mit Vergleich pro Tag - gespeichert erst per Knopf
+  const card = page.locator('[data-action=programUpdate]');
+  await card.waitFor();
+  assert.match(await card.innerText(), /Speed Block/);
+  assert.equal(await card.locator('[data-diff=changed]').count(), 2);
+  assert.equal(await card.locator('[data-diff=new]').count(), 1);
+  assert.match(await card.locator('[data-diff=changed]').first().innerText(), /Bench Press: 4×5 → 5×5 @RPE 8/);
+  assert.match(await card.locator('[data-diff=changed]').nth(1).innerText(), /Running \/ Sprints 4×20 m/);
+  let [program] = await api('GET', '/api/programs', token);
+  assert.equal(program.days.length, 2, 'nothing changed before confirming');
+
+  await card.locator('[data-test=ai-action-apply]').click();
+  await card.locator('text=Saved').waitFor();
+  // Vergleich bleibt nach dem Speichern sichtbar (nicht alles "unverändert")
+  assert.equal(await card.locator('[data-diff=changed]').count(), 2);
+  [program] = await api('GET', '/api/programs', token);
+  assert.equal(program.days.length, 3);
+  assert.equal(program.days[0].id, dayA.id, 'existing days keep their id - history stays linked');
+  assert.equal(program.days[1].id, dayB.id);
+  assert.equal(program.days[0].exercises[0].sets, 5);
+  assert.equal(program.days[0].exercises[0].targetRpe, 8);
+  assert.equal(program.days[1].exercises.length, 1);
+  assert.equal(program.days[2].name, 'Recovery');
+  assert.deepEqual(errors, []);
+  await context.close();
+});

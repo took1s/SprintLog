@@ -29,8 +29,14 @@ export interface AiProgramDraft {
   weeks: number;
   days: { name: string; notes?: string | null; exercises: { exerciseId: number; sets: number; repsMin?: number | null; repsMax?: number | null; distance?: number | null; time?: number | null; targetRpe?: number | null; restSeconds?: number | null; note?: string | null }[] }[];
 }
+export interface AiProgramUpdateDraft extends AiProgramDraft {
+  days: (AiProgramDraft['days'][number] & { id?: number | null })[];
+  cycleWeeks?: number | null;
+  deloadEvery?: number | null;
+}
 export type AiAction =
   | { type: 'program'; program: AiProgramDraft; summary: string }
+  | { type: 'programUpdate'; programId: number; programName: string; program: AiProgramUpdateDraft; changes: string[] }
   | { type: 'goal'; exerciseId: number; exerciseName: string; targetWeight: number; targetReps: number; targetDate: string | null; reason: string }
   | { type: 'schedule'; trainingDays: number; matchDays: number; reason: string };
 export interface AiChatMessage { role: 'user' | 'assistant'; content: string; at: string; mode?: AiMode; actions?: AiAction[]; applied?: number[] }
@@ -49,12 +55,12 @@ export interface AthleteProfile {
 export const emptyProfile = (): AthleteProfile => ({ position: null, birthYear: null, heightCm: null, weightKg: null, level: null, goals: null, injuries: null, equipment: null, sessionMinutes: null, notes: null });
 export const POSITIONS = ['goalkeeper', 'defender', 'fullback', 'midfielder', 'winger', 'striker'] as const;
 
-export type AiErrorCode = 'ai_disabled' | 'ai_quota' | 'ai_rate' | 'ai_no_credit' | 'ai_key_invalid' | 'ai_model' | 'ai_busy' | 'ai_unavailable' | 'ai_bad_plan' | 'ai_empty' | 'offline' | 'unknown';
+export type AiErrorCode = 'ai_disabled' | 'ai_quota' | 'ai_rate' | 'ai_no_credit' | 'ai_key_invalid' | 'ai_model' | 'ai_busy' | 'ai_unavailable' | 'ai_bad_plan' | 'ai_empty' | 'ai_timeout' | 'offline' | 'unknown';
 
 const MAX_STORED = 40;
 /** Wie viele frühere Nachrichten als Gesprächsverlauf mitgehen (Kosten vs. Zusammenhang). */
 const HISTORY = 8;
-const CODES: readonly AiErrorCode[] = ['ai_disabled', 'ai_quota', 'ai_no_credit', 'ai_key_invalid', 'ai_model', 'ai_busy', 'ai_unavailable', 'ai_bad_plan', 'ai_empty'];
+const CODES: readonly AiErrorCode[] = ['ai_disabled', 'ai_quota', 'ai_no_credit', 'ai_key_invalid', 'ai_model', 'ai_busy', 'ai_unavailable', 'ai_bad_plan', 'ai_empty', 'ai_timeout'];
 const DEFAULT_COSTS = { quick: 1, deep: 4, plan: 6, analysis: 6 } as const;
 const MODE_KEY = 'sprintlog:aiMode';
 
@@ -67,7 +73,22 @@ function errorCode(e: unknown): AiErrorCode {
   return e.status === 429 ? 'ai_rate' : 'unknown';
 }
 
-const readMode = (): AiMode => { try { return localStorage.getItem(MODE_KEY) === 'deep' ? 'deep' : 'quick'; } catch { return 'quick'; } };
+// Standard: gründlich (Profi-Qualität); wer bewusst "Schnell" wählt, behält das auf diesem Gerät
+const readMode = (): AiMode => { try { return localStorage.getItem(MODE_KEY) === 'quick' ? 'quick' : 'deep'; } catch { return 'deep'; } };
+
+/** Pausen vor automatischen Wiederholungen nach einem Netzwerkfehler (z. B. eingeschlafene Verbindung nach dem Aufwachen). */
+const RETRY_DELAYS = [1200, 3500];
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Hat das Gerät überhaupt Netz? Bewusst NICHT der Sync-Status der App (app.online): der springt nach einem einzelnen
+ * fehlgeschlagenen Hintergrund-Sync auf "offline" und blieb dann hängen - der Chat meldete "Kein Internet", obwohl es ging.
+ */
+export const deviceOnline = ref(typeof navigator === 'undefined' ? true : navigator.onLine !== false);
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => { deviceOnline.value = true; });
+  window.addEventListener('offline', () => { deviceOnline.value = false; });
+}
 
 /** Coach-Gründe als kurzer englischer Text für die Zusammenfassung. */
 function reasonText(r: Reason): string {
@@ -123,8 +144,25 @@ export const useAiStore = defineStore('ai', () => {
   const persist = () => { if (storageKey.value) writeJson(storageKey.value, messages.value.slice(-MAX_STORED)); };
   const setRemaining = (n: number) => { if (status.value) status.value = { ...status.value, remaining: n }; };
 
+  /**
+   * KI-Anfrage mit automatischer Wiederholung bei Netzwerkfehlern. Doppelte Ausführung ist unkritisch (keine Daten werden
+   * geändert, höchstens eine Einheit des Tageskontingents). Erfolg setzt den Sync-Status wieder auf online.
+   */
+  async function aiPost<T>(path: string, body: unknown): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const res = await app.api().post<T>(path, body);
+        app.online = true;
+        return res;
+      } catch (e) {
+        if (!(isApiError(e) && e.isNetwork) || attempt >= RETRY_DELAYS.length || !deviceOnline.value) throw e;
+        await sleep(RETRY_DELAYS[attempt]);
+      }
+    }
+  }
+
   async function loadStatus() {
-    if (!app.isAuthenticated || !app.online) return;
+    if (!app.isAuthenticated || !deviceOnline.value) return;
     try { status.value = await app.api().get<AiStatus>('/api/ai/status'); } catch { /* KI bleibt ausgeblendet */ }
     if (status.value?.enabled) void loadProfile();
   }
@@ -172,7 +210,7 @@ export const useAiStore = defineStore('ai', () => {
   async function ask(question: string) {
     const q = question.trim();
     if (q.length < 2 || busy.value) return;
-    if (!app.online) { error.value = 'offline'; return; }
+    if (!deviceOnline.value) { error.value = 'offline'; return; }
     const history = messages.value.slice(-HISTORY).map(({ role, content }) => ({ role, content: content.slice(0, 2000) }));
     const m = mode.value;
     messages.value = [...messages.value, { role: 'user', content: q, at: new Date().toISOString(), mode: m }];
@@ -180,7 +218,7 @@ export const useAiStore = defineStore('ai', () => {
     busy.value = true;
     error.value = null;
     try {
-      const res = await app.api().post<{ answer: string; remaining: number; actions?: AiAction[] }>('/api/ai/ask', { question: q, context: context(), history, locale: locale.value, mode: m });
+      const res = await aiPost<{ answer: string; remaining: number; actions?: AiAction[] }>('/api/ai/ask', { question: q, context: context(), history, locale: locale.value, mode: m });
       messages.value = [...messages.value, { role: 'assistant', content: res.answer, at: new Date().toISOString(), mode: m, actions: res.actions?.length ? res.actions : undefined }];
       setRemaining(res.remaining);
       persist();
@@ -213,7 +251,7 @@ export const useAiStore = defineStore('ai', () => {
   /** Programm speichern, aktivieren und optional den Wochenplan setzen (Plan-Builder und Chat-Karten). */
   async function saveProgramDraft(draft: AiProgramDraft, schedule: { trainingDays: number; matchDays: number } | null): Promise<boolean> {
     const ui = useUiStore();
-    if (!app.online) { ui.toast(t('plan.toast.needsConnection'), 'error'); return false; }
+    if (!deviceOnline.value) { ui.toast(t('plan.toast.needsConnection'), 'error'); return false; }
     if (app.activeProgram) {
       const ok = await ui.confirm({ title: t('plan.confirm.switchTitle'), message: t('plan.confirm.switchMessage', { name: app.activeProgram.name }), confirmText: t('common.start') });
       if (!ok) return false;
@@ -232,6 +270,22 @@ export const useAiStore = defineStore('ai', () => {
     }
   }
 
+  /** Geänderte Version eines bestehenden Programms speichern (Tage mit ID behalten ihren Verlauf). */
+  async function applyProgramUpdate(action: Extract<AiAction, { type: 'programUpdate' }>): Promise<boolean> {
+    const ui = useUiStore();
+    if (!deviceOnline.value) { ui.toast(t('plan.toast.needsConnection'), 'error'); return false; }
+    if (!app.programs.some((p) => p.id === action.programId)) { ui.toast(t('ai.actions.programGone'), 'error'); return false; }
+    try {
+      await app.api().put(`/api/programs/${action.programId}`, action.program);
+      await app.loadPrograms();
+      ui.toast(t('ai.actions.updateSaved', { name: action.program.name }), 'success');
+      return true;
+    } catch (e) {
+      ui.toast(isApiError(e) && e.isNetwork ? t('plan.toast.needsConnection') : isApiError(e) ? e.message : t('ai.errors.unknown'), 'error');
+      return false;
+    }
+  }
+
   /** Karte aus dem Chat übernehmen. Erst hier wird gespeichert - die KI selbst ändert nichts. */
   async function applyAction(messageIndex: number, actionIndex: number) {
     const msg = messages.value[messageIndex];
@@ -242,7 +296,9 @@ export const useAiStore = defineStore('ai', () => {
     applying.value = key;
     try {
       let ok = false;
-      if (action.type === 'program') {
+      if (action.type === 'programUpdate') {
+        ok = await applyProgramUpdate(action);
+      } else if (action.type === 'program') {
         // Steht im Wochenplan schon etwas, bleibt er; sonst Vorschlag aus der Anzahl der Tage
         ok = await saveProgramDraft(action.program, null);
       } else if (action.type === 'goal') {
@@ -273,11 +329,11 @@ export const useAiStore = defineStore('ai', () => {
 
   async function runAnalysis(period: 'full' | 'week') {
     if (analysisBusy.value) return;
-    if (!app.online) { analysisError.value = 'offline'; return; }
+    if (!deviceOnline.value) { analysisError.value = 'offline'; return; }
     analysisBusy.value = period;
     analysisError.value = null;
     try {
-      const res = await app.api().post<{ report: AiReport; generatedAt: string; remaining: number }>('/api/ai/analysis', { context: context(), locale: locale.value, period });
+      const res = await aiPost<{ report: AiReport; generatedAt: string; remaining: number }>('/api/ai/analysis', { context: context(), locale: locale.value, period });
       analysis.value = { report: res.report, generatedAt: res.generatedAt, period };
       if (keys.value) writeJson(keys.value.aiAnalysis, analysis.value);
       setRemaining(res.remaining);
@@ -293,7 +349,7 @@ export const useAiStore = defineStore('ai', () => {
   const persistProfile = () => { if (keys.value) writeJson(keys.value.athlete, profile.value); };
 
   async function pushProfile(): Promise<boolean> {
-    if (!profile.value.pending || !app.online) return false;
+    if (!profile.value.pending || !deviceOnline.value) return false;
     const { pending: _pending, updatedAt: _updated, ...body } = profile.value;
     try {
       const saved = await app.api().put<AthleteProfile>('/api/profile/athlete', body);
@@ -312,7 +368,7 @@ export const useAiStore = defineStore('ai', () => {
   }
 
   async function loadProfile() {
-    if (!app.isAuthenticated || !app.online) return;
+    if (!app.isAuthenticated || !deviceOnline.value) return;
     try {
       if (profile.value.pending) { await pushProfile(); return; }
       const fresh = await app.api().get<AthleteProfile>('/api/profile/athlete');
@@ -352,12 +408,12 @@ export const useAiStore = defineStore('ai', () => {
   async function generatePlan(answers: PlanAnswers) {
     const pl = plan.value;
     if (pl.busy) return;
-    if (!app.online) { pl.error = 'offline'; return; }
+    if (!deviceOnline.value) { pl.error = 'offline'; return; }
     pl.busy = true;
     pl.error = null;
     pl.result = null;
     try {
-      const res = await app.api().post<{ program: AiProgramDraft; summary: string; remaining: number }>('/api/ai/plan', {
+      const res = await aiPost<{ program: AiProgramDraft; summary: string; remaining: number }>('/api/ai/plan', {
         answers: { ...answers }, notes: pl.notes.trim() || null, context: context(), locale: locale.value,
       });
       pl.result = { program: res.program, summary: res.summary, answers: { ...answers } };
@@ -390,7 +446,7 @@ export const useAiStore = defineStore('ai', () => {
 
   return {
     status, enabled, open, messages, busy, error, mode, applying, plan, analysis, analysisBusy, analysisError,
-    profile, profileOpen, profileBusy, profileFilled, cost, left,
+    profile, profileOpen, profileBusy, profileFilled, cost, left, deviceOnline,
     loadStatus, openChat, ask, retry, askFromElsewhere, clearChat, applyAction, generatePlan, discardPlan, acceptPlan,
     runAnalysis, loadProfile, openProfile, saveProfile, context,
   };

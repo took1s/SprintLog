@@ -101,8 +101,8 @@ const NO_REFRESH = /^\/api\/auth\/(login|register|refresh|logout|recover|reset-p
 /** Wartezeiten zwischen erneuten Refresh-Versuchen nach 409. */
 export const REFRESH_RACE_DELAYS = [300, 800, 1500] as const;
 
-/** Obergrenze für KI-Anfragen (Render-Kaltstart + mehrere Modell-Aufrufe). */
-export const AI_TIMEOUT_MS = 150_000;
+/** Obergrenze für KI-Anfragen (Render-Kaltstart + mehrere Modell-Aufrufe + lange, fortgesetzte Antworten). */
+export const AI_TIMEOUT_MS = 300_000;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -112,7 +112,9 @@ export function createApi({ onUnauthorized, getLegacyToken, onLegacyTokenUsed, t
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     const controller = new AbortController();
     // KI-Antworten (Analyse, Pläne mit mehreren Werkzeug-Aufrufen) brauchen deutlich länger als normale Requests
-    const timer = setTimeout(() => controller.abort(), path.startsWith('/api/ai/') ? Math.max(timeoutMs, AI_TIMEOUT_MS) : timeoutMs);
+    const ai = path.startsWith('/api/ai/');
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; controller.abort(); }, ai ? Math.max(timeoutMs, AI_TIMEOUT_MS) : timeoutMs);
     try {
       const response = await fetch(apiUrl(path), {
         method,
@@ -126,6 +128,8 @@ export function createApi({ onUnauthorized, getLegacyToken, onLegacyTokenUsed, t
       // (Funkloch, iOS friert die WebView ein), hinge response.text() sonst ewig - und mit ihm die Sync-Queue.
       return await buffered(response);
     } catch {
+      // KI zu langsam ist kein Verbindungsfehler: nicht automatisch wiederholen (sonst nochmal minutenlang warten)
+      if (ai && timedOut) throw new ApiError(408, 'ai_timeout');
       throw new ApiError(0, t('common.noConnection'));
     } finally {
       clearTimeout(timer);

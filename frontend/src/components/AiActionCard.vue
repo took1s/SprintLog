@@ -1,32 +1,49 @@
 <script setup lang="ts">
-// Vorschlag des KI-Coachs als Karte (Plan, Ziel, Wochenplan). Gespeichert wird nur über den Knopf - die KI ändert nie selbst etwas.
+// Vorschlag des KI-Coachs als Karte (neuer Plan, Plan-Änderung mit Diff, Ziel, Wochenplan). Gespeichert wird nur über den Knopf - die KI ändert nie selbst etwas.
 // Die Karte steht in voller Breite unter der Antwort (nicht in der 85-%-Blase) - sonst wird es für Tagesliste und Knopf zu eng.
-import { computed, useId } from 'vue';
+import { computed, shallowRef, useId, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { intlLocale, t, tn } from '@/i18n';
 import { exerciseName, goalName } from '@/i18n/content';
 import { formatDate, formatNumber } from '@/lib/format';
 import { WEEKDAYS, bit } from '@/lib/schedule';
+import { programDiff, type DayDiff, type DiffItem } from '@/lib/programDiff';
 import { useAppStore } from '@/stores/app';
 import type { AiAction } from '@/stores/ai';
 
 const props = defineProps<{ action: AiAction; applied: boolean; busy: boolean }>();
 const emit = defineEmits<{ apply: [] }>();
-const { exercisesById } = storeToRefs(useAppStore());
+const { exercisesById, programs } = storeToRefs(useAppStore());
 const titleId = useId();
 
 const dayShort = (d: number) => new Date(2024, 0, 1 + d).toLocaleDateString(intlLocale(), { weekday: 'short' }).replace('.', '');
 const dayLong = (d: number) => new Date(2024, 0, 1 + d).toLocaleDateString(intlLocale(), { weekday: 'long' });
 
-function prescription(x: { exerciseId: number; sets: number; repsMin?: number | null; repsMax?: number | null; distance?: number | null; time?: number | null }) {
-  const ex = exercisesById.value.get(x.exerciseId);
-  const name = ex ? exerciseName(ex) : `#${x.exerciseId}`;
+const nameOf = (id: number) => { const ex = exercisesById.value.get(id); return ex ? exerciseName(ex) : `#${id}`; };
+/** "4×5 @RPE 8" / "6×30 m" / "3×45 s" */
+function dose(x: DiffItem) {
   const what = x.distance ? `${x.distance} ${t('units.m')}` : x.time ? `${x.time} ${t('units.s')}` : x.repsMin ? `${x.repsMin}${x.repsMax && x.repsMax !== x.repsMin ? `-${x.repsMax}` : ''}` : '';
-  return `${name} ${x.sets}×${what}`;
+  return `${x.sets}×${what}${x.targetRpe ? ` @RPE ${formatNumber(x.targetRpe, 1)}` : ''}`;
 }
+const prescription = (x: DiffItem) => `${nameOf(x.exerciseId)} ${dose(x)}`;
+
+// Plan-Änderung: Vergleich mit dem Programm, wie es jetzt gespeichert ist
+const liveDiff = computed(() => {
+  if (props.action.type !== 'programUpdate') return [];
+  const id = props.action.programId;
+  return programDiff(programs.value.find((p) => p.id === id)?.days ?? [], props.action.program.days);
+});
+// Beim Übernehmen einfrieren - danach ist der gespeicherte Plan gleich dem Vorschlag und alles stünde auf "unverändert"
+const frozenDiff = shallowRef<DayDiff[] | null>(null);
+watch(() => props.busy, (b) => { if (b && !props.applied) frozenDiff.value = liveDiff.value; });
+const diff = computed(() => frozenDiff.value ?? liveDiff.value);
+// Nach Neuladen eines schon übernommenen Vorschlags gibt es keinen Vorher-Stand mehr: dann nur die Änderungsliste
+const showDiff = computed(() => !props.applied || frozenDiff.value !== null);
 
 const title = computed(() => t(`ai.actions.${props.action.type}`));
-const button = computed(() => (props.action.type === 'program' ? t('ai.actions.saveProgram') : props.action.type === 'goal' ? t('ai.actions.saveGoal') : t('ai.actions.applySchedule')));
+const button = computed(() => ({
+  program: t('ai.actions.saveProgram'), programUpdate: t('ai.actions.applyUpdate'), goal: t('ai.actions.saveGoal'), schedule: t('ai.actions.applySchedule'),
+})[props.action.type]);
 const goalExercise = computed(() => {
   if (props.action.type !== 'goal') return '';
   const ex = exercisesById.value.get(props.action.exerciseId);
@@ -72,6 +89,35 @@ const apply = () => { if (!locked.value) emit('apply'); };
           </details>
       </template>
 
+      <template v-else-if="action.type === 'programUpdate'">
+          <p class="mt-1 break-words text-lg font-bold leading-tight text-white">{{ action.programName }}<template v-if="action.program.name !== action.programName"> → {{ action.program.name }}</template></p>
+          <ul v-if="action.changes.length" class="mt-2 space-y-1">
+              <li v-for="(c, i) in action.changes" :key="i" class="flex gap-2 text-sm leading-snug text-slate-200"><span class="text-accent" aria-hidden="true">•</span><span class="min-w-0 break-words">{{ c }}</span></li>
+          </ul>
+          <details v-if="showDiff" class="group mt-1" open>
+              <summary class="-mx-1 flex min-h-[2.75rem] cursor-pointer list-none items-center gap-1.5 rounded-lg px-1 text-xs font-bold text-slate-300 hover:text-white [&::-webkit-details-marker]:hidden">
+                  {{ t('ai.actions.details') }}
+                  <svg class="h-3.5 w-3.5 transition-transform duration-200 group-open:rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
+              </summary>
+              <ol class="mb-1 space-y-2" data-test="ai-diff">
+                  <li v-for="(d, i) in diff" :key="i" class="rounded-xl border border-white/5 bg-black/20 p-3" :data-diff="d.status">
+                      <p class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span class="break-words text-xs font-bold uppercase tracking-label" :class="d.status === 'removed' ? 'text-slate-500 line-through' : 'text-slate-200'">{{ d.name }}</span>
+                          <span v-if="d.status !== 'same'" class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-label"
+                                :class="{ new: 'bg-emerald-400/15 text-emerald-300', changed: 'bg-orange-400/15 text-orange-300', removed: 'bg-red-500/15 text-red-300', same: '' }[d.status]">{{ t(`ai.actions.diff.${d.status}`) }}</span>
+                          <span v-else class="text-[10px] uppercase text-slate-500 tracking-label">{{ t('ai.actions.diff.same') }}</span>
+                      </p>
+                      <p v-if="d.renamedFrom" class="mt-1 text-[11px] text-slate-400">{{ t('ai.actions.diff.renamed', { name: d.renamedFrom }) }}</p>
+                      <ul v-if="d.status !== 'same'" class="mt-1.5 space-y-1 text-sm">
+                          <li v-for="(x, j) in d.added" :key="`a${j}`" class="flex gap-2 text-emerald-300"><span aria-hidden="true">+</span><span class="sr-only">{{ t('ai.actions.diff.addedSr') }}</span><span class="min-w-0 break-words">{{ prescription(x) }}</span></li>
+                          <li v-for="(x, j) in d.changed" :key="`c${j}`" class="flex gap-2 text-orange-300"><span aria-hidden="true">~</span><span class="min-w-0 break-words">{{ nameOf(x.to.exerciseId) }}: <span class="text-slate-400 line-through">{{ dose(x.from) }}</span> → {{ dose(x.to) }}</span></li>
+                          <li v-for="(x, j) in d.removed" :key="`r${j}`" class="flex gap-2 text-red-300"><span aria-hidden="true">−</span><span class="sr-only">{{ t('ai.actions.diff.removedSr') }}</span><span class="min-w-0 break-words line-through">{{ prescription(x) }}</span></li>
+                      </ul>
+                  </li>
+              </ol>
+          </details>
+      </template>
+
       <template v-else-if="action.type === 'goal'">
           <p class="mt-1 break-words font-bold leading-tight text-white">{{ goalExercise }}</p>
           <!-- Die Zielzahl ist das Wichtigste auf der Karte - also das Größte -->
@@ -80,7 +126,7 @@ const apply = () => { if (!locked.value) emit('apply'); };
           <p v-if="action.reason" class="mt-2 text-sm leading-relaxed text-slate-300">{{ action.reason }}</p>
       </template>
 
-      <template v-else>
+      <template v-else-if="action.type === 'schedule'">
           <ul class="mt-2 grid grid-cols-7 gap-1">
               <li v-for="d in WEEKDAYS" :key="d" class="flex flex-col items-center rounded-lg border py-1.5" :class="pill(kind(d))">
                   <span class="sr-only">{{ dayLong(d) }}: {{ t(`schedule.kind.${kind(d)}`) }}</span>
