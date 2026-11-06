@@ -323,7 +323,7 @@ public class AiTests
         _factory.Ai.Reply = (req, n) => n == 0 ? AiResponse.FromTool("get_programs", new { }) : AiResponse.FromText((json = ToolResult(req)) is null ? "" : "ok");
         await HttpAssert.StatusAsync(HttpStatusCode.OK, await user.Client.PostAsJsonAsync("/api/ai/ask", new { question = "Wie ist mein Plan?" }));
 
-        var details = JsonDocument.Parse(json!).RootElement.GetProperty("details");
+        Assert.True(JsonDocument.Parse(json!).RootElement.TryGetProperty("details", out var details), json);
         Assert.Equal("Speed Block", details.GetProperty("name").GetString());
         Assert.True(details.GetProperty("active").GetBoolean());
         var days = details.GetProperty("days");
