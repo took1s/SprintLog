@@ -1,6 +1,6 @@
 // Gemeinsame Domänen-Typen (entsprechen den DTOs der API in SprintLog.Api/DTOs).
 
-export type TrackingType = 'WeightReps' | 'DistanceTime' | 'Duration';
+export type TrackingType = 'WeightReps' | 'DistanceTime' | 'Duration' | 'Cardio';
 export type Category = 'Gym' | 'Football';
 export type WorkoutType = 'Gym' | 'Football' | 'Hybrid' | 'Match';
 export type ProgramGoal = 'Strength' | 'Hypertrophy' | 'Speed' | 'General' | 'Rehab';
@@ -12,6 +12,20 @@ export interface Exercise {
   muscleGroup: string | null;
   trackingType: TrackingType;
   isCustom?: boolean;
+  /** Unterstützte Maschine (Gravitron): Gewicht = Hilfe, weniger ist besser. */
+  isAssisted?: boolean;
+  /** Einseitig: Werte gelten pro Seite (Seitstütz, Split Squat). */
+  perSide?: boolean;
+}
+
+export type ExerciseNoteReason = 'pain' | 'equipment' | 'time' | 'fatigue' | 'other';
+
+/** Notiz zu einer Übung in einer Einheit - oder ausgelassen mit Grund (für die KI und den Verlauf). */
+export interface ExerciseNote {
+  exerciseId: number;
+  note?: string | null;
+  skipped?: boolean;
+  reason?: ExerciseNoteReason | null;
 }
 
 /** Ein Satz - vom Server (WorkoutSetResponse) oder lokal (laufende Session / Queue). */
@@ -32,6 +46,19 @@ export interface WorkoutSet {
   isWarmup?: boolean;
   /** Notiz zum Satz (max. 200 Zeichen). */
   note?: string | null;
+  // Ausdauergerät (Cardio): Dauer in time, Distanz in distance (Meter)
+  /** Widerstandsstufe bzw. Steigung. */
+  level?: number | null;
+  /** Durchschnittsleistung in Watt. */
+  power?: number | null;
+  /** Durchschnittspuls. */
+  heartRate?: number | null;
+  /** Trittfrequenz bzw. Schläge pro Minute. */
+  cadence?: number | null;
+  calories?: number | null;
+  /** Von der Übung übernommen (Server bzw. Katalog). */
+  isAssisted?: boolean;
+  perSide?: boolean;
 }
 
 export type QueueStatusValue = 'pending' | 'failed';
@@ -48,6 +75,9 @@ export interface Workout {
   notes?: string | null;
   programDayId?: number | null;
   updatedAt?: string;
+  /** Studio der Einheit (Geräte und Gewichte unterscheiden sich). */
+  gym?: string | null;
+  exerciseNotes?: ExerciseNote[] | null;
   sets: WorkoutSet[];
   /** Nur bei Spielen (workoutType "Match"). */
   match?: MatchDetails | null;
@@ -73,6 +103,8 @@ export interface QueueEntry {
   quality?: number | null;
   notes?: string | null;
   programDayId?: number | null;
+  gym?: string | null;
+  exerciseNotes?: ExerciseNote[] | null;
   sets: WorkoutSet[];
   match?: MatchDetails | null;
   status: QueueStatusValue;

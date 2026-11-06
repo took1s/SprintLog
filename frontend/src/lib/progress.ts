@@ -1,7 +1,7 @@
 // Fortschritt: Zeiträume, Kennzahlen eines Verlaufs und die Trendliste aller Übungen - reine Funktionen (getestet).
 import type { Workout, WorkoutSet } from '@/types';
 import {
-  exerciseKey, isWorkingSet, metricsFor, metricValue, percentChange,
+  exerciseKey, hasMetricValue, isWorkingSet, metricsFor, metricValue, percentChange,
   type ExerciseRecord, type MetricOption, type SeriesPoint,
 } from '@/lib/analytics';
 
@@ -80,8 +80,8 @@ export function sparkPoints(values: readonly number[], w: number, h: number, pad
 }
 
 /** Mögliche Kennzahlen einer Übung in Reihenfolge der Vorliebe (Gewicht, sonst Wiederholungen, Tempo, Dauer). */
-export const metricsOf = (record: Pick<ExerciseRecord, 'trackingType' | 'maxWeight'>): MetricOption[] =>
-  metricsFor(record.trackingType, (record.maxWeight?.value ?? 0) > 0);
+export const metricsOf = (record: Pick<ExerciseRecord, 'trackingType' | 'maxWeight' | 'isAssisted'>): MetricOption[] =>
+  metricsFor(record.trackingType, (record.maxWeight?.value ?? 0) > 0, !!record.isAssisted);
 
 export interface ExerciseTrend {
   key: string;
@@ -117,7 +117,7 @@ export function exerciseTrends(records: Iterable<ExerciseRecord>, workouts: read
       const entry = metrics.get(key)!;
       entry.options.forEach((m, i) => {
         const value = metricValue(sets, m.key);
-        if (value > 0) entry.series[i]!.push({ date: w.date, value });
+        if (hasMetricValue(m.key, value)) entry.series[i]!.push({ date: w.date, value });
       });
     }
   }

@@ -7,6 +7,7 @@ export const TrackingType = Object.freeze({
   WeightReps: 'WeightReps',
   DistanceTime: 'DistanceTime',
   Duration: 'Duration',
+  Cardio: 'Cardio',
 } as const satisfies Record<string, TrackingTypeValue>);
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -36,8 +37,12 @@ export function epley1RM(weight: number | null | undefined, reps: number | null 
 /** Arbeitssatz = kein Aufwärmsatz. Nur Arbeitssätze zählen für Rekorde, Volumen und Verläufe. */
 export const isWorkingSet = (set: MaybeSet): boolean => !set?.isWarmup;
 
+/** Bewegtes Gewicht. Unterstützte Maschine: 0 (das Gewicht hilft, es wird nicht bewegt); einseitig: beide Seiten. */
 export const setVolume = (set: MaybeSet): number =>
-  isWorkingSet(set) && (set?.weight ?? 0) > 0 && (set?.reps ?? 0) > 0 ? set!.weight! * set!.reps! : 0;
+  isWorkingSet(set) && !set?.isAssisted && (set?.weight ?? 0) > 0 && (set?.reps ?? 0) > 0 ? set!.weight! * set!.reps! * (set!.perSide ? 2 : 1) : 0;
+
+/** Unterstützte Maschine (Gravitron): eingetragenes Gewicht ist Hilfe - weniger ist besser. */
+export const isAssistedSet = (set: MaybeSet): boolean => !!set?.isAssisted;
 
 /** Trainingslast nach Foster: Session-RPE × Dauer in Minuten (Arbitrary Units). */
 export const sessionLoad = (workout: Pick<Workout, 'sessionRpe' | 'durationSeconds'> | null | undefined): number =>
@@ -110,6 +115,8 @@ export interface WorkoutSummary {
   volume: number;
   distance: number;
   durationWork: number;
+  /** Minuten auf Ausdauergeräten. */
+  cardioMinutes: number;
 }
 
 /** Kennzahlen einer Einheit. */
@@ -118,6 +125,7 @@ export function summarizeWorkout(workout: Partial<Pick<Workout, 'sets' | 'sessio
   let volume = 0;
   let distance = 0;
   let durationWork = 0;
+  let cardioSeconds = 0;
   const exercises = new Set<string>();
 
   let warmups = 0;
@@ -127,7 +135,8 @@ export function summarizeWorkout(workout: Partial<Pick<Workout, 'sets' | 'sessio
     volume += setVolume(s);
     const type = trackingOf(s);
     if (type === TrackingType.DistanceTime && (s.distance ?? 0) > 0) distance += s.distance!;
-    if (type === TrackingType.Duration && (s.time ?? 0) > 0) durationWork += s.time!;
+    if (type === TrackingType.Duration && (s.time ?? 0) > 0) durationWork += s.time! * (s.perSide ? 2 : 1);
+    if (type === TrackingType.Cardio && (s.time ?? 0) > 0) cardioSeconds += s.time!;
   }
 
   return {
@@ -139,6 +148,7 @@ export function summarizeWorkout(workout: Partial<Pick<Workout, 'sets' | 'sessio
     volume: round1(volume),
     distance: round1(distance),
     durationWork: round1(durationWork),
+    cardioMinutes: Math.round(cardioSeconds / 60),
   };
 }
 
@@ -167,7 +177,7 @@ export function groupSetsByExercise(sets: readonly WorkoutSet[] | null | undefin
 // ---------- Rekorde ----------
 
 export interface RecordValue { value: number; date: string }
-export type RecordField = 'maxWeight' | 'maxE1RM' | 'maxVolume' | 'topSpeed' | 'maxDistance' | 'longest';
+export type RecordField = 'maxWeight' | 'maxE1RM' | 'maxVolume' | 'topSpeed' | 'maxDistance' | 'longest' | 'maxPower';
 
 export interface ExerciseRecord extends Record<RecordField, RecordValue | null> {
   key: string;
@@ -176,6 +186,10 @@ export interface ExerciseRecord extends Record<RecordField, RecordValue | null> 
   trackingType: TrackingTypeValue;
   lastDate: string | null;
   sessions: number;
+  isAssisted: boolean;
+  perSide: boolean;
+  /** Unterstützte Maschine: geringste Hilfe (kg) mit den Wiederholungen dazu - weniger ist besser. */
+  minAssist: (RecordValue & { reps: number }) | null;
 }
 
 function emptyRecord(set: WorkoutSet): ExerciseRecord {
@@ -189,22 +203,33 @@ function emptyRecord(set: WorkoutSet): ExerciseRecord {
     maxVolume: null,
     topSpeed: null,    // m/s
     maxDistance: null,
-    longest: null,     // Sekunden (Duration)
+    longest: null,     // Sekunden (Duration, Cardio)
+    maxPower: null,    // Watt (Cardio)
     lastDate: null,
     sessions: 0,
+    isAssisted: !!set.isAssisted,
+    perSide: !!set.perSide,
+    minAssist: null,
   };
 }
+
+/** Mehr Wdh. bei gleicher Hilfe oder weniger Hilfe (mindestens so viele Wdh. wie beim Bestwert, sonst zählt es nicht). */
+export const betterAssist = (current: { value: number; reps: number } | null, weight: number, reps: number): boolean =>
+  reps > 0 && (current === null || weight < current.value - 1e-9 && reps >= current.reps || Math.abs(weight - current.value) < 1e-9 && reps > current.reps);
+
+/** Rekord-Schlüssel: Übung, bei studioabhängigen Übungen zusätzlich das Studio. */
+export type RecordKeyOf = (set: WorkoutSet, workout: Workout) => string;
 
 const better = (current: RecordValue | null, value: number) => value > 0 && (current === null || value > current.value);
 
 /** Bestwerte pro Übung über die gesamte Historie (exerciseKey -> Record). */
-export function computeRecords(workouts: readonly Workout[] | null | undefined): Map<string, ExerciseRecord> {
+export function computeRecords(workouts: readonly Workout[] | null | undefined, keyOf: RecordKeyOf = (s) => exerciseKey(s)): Map<string, ExerciseRecord> {
   const records = new Map<string, ExerciseRecord>();
   for (const w of chronological(workouts)) {
     const seenInWorkout = new Set<string>();
     for (const s of w.sets ?? []) {
       if (!isWorkingSet(s)) continue;
-      const key = exerciseKey(s);
+      const key = keyOf(s, w);
       if (!records.has(key)) records.set(key, emptyRecord(s));
       const r = records.get(key)!;
       if (!seenInWorkout.has(key)) {
@@ -212,14 +237,21 @@ export function computeRecords(workouts: readonly Workout[] | null | undefined):
         seenInWorkout.add(key);
       }
       r.lastDate = w.date;
+      r.isAssisted ||= !!s.isAssisted;
+      r.perSide ||= !!s.perSide;
 
+      const type = trackingOf(s);
+      const assisted = !!s.isAssisted;
+      if (assisted && betterAssist(r.minAssist, s.weight ?? 0, s.reps ?? 0)) r.minAssist = { value: round2(s.weight ?? 0), reps: s.reps ?? 0, date: w.date };
       const candidates: Record<RecordField, number> = {
-        maxWeight: s.weight ?? 0,
-        maxE1RM: epley1RM(s.weight, s.reps),
+        // Unterstützt: mehr Gewicht = mehr Hilfe = kein Rekord
+        maxWeight: assisted ? 0 : s.weight ?? 0,
+        maxE1RM: assisted ? 0 : epley1RM(s.weight, s.reps),
         maxVolume: setVolume(s),
         topSpeed: setSpeed(s),
-        maxDistance: trackingOf(s) === TrackingType.DistanceTime ? s.distance ?? 0 : 0,
-        longest: trackingOf(s) === TrackingType.Duration ? s.time ?? 0 : 0,
+        maxDistance: type === TrackingType.DistanceTime || type === TrackingType.Cardio ? s.distance ?? 0 : 0,
+        longest: type === TrackingType.Duration || type === TrackingType.Cardio ? s.time ?? 0 : 0,
+        maxPower: type === TrackingType.Cardio ? s.power ?? 0 : 0,
       };
       for (const [field, value] of Object.entries(candidates) as [RecordField, number][]) {
         if (better(r[field], value)) r[field] = { value: round2(value), date: w.date };
@@ -229,7 +261,7 @@ export function computeRecords(workouts: readonly Workout[] | null | undefined):
   return records;
 }
 
-type PrField = 'maxWeight' | 'maxVolume' | 'topSpeed' | 'maxDistance' | 'longest';
+type PrField = 'maxWeight' | 'maxVolume' | 'topSpeed' | 'maxDistance' | 'longest' | 'minAssist';
 export type BadgeTone = 'gold' | 'orange' | 'green';
 export interface PrBadge { field: PrField; label: string; icon: string; tone: BadgeTone }
 export interface PrEvent extends PrBadge { key: string; date: string; name: string | undefined; value: number; previous: number }
@@ -240,46 +272,57 @@ const PR_BADGES: Record<PrField, Omit<PrBadge, 'field'>> = {
   topSpeed: { label: 'TOP SPD', icon: '⚡', tone: 'green' },
   maxDistance: { label: 'MAX DIST', icon: '👑', tone: 'gold' },
   longest: { label: 'LONGEST', icon: '⏱', tone: 'green' },
+  minAssist: { label: 'LESS ASSIST', icon: '👑', tone: 'gold' },
 };
 
 /**
  * Erkennt historische Rekorde: ein Satz bekommt ein Badge, wenn er zum Zeitpunkt des Trainings
  * den bisherigen Bestwert übertroffen hat. Der allererste Satz einer Übung zählt nicht (kein Vergleich).
+ * Unterstützte Maschinen: Rekord = weniger Hilfe bei mindestens gleich vielen Wdh. (nicht mehr Gewicht).
  * badges: Schlüssel `${workoutKey}#${setIndex}` -> Liste von Badges; events: alle PR-Ereignisse, neueste zuerst.
  */
-export function detectPRs(workouts: readonly Workout[] | null | undefined): { badges: Map<string, PrBadge[]>; events: PrEvent[] } {
-  const best = new Map<string, Record<PrField, number>>();
+export function detectPRs(workouts: readonly Workout[] | null | undefined, keyOf: RecordKeyOf = (s) => exerciseKey(s)): { badges: Map<string, PrBadge[]>; events: PrEvent[] } {
+  const best = new Map<string, { values: Record<Exclude<PrField, 'minAssist'>, number>; assist: { value: number; reps: number } | null }>();
   const badges = new Map<string, PrBadge[]>();
   const events: PrEvent[] = [];
+  const award = (wKey: string, index: number, field: PrField, ev: Omit<PrEvent, keyof PrBadge>) => {
+    const badge: PrBadge = { field, ...PR_BADGES[field] };
+    const list = badges.get(`${wKey}#${index}`) ?? [];
+    list.push(badge);
+    badges.set(`${wKey}#${index}`, list);
+    events.push({ ...badge, ...ev });
+  };
 
   for (const w of chronological(workouts)) {
     const wKey = workoutKey(w);
     (w.sets ?? []).forEach((s, index) => {
       if (!isWorkingSet(s)) return;
-      const key = exerciseKey(s);
-      const values: Record<PrField, number> = {
-        maxWeight: s.weight ?? 0,
+      const key = keyOf(s, w);
+      const type = trackingOf(s);
+      const assisted = !!s.isAssisted;
+      const values: Record<Exclude<PrField, 'minAssist'>, number> = {
+        maxWeight: assisted ? 0 : s.weight ?? 0,
         maxVolume: setVolume(s),
         topSpeed: setSpeed(s),
-        maxDistance: trackingOf(s) === TrackingType.DistanceTime ? s.distance ?? 0 : 0,
-        longest: trackingOf(s) === TrackingType.Duration ? s.time ?? 0 : 0,
+        maxDistance: type === TrackingType.DistanceTime || type === TrackingType.Cardio ? s.distance ?? 0 : 0,
+        longest: type === TrackingType.Duration || type === TrackingType.Cardio ? s.time ?? 0 : 0,
       };
+      const assist = assisted && (s.reps ?? 0) > 0 ? { value: s.weight ?? 0, reps: s.reps ?? 0 } : null;
       const previous = best.get(key);
       if (!previous) {
-        best.set(key, { ...values });
+        best.set(key, { values: { ...values }, assist });
         return;
       }
-      for (const [field, value] of Object.entries(values) as [PrField, number][]) {
-        if (value > 0 && value > (previous[field] ?? 0) + 1e-9) {
-          if ((previous[field] ?? 0) > 0) {
-            const badge: PrBadge = { field, ...PR_BADGES[field] };
-            const list = badges.get(`${wKey}#${index}`) ?? [];
-            list.push(badge);
-            badges.set(`${wKey}#${index}`, list);
-            events.push({ ...badge, key, date: w.date, name: s.exerciseName ?? s.name, value: round2(value), previous: round2(previous[field]) });
-          }
-          previous[field] = value;
+      const name = s.exerciseName ?? s.name;
+      for (const [field, value] of Object.entries(values) as [Exclude<PrField, 'minAssist'>, number][]) {
+        if (value > 0 && value > (previous.values[field] ?? 0) + 1e-9) {
+          if ((previous.values[field] ?? 0) > 0) award(wKey, index, field, { key, date: w.date, name, value: round2(value), previous: round2(previous.values[field]) });
+          previous.values[field] = value;
         }
+      }
+      if (assist && betterAssist(previous.assist, assist.value, assist.reps)) {
+        if (previous.assist) award(wKey, index, 'minAssist', { key, date: w.date, name, value: round2(assist.value), previous: round2(previous.assist.value) });
+        previous.assist = assist;
       }
     });
   }
@@ -304,6 +347,11 @@ export const ChartMetric = Object.freeze({
   Longest: 'longest',
   MaxReps: 'maxReps',
   TotalReps: 'totalReps',
+  MinAssist: 'minAssist',
+  CardioMinutes: 'cardioMinutes',
+  CardioKm: 'cardioKm',
+  AvgSpeed: 'avgSpeed',
+  AvgPower: 'avgPower',
 } as const);
 export type ChartMetricValue = (typeof ChartMetric)[keyof typeof ChartMetric];
 
@@ -313,8 +361,15 @@ export interface MetricOption { key: ChartMetricValue; label: string; unit: stri
  * Kennzahlen für den Verlauf. Ohne Zusatzgewicht (Klimmzüge, Liegestütze) sind Gewicht, 1RM und Volumen immer 0 -
  * dort zählen die Wiederholungen.
  */
-export function metricsFor(trackingType: TrackingTypeValue | null | undefined, hasWeight = true): MetricOption[] {
+export function metricsFor(trackingType: TrackingTypeValue | null | undefined, hasWeight = true, assisted = false): MetricOption[] {
   switch (trackingType) {
+    case TrackingType.Cardio:
+      return [
+        { key: ChartMetric.CardioMinutes, label: 'Duration', unit: 'min' },
+        { key: ChartMetric.CardioKm, label: 'Distance', unit: 'km' },
+        { key: ChartMetric.AvgSpeed, label: 'Avg speed', unit: 'km/h' },
+        { key: ChartMetric.AvgPower, label: 'Avg power', unit: 'W' },
+      ];
     case TrackingType.DistanceTime:
       return [
         { key: ChartMetric.TopSpeed, label: 'Top speed', unit: 'km/h' },
@@ -324,6 +379,13 @@ export function metricsFor(trackingType: TrackingTypeValue | null | undefined, h
     case TrackingType.Duration:
       return [{ key: ChartMetric.Longest, label: 'Longest', unit: 's' }];
     default:
+      // Unterstützte Maschine: Fortschritt = weniger Hilfe; dazu die Wiederholungen
+      if (assisted) {
+        return [
+          { key: ChartMetric.MinAssist, label: 'Assistance', unit: 'kg', lowerIsBetter: true },
+          { key: ChartMetric.MaxReps, label: 'Max reps', unit: 'reps' },
+        ];
+      }
       if (!hasWeight) {
         return [
           { key: ChartMetric.MaxReps, label: 'Max reps', unit: 'reps' },
@@ -341,6 +403,9 @@ export function metricsFor(trackingType: TrackingTypeValue | null | undefined, h
 
 export interface SeriesPoint { date: string; value: number }
 
+/** Hat eine Einheit einen Wert für diese Kennzahl? (Unterstützung: 0 kg ist ein Wert, -1 heißt "nichts".) */
+export const hasMetricValue = (metric: ChartMetricValue | string, value: number): boolean => (metric === ChartMetric.MinAssist ? value >= 0 : value > 0);
+
 /** Wert einer Kennzahl für die Arbeitssätze einer Übung in einer Einheit (0 = nichts Messbares). */
 export function metricValue(sets: readonly WorkoutSet[], metric: ChartMetricValue | string): number {
   if (sets.length === 0) return 0;
@@ -357,6 +422,24 @@ export function metricValue(sets: readonly WorkoutSet[], metric: ChartMetricValu
     case ChartMetric.Longest: return round2(Math.max(...sets.map((s) => s.time ?? 0)));
     case ChartMetric.MaxReps: return Math.max(...sets.map((s) => s.reps ?? 0));
     case ChartMetric.TotalReps: return sets.reduce((sum, s) => sum + (s.reps ?? 0), 0);
+    case ChartMetric.MinAssist: {
+      // 0 kg Hilfe ist der beste Wert - "nichts gemessen" ist hier -1
+      const withReps = sets.filter((s) => (s.reps ?? 0) > 0);
+      return withReps.length ? round2(Math.min(...withReps.map((s) => s.weight ?? 0))) : -1;
+    }
+    case ChartMetric.CardioMinutes: return round1(sets.reduce((sum, s) => sum + (s.time ?? 0), 0) / 60);
+    case ChartMetric.CardioKm: return round2(sets.reduce((sum, s) => sum + (s.distance ?? 0), 0) / 1000);
+    case ChartMetric.AvgSpeed: {
+      const d = sets.reduce((sum, s) => sum + (s.distance ?? 0), 0);
+      const t = sets.reduce((sum, s) => sum + ((s.distance ?? 0) > 0 ? s.time ?? 0 : 0), 0);
+      return d > 0 && t > 0 ? round1(msToKmh(d / t)) : 0;
+    }
+    case ChartMetric.AvgPower: {
+      const p = sets.filter((s) => (s.power ?? 0) > 0);
+      // Zeitgewichtet, wenn Dauer da ist (20 min mit 150 W zählen mehr als 2 min mit 300 W)
+      const w = p.reduce((sum, s) => sum + (s.time ?? 1), 0);
+      return p.length ? Math.round(p.reduce((sum, s) => sum + s.power! * (s.time ?? 1), 0) / w) : 0;
+    }
     default: return 0;
   }
 }
@@ -366,7 +449,7 @@ export function exerciseSeries(workouts: readonly Workout[] | null | undefined, 
   const points: SeriesPoint[] = [];
   for (const w of chronological(workouts)) {
     const value = metricValue((w.sets ?? []).filter((s) => exerciseKey(s) === key && isWorkingSet(s)), metric);
-    if (value > 0) points.push({ date: w.date, value });
+    if (hasMetricValue(metric, value)) points.push({ date: w.date, value });
   }
   return points;
 }

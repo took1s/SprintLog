@@ -22,7 +22,7 @@ export interface GhostValues {
 
 export interface Suggestion { weight?: number | null; reps?: number | null; distance?: number | null; time?: number | null }
 
-export const GHOST_DEFAULTS = Object.freeze({ weight: 20, reps: 10, distance: 30, time: 4.5, duration: 60 });
+export const GHOST_DEFAULTS = Object.freeze({ weight: 20, reps: 10, distance: 30, time: 4.5, duration: 60, cardio: 20 * 60 });
 
 /** Reihenfolge der Blöcke: explizit hinzugefügte Übungen, dann Plan-Ziele, dann Übungen, die nur Sätze haben. */
 export function blockOrder(order: readonly number[] | undefined, planIds: readonly number[], setIds: readonly number[]): number[] {
@@ -37,16 +37,25 @@ export function blockOrder(order: readonly number[] | undefined, planIds: readon
 }
 
 /** Alle Sätze dieser Übung aus der letzten Einheit, die sie enthielt (in Original-Reihenfolge). */
-export function previousSets(workouts: readonly Workout[] | null | undefined, exerciseId: number, exclude?: { id?: number | null; clientId?: string | null } | null): WorkoutSet[] {
+export function previousSets(
+  workouts: readonly Workout[] | null | undefined,
+  exerciseId: number,
+  exclude?: { id?: number | null; clientId?: string | null } | null,
+  /** Bevorzugte Einheiten (z. B. gleiches Studio bei Maschinen) - nur wenn es dort keine gibt, zählt jede. */
+  prefer?: ((w: Workout) => boolean) | null,
+): WorkoutSet[] {
   const key = `id:${exerciseId}`;
   let best: { date: string; sets: WorkoutSet[] } | null = null;
+  let bestPreferred: { date: string; sets: WorkoutSet[] } | null = null;
   for (const w of workouts ?? []) {
     if (exclude && ((exclude.id != null && w.id === exclude.id) || (exclude.clientId && w.clientId === exclude.clientId))) continue;
     const sets = (w.sets ?? []).filter((s) => exerciseKey(s) === key);
     if (!sets.length) continue;
-    if (!best || String(w.date) > best.date) best = { date: String(w.date), sets };
+    const date = String(w.date);
+    if (!best || date > best.date) best = { date, sets };
+    if (prefer?.(w) && (!bestPreferred || date > bestPreferred.date)) bestPreferred = { date, sets };
   }
-  return best?.sets ?? [];
+  return (bestPreferred ?? best)?.sets ?? [];
 }
 
 const n = (v: unknown, fallback = 0): number => (Number.isFinite(Number(v)) && v !== null && v !== undefined ? Number(v) : fallback);
@@ -68,7 +77,9 @@ export function ghostFor({ trackingType, bodyweight, index, sessionSets, templat
     weight: trackingType === TrackingType.WeightReps && !bodyweight ? GHOST_DEFAULTS.weight : 0,
     reps: trackingType === TrackingType.WeightReps ? GHOST_DEFAULTS.reps : 0,
     distance: trackingType === TrackingType.DistanceTime ? GHOST_DEFAULTS.distance : 0,
-    time: trackingType === TrackingType.Duration ? GHOST_DEFAULTS.duration : trackingType === TrackingType.DistanceTime ? GHOST_DEFAULTS.time : 0,
+    time: trackingType === TrackingType.Duration ? GHOST_DEFAULTS.duration
+      : trackingType === TrackingType.DistanceTime ? GHOST_DEFAULTS.time
+      : trackingType === TrackingType.Cardio ? GHOST_DEFAULTS.cardio : 0,
   };
   const from = (s: WorkoutSet | Suggestion, source: GhostValues['source'], warmup = false): GhostValues => ({
     weight: n(s.weight, defaults.weight),

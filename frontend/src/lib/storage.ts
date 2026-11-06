@@ -35,6 +35,8 @@ export const Keys = Object.freeze({
   settings: `${PREFIX}:settings`,
   legacySets: 'sprintlog_sets',    // v2: laufende Einheit
   legacyQueue: 'sync_queue',       // v2: Offline-Warteschlange
+  gyms: `${PREFIX}:gyms`,          // Studios dieses Geräts (Reihenfolge: erstes = Hauptstudio)
+  currentGym: `${PREFIX}:gym`,     // zuletzt gewähltes Studio
 });
 
 /** Nutzerspezifische Schlüssel - verhindert, dass Daten von Konto A bei Konto B landen. */

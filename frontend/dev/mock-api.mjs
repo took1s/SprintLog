@@ -19,8 +19,14 @@ const demo = process.argv.includes('--demo');
 
 // ---------- Seed aus dem C#-Code ----------
 const seedSource = readFileSync(join(root, 'SprintLog.Api', 'Data', 'AppDbContext.cs'), 'utf8');
+const idSet = (name) => new Set((seedSource.match(new RegExp(`${name} = new\\(\\) \\{([^}]*)\\}`))?.[1] ?? '').split(',').map((x) => Number(x.trim())).filter(Boolean));
+const ASSISTED = idSet('AssistedSeedIds');
+const PER_SIDE = idSet('PerSideSeedIds');
 const seed = [...seedSource.matchAll(/Ex\((\d+), "([^"]+)", "([^"]+)", "([^"]+)"(?:, TrackingType\.(\w+))?\)/g)]
-  .map(([, id, name, category, muscleGroup, trackingType]) => ({ id: Number(id), name, category, muscleGroup, trackingType: trackingType ?? 'WeightReps', userId: null }));
+  .map(([, id, name, category, muscleGroup, trackingType]) => ({
+    id: Number(id), name, category, muscleGroup, trackingType: trackingType ?? 'WeightReps', userId: null,
+    isAssisted: ASSISTED.has(Number(id)), perSide: PER_SIDE.has(Number(id)),
+  }));
 
 // Plan-Vorlagen: dieselbe JSON-Datei wie die API (SprintLog.Api/Data/program-templates.json, eingebettete Ressource).
 const PX_DEFAULTS = { repsMin: null, repsMax: null, distance: null, time: null, targetRpe: null, restSeconds: null, progressionStep: null, percentOf1Rm: null, note: null, weekSteps: [] };
@@ -122,16 +128,21 @@ function sendMail(to, subject, param, token) {
   db.outbox.push({ to, subject, link, sentAt: new Date().toISOString() });
 }
 const visible = (userId) => db.exercises.filter((e) => e.userId === null || e.userId === userId);
-const exerciseDto = (e) => ({ id: e.id, name: e.name, category: e.category, muscleGroup: e.muscleGroup, trackingType: e.trackingType, isCustom: e.userId !== null });
+const exerciseDto = (e) => ({ id: e.id, name: e.name, category: e.category, muscleGroup: e.muscleGroup, trackingType: e.trackingType, isCustom: e.userId !== null, isAssisted: !!e.isAssisted, perSide: !!e.perSide });
+const CARDIO_KEYS = ['level', 'power', 'heartRate', 'cadence', 'calories'];
+const NOTE_REASONS = ['pain', 'equipment', 'time', 'fatigue', 'other'];
+const cleanNotes = (notes) => (notes ?? []).map((n) => ({ exerciseId: n.exerciseId, note: n.note?.trim() || null, skipped: !!n.skipped, reason: n.reason ?? null }));
 
 function workoutResponse(w) {
   return {
     id: w.id, clientId: w.clientId, date: w.date, workoutType: w.workoutType, durationSeconds: w.durationSeconds,
     sessionRpe: w.sessionRpe ?? null, quality: w.quality ?? null, notes: w.notes ?? null, programDayId: w.programDayId ?? null, updatedAt: w.updatedAt,
+    gym: w.gym ?? null, exerciseNotes: cleanNotes(w.exerciseNotes),
     match: w.workoutType === 'Match' ? { goals: w.match?.goals ?? null, assists: w.match?.assists ?? null, opponent: w.match?.opponent?.trim() || null } : null,
     sets: (w.sets ?? []).map((s, i) => {
       const ex = db.exercises.find((e) => e.id === s.exerciseId);
-      return { exerciseId: s.exerciseId, exerciseName: ex?.name ?? '?', trackingType: ex?.trackingType ?? 'WeightReps', muscleGroup: ex?.muscleGroup ?? null, setNumber: i + 1, weight: s.weight ?? null, reps: s.reps ?? null, distance: s.distance ?? null, time: s.time ?? null, rpe: s.rpe ?? null, isWarmup: !!s.isWarmup, note: s.note?.trim() || null };
+      return { exerciseId: s.exerciseId, exerciseName: ex?.name ?? '?', trackingType: ex?.trackingType ?? 'WeightReps', muscleGroup: ex?.muscleGroup ?? null, setNumber: i + 1, weight: s.weight ?? null, reps: s.reps ?? null, distance: s.distance ?? null, time: s.time ?? null, rpe: s.rpe ?? null, isWarmup: !!s.isWarmup, note: s.note?.trim() || null,
+        ...Object.fromEntries(CARDIO_KEYS.map((k) => [k, s[k] ?? null])), isAssisted: !!ex?.isAssisted, perSide: !!ex?.perSide };
     }),
   };
 }
@@ -159,8 +170,18 @@ function validateWorkout(user, body) {
   (body.sets ?? []).forEach((s, i) => {
     if ([s.weight, s.reps, s.distance, s.time].some((v) => v != null && v < 0)) errors[`sets[${i}]`] = ['Metrics cannot be negative.'];
   });
+  (body.sets ?? []).forEach((s, i) => {
+    if (s.heartRate != null && (s.heartRate < 30 || s.heartRate > 250)) errors[`sets[${i}]`] = ['Heart rate must be between 30 and 250 bpm.'];
+    if (s.power != null && (s.power < 0 || s.power > 3000)) errors[`sets[${i}]`] = ['Power must be between 0 and 3000 W.'];
+    if (s.level != null && (s.level < 0 || s.level > 100)) errors[`sets[${i}]`] = ['Level must be between 0 and 100.'];
+  });
+  if (body.gym != null && String(body.gym).length > 40) errors.gym = ['Gym must not exceed 40 characters.'];
+  (body.exerciseNotes ?? []).forEach((n, i) => {
+    if (n.reason != null && !NOTE_REASONS.includes(n.reason)) errors[`exerciseNotes[${i}]`] = ['Unknown reason.'];
+    if (!n.skipped && n.reason == null && !n.note?.trim()) errors[`exerciseNotes[${i}]`] = ['Empty exercise note.'];
+  });
   const ids = visible(user.id).map((e) => e.id);
-  const unknown = (body.sets ?? []).map((s) => s.exerciseId).filter((id) => !ids.includes(id));
+  const unknown = [...(body.sets ?? []), ...(body.exerciseNotes ?? [])].map((s) => s.exerciseId).filter((id) => !ids.includes(id));
   if (unknown.length) errors.sets = [`Unknown exercise id(s): ${unknown.join(', ')}.`];
   if (body.sessionRpe != null && (body.sessionRpe < 1 || body.sessionRpe > 10)) errors.sessionRpe = ['Session RPE must be between 1 and 10.'];
   if (body.quality != null && (body.quality < 1 || body.quality > 10)) errors.quality = ['Quality must be between 1 and 10.'];
@@ -180,6 +201,7 @@ function saveWorkout(user, body) {
     date: body.date ? new Date(body.date).toISOString() : new Date().toISOString(),
     durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null, quality: body.quality ?? null,
     notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets ?? [], match: body.match ?? null,
+    gym: body.gym?.trim() || null, exerciseNotes: cleanNotes(body.exerciseNotes),
     updatedAt: new Date().toISOString(),
   };
   db.workouts.push(w);
@@ -342,11 +364,20 @@ async function handleApi(req, res, url) {
     if (!['Gym', 'Football'].includes(body.category)) errors.category = ["Category must be 'Gym' or 'Football'."];
     if (Object.keys(errors).length) return problem(res, 400, 'One or more validation errors occurred.', errors);
     if (visible(user.id).some((e) => e.name.toLowerCase() === name.toLowerCase())) return problem(res, 409, `An exercise named '${name}' already exists.`);
-    const ex = { id: db.nextExerciseId++, name, category: body.category, muscleGroup: body.muscleGroup || 'Other', trackingType: body.trackingType ?? 'WeightReps', userId: user.id };
+    const ex = { id: db.nextExerciseId++, name, category: body.category, muscleGroup: body.muscleGroup || 'Other', trackingType: body.trackingType ?? 'WeightReps', userId: user.id, isAssisted: !!body.isAssisted, perSide: !!body.perSide };
     db.exercises.push(ex);
     return json(res, 201, exerciseDto(ex));
   }
   let m = path.match(/^\/api\/exercises\/(\d+)$/);
+  if (method === 'PATCH' && m) {
+    const ex = db.exercises.find((e) => e.id === Number(m[1]) && e.userId === user.id);
+    if (!ex) return problem(res, 404, 'Not Found');
+    const body = await readBody(req);
+    if (body.isAssisted === true && ex.trackingType !== 'WeightReps') return problem(res, 400, 'One or more validation errors occurred.', { isAssisted: ['Only weight exercises can be assisted.'] });
+    if (typeof body.isAssisted === 'boolean') ex.isAssisted = body.isAssisted;
+    if (typeof body.perSide === 'boolean') ex.perSide = body.perSide;
+    return json(res, 200, exerciseDto(ex));
+  }
   if (method === 'DELETE' && m) {
     const id = Number(m[1]);
     const ex = db.exercises.find((e) => e.id === id && e.userId === user.id);
@@ -479,10 +510,30 @@ async function handleApi(req, res, url) {
         const pool = [12, 50, 1, 47].map((id) => visible(user.id).find((e) => e.id === id)).filter(Boolean);
         actions.push({ type: 'program', summary: 'Two days around your match.', program: { name: 'Chat Plan', goal: 'Speed', weeks: 6, days: ['A', 'B'].map((n) => ({ id: null, name: `Day ${n}`, notes: null, exercises: pool.map((e) => ({ exerciseId: e.id, sets: 3, ...target(e) })) })) } });
       }
+      let liveAnswer = '';
+      // Im Training: wie propose_workout_change - besetztes Gerät tauschen, Ziel für die restlichen Sätze anpassen
+      if (body.session) {
+        let live = null;
+        try { live = JSON.parse(body.session); } catch { /* nur Text */ }
+        const first = live?.exercises?.find((e) => !e.done) ?? live?.exercises?.[0];
+        if (first && /busy|besetzt|занят|replace|tausch|замен/.test(lower)) {
+          const alt = [14, 110, 36].map((id) => visible(user.id).find((e) => e.id === id)).find((e) => e && e.id !== first.id);
+          actions.push({ type: 'workout', changes: ['Machine busy -> similar movement'], operations: [
+            { op: 'replace', exerciseId: first.id, name: first.name, withExerciseId: alt.id, withName: alt.name, trackingType: alt.trackingType, sets: 3, reps: 10, weight: 40 },
+            { op: 'add', exerciseId: 47, name: 'Plank', trackingType: 'Duration', sets: 2, time: 45, note: 'Core finisher' },
+          ] });
+        } else if (first && /easy|легко|leicht|hard|тяжело|schwer/.test(lower)) {
+          actions.push({ type: 'workout', changes: ['Adjust the remaining sets'], operations: [
+            { op: 'adjust', exerciseId: first.id, name: first.name, trackingType: first.trackingType ?? 'WeightReps', sets: 2, reps: 8, weight: 62.5, targetRpe: 8 },
+          ] });
+        }
+        liveAnswer = `Live workout: ${live?.exercises?.length ?? 0} exercises at ${live?.gym ?? 'unknown gym'}.`;
+      }
       if (lower.includes('week') || lower.includes('недел') || lower.includes('woche')) {
         actions.push({ type: 'schedule', trainingDays: 1 | 4 | 16, matchDays: 64, reason: 'Rest before and after the match.' });
       }
       let answer = `Mock coach (${body.locale}, ${mode}): today is a ${today} day.\n- Position: ${profile?.position ?? 'unknown'}.\n- History: ${(body.history ?? []).length} messages.`;
+      if (liveAnswer) answer = `${liveAnswer}\n${answer}`;
       // Gedächtnis wie das Werkzeug "remember": "Remember that ..." / "Запомни, что ..." / "Merk dir, dass ..."
       const memoryChanges = [];
       const rem = q.match(/^(?:remember(?: that)?|запомни(?:,? что)?|merk dir(?:,? dass)?)\s*[:,]?\s*(.+)$/i);
@@ -609,6 +660,7 @@ async function handleApi(req, res, url) {
       workoutType: body.workoutType, date: body.date ? new Date(body.date).toISOString() : w.date,
       durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null, quality: body.quality ?? null,
       notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets ?? [], match: body.match ?? null,
+      gym: body.gym?.trim() || null, exerciseNotes: cleanNotes(body.exerciseNotes),
       updatedAt: new Date().toISOString(),
     });
     return json(res, 200, workoutResponse(w));

@@ -12,7 +12,7 @@ import {
   TrackingType, trackingOf, epley1RM, setSpeed, msToKmh, trainingZone, roundTo, exerciseKey,
   computeRecords, detectPRs, workoutKey, summarizeWorkout, groupSetsByExercise, metricsFor,
   exerciseSeries, weeklyTotals, weekStreak, muscleDistribution, activityHeatmap, lastSetFor,
-  usageCounts, lastSetsByKey, inferWorkoutType, percentChange, dateKey, type ExerciseRecord, type MetricOption,
+  usageCounts, lastSetsByKey, inferWorkoutType, percentChange, dateKey, betterAssist, type ExerciseRecord, type MetricOption,
 } from '../lib/analytics';
 import { formatNumber, formatClock, formatDate, formatRelative, formatSeconds, describeSet, toLocalInput } from '../lib/format';
 import { unlockAudio, playRestAlarm, createWakeLock } from '../lib/feedback';
@@ -29,9 +29,10 @@ import {
 } from '../lib/program';
 import type { WeeklyMetric } from '../lib/charts';
 import type {
-  AuthResult, AuthUser, Exercise, Profile, ProgramDay, ProgramExercise, ProgramTemplate, QueueEntry,
+  AuthResult, AuthUser, Exercise, ExerciseNote, Profile, ProgramDay, ProgramExercise, ProgramTemplate, QueueEntry,
   TrackingType as TrackingTypeValue, TrainingProgram, Workout, WorkoutSet,
 } from '../types';
+import { applyWorkoutOps, gymKey, isGymDependent, liveSessionText, type WorkoutOp } from '../lib/liveWorkout';
 import { useUiStore } from './ui';
 import { useGoalsStore, type GoalView } from './goals';
 import { alternativesFor, type Alternative } from '../lib/alternatives';
@@ -65,7 +66,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
 });
 export type Settings = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: (typeof DEFAULT_SETTINGS)[K] extends boolean ? boolean : number };
 
-const DEFAULTS = Object.freeze({ weight: 20, reps: 10, distance: 30, time: 4.5, duration: 60 });
+const DEFAULTS = Object.freeze({ weight: 20, reps: 10, distance: 30, time: 4.5, duration: 60, cardio: 20 * 60 });
 
 /** RPE-Werte für Sätze (Reps in Reserve: 10 = Maximum, 8 = noch 2 Wiederholungen möglich). */
 export const SET_RPE = Object.freeze([6, 7, 7.5, 8, 8.5, 9, 9.5, 10]);
@@ -131,6 +132,12 @@ export interface Session {
   templates?: Record<number, WorkoutSet[]>;
   /** Abgeschlossene Übungen: kein vorausgefüllter nächster Satz mehr (bis "+ Satz"). */
   done?: number[];
+  /** Studio dieser Einheit; undefined = aktuelles Studio aus den Einstellungen, null = ohne Studio. */
+  gym?: string | null;
+  /** Notizen / Auslassungen pro Übung (für den Verlauf und die KI). */
+  notes?: Record<number, ExerciseNote>;
+  /** Hinweise der KI pro Übung ("Kern zum Abschluss") - stehen unter dem Titel. */
+  hints?: Record<number, string>;
 }
 
 /** Ein Übungs-Block der laufenden Einheit (Anzeige). */
@@ -145,6 +152,10 @@ export interface WorkoutBlock {
   done: boolean;
   /** Kraft-Ziel dieser Übung mit Vorgabe für heute. */
   goal: GoalView | null;
+  /** Notiz oder Auslassung dieser Übung in der Einheit. */
+  note: ExerciseNote | null;
+  /** Hinweis der KI zu dieser Übung. */
+  hint: string | null;
 }
 
 export type PickerFilter = 'recent' | 'favorites' | 'all';
@@ -171,11 +182,20 @@ interface SetModal {
   isWarmup: boolean;
   note: string;
   showNote: boolean;
+  /** Ausdauergerät: optionale Kennzahlen vom Display. */
+  level: number | null;
+  power: number | null;
+  heartRate: number | null;
+  cadence: number | null;
+  calories: number | null;
 }
 
 interface Timer { endAt: number | null; duration: number }
 
-const closedSetModal = (): SetModal => ({ open: false, exercise: null, editIndex: null, weight: 0, reps: 0, distance: 0, time: 0, rpe: null, isWarmup: false, note: '', showNote: false });
+const closedSetModal = (): SetModal => ({
+  open: false, exercise: null, editIndex: null, weight: 0, reps: 0, distance: 0, time: 0, rpe: null, isWarmup: false, note: '', showNote: false,
+  level: null, power: null, heartRate: null, cadence: null, calories: null,
+});
 
 const wakeLock = createWakeLock();
 let reloadOnControllerChange = false;
@@ -258,7 +278,7 @@ export const useAppStore = defineStore('app', () => {
   const setModal = ref<SetModal>(closedSetModal());
 
   // Eigene Übung
-  const customModal = ref({ open: false, name: '', category: 'Gym', muscleGroup: '', trackingType: TrackingType.WeightReps as TrackingTypeValue, busy: false, error: '', addToWorkout: false });
+  const customModal = ref({ open: false, name: '', category: 'Gym', muscleGroup: '', trackingType: TrackingType.WeightReps as TrackingTypeValue, isAssisted: false, perSide: false, busy: false, error: '', addToWorkout: false });
 
   // Einstellungen
   const settingsOpen = ref(false);
@@ -288,6 +308,21 @@ export const useAppStore = defineStore('app', () => {
 
   const exercisesById = computed(() => new Map(exercises.value.map((e) => [e.id, e])));
 
+  /**
+   * Eigenschaften der Übung an jeden Satz: Tracking-Typ, unterstützt, pro Seite. Der Katalog ist die Quelle - ältere
+   * gespeicherte Sätze kennen z. B. "Ausdauergerät" oder "Gravitron = weniger ist besser" noch nicht.
+   */
+  function withTraits(w: Workout, byId: Map<number, Exercise>): Workout {
+    let changed = false;
+    const sets = (w.sets ?? []).map((s) => {
+      const ex = s.exerciseId != null ? byId.get(s.exerciseId) : undefined;
+      if (!ex || (s.trackingType === ex.trackingType && !!s.isAssisted === !!ex.isAssisted && !!s.perSide === !!ex.perSide)) return s;
+      changed = true;
+      return { ...s, trackingType: ex.trackingType, isAssisted: !!ex.isAssisted, perSide: !!ex.perSide };
+    });
+    return changed ? { ...w, sets } : w;
+  }
+
   /** Server-Historie + noch nicht synchronisierte Einheiten, neueste zuerst. */
   const allWorkouts = computed<Workout[]>(() => {
     const pending = queueAsWorkouts(queue.value);
@@ -295,11 +330,67 @@ export const useAppStore = defineStore('app', () => {
     // Noch nicht synchronisierte Änderungen ersetzen die Server-Version in der Anzeige.
     const updatedIds = new Set(pending.filter((w) => w.op === 'update').map((w) => w.id));
     const synced = history.value.filter((w) => !(w.clientId && pendingIds.has(w.clientId)) && !updatedIds.has(w.id));
-    return [...pending, ...synced].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const byId = exercisesById.value;
+    return [...pending, ...synced].map((w) => withTraits(w, byId)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   });
 
+  // ---------- Studios ----------
+  // Liste und aktuelles Studio pro Gerät; dazu jedes Studio, das in der Historie vorkommt (z. B. vom anderen Gerät).
+  const savedGyms = ref<string[]>(readJson<string[]>(Keys.gyms, []));
+  const currentGym = ref<string | null>(readJson<string | null>(Keys.currentGym, null));
+  const gyms = computed(() => {
+    const list: string[] = [];
+    const seen = new Set<string>();
+    const add = (g: string | null | undefined) => { const k = gymKey(g); if (k && !seen.has(k)) { seen.add(k); list.push(g!.trim()); } };
+    savedGyms.value.forEach(add);
+    allWorkouts.value.forEach((w) => add(w.gym));
+    return list;
+  });
+  /** Hauptstudio: Einheiten ohne Angabe zählen hierzu (ältere Einheiten vor dieser Funktion). */
+  const mainGym = computed(() => gyms.value[0] ?? null);
+  function persistGyms() { writeJson(Keys.gyms, savedGyms.value); writeJson(Keys.currentGym, currentGym.value); }
+  function addGym(name: string): boolean {
+    const clean = name.trim().replace(/\s+/g, ' ').slice(0, 40);
+    if (!clean) return false;
+    if (gyms.value.some((g) => gymKey(g) === gymKey(clean))) { toast(t('gym.exists'), 'info'); return false; }
+    savedGyms.value = [...gyms.value, clean];
+    persistGyms();
+    return true;
+  }
+  function removeGym(name: string) {
+    savedGyms.value = gyms.value.filter((g) => gymKey(g) !== gymKey(name));
+    if (gymKey(currentGym.value) === gymKey(name)) currentGym.value = null;
+    persistGyms();
+  }
+  function makeMainGym(name: string) {
+    savedGyms.value = [name, ...gyms.value.filter((g) => gymKey(g) !== gymKey(name))];
+    persistGyms();
+  }
+  /** Studio der laufenden Einheit (undefined in der Session = aktuelles Studio). */
+  const sessionGym = computed(() => (session.value.gym !== undefined ? session.value.gym : currentGym.value));
+  function setSessionGym(name: string | null) {
+    session.value.gym = name;
+    // Neue Einheiten merken sich das Studio für das nächste Mal; beim Bearbeiten alter Einheiten nicht
+    if (!session.value.editing) { currentGym.value = name; persistGyms(); }
+    ghostDraft.value = {};
+    persistSession();
+  }
+
+  /** Rekord-Schlüssel: Maschinen, Kabel, unterstützte und Ausdauergeräte pro Studio, alles andere studioübergreifend. */
+  const recordKeyOf = (s: WorkoutSet, w: Workout): string => {
+    const key = exerciseKey(s);
+    const ex = s.exerciseId != null ? exercisesById.value.get(s.exerciseId) : undefined;
+    return isGymDependent(ex) ? `${key}@${gymKey(w.gym, mainGym.value)}` : key;
+  };
+  const recordKeyFor = (exerciseId: number, gym: string | null | undefined): string => {
+    const ex = exercisesById.value.get(exerciseId);
+    return isGymDependent(ex) ? `id:${exerciseId}@${gymKey(gym, mainGym.value)}` : `id:${exerciseId}`;
+  };
+
   const records = computed(() => computeRecords(allWorkouts.value));
-  const prInfo = computed(() => detectPRs(allWorkouts.value));
+  /** Rekorde fair verglichen: an Maschinen nur im selben Studio. */
+  const gymRecords = computed(() => computeRecords(allWorkouts.value, recordKeyOf));
+  const prInfo = computed(() => detectPRs(allWorkouts.value, recordKeyOf));
   const usage = computed(() => usageCounts(allWorkouts.value));
   const clockDate = computed(() => new Date(clock.value));
   // Kraft-Ziele lesen Historie, Katalog und API über diese Quelle (kein Store-Import im Ziel-Store -> kein Typ-Zirkel)
@@ -617,7 +708,16 @@ export const useAppStore = defineStore('app', () => {
     return progressMetric.value.lowerIsBetter && change !== null ? -change : change;
   });
 
-  const recordList = computed(() => [...records.value.values()].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')));
+  /** Rekorde für die Liste: an Maschinen pro Studio (mit Studio-Namen, sobald es mehr als eines gibt). */
+  const recordList = computed(() => {
+    const names = new Map(gyms.value.map((g) => [gymKey(g), g]));
+    return [...gymRecords.value.entries()]
+      .map(([key, r]) => {
+        const at = key.indexOf('@');
+        return { ...r, gym: at >= 0 && gyms.value.length > 1 ? names.get(key.slice(at + 1)) ?? null : null };
+      })
+      .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '') || (a.gym ?? '').localeCompare(b.gym ?? ''));
+  });
   const heatmap = computed(() => activityHeatmap(allWorkouts.value, 26, clockDate.value, intlLocale()));
   const selectedDayWorkouts = computed(() => (selectedDay.value ? allWorkouts.value.filter((w) => dateKey(w.date) === selectedDay.value) : []));
   const activeDaysLast30 = computed(() => {
@@ -957,7 +1057,7 @@ export const useAppStore = defineStore('app', () => {
       const mapping = new Map<number, number>();
       for (const ex of local) {
         try {
-          const created = await api().post<Exercise>('/api/exercises', { name: ex.name, category: ex.category, muscleGroup: ex.muscleGroup || null, trackingType: ex.trackingType });
+          const created = await api().post<Exercise>('/api/exercises', { name: ex.name, category: ex.category, muscleGroup: ex.muscleGroup || null, trackingType: ex.trackingType, isAssisted: !!ex.isAssisted, perSide: !!ex.perSide });
           mapping.set(ex.id, created.id);
           exercises.value = exercises.value.map((e) => (e.id === ex.id ? created : e));
         } catch (e) {
@@ -1168,7 +1268,13 @@ export const useAppStore = defineStore('app', () => {
       isWarmup: editIndex !== null ? !!source?.isWarmup : false,
       note: editIndex !== null ? source?.note ?? '' : '',
       showNote: editIndex !== null && !!source?.note,
+      level: source?.level ?? null,
+      power: source?.power ?? null,
+      heartRate: source?.heartRate ?? null,
+      cadence: source?.cadence ?? null,
+      calories: editIndex !== null ? source?.calories ?? null : null,
     };
+    if (type === TrackingType.Cardio && !source) setModal.value.time = DEFAULTS.cardio;
   }
 
   function closeSetModal() { setModal.value.open = false; }
@@ -1206,7 +1312,27 @@ export const useAppStore = defineStore('app', () => {
       rpe: m.rpe ?? null,
       isWarmup: !!m.isWarmup,
       note: m.note.trim().slice(0, 200) || null,
+      isAssisted: !!ex.isAssisted,
+      perSide: !!ex.perSide,
     };
+    if (type === TrackingType.Cardio) {
+      // Ausdauergerät: Dauer Pflicht, der Rest so, wie das Display ihn zeigt (leer = nicht erfasst)
+      const opt = (v: unknown, max: number, int = true) => {
+        if (v === null || v === undefined || v === '') return null;
+        const x = Number(v);
+        return Number.isFinite(x) && x > 0 ? Math.min(max, int ? Math.round(x) : Math.round(x * 10) / 10) : null;
+      };
+      set.time = Math.max(0, Math.round(num(m.time)));
+      set.distance = num(m.distance) > 0 ? Math.round(num(m.distance)) : null;
+      set.level = opt(m.level, 100, false);
+      set.power = opt(m.power, 3000);
+      set.heartRate = opt(m.heartRate, 250);
+      if (set.heartRate != null && set.heartRate < 30) set.heartRate = null;
+      set.cadence = opt(m.cadence, 300);
+      set.calories = opt(m.calories, 10000);
+      if (!(set.time > 0)) return { error: t('cardio.error') };
+      return { set };
+    }
     if (type === TrackingType.WeightReps) {
       set.weight = Math.max(0, num(m.weight));
       set.reps = Math.max(0, Math.round(num(m.reps)));
@@ -1295,7 +1421,14 @@ export const useAppStore = defineStore('app', () => {
     return blockOrder(s.order, (s.plan?.targets ?? []).map((x) => x.exerciseId), s.sets.map((x) => x.exerciseId));
   });
   /** Sätze der letzten Einheit je Übung (nur neu, wenn Historie oder Blöcke sich ändern). */
-  const previousById = computed(() => new Map(blockIds.value.map((id) => [id, previousSets(allWorkouts.value, id, editingExclude.value)])));
+  const previousById = computed(() => {
+    const gym = gymKey(sessionGym.value, mainGym.value);
+    // Maschinen: "letztes Mal" aus demselben Studio (sonst stünde das Gewicht vom anderen Stapel im Feld)
+    return new Map(blockIds.value.map((id) => {
+      const prefer = isGymDependent(exercisesById.value.get(id)) ? (w: Workout) => gymKey(w.gym, mainGym.value) === gym : null;
+      return [id, previousSets(allWorkouts.value, id, editingExclude.value, prefer)];
+    }));
+  });
 
   const workoutBlocks = computed<WorkoutBlock[]>(() => {
     const s = session.value;
@@ -1318,8 +1451,10 @@ export const useAppStore = defineStore('app', () => {
       return {
         exercise, sets, workingDone: sets.filter((x) => !x.isWarmup).length, target, previous,
         ghost: { ...ghost, ...ghostDraft.value[id] },
-        done: !!s.done?.includes(id),
+        done: !!s.done?.includes(id) || !!s.notes?.[id]?.skipped,
         goal,
+        note: s.notes?.[id] ?? null,
+        hint: s.hints?.[id] ?? null,
       };
     });
   });
@@ -1351,6 +1486,8 @@ export const useAppStore = defineStore('app', () => {
     if (s.plan) s.plan = { ...s.plan, targets: s.plan.targets.filter((x) => x.exerciseId !== id) };
     if (s.templates) delete s.templates[id];
     if (s.done) s.done = s.done.filter((x) => x !== id);
+    if (s.notes) delete s.notes[id];
+    if (s.hints) delete s.hints[id];
     delete ghostDraft.value[id];
     if (!s.sets.length && !s.order.length && !s.plan && !isEditing.value) s.startedAt = null;
     persistSession();
@@ -1404,13 +1541,18 @@ export const useAppStore = defineStore('app', () => {
       if ((set.weight ?? 0) > 1000) return t('set.errors.weight');
     } else if (set.trackingType === TrackingType.DistanceTime) {
       if (!((set.distance ?? 0) > 0) && !((set.time ?? 0) > 0)) return t('set.errors.distanceTime');
+    } else if (set.trackingType === TrackingType.Cardio) {
+      if (!((set.time ?? 0) > 0)) return t('cardio.error');
     } else if (!((set.time ?? 0) > 0)) return t('set.errors.duration');
     return null;
   }
 
   function isNewRecord(set: SessionSet): boolean {
-    const r = records.value.get(`id:${set.exerciseId}`);
+    // An Maschinen nur im selben Studio vergleichen - der Stapel im anderen Studio wiegt anders
+    const r = gymRecords.value.get(recordKeyFor(set.exerciseId, sessionGym.value));
     if (!r || set.isWarmup) return false;
+    if (set.isAssisted) return !!r.minAssist && betterAssist(r.minAssist, set.weight ?? 0, set.reps ?? 0);
+    if (set.trackingType === TrackingType.Cardio) return (r.longest?.value ?? 0) > 0 && (set.time ?? 0) > r.longest!.value + 59;
     if (set.trackingType === TrackingType.WeightReps) return (r.maxWeight?.value ?? 0) > 0 && (set.weight ?? 0) > r.maxWeight!.value;
     if (set.trackingType === TrackingType.DistanceTime) {
       const speed = setSpeed({ distance: set.distance ?? 0, time: set.time ?? 0 });
@@ -1438,11 +1580,13 @@ export const useAppStore = defineStore('app', () => {
       category: ex.category,
       weight: type === TrackingType.WeightReps ? g.weight : null,
       reps: type === TrackingType.WeightReps ? Math.round(g.reps) : null,
-      distance: type === TrackingType.DistanceTime ? g.distance : null,
-      time: type === TrackingType.WeightReps ? null : g.time,
+      distance: type === TrackingType.DistanceTime || (type === TrackingType.Cardio && g.distance > 0) ? g.distance : null,
+      time: type === TrackingType.WeightReps ? null : type === TrackingType.Cardio ? Math.round(g.time) : g.time,
       rpe: null,
       isWarmup: !!g.isWarmup,
       note: null,
+      isAssisted: !!ex.isAssisted,
+      perSide: !!ex.perSide,
     };
     const error = validateSet(set);
     if (error) { toast(error, 'error'); return; }
@@ -1464,11 +1608,21 @@ export const useAppStore = defineStore('app', () => {
   }
 
   // ---------- Timer für Zeit-Übungen (Planke, Isometrie) ----------
-  const holdTimer = ref<{ exerciseId: number; target: number; startedAt: number; pausedAt: number | null; pausedMs: number } | null>(null);
+  /**
+   * Halte-Timer. Einseitige Übungen (Seitstütz): erst Seite 1, dann Seitenwechsel mit längerem Vorlauf, dann Seite 2.
+   * Geloggt wird die Zeit pro Seite (die kürzere der beiden - so steht da, was beide Seiten geschafft haben).
+   */
+  const holdTimer = ref<{ exerciseId: number; target: number; startedAt: number; pausedAt: number | null; pausedMs: number; sides: 1 | 2; side: 1 | 2; lead: number; firstSide: number | null } | null>(null);
   function startHold(id: number) {
     const block = workoutBlocks.value.find((b) => b.exercise.id === id);
     const target = Math.max(1, Math.round(block?.ghost.time ?? 30));
-    holdTimer.value = { exerciseId: id, target, startedAt: Date.now(), pausedAt: null, pausedMs: 0 };
+    holdTimer.value = { exerciseId: id, target, startedAt: Date.now(), pausedAt: null, pausedMs: 0, sides: block?.exercise.perSide ? 2 : 1, side: 1, lead: 3, firstSide: null };
+  }
+  /** Seite 1 fertig: Seitenwechsel (5 s Vorlauf), Seite 2 bekommt dieselbe Zeit als Ziel. */
+  function switchHoldSide(seconds: number) {
+    const h = holdTimer.value;
+    if (!h) return;
+    holdTimer.value = { ...h, side: 2, firstSide: seconds, target: Math.max(1, Math.round(seconds)), startedAt: Date.now(), pausedAt: null, pausedMs: 0, lead: 5 };
   }
   function closeHoldTimer() { holdTimer.value = null; }
   /** Gehaltene Sekunden als Satz loggen (wie ✓, nur mit der gemessenen Zeit). */
@@ -1499,7 +1653,73 @@ export const useAppStore = defineStore('app', () => {
     if (rpePrompt.value?.exerciseId === id) rpePrompt.value = null;
     markDone(id, true);
   }
-  function reopenBlock(id: number) { markDone(id, false); }
+  function reopenBlock(id: number) {
+    // "Doch machen": eine Auslassung gilt dann nicht mehr (die Notiz bleibt)
+    const n = session.value.notes?.[id];
+    if (n?.skipped) setExerciseNote(id, { ...n, skipped: false, reason: n.reason === 'equipment' || n.reason === 'time' || n.reason === 'fatigue' ? null : n.reason ?? null });
+    markDone(id, false);
+  }
+
+  // ---------- Notiz / Auslassen pro Übung ----------
+  const noteSheetFor = ref<number | null>(null);
+  function openNoteSheet(id: number) { noteSheetFor.value = id; }
+  function closeNoteSheet() { noteSheetFor.value = null; }
+  /** Notiz setzen; leer und nicht ausgelassen = Notiz entfernen. Auslassen schließt die Übung (kein offener Satz). */
+  function setExerciseNote(id: number, value: { note?: string | null; skipped?: boolean; reason?: ExerciseNote['reason'] }) {
+    const s = session.value;
+    const note = value.note?.trim().slice(0, 200) || null;
+    const skipped = !!value.skipped;
+    const reason = value.reason ?? null;
+    const notes = { ...(s.notes ?? {}) };
+    if (!note && !skipped && !reason) delete notes[id];
+    else notes[id] = { exerciseId: id, note, skipped, reason };
+    s.notes = notes;
+    if (skipped) {
+      s.done = [...new Set([...(s.done ?? []), id])];
+      if (rpePrompt.value?.exerciseId === id) rpePrompt.value = null;
+    }
+    // Übung ohne Satz, aber mit Notiz: als Block behalten (sonst verschwindet sie aus der Einheit)
+    if (notes[id] && !(s.order ?? []).includes(id)) s.order = [...workoutBlocks.value.map((b) => b.exercise.id).filter((x) => x !== id), id];
+    ensureStarted();
+    persistSession();
+  }
+
+  // ---------- KI im Training ----------
+  /** Die laufende Einheit für den Coach (null = kein Training). */
+  function liveSessionForAi(): string | null {
+    if (!sessionActive.value) return null;
+    const s = session.value;
+    const planDayName = s.plan ? (programs.value.find((p) => p.id === s.plan!.programId) && s.plan.dayName) || s.plan.dayName : null;
+    return liveSessionText({
+      startedAt: s.startedAt,
+      gym: sessionGym.value,
+      planDayName,
+      order: workoutBlocks.value.map((b) => b.exercise.id),
+      sets: s.sets,
+      done: workoutBlocks.value.filter((b) => b.done).map((b) => b.exercise.id),
+      notes: s.notes ?? {},
+      targets: new Map((s.plan?.targets ?? []).map((x) => [x.exerciseId, { sets: x.sets, repsMin: x.repsMin, repsMax: x.repsMax, time: x.time, distance: x.distance, targetRpe: x.targetRpe, note: x.note }])),
+    }, (id) => exercisesById.value.get(id), new Date());
+  }
+
+  /** Änderungen der KI übernehmen - mit Rückgängig. Geloggte Sätze bleiben immer erhalten. */
+  function applyWorkoutChange(ops: readonly WorkoutOp[]): boolean {
+    if (!sessionActive.value) { toast(t('ai.actions.noSession'), 'error'); return false; }
+    const before = JSON.parse(JSON.stringify(session.value)) as Session;
+    const { session: next, touched } = applyWorkoutOps(session.value, ops);
+    session.value = next;
+    const drafts = { ...ghostDraft.value };
+    for (const id of touched) delete drafts[id];
+    ghostDraft.value = drafts;
+    rpePrompt.value = null;
+    ensureStarted();
+    persistSession();
+    toast(t('ai.actions.workoutApplied'), 'success', {
+      label: t('common.undo'),
+      run: () => { session.value = before; ghostDraft.value = {}; persistSession(); },
+    });
+    return true;
+  }
 
   function setSetRpe(index: number, rpe: number | null) {
     const set = session.value.sets[index];
@@ -1708,6 +1928,8 @@ export const useAppStore = defineStore('app', () => {
       programDayId: s.plan?.dayId ?? s.meta?.programDayId ?? null,
       workoutType: inferWorkoutType(s.sets),
       sets: s.sets.map((x) => ({ ...x })),
+      gym: sessionGym.value?.trim() || null,
+      exerciseNotes: Object.values(s.notes ?? {}).filter((n) => n.skipped || n.note?.trim() || n.reason).map((n) => ({ ...n })),
       status: QueueStatus.Pending,
       attempts: 0,
       error: null,
@@ -1773,6 +1995,9 @@ export const useAppStore = defineStore('app', () => {
         muscleGroup: s.muscleGroup ?? ex?.muscleGroup,
         category: s.category ?? ex?.category,
         weight: s.weight, reps: s.reps, distance: s.distance, time: s.time,
+        level: s.level ?? null, power: s.power ?? null, heartRate: keepDetails ? s.heartRate ?? null : null, cadence: s.cadence ?? null,
+        calories: keepDetails ? s.calories ?? null : null,
+        isAssisted: s.isAssisted ?? ex?.isAssisted ?? false, perSide: s.perSide ?? ex?.perSide ?? false,
         rpe: keepDetails ? s.rpe ?? null : null,
         isWarmup: !!s.isWarmup,
         note: keepDetails ? s.note ?? null : null,
@@ -1812,6 +2037,10 @@ export const useAppStore = defineStore('app', () => {
       editing: workout.pending ? { kind: 'pending', clientId: workout.clientId! } : { kind: 'server', id: workout.id!, clientId: workout.clientId },
       meta: { date: workout.date, durationSeconds: workout.durationSeconds, sessionRpe: workout.sessionRpe, quality: workout.quality ?? null, notes: workout.notes, programDayId: workout.programDayId ?? null },
       plan: null,
+      gym: workout.gym ?? null,
+      notes: Object.fromEntries((workout.exerciseNotes ?? []).map((n) => [n.exerciseId, { ...n }])),
+      // Ausgelassene Übungen ohne Sätze bleiben als Block sichtbar (sonst ginge die Notiz beim Speichern verloren)
+      order: [...new Set([...workout.sets.map((x) => x.exerciseId!), ...(workout.exerciseNotes ?? []).map((n) => n.exerciseId)])],
     };
     persistSession();
     const sets = session.value.sets;
@@ -2154,9 +2383,30 @@ export const useAppStore = defineStore('app', () => {
       category: tab.value === 'Football' ? 'Football' : 'Gym',
       muscleGroup: muscleFilters.value[0] ?? '',
       trackingType: tab.value === 'Football' ? TrackingType.DistanceTime : TrackingType.WeightReps,
+      isAssisted: false,
+      perSide: false,
       busy: false,
       error: '',
     };
+  }
+
+  /** Eigene Übung nachträglich als "unterstützt" oder "pro Seite" markieren (z. B. selbst angelegtes "Gravitron"). */
+  async function updateExerciseFlags(ex: Exercise, flags: { isAssisted?: boolean; perSide?: boolean }) {
+    if (!ex.isCustom) return;
+    const apply = (e: Exercise) => (e.id === ex.id ? { ...e, ...flags } : e);
+    const before = exercises.value;
+    exercises.value = exercises.value.map(apply);
+    writeJson(keys.value!.exercises, exercises.value);
+    if (isLocalExerciseId(ex.id)) return; // wird mit der Übung später angelegt
+    try {
+      const saved = await api().patch<Exercise>(`/api/exercises/${ex.id}`, flags);
+      exercises.value = exercises.value.map((e) => (e.id === saved.id ? { ...e, ...saved } : e));
+      writeJson(keys.value!.exercises, exercises.value);
+    } catch (e) {
+      exercises.value = before;
+      writeJson(keys.value!.exercises, exercises.value);
+      toast(errorMessage(e), 'error');
+    }
   }
 
   async function saveCustomExercise() {
@@ -2166,7 +2416,10 @@ export const useAppStore = defineStore('app', () => {
     m.busy = true;
     try {
       let created: Exercise;
-      const body = { name: m.name.trim(), category: m.category, muscleGroup: m.muscleGroup.trim() || null, trackingType: m.trackingType };
+      const body = {
+        name: m.name.trim(), category: m.category, muscleGroup: m.muscleGroup.trim() || null, trackingType: m.trackingType,
+        isAssisted: m.trackingType === TrackingType.WeightReps && m.isAssisted, perSide: m.perSide,
+      };
       try {
         created = await api().post<Exercise>('/api/exercises', body);
       } catch (e) {
@@ -2175,7 +2428,7 @@ export const useAppStore = defineStore('app', () => {
         // Gleiche Regel wie der Server: Namen dürfen nicht doppelt sein (sonst hinge die Einheit später fest).
         online.value = false;
         if (exercises.value.some((x) => x.name.toLowerCase() === body.name.toLowerCase())) { m.error = t('custom.errors.exists', { name: body.name }); return; }
-        created = { id: localExerciseId(exercises.value), name: body.name, category: body.category, muscleGroup: body.muscleGroup ?? '', trackingType: body.trackingType, isCustom: true } as Exercise;
+        created = { id: localExerciseId(exercises.value), name: body.name, category: body.category, muscleGroup: body.muscleGroup ?? '', trackingType: body.trackingType, isCustom: true, isAssisted: body.isAssisted, perSide: body.perSide } as Exercise;
         toast(t('custom.toast.offline', { name: created.name }), 'info');
       }
       exercises.value = [...exercises.value, created];
@@ -2537,6 +2790,8 @@ export const useAppStore = defineStore('app', () => {
     exercises, history, favorites, queue, loadingExercises, loadingHistory, programs, templates, loadingPrograms, programEditor, expandedDay,
     tab, dataTab, search, sortMode, sortOpen, muscleFilters,
     session, showReview, finishModal, setModal, customModal,
+    gyms, mainGym, currentGym, sessionGym, addGym, removeGym, makeMainGym, setSessionGym, gymRecords, recordKeyFor,
+    noteSheetFor, openNoteSheet, closeNoteSheet, setExerciseNote, liveSessionForAi, applyWorkoutChange, switchHoldSide, updateExerciseFlags,
     settingsOpen, settings, profile, deleteAccount,
     timer, now, clock,
     historyFilter, historyLimit, progress, weeklyMetric, selectedDay,
@@ -2577,7 +2832,7 @@ export const useAppStore = defineStore('app', () => {
 
 // Kleine Anzeige-Helfer ohne Zustand - in Komponenten direkt importierbar.
 export function trackingLabel(type: TrackingTypeValue): string {
-  return ({ WeightReps: 'Weight × Reps', DistanceTime: 'Distance + Time', Duration: 'Duration' } as const)[type] ?? type;
+  return ({ WeightReps: 'Weight × Reps', DistanceTime: 'Distance + Time', Duration: 'Duration', Cardio: 'Cardio' } as const)[type] ?? type;
 }
 export function setLabel(sets: readonly WorkoutSet[], n: number): string {
   if (sets[n]?.isWarmup) return t('history.warmupShort');
