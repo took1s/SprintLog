@@ -743,6 +743,7 @@ test('gym extras: comma decimals, drag & drop order, hold timer for planks, repl
   }
   await page.click('[data-test=picker-add]');
   const order = () => page.$$eval('[data-block]', (els) => els.map((e) => Number(e.getAttribute('data-block'))));
+  await page.waitForSelector('[data-block="238"]'); // Einheit gleitet herein (Übergang)
   assert.deepEqual(await order(), [1, 47, 238]);
 
   // iPhone-Tastatur hat nur ein Komma: "72,5" bleibt beim Tippen stehen und wird als 72.5 geloggt
@@ -1101,6 +1102,114 @@ test('AI coach expert: edits the plan in chat with a day-by-day diff, retries a 
   assert.equal(program.days[0].exercises[0].targetRpe, 8);
   assert.equal(program.days[1].exercises.length, 1);
   assert.equal(program.days[2].name, 'Recovery');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('Motion: page stays put under sheets, pull down to close, long-press shortcuts, hold to confirm', async () => {
+  const { page, errors, context } = await newPage();
+  await register(page, `motion_${Date.now()}`);
+  const locked = () => page.evaluate(() => document.documentElement.hasAttribute('data-scroll-locked'));
+  const dialogs = () => page.locator('[aria-modal="true"]').count();
+  // Codes-Dialog der Registrierung ist zu -> Seite wieder frei
+  await page.waitForFunction(() => !document.documentElement.hasAttribute('data-scroll-locked'));
+
+  // Katalog-Karte gedrückt halten -> Technik/Info statt Satz-Dialog; die Seite darunter bleibt stehen
+  const card = page.locator('[data-ex="1"]');
+  await card.scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy(0, 120));
+  await page.waitForTimeout(300); // Karten außerhalb des Bildschirms werden erst beim Näherkommen gerendert
+  const y0 = await page.evaluate(() => window.scrollY);
+  assert.ok(y0 > 100, `page scrolled (${y0})`);
+  const box = await card.boundingBox();
+  await page.mouse.move(box.x + 30, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForSelector('[data-test=exercise-info]', { timeout: 2000 });
+  await page.mouse.up();
+  await page.waitForTimeout(100);
+  assert.equal(await dialogs(), 1, 'only the info sheet, no set dialog');
+  assert.equal(await locked(), true);
+  assert.equal(await page.evaluate(() => document.body.style.top), `-${y0}px`);
+
+  // Nach unten ziehen schließt; danach steht die Seite wieder an derselben Stelle
+  const sheet = page.locator('[data-test=exercise-info]');
+  await page.waitForTimeout(500); // Einblenden abwarten
+  let b = await sheet.boundingBox();
+  await page.mouse.move(b.x + b.width / 2, b.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + 380, { steps: 12 });
+  await page.mouse.up();
+  await sheet.waitFor({ state: 'detached' });
+  await page.waitForFunction(() => !document.documentElement.hasAttribute('data-scroll-locked'));
+  assert.equal(await page.evaluate(() => window.scrollY), y0);
+
+  // Kurz angezogen federt zurück und bleibt offen
+  await page.click('[data-test=coach-ask]');
+  const chat = page.locator('[data-test=ai-chat]');
+  await chat.waitFor();
+  await page.waitForTimeout(500);
+  b = await chat.boundingBox();
+  await page.mouse.move(b.x + b.width / 2, b.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + 50, { steps: 4 });
+  await page.mouse.up();
+  await page.waitForTimeout(500);
+  assert.equal(await chat.count(), 1);
+  assert.equal(await chat.evaluate((el) => el.style.transform), '');
+
+  // Chat löschen nur per Gedrückthalten (Ring); kurzes Tippen zeigt nur den Hinweis
+  await page.fill('[data-test=ai-input]', 'Quick question');
+  await page.click('[data-test=ai-send]');
+  await page.waitForSelector('[data-role=assistant]');
+  await page.click('[data-test=ai-clear]');
+  await page.waitForTimeout(150);
+  assert.equal(await page.locator('[data-role=assistant]').count(), 1, 'a tap does not delete');
+  await page.locator('[data-test=ai-clear]').hover();
+  await page.mouse.down();
+  await page.waitForTimeout(900);
+  await page.mouse.up();
+  await page.waitForSelector('[data-role=assistant]', { state: 'detached' });
+  await page.keyboard.press('Escape');
+  await chat.waitFor({ state: 'detached' });
+
+  // Tab-Marker gleitet mit
+  await page.click('[role=tab] >> text=Plan');
+  await page.waitForFunction(() => document.querySelector('.tab-indicator')?.style.transform.includes('200%'));
+  await page.click('[role=tab] >> text=Gym');
+
+  // Einheit: Satz loggen -> Zeile leuchtet auf; Übungstitel gedrückt halten -> Aktions-Menü
+  await page.click('[data-add="1"]');
+  await page.waitForSelector('[data-test=workout]');
+  await page.fill('[data-test=ghost-weight]', '60');
+  await page.fill('[data-test=ghost-reps]', '5');
+  await page.click('[data-test=log-ghost]');
+  await page.waitForSelector('[data-test=set-row].set-pop, [data-test=set-row].set-pr');
+  const title = page.locator('[data-test=block-title]').first();
+  const tb = await title.boundingBox();
+  await page.mouse.move(tb.x + 20, tb.y + tb.height / 2);
+  await page.mouse.down();
+  await page.waitForSelector('[data-test=block-sheet]', { timeout: 2000 });
+  await page.mouse.up();
+  await page.waitForTimeout(100);
+  assert.equal(await dialogs(), 1, 'menu only, no set dialog');
+  await page.click('[data-test=block-sheet]', { position: { x: 10, y: 10 } });
+  await page.waitForSelector('[data-test=block-sheet]', { state: 'detached' });
+
+  // Verwerfen: Tippen = Hinweis, Tastatur = Rückfrage, Halten = verworfen
+  const discard = page.locator('[data-test=discard-session]');
+  await discard.click();
+  await page.waitForSelector('[data-test=discard-session] >> text=Hold to confirm');
+  assert.equal(await page.locator('[data-test=workout]').count(), 1);
+  await discard.focus();
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('[role=alertdialog]');
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('[role=alertdialog]', { state: 'detached' });
+  await discard.hover();
+  await page.mouse.down();
+  await page.waitForTimeout(900);
+  await page.mouse.up();
+  await page.waitForSelector('[data-test=workout]', { state: 'detached' });
   assert.deepEqual(errors, []);
   await context.close();
 });

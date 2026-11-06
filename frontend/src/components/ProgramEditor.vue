@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
 import { newDraftStep, type DraftExercise } from '@/lib/program';
 import { ref } from 'vue';
+import { vSheetDrag } from '@/lib/gestures';
 
 const app = useAppStore();
 const { exerciseGroups, programEditor, programs } = storeToRefs(app);
@@ -32,9 +33,9 @@ const DELOADS = [null, 3, 4, 5, 6, 8] as const;
 </script>
 
 <template>
-  <transition name="fade">
+  <transition name="sheet">
       <div v-if="programEditor.open" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/80 backdrop-blur-sm sm:items-center" @click.self="programEditor.open = false">
-          <form @submit.prevent="saveProgram" class="glass-panel modal-panel max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl p-5 sm:rounded-3xl sm:p-7" role="dialog" aria-modal="true" :aria-label="programEditor.draft.id ? `${t('editor.titleEdit')} ${t('editor.titleEditAccent')}` : `${t('editor.titleNew')} ${t('editor.titleAccent')}`">
+          <form v-sheet-drag:handle="() => (programEditor.open = false)" @submit.prevent="saveProgram" class="glass-panel modal-panel max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl p-5 sm:rounded-3xl sm:p-7" role="dialog" aria-modal="true" :aria-label="programEditor.draft.id ? `${t('editor.titleEdit')} ${t('editor.titleEditAccent')}` : `${t('editor.titleNew')} ${t('editor.titleAccent')}`">
               <div class="mb-5 flex items-start justify-between">
                   <h3 class="text-2xl display text-white">{{ programEditor.draft.id ? t('editor.titleEdit') : t('editor.titleNew') }} <span class="text-accent">{{ programEditor.draft.id ? t('editor.titleEditAccent') : t('editor.titleAccent') }}</span></h3>
                   <button type="button" @click="programEditor.open = false" class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>

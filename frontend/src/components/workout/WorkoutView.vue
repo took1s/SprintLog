@@ -19,10 +19,12 @@ import type { WorkoutSet } from '@/types';
 import SwipeRow from '@/components/workout/SwipeRow.vue';
 import DecimalInput from '@/components/DecimalInput.vue';
 import { tap } from '@/lib/native';
+import { vLongPress, vSheetDrag } from '@/lib/gestures';
+import HoldButton from '@/components/HoldButton.vue';
 
 const app = useAppStore();
 const goals = useGoalsStore();
-const { hasSets, isEditing, planProgress, programs, rpePrompt, session, sessionSummary, settings, workoutBlocks } = storeToRefs(app);
+const { hasSets, isEditing, lastLogged, planProgress, programs, rpePrompt, session, sessionSummary, settings, workoutBlocks } = storeToRefs(app);
 const {
   abortSession, completeBlock, reorderBlock, deleteSessionSet, dismissRpePrompt, editSessionSet, finishSession, moveBlock, openExerciseInfo, openPicker,
   openReplace, openSetModal, quickLog, removeBlock, startHold, reopenBlock, setGhostValue, setSetRpe, toggleGhostWarmup,
@@ -112,6 +114,13 @@ function dragStyle(id: number, index: number): Record<string, string> | undefine
   return { transform: 'translate3d(0, 0, 0)' };
 }
 
+/** Gerade geloggter Satz: Zeile leuchtet kurz auf (Rekord in Gold). Nur direkt nach dem Loggen, nicht beim erneuten Öffnen. */
+function popClass(index: number) {
+  const l = lastLogged.value;
+  if (!l || l.index !== index || Date.now() - l.at > 1500) return '';
+  return l.pr ? 'set-pr' : 'set-pop';
+}
+
 /** Übung, deren Aktions-Sheet offen ist. */
 const sheetFor = ref<number | null>(null);
 const sheetBlock = computed(() => workoutBlocks.value.find((b) => b.exercise.id === sheetFor.value) ?? null);
@@ -180,7 +189,9 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                    :class="drag ? (drag.id === block.exercise.id ? 'z-20 shadow-2xl ring-2 ring-accent/60' : 'transition-transform duration-150 ease-out') : ''"
                    :style="dragStyle(block.exercise.id, bi)" :data-block="block.exercise.id" :data-done="block.done || undefined">
               <header class="mb-2 flex items-start justify-between gap-2">
-                  <button type="button" class="min-w-0 text-left" @click="openSetModal(block.exercise)" :aria-label="t('workout.details', { name: exerciseName(block.exercise) })">
+                  <!-- Antippen = Satz-Dialog, gedrückt halten = Aktions-Menü (wie ein Kontextmenü) -->
+                  <button type="button" class="min-w-0 rounded-lg text-left" @click="openSetModal(block.exercise)" v-long-press="() => (sheetFor = block.exercise.id)"
+                          :aria-label="t('workout.details', { name: exerciseName(block.exercise) })" data-test="block-title">
                       <div class="flex items-center gap-2">
                           <span v-if="block.done" class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-emerald-400/20 text-emerald-400" aria-hidden="true">
                               <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
@@ -228,7 +239,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
               <template v-for="(set, si) in block.sets" :key="set.index">
                   <SwipeRow :label="t('workout.deleteSet')" @tap="editSessionSet(set.index)" @delete="deleteSessionSet(set.index)">
                       <button type="button" class="grid w-full grid-cols-[2.75rem_minmax(0,1fr)_4.5rem_4.5rem_3rem] items-center gap-x-2 px-1 py-1.5 text-left transition-colors hover:bg-white/5"
-                              :aria-label="t('workout.editSet', { n: rowLabel(block.sets, si) })" data-test="set-row">
+                              :class="popClass(set.index)" :aria-label="t('workout.editSet', { n: rowLabel(block.sets, si) })" data-test="set-row">
                           <span class="text-center font-mono text-xs font-bold" :class="set.isWarmup ? 'text-orange-400' : 'text-slate-400'">{{ rowLabel(block.sets, si) }}</span>
                           <span class="truncate font-mono text-[11px] text-slate-500">
                               {{ prevText(set.isWarmup ? null : previousForRow(block.previous, block.sets.slice(0, si).filter((s) => !s.isWarmup).length), block.exercise.trackingType) }}
@@ -335,18 +346,17 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
       </button>
 
       <div class="mt-4 flex justify-center">
-          <button type="button" @click="abortSession" class="px-3 py-2 text-[11px] font-bold uppercase text-slate-500 hover:text-red-400 tracking-label">
-              {{ isEditing ? t('workout.discardChanges') : t('workout.discard') }}
-          </button>
+          <!-- Verwerfen nur per Gedrückthalten - kein versehentlicher Verlust einer ganzen Einheit -->
+          <HoldButton :label="isEditing ? t('workout.discardChanges') : t('workout.discard')" @confirm="abortSession({ confirmed: true })" @fallback="abortSession()"
+                      class="min-h-[2.75rem] rounded-xl px-4 py-2 text-[11px] font-bold uppercase text-slate-500 hover:text-red-400 tracking-label" data-test="discard-session" />
       </div>
 
       <!-- Aktions-Sheet einer Übung: liegt über allem (Teleport), damit kein anderer Block es verdeckt -->
       <Teleport to="body">
-          <transition name="fade">
+          <transition name="sheet">
               <div v-if="sheetBlock" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 backdrop-blur-sm sm:items-center" @click.self="sheetFor = null" data-test="block-sheet">
-                  <div class="glass-panel modal-panel w-full max-w-md overflow-hidden rounded-t-3xl pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="exerciseName(sheetBlock.exercise)">
-                      <div class="mx-auto mt-2 h-1 w-10 rounded-full bg-white/20 sm:hidden" aria-hidden="true"></div>
-                      <div class="px-6 pb-2 pt-4">
+                  <div v-sheet-drag="() => (sheetFor = null)" class="glass-panel modal-panel w-full max-w-md overflow-hidden rounded-t-3xl pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="exerciseName(sheetBlock.exercise)">
+                      <div class="px-6 pb-2 pt-6">
                           <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ muscleName(sheetBlock.exercise.muscleGroup) }} · {{ tn('units.sets', sheetBlock.sets.length) }}</p>
                           <h2 class="display truncate text-xl text-white">{{ exerciseName(sheetBlock.exercise) }}</h2>
                       </div>

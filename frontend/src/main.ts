@@ -15,9 +15,11 @@ import { ensureLocale, locale } from './i18n';
 import App from './App.vue';
 import { useAppStore } from './stores/app';
 import { initMonitoring } from './lib/monitoring';
+import { initScrollLock } from './lib/scrollLock';
 
 // Theme vor dem ersten Rendern setzen (kein Aufflackern).
 initAppearance();
+initScrollLock();
 
 const app = createApp(App);
 const pinia = createPinia();

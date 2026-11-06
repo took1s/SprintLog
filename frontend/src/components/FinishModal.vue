@@ -2,6 +2,7 @@
 import { t, tn } from '@/i18n';
 import { storeToRefs } from 'pinia';
 import { useAppStore, SESSION_RPE, sessionRpeLabel } from '@/stores/app';
+import { vSheetDrag } from '@/lib/gestures';
 
 const app = useAppStore();
 const { finishLoad, finishModal, isEditing, session, sessionRecovery, sessionSummary } = storeToRefs(app);
@@ -9,9 +10,9 @@ const { confirmFinish } = app;
 </script>
 
 <template>
-  <transition name="fade">
+  <transition name="sheet">
       <div v-if="finishModal.open" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/80 backdrop-blur-sm sm:items-center" @click.self="finishModal.open = false">
-          <form @submit.prevent="confirmFinish" class="glass-panel modal-panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 sm:rounded-3xl sm:p-8" role="dialog" aria-modal="true" :aria-label="isEditing ? `${t('finish.titleSave')} ${t('finish.titleSaveAccent')}` : `${t('finish.titleFinish')} ${t('finish.titleAccent')}`">
+          <form v-sheet-drag:handle="() => (finishModal.open = false)" @submit.prevent="confirmFinish" class="glass-panel modal-panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 sm:rounded-3xl sm:p-8" role="dialog" aria-modal="true" :aria-label="isEditing ? `${t('finish.titleSave')} ${t('finish.titleSaveAccent')}` : `${t('finish.titleFinish')} ${t('finish.titleAccent')}`">
               <div class="mb-5 flex items-start justify-between">
                   <div>
                       <h3 class="text-2xl display text-white">{{ isEditing ? t('finish.titleSave') : t('finish.titleFinish') }} <span class="text-accent">{{ isEditing ? t('finish.titleSaveAccent') : t('finish.titleAccent') }}</span></h3>

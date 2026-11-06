@@ -11,6 +11,7 @@ import { describeSet, formatClock, formatNumber, formatRelative, formatSeconds }
 import { msToKmh } from '@/lib/analytics';
 import { prescriptionText, suggestionNote } from '@/lib/program';
 import ExerciseFigure from '@/components/ExerciseFigure.vue';
+import { vSheetDrag } from '@/lib/gestures';
 
 const app = useAppStore();
 const { clockDate, isEditing, modalE1RM, modalEx, modalIntensity, modalIsNewPR, modalPrevious, modalRecord, modalSessionSets, modalSpeed, modalSpeedVsBest, modalTarget, modalType, modalZone, setModal, settings } = storeToRefs(app);
@@ -31,9 +32,9 @@ const modalTechnique = computed(() => {
 </script>
 
 <template>
-  <transition name="fade">
+  <transition name="sheet">
       <div v-if="setModal.open && modalEx" class="fixed inset-0 z-40 flex items-end justify-center bg-ink/60 backdrop-blur-sm sm:items-center" @click.self="closeSetModal">
-          <div class="glass-panel modal-panel relative max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 sm:rounded-3xl sm:p-8" role="dialog" aria-modal="true" :aria-label="exerciseName(modalEx)">
+          <div v-sheet-drag:handle="closeSetModal" class="glass-panel modal-panel relative max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 sm:rounded-3xl sm:p-8" role="dialog" aria-modal="true" :aria-label="exerciseName(modalEx)">
               <div class="mb-6 flex items-start justify-between gap-3">
                   <div class="min-w-0">
                       <h3 class="text-2xl display text-white">{{ exerciseName(modalEx) }}</h3>

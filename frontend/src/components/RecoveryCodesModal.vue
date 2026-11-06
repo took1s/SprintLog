@@ -44,7 +44,7 @@ function download() {
 </script>
 
 <template>
-  <transition name="fade">
+  <transition name="pop">
     <div v-if="recoveryCodes" class="fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-ink/90 p-4 backdrop-blur-md">
       <div class="glass-panel modal-panel w-full max-w-sm rounded-3xl border border-yellow-400/30 p-6" role="dialog" aria-modal="true" aria-labelledby="codes-title">
         <h3 id="codes-title" class="mb-1 text-2xl display text-white">{{ t('codes.title') }} <span class="text-yellow-400">{{ t('codes.titleAccent') }}</span></h3>

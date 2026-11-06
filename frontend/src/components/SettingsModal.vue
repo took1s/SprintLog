@@ -11,6 +11,7 @@ import { appearance, activeScheme, inSeason, setScheme, setTheme, SCHEMES, THEME
 import { APP_ICON_CHOICES, appIconChoice, appIconNative, resolveAppIcon, setAppIcon, type AppIconChoice } from '@/lib/appIcon';
 import { isNative } from '@/lib/native';
 import { useAiStore, type POSITIONS } from '@/stores/ai';
+import { vSheetDrag } from '@/lib/gestures';
 type Position = (typeof POSITIONS)[number];
 const ai = useAiStore();
 
@@ -29,9 +30,9 @@ const pickIcon = (c: AppIconChoice) => { void setAppIcon(c); };
 </script>
 
 <template>
-  <transition name="fade">
+  <transition name="sheet">
       <div v-if="settingsOpen" class="fixed inset-0 z-40 flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="settingsOpen = false">
-          <div class="glass-panel modal-panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 sm:rounded-3xl sm:p-8" role="dialog" aria-modal="true" :aria-label="t('settings.title')">
+          <div v-sheet-drag="() => (settingsOpen = false)" class="glass-panel modal-panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl p-6 sm:rounded-3xl sm:p-8" role="dialog" aria-modal="true" :aria-label="t('settings.title')">
               <div class="mb-6 flex items-start justify-between">
                   <div>
                       <h3 class="display text-2xl text-white">{{ t('settings.title') }}</h3>

@@ -10,6 +10,7 @@ import { describeSet, formatDate } from '@/lib/format';
 import { inferSessionCode, obsidianText, SESSION_CODES, type SessionCode } from '@/lib/obsidian';
 import { readJson, writeJson } from '@/lib/storage';
 import type { Workout, WorkoutSet } from '@/types';
+import { vSheetDrag } from '@/lib/gestures';
 
 const app = useAppStore();
 const { allWorkouts, exercisesById, obsidianWorkout } = storeToRefs(app);
@@ -77,9 +78,9 @@ async function share() {
 </script>
 
 <template>
-  <transition name="fade">
+  <transition name="sheet">
       <div v-if="obsidianWorkout" class="backdrop fixed inset-0 z-40 flex items-end justify-center sm:items-center" @click.self="obsidianWorkout = null">
-          <div class="modal-panel glass-panel max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl p-5 sm:rounded-3xl sm:p-6" role="dialog" aria-modal="true" :aria-label="t('obsidian.title')">
+          <div v-sheet-drag="() => (obsidianWorkout = null)" class="modal-panel glass-panel max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl p-5 sm:rounded-3xl sm:p-6" role="dialog" aria-modal="true" :aria-label="t('obsidian.title')">
               <div class="mb-4 flex items-start justify-between gap-3">
                   <div>
                       <h3 class="display text-2xl text-white">{{ t('obsidian.title') }}</h3>

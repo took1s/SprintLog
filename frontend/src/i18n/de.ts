@@ -32,6 +32,9 @@ export const de: Messages = {
     language: 'Sprache',
     tooManyAttempts: 'Zu viele Versuche. Bitte warte eine Minute.',
   },
+  gesture: {
+    holdHint: 'Zum Bestätigen gedrückt halten',
+  },
   units: {
     sets: { one: '{n} Satz', other: '{n} Sätze' },
     workouts: { one: '{n} Einheit', other: '{n} Einheiten' },

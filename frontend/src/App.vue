@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { defineAsyncComponent, onMounted, reactive, watchEffect } from 'vue';
+import { defineAsyncComponent, onMounted, reactive, ref, watch, watchEffect } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
 import ToastStack from '@/components/ToastStack.vue';
 import UpdateBanner from '@/components/UpdateBanner.vue';
 import RestTimer from '@/components/RestTimer.vue';
 import Spinner from '@/components/Spinner.vue';
-import AuthView from '@/components/AuthView.vue';
 import AppHeader from '@/components/AppHeader.vue';
 import WorkoutView from '@/components/workout/WorkoutView.vue';
 import StartPanel from '@/components/workout/StartPanel.vue';
@@ -22,6 +21,8 @@ import { useAiStore } from '@/stores/ai';
 // Seltener gebrauchte Teile als eigene Chunks (kleineres Start-Bundle; offline per Service-Worker-Cache verfügbar):
 // Auswertungen inkl. Chart.js, Plan, Satz-Dialog mit Animationen, Einstellungen, Editoren.
 const DataView = defineAsyncComponent(() => import('@/components/data/DataView.vue'));
+// Anmeldung: braucht nur, wer abgemeldet ist - angemeldete Nutzer laden den Code nie
+const AuthView = defineAsyncComponent({ loader: () => import('@/components/AuthView.vue'), loadingComponent: Spinner, delay: 150 });
 const PlanView = defineAsyncComponent(() => import('@/components/PlanView.vue'));
 const SetModal = defineAsyncComponent(() => import('@/components/SetModal.vue'));
 const CustomExerciseModal = defineAsyncComponent(() => import('@/components/CustomExerciseModal.vue'));
@@ -61,6 +62,11 @@ watchEffect(() => {
 });
 
 onMounted(() => { void app.init(); });
+
+// Richtung des Tabwechsels für den Übergang (Reihenfolge wie in der Tab-Leiste)
+const ORDER = ['Gym', 'Football', 'Plan', 'Data'];
+const tabTransition = ref('tab-next');
+watch(tab, (next, prev) => { tabTransition.value = ORDER.indexOf(next) >= ORDER.indexOf(prev) ? 'tab-next' : 'tab-prev'; });
 </script>
 
 <template>
@@ -78,7 +84,9 @@ onMounted(() => { void app.init(); });
     <template v-else>
       <AppHeader />
 
-      <section v-if="tab === 'Gym' || tab === 'Football'">
+      <transition :name="tabTransition" mode="out-in">
+      <!-- key: Gym/Feld teilen sich den Bereich - ohne laufende Einheit trotzdem ein Übergang, mit Einheit bleibt sie gemountet -->
+      <section v-if="tab === 'Gym' || tab === 'Football'" :key="sessionActive ? 'session' : tab">
         <!-- Läuft eine Einheit: Blöcke mit Sätzen. Sonst: Einstieg + Katalog zum Stöbern. -->
         <WorkoutView v-if="sessionActive" />
         <template v-else>
@@ -94,6 +102,7 @@ onMounted(() => { void app.init(); });
       </section>
       <PlanView v-else-if="tab === 'Plan'" :class="{ 'pb-28': app.sessionActive }" />
       <DataView v-else-if="tab === 'Data'" />
+      </transition>
 
       <SessionBar />
       <ExercisePicker />

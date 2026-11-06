@@ -11,6 +11,7 @@ import { useGoalsStore } from '@/stores/goals';
 import { dateRealism, goalSessions, nextPrescription, targetE1RM, type LiftGoal } from '@/lib/goals';
 import { prescriptionLabel } from '@/lib/goalText';
 import { formatNumber } from '@/lib/format';
+import { vSheetDrag } from '@/lib/gestures';
 
 const app = useAppStore();
 const goals = useGoalsStore();
@@ -66,9 +67,9 @@ const realismClass = computed(() => ({ ok: 'text-emerald-400', ambitious: 'text-
 </script>
 
 <template>
-  <transition name="fade">
+  <transition name="sheet">
       <div v-if="draft.open" class="fixed inset-0 z-[70] flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="goals.closeGoal()">
-          <div class="glass-panel modal-panel flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="t('goals.sheetTitle')" data-test="goal-sheet">
+          <div v-sheet-drag:handle="() => goals.closeGoal()" class="glass-panel modal-panel flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="t('goals.sheetTitle')" data-test="goal-sheet">
               <div class="flex items-start justify-between gap-3 px-6 pb-3 pt-6">
                   <div class="min-w-0">
                       <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('goals.sheetTitle') }}</p>

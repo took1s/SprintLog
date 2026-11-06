@@ -33,6 +33,9 @@ export const ru: Messages = {
     language: 'Язык',
     tooManyAttempts: 'Слишком много попыток. Подожди минуту.',
   },
+  gesture: {
+    holdHint: 'Удерживай, чтобы подтвердить',
+  },
   units: {
     sets: { one: '{n} подход', few: '{n} подхода', many: '{n} подходов', other: '{n} подхода' },
     workouts: { one: '{n} тренировка', few: '{n} тренировки', many: '{n} тренировок', other: '{n} тренировки' },
