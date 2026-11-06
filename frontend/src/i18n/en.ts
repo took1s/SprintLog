@@ -469,7 +469,7 @@ export const en = {
     title: 'Workout',
     open: 'Open',
     details: 'Details and technique: {name}',
-    lastTime: 'Last time {value} · {sets} sets',
+    lastTime: 'Last time {value} · {sets}',
     firstTime: 'first time',
     menu: 'Exercise options',
     technique: 'Technique and details',

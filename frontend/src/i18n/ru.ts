@@ -476,7 +476,7 @@ export const ru: Messages = {
     title: 'Тренировка',
     open: 'Открыть',
     details: 'Подробно и техника: {name}',
-    lastTime: 'Прошлый раз {value} · подходов: {sets}',
+    lastTime: 'Прошлый раз {value} · {sets}',
     firstTime: 'впервые',
     menu: 'Действия с упражнением',
     technique: 'Техника и подробности',

@@ -233,7 +233,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                       </div>
                       <p class="mt-0.5 truncate font-mono text-xs text-slate-400">
                           <template v-if="block.target">{{ prescriptionText(block.target) }}</template>
-                          <template v-else-if="block.previous.length">{{ t('workout.lastTime', { value: prevText(block.previous.filter((s) => !s.isWarmup).at(-1) ?? block.previous.at(-1) ?? null, block.exercise.trackingType), sets: block.previous.filter((s) => !s.isWarmup).length }) }}</template>
+                          <template v-else-if="block.previous.length">{{ t('workout.lastTime', { value: prevText(block.previous.filter((s) => !s.isWarmup).at(-1) ?? block.previous.at(-1) ?? null, block.exercise.trackingType), sets: tn('units.sets', block.previous.filter((s) => !s.isWarmup).length) }) }}</template>
                           <template v-else>{{ muscleName(block.exercise.muscleGroup) }} · {{ t('workout.firstTime') }}</template>
                       </p>
                       <p v-if="block.target?.note" class="truncate font-mono text-[10px] text-accent">{{ noteText(block.target.note) }}</p>

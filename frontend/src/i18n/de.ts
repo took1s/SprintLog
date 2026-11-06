@@ -470,7 +470,7 @@ export const de: Messages = {
     title: 'Training',
     open: 'Öffnen',
     details: 'Details und Technik: {name}',
-    lastTime: 'Letztes Mal {value} · {sets} Sätze',
+    lastTime: 'Letztes Mal {value} · {sets}',
     firstTime: 'zum ersten Mal',
     menu: 'Übungsoptionen',
     technique: 'Technik und Details',
