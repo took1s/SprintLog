@@ -395,8 +395,9 @@ export const useAiStore = defineStore('ai', () => {
     }
   }
 
-  async function clearChat() {
-    const ok = await useUiStore().confirm({ title: t('ai.clear.title'), message: t('ai.clear.message'), confirmText: t('ai.clear.confirm'), danger: true });
+  /** confirmed: schon per Gedrückthalten bestätigt (HoldButton) - keine Rückfrage. */
+  async function clearChat(opts?: { confirmed?: boolean }) {
+    const ok = opts?.confirmed === true || await useUiStore().confirm({ title: t('ai.clear.title'), message: t('ai.clear.message'), confirmText: t('ai.clear.confirm'), danger: true });
     if (!ok) return;
     messages.value = [];
     error.value = null;

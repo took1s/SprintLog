@@ -31,6 +31,9 @@ export const en = {
     language: 'Language',
     tooManyAttempts: 'Too many attempts. Please wait a minute.',
   },
+  gesture: {
+    holdHint: 'Hold to confirm',
+  },
   units: {
     sets: { one: '{n} set', other: '{n} sets' },
     workouts: { one: '{n} workout', other: '{n} workouts' },

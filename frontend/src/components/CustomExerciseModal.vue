@@ -2,6 +2,7 @@
 import { t } from '@/i18n';
 import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
+import { vSheetDrag } from '@/lib/gestures';
 
 const app = useAppStore();
 const { allMuscleGroups, customModal } = storeToRefs(app);
@@ -9,9 +10,9 @@ const { saveCustomExercise } = app;
 </script>
 
 <template>
-  <transition name="fade">
+  <transition name="sheet">
       <div v-if="customModal.open" class="fixed inset-0 z-40 flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="customModal.open = false">
-          <form @submit.prevent="saveCustomExercise" class="glass-panel modal-panel w-full max-w-md rounded-t-3xl p-6 sm:rounded-3xl sm:p-8" role="dialog" aria-modal="true" :aria-label="t('catalog.customExercise')">
+          <form v-sheet-drag:handle="() => (customModal.open = false)" @submit.prevent="saveCustomExercise" class="glass-panel modal-panel w-full max-w-md rounded-t-3xl p-6 sm:rounded-3xl sm:p-8" role="dialog" aria-modal="true" :aria-label="t('catalog.customExercise')">
               <div class="mb-6 flex items-start justify-between">
                   <div>
                       <h3 class="text-2xl display text-white">{{ t('custom.title') }} <span class="text-accent">{{ t('custom.titleAccent') }}</span></h3>

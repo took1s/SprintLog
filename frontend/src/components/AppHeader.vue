@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { t } from '@/i18n';
 import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
@@ -8,6 +9,18 @@ const { online, pendingCount, syncState, syncing, tab } = storeToRefs(app);
 const { openSettings, syncNow } = app;
 import BrandMark from '@/components/BrandMark.vue';
 import { appearance } from '@/lib/theme';
+import { tap } from '@/lib/native';
+
+// Reihenfolge = Richtung der Übergänge (App.vue) und Position des gleitenden Markers
+const TABS = [
+  { key: 'Gym', label: 'nav.gym' }, { key: 'Football', label: 'nav.field' }, { key: 'Plan', label: 'nav.plan' }, { key: 'Data', label: 'nav.data' },
+] as const;
+const index = computed(() => Math.max(0, TABS.findIndex((x) => x.key === tab.value)));
+function select(key: (typeof TABS)[number]['key']) {
+  if (tab.value === key) return;
+  tap();
+  tab.value = key;
+}
 </script>
 
 <template>
@@ -39,11 +52,10 @@ import { appearance } from '@/lib/theme';
   </header>
 
   <nav class="mb-8 flex justify-center">
-      <div class="tab-container w-full max-w-md" role="tablist">
-          <button role="tab" :aria-selected="tab === 'Gym'" @click="tab = 'Gym'" class="tab-btn" :class="{ 'tab-active': tab === 'Gym' }">{{ t('nav.gym') }}</button>
-          <button role="tab" :aria-selected="tab === 'Football'" @click="tab = 'Football'" class="tab-btn" :class="{ 'tab-active': tab === 'Football' }">{{ t('nav.field') }}</button>
-          <button role="tab" :aria-selected="tab === 'Plan'" @click="tab = 'Plan'" class="tab-btn" :class="{ 'tab-active': tab === 'Plan' }">{{ t('nav.plan') }}</button>
-          <button role="tab" :aria-selected="tab === 'Data'" @click="tab = 'Data'" class="tab-btn" :class="{ 'tab-active': tab === 'Data' }">{{ t('nav.data') }}</button>
+      <div class="tab-container relative w-full max-w-md" role="tablist">
+          <!-- Gleitender Marker statt springender Hintergrund: zeigt, woher man kommt -->
+          <span class="tab-indicator" :style="{ transform: `translate3d(${index * 100}%, 0, 0)` }" aria-hidden="true"></span>
+          <button v-for="x in TABS" :key="x.key" role="tab" :aria-selected="tab === x.key" @click="select(x.key)" class="tab-btn relative" :class="{ 'tab-active': tab === x.key }">{{ t(x.label) }}</button>
       </div>
   </nav>
 </template>

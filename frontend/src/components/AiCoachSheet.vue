@@ -6,6 +6,8 @@ import { t, tn } from '@/i18n';
 import { deviceOnline, useAiStore } from '@/stores/ai';
 import AiActionCard from './AiActionCard.vue';
 import AiText from './AiText.vue';
+import HoldButton from './HoldButton.vue';
+import { vSheetDrag } from '@/lib/gestures';
 
 const ai = useAiStore();
 const { open, messages, busy, error, status, mode, applying, profileFilled } = storeToRefs(ai);
@@ -56,7 +58,30 @@ function autoGrow() {
 watch(draft, () => nextTick(autoGrow));
 
 const scrollDown = () => nextTick(() => { const el = list.value; if (el) el.scrollTop = el.scrollHeight; });
-watch(() => [messages.value.length, busy.value, error.value], scrollDown);
+const reduceMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
+/** Neue Antwort: gleitet herein; Blöcke und Karten erscheinen nacheinander. Nur in diesem Öffnen, nicht beim Wiederöffnen. */
+const fresh = ref(-1);
+
+/**
+ * Nach neuen Nachrichten weich mitscrollen. Lange Antwort: an ihren Anfang springen statt ans Ende -
+ * man liest von oben, nicht vom letzten Satz rückwärts.
+ */
+function followLatest() {
+  void nextTick(() => {
+    const el = list.value;
+    if (!el) return;
+    const behavior: ScrollBehavior = reduceMotion() ? 'auto' : 'smooth';
+    const n = messages.value.length - 1;
+    const node = el.querySelector<HTMLElement>(`[data-msg="${n}"]`);
+    if (!busy.value && messages.value[n]?.role === 'assistant' && node && node.offsetHeight > el.clientHeight * 0.7) {
+      el.scrollTo({ top: el.scrollTop + node.getBoundingClientRect().top - el.getBoundingClientRect().top - 12, behavior });
+    } else {
+      el.scrollTo({ top: el.scrollHeight, behavior });
+    }
+  });
+}
+watch(() => [messages.value.length, busy.value, error.value], followLatest);
 
 /**
  * Fokus beim Öffnen: mit Maus/Tastatur direkt ins Eingabefeld; auf Touch-Geräten nur in den Dialog
@@ -78,6 +103,7 @@ watch(busy, (b) => { if (b) announce.value = t('ai.thinking'); });
 watch(() => messages.value.length, (n, prev) => {
   const last = messages.value[n - 1];
   if (n > prev && last?.role === 'assistant') {
+    fresh.value = n - 1;
     // Vorschlags-Karten mit ansagen - sonst erfährt man ohne Blick auf den Bildschirm nicht, dass es etwas zu speichern gibt
     const cards = (last.actions ?? []).map((a) => t(`ai.actions.${a.type}`));
     announce.value = [`${t('ai.coach')}: ${last.content}`, ...cards].join('. ');
@@ -89,6 +115,7 @@ let opener: HTMLElement | null = null;
 // immediate: die Komponente wird erst beim ersten Öffnen geladen - dann ist open schon true.
 watch(open, (o) => {
   if (o) {
+    fresh.value = -1;
     opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     scrollDown();
     focusStart();
@@ -100,8 +127,8 @@ watch(open, (o) => {
   }
 }, { immediate: true });
 
-async function clearChat() {
-  await ai.clearChat();
+async function clearChat(confirmed = false) {
+  await ai.clearChat({ confirmed });
   // Der Löschen-Knopf verschwindet mit dem Verlauf - Fokus nicht im Nichts lassen
   if (!messages.value.length) focusStart();
 }
@@ -116,11 +143,11 @@ const close = () => { open.value = false; };
 </script>
 
 <template>
-  <transition name="fade">
+  <transition name="sheet">
       <!-- .stop: sonst schließt der globale Escape-Handler (app.closeTopLayer) zusätzlich die Ebene darunter -->
       <div v-if="open" class="fixed inset-0 z-[70] flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="close" @keydown.esc.stop="close">
           <!-- dvh statt vh: in Safari ist 92vh höher als der sichtbare Bereich, das Eingabefeld läge hinter der Toolbar -->
-          <div ref="panel" tabindex="-1" class="glass-panel modal-panel flex h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl outline-none sm:h-[85dvh] sm:rounded-3xl" role="dialog" aria-modal="true" aria-labelledby="ai-title" data-test="ai-chat">
+          <div v-sheet-drag="close" ref="panel" tabindex="-1" class="glass-panel modal-panel flex h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl outline-none sm:h-[85dvh] sm:rounded-3xl" role="dialog" aria-modal="true" aria-labelledby="ai-title" data-test="ai-chat">
               <header class="flex items-start justify-between gap-3 border-b border-white/5 px-6 pb-3 pt-6">
                   <div class="min-w-0">
                       <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('ai.kicker') }}</p>
@@ -128,9 +155,11 @@ const close = () => { open.value = false; };
                       <p v-if="status?.enabled" class="mt-0.5 font-mono text-[11px]" :class="ai.left('deep') < 1 ? 'text-orange-300' : 'text-slate-400'" data-test="ai-remaining">{{ remaining }}</p>
                   </div>
                   <div class="flex flex-shrink-0 gap-2">
-                      <button v-if="messages.length" type="button" @click="clearChat" class="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('ai.clear.button')" data-test="ai-clear">
+                      <!-- Gedrückt halten löscht (Ring füllt sich); Tastatur/Screenreader bekommen die Rückfrage -->
+                      <HoldButton v-if="messages.length" variant="icon" :label="t('ai.clear.button')" @confirm="clearChat(true)" @fallback="clearChat()"
+                                  class="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" data-test="ai-clear">
                           <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>
-                      </button>
+                      </HoldButton>
                       <button type="button" @click="close" class="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>
                   </div>
               </header>
@@ -151,7 +180,8 @@ const close = () => { open.value = false; };
                           </div>
                       </template>
 
-                      <div v-for="(m, i) in messages" :key="i">
+                      <TransitionGroup name="msg">
+                      <div v-for="(m, i) in messages" :key="i" :data-msg="i" :class="{ 'msg-fresh': i === fresh }">
                           <div class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
                               <div class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed" :data-role="m.role"
                                    :class="m.role === 'user' ? 'rounded-br-md bg-accent text-on-accent' : 'rounded-bl-md border border-white/10 bg-white/[0.05] text-slate-100'">
@@ -165,6 +195,7 @@ const close = () => { open.value = false; };
                               <AiActionCard v-for="(a, j) in m.actions" :key="j" :action="a" :applied="!!m.applied?.includes(j)" :busy="applying === `${i}:${j}`" @apply="ai.applyAction(i, j)" />
                           </div>
                       </div>
+                      </TransitionGroup>
 
                       <div v-if="busy" class="flex justify-start" data-test="ai-thinking">
                           <div class="flex items-center gap-2 rounded-2xl rounded-bl-md border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-slate-300">

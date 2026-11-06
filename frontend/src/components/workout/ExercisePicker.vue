@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia';
 import { t, tn } from '@/i18n';
 import { exerciseName, muscleName } from '@/i18n/content';
 import { useAppStore, type PickerFilter } from '@/stores/app';
+import { vSheetDrag } from '@/lib/gestures';
 
 const app = useAppStore();
 const { picker, pickerMuscles, pickerResults, replaceSuggestions } = storeToRefs(app);
@@ -31,9 +32,9 @@ function createCustom() {
 </script>
 
 <template>
-  <transition name="fade">
+  <transition name="sheet">
       <div v-if="picker.open" class="backdrop fixed inset-0 z-40 flex items-end justify-center sm:items-center" @click.self="picker.open = false">
-          <div class="modal-panel glass-panel flex h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl sm:h-[80vh] sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="t('picker.title')">
+          <div v-sheet-drag="() => (picker.open = false)" class="modal-panel glass-panel flex h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl sm:h-[80vh] sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="t('picker.title')">
               <div class="flex items-center justify-between gap-3 px-5 pb-3 pt-5">
                   <div v-if="replacing" class="min-w-0">
                       <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('picker.replaceKicker') }}</p>

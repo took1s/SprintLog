@@ -9,6 +9,7 @@ import { deviceOnline, useAiStore } from '@/stores/ai';
 import { exerciseName } from '@/i18n/content';
 import { WEEKDAYS } from '@/lib/schedule';
 import type { PlanFocus, PlanLevel } from '@/lib/planBuilder';
+import { vSheetDrag } from '@/lib/gestures';
 
 const app = useAppStore();
 const { online, planBuilder, planChoices } = storeToRefs(app);
@@ -50,9 +51,9 @@ watch(() => !!aiPlan.value.result, (has, had) => {
 </script>
 
 <template>
-  <transition name="fade">
+  <transition name="sheet">
       <div v-if="planBuilder.open" class="fixed inset-0 z-[70] flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center" @click.self="close">
-          <div class="glass-panel modal-panel flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="t('builder.title')" data-test="plan-builder">
+          <div v-sheet-drag:handle="close" class="glass-panel modal-panel flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="t('builder.title')" data-test="plan-builder">
               <div class="flex items-start justify-between gap-3 px-6 pb-3 pt-6">
                   <div class="min-w-0">
                       <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('builder.kicker') }}</p>

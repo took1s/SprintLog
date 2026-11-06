@@ -3,10 +3,11 @@ import { t, tn } from '@/i18n';
 import { exerciseName, muscleName } from '@/i18n/content';
 import { storeToRefs } from 'pinia';
 import { useAppStore, sortOptions } from '@/stores/app';
+import { vLongPress } from '@/lib/gestures';
 
 const app = useAppStore();
 const { availableMuscleGroups, exercises, favorites, filteredExercises, loadingExercises, muscleFilters, search, sortLabel, sortMode, sortOpen, usage } = storeToRefs(app);
-const { addFromCatalog, lastSetLabel, openCustomModal, openSetModal, selectSort, toggleFavorite, toggleMuscleFilter } = app;
+const { addFromCatalog, lastSetLabel, openCustomModal, openExerciseInfo, openSetModal, selectSort, toggleFavorite, toggleMuscleFilter } = app;
 </script>
 
 <template>
@@ -49,8 +50,10 @@ const { addFromCatalog, lastSetLabel, openCustomModal, openSetModal, selectSort,
   </div>
 
   <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <!-- Antippen = Satz loggen, gedrückt halten = Technik & eigene Werte (Vorschau wie Haptic Touch) -->
       <div v-for="ex in filteredExercises" :key="ex.id" @click="openSetModal(ex)" @keydown.enter="openSetModal(ex)" tabindex="0" role="button"
-           class="glass-panel group relative flex cursor-pointer items-center justify-between overflow-hidden rounded-2xl p-5 transition-all hover:border-accent/40">
+           v-long-press="() => openExerciseInfo(ex.id, 'catalog')" :data-ex="ex.id"
+           class="catalog-card glass-panel group relative flex cursor-pointer items-center justify-between overflow-hidden rounded-2xl p-5 transition-all hover:border-accent/40">
           <div class="relative z-10 min-w-0 pr-2">
               <h3 class="display truncate text-lg text-white transition-colors group-hover:text-accent">{{ exerciseName(ex) }}</h3>
               <div class="mt-2 flex flex-wrap items-center gap-1.5">

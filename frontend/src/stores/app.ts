@@ -1412,6 +1412,9 @@ export const useAppStore = defineStore('app', () => {
   }
 
   /** ✓ im Geister-Satz: Satz mit den angezeigten Werten loggen. */
+  /** Zuletzt per ✓ geloggter Satz - für die kurze Bestätigungs-Animation der Zeile (Rekord = Gold). */
+  const lastLogged = ref<{ index: number; pr: boolean; at: number } | null>(null);
+
   function quickLog(id: number) {
     unlockAudio();
     const block = workoutBlocks.value.find((b) => b.exercise.id === id);
@@ -1438,6 +1441,7 @@ export const useAppStore = defineStore('app', () => {
     const wasPR = isNewRecord(set);
     ensureStarted();
     session.value.sets.push(set);
+    lastLogged.value = { index: session.value.sets.length - 1, pr: wasPR, at: Date.now() };
     const { [id]: _done, ...rest } = ghostDraft.value;
     ghostDraft.value = rest;
     const planRest = block.target?.restSeconds;
@@ -1646,8 +1650,9 @@ export const useAppStore = defineStore('app', () => {
     persistSession();
   }
 
-  async function abortSession() {
-    const ok = await confirm(isEditing.value
+  /** confirmed: schon per Gedrückthalten bestätigt (HoldButton) - keine Rückfrage. */
+  async function abortSession(opts?: { confirmed?: boolean }) {
+    const ok = opts?.confirmed === true || await confirm(isEditing.value
       ? { title: t('session.confirm.discardChangesTitle'), message: t('session.confirm.discardChangesMessage'), confirmText: t('session.discard'), danger: true }
       : { title: t('session.confirm.discardSessionTitle'), message: t('session.confirm.discardSessionMessage'), confirmText: t('session.discard'), danger: true });
     if (!ok) return;
@@ -2384,7 +2389,12 @@ export const useAppStore = defineStore('app', () => {
     window.addEventListener('focus', kickSync);
     window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeTopLayer(); });
 
-    setInterval(() => { now.value = Date.now(); checkTimer(); }, 500);
+    // Sekundentakt nur, wenn etwas läuft und die App sichtbar ist (Einheit, Pause) - sonst kein Re-Rendern im Leerlauf.
+    // Beim Zurückkehren setzt der visibilitychange-Handler oben die Zeit sofort.
+    setInterval(() => {
+      if (document.visibilityState === 'visible' && (session.value.startedAt || timer.value.endAt)) now.value = Date.now();
+      checkTimer();
+    }, 500);
     setInterval(() => { clock.value = Date.now(); }, 60_000);
     // Hintergrund-Sync jede Minute, falls etwas offen ist.
     setInterval(kickSync, 60_000);
@@ -2527,7 +2537,7 @@ export const useAppStore = defineStore('app', () => {
     sessionActive, hasSets, isEditing, finishLoad, sessionElapsed, sessionGroups, sessionSummary,
     workoutBlocks, ghostDraft, picker, obsidianWorkout, openObsidian, pickerResults, pickerMuscles, searchExercises,
     exerciseInfo, openExerciseInfo, closeExerciseInfo, holdTimer, startHold, closeHoldTimer, logHold,
-    rpePrompt, completeBlock, reopenBlock, setSetRpe, dismissRpePrompt, deleteSessionSet,
+    lastLogged, rpePrompt, completeBlock, reopenBlock, setSetRpe, dismissRpePrompt, deleteSessionSet,
     setSchedule, todayPlan, recovery, sessionRecovery, startLine, summary, closeSummary, coach, planBuilder, planChoices, openPlanBuilder, startPlanChoice,
     addExercises, removeBlock, moveBlock, reorderBlock, openReplace, replaceBlock, replaceSuggestions, setGhostValue, stepGhost, toggleGhostWarmup, quickLog, openPicker, togglePicked, addFromCatalog, confirmPicker, startWorkout, exerciseFor,
     modalEx, modalType, modalKey, modalRecord, modalPrevious, modalSessionSets, modalTarget, modalE1RM, modalIntensity,

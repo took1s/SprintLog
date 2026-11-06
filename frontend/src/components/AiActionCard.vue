@@ -67,7 +67,7 @@ const apply = () => { if (!locked.value) emit('apply'); };
 </script>
 
 <template>
-  <article class="rounded-2xl border border-accent/50 bg-accent/5 p-4" :aria-labelledby="titleId" :data-action="action.type">
+  <article class="ai-card rounded-2xl border border-accent/50 bg-accent/5 p-4" :aria-labelledby="titleId" :data-action="action.type">
       <h3 :id="titleId" class="text-[10px] font-bold uppercase text-accent tracking-label">{{ title }}</h3>
 
       <template v-if="action.type === 'program'">
