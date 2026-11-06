@@ -7,6 +7,7 @@ import { t } from '@/i18n';
 import { formatDate } from '@/lib/format';
 import { vSheetDrag } from '@/lib/gestures';
 import { MEMORY_CATEGORIES, deviceOnline, useAiStore, type CoachMemory, type MemoryCategory } from '@/stores/ai';
+import { useUiStore } from '@/stores/ui';
 import HoldButton from './HoldButton.vue';
 import MemoryIcon from './MemoryIcon.vue';
 
@@ -61,8 +62,24 @@ async function add() {
   }
 }
 
+// Fokus bleibt im Dialog: nach Bearbeiten/Löschen verschwindet der gedrückte Knopf
+const refocus = () => void nextTick(() => panel.value?.focus({ preventScroll: true }));
+
 function startEdit(m: CoachMemory) {
   Object.assign(editing, { id: m.id, content: m.content, category: m.category, important: m.importance === 3, busy: false });
+  void nextTick(() => document.getElementById(`memory-edit-${m.id}`)?.focus({ preventScroll: true }));
+}
+
+function cancelEdit() {
+  editing.id = 0;
+  refocus();
+}
+
+/** Löschen mit "Rückgängig" - ein verrutschter Daumen soll keinen Verletzungs-Eintrag kosten. */
+async function forget(m: CoachMemory) {
+  if (!(await ai.forgetMemory(m.id))) return;
+  refocus();
+  useUiStore().toast(t('ai.memory.undone'), 'info', { label: t('ai.memory.undo'), run: () => void ai.addMemory(m.content, m.category, m.importance) });
 }
 
 async function saveEdit(m: CoachMemory) {
@@ -72,7 +89,7 @@ async function saveEdit(m: CoachMemory) {
   const importance = editing.important ? 3 : m.importance === 3 ? 2 : m.importance;
   const ok = await ai.updateMemory(m, editing.content.trim(), editing.category, importance);
   editing.busy = false;
-  if (ok) editing.id = 0;
+  if (ok) { editing.id = 0; refocus(); }
 }
 </script>
 
@@ -98,12 +115,12 @@ async function saveEdit(m: CoachMemory) {
                                 class="cyber-input w-full resize-none rounded-xl p-3 text-base" data-test="memory-input" @keydown.enter.exact.prevent="add"></textarea>
                       <div class="mt-2 flex flex-wrap items-center gap-2">
                           <label class="sr-only" for="memory-category">{{ t('ai.memory.category') }}</label>
-                          <select id="memory-category" v-model="draft.category" class="cyber-input min-h-[2.75rem] min-w-0 flex-1 rounded-xl px-3 text-sm" data-test="memory-category">
+                          <select id="memory-category" v-model="draft.category" class="cyber-input min-h-[2.75rem] w-full rounded-xl px-3 text-base" data-test="memory-category">
                               <option v-for="c in MEMORY_CATEGORIES" :key="c" :value="c">{{ t(`ai.memory.categories.${c}`) }}</option>
                           </select>
                           <button type="button" :aria-pressed="draft.important" @click="draft.important = !draft.important"
                                   class="min-h-[2.75rem]" :class="draft.important ? 'chip chip-active' : 'chip chip-idle'">{{ t('ai.memory.importantToggle') }}</button>
-                          <button type="submit" :disabled="!canAdd" class="btn-primary min-h-[2.75rem] rounded-xl px-4 text-sm" data-test="memory-submit">{{ t('ai.memory.add') }}</button>
+                          <button type="submit" :disabled="!canAdd" class="btn-primary ml-auto min-h-[2.75rem] rounded-xl px-5 text-sm" data-test="memory-submit">{{ t('ai.memory.add') }}</button>
                       </div>
                   </form>
 
@@ -113,22 +130,22 @@ async function saveEdit(m: CoachMemory) {
                       <h3 class="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-label" :class="tone[g.category]">
                           <MemoryIcon :category="g.category" class="h-4 w-4" />
                           {{ t(`ai.memory.categories.${g.category}`) }}
-                          <span class="font-mono text-slate-500">{{ g.items.length }}</span>
+                          <span class="font-mono text-slate-400">{{ g.items.length }}</span>
                       </h3>
                       <ul class="space-y-2">
                           <li v-for="m in g.items" :key="m.id" class="memory-item rounded-xl border border-white/5 bg-black/20 py-2.5 pl-3 pr-1" :data-memory="m.id">
                               <form v-if="editing.id === m.id" class="pr-2" @submit.prevent="saveEdit(m)">
                                   <label class="sr-only" :for="`memory-edit-${m.id}`">{{ t('ai.memory.edit') }}</label>
-                                  <textarea :id="`memory-edit-${m.id}`" v-model="editing.content" rows="3" maxlength="300" class="cyber-input w-full resize-none rounded-xl p-2.5 text-sm" data-test="memory-edit-input"></textarea>
+                                  <textarea :id="`memory-edit-${m.id}`" v-model="editing.content" rows="3" maxlength="300" class="cyber-input w-full resize-none rounded-xl p-2.5 text-base" data-test="memory-edit-input"></textarea>
                                   <div class="mt-2 flex flex-wrap items-center gap-2">
-                                      <select v-model="editing.category" class="cyber-input min-h-[2.75rem] min-w-0 flex-1 rounded-xl px-3 text-sm" :aria-label="t('ai.memory.category')">
+                                      <select v-model="editing.category" class="cyber-input min-h-[2.75rem] w-full rounded-xl px-3 text-base" :aria-label="t('ai.memory.category')">
                                           <option v-for="c in MEMORY_CATEGORIES" :key="c" :value="c">{{ t(`ai.memory.categories.${c}`) }}</option>
                                       </select>
                                       <button type="button" :aria-pressed="editing.important" @click="editing.important = !editing.important"
                                               class="min-h-[2.75rem]" :class="editing.important ? 'chip chip-active' : 'chip chip-idle'">{{ t('ai.memory.importantToggle') }}</button>
                                   </div>
                                   <div class="mt-2 grid grid-cols-2 gap-2">
-                                      <button type="button" class="btn-ghost min-h-[2.75rem] rounded-xl text-sm" @click="editing.id = 0">{{ t('ai.memory.cancel') }}</button>
+                                      <button type="button" class="btn-ghost min-h-[2.75rem] rounded-xl text-sm" @click="cancelEdit">{{ t('ai.memory.cancel') }}</button>
                                       <button type="submit" :disabled="editing.busy || editing.content.trim().length < 3" class="btn-primary min-h-[2.75rem] rounded-xl text-sm" data-test="memory-edit-save">{{ t('ai.memory.save') }}</button>
                                   </div>
                               </form>
@@ -145,7 +162,7 @@ async function saveEdit(m: CoachMemory) {
                                           :aria-label="t('ai.memory.editLabel', { text: m.content })" data-test="memory-edit">
                                       <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"/></svg>
                                   </button>
-                                  <button type="button" @click="ai.forgetMemory(m.id)" class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-red-500/10 hover:text-red-300"
+                                  <button type="button" @click="forget(m)" class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-red-500/10 hover:text-red-300"
                                           :aria-label="t('ai.memory.deleteLabel', { text: m.content })" data-test="memory-delete">
                                       <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>
                                   </button>
@@ -156,7 +173,7 @@ async function saveEdit(m: CoachMemory) {
               </div>
 
               <footer class="border-t border-white/5 px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-                  <p class="mb-2 text-[11px] leading-snug text-slate-500">{{ t('ai.memory.privacy') }}</p>
+                  <p class="mb-2 text-[11px] leading-snug text-slate-400">{{ t('ai.memory.privacy') }}</p>
                   <HoldButton v-if="memory.length" :label="t('ai.memory.clear')" @confirm="ai.clearMemory({ confirmed: true })" @fallback="ai.clearMemory()"
                               class="min-h-[2.75rem] w-full rounded-xl border border-white/10 px-4 text-[11px] font-bold uppercase text-slate-400 tracking-label hover:text-red-300" data-test="memory-clear" />
               </footer>

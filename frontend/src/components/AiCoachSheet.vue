@@ -203,7 +203,7 @@ const close = () => { open.value = false; };
                               <li v-for="c in m.memory" :key="c.id" class="memory-note flex items-center gap-1 rounded-xl border border-accent/25 bg-accent/5 pl-3 pr-1 text-xs text-slate-200" :data-memory-action="c.undone ? 'undone' : c.action">
                                   <MemoryIcon category="brain" class="h-4 w-4 flex-shrink-0 text-accent" />
                                   <button type="button" class="min-h-[2.75rem] min-w-0 flex-1 py-1.5 pl-1 text-left leading-snug" @click="ai.openMemory()">
-                                      <span class="font-bold text-accent">{{ t(`ai.memory.${c.undone ? 'undone' : c.action}`) }}:</span>
+                                      <span class="font-bold text-accent">{{ t(`ai.memory.${c.undone ? 'undone' : c.action}`) }}: </span>
                                       <span class="break-words" :class="{ 'text-slate-400 line-through': c.undone || c.action === 'forgotten' }">{{ c.content }}</span>
                                   </button>
                                   <button v-if="c.action === 'saved' && !c.undone" type="button" @click="ai.undoMemory(i, c)" data-test="memory-undo"
