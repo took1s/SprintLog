@@ -138,7 +138,7 @@ test('register, log gym + field sets, finish -> stored on server with client dat
   await page.click('button.subtab:text-is("Progress")');
   await page.waitForSelector('canvas[aria-label="Progress chart"]');
   await page.click('button.subtab:text-is("Calendar")');
-  await page.waitForSelector('text=Activity');
+  await page.waitForSelector('[data-test=calendar-grid] [data-level="4"]'); // heutiger Tag mit den beiden Einheiten
   assert.equal(await page.evaluate(() => window.__cspViolations?.length ?? 0), 0, 'no CSP violations');
   assert.deepEqual(errors, []);
   await context.close();
@@ -1299,6 +1299,121 @@ test('Halloween theme: decorations are behind the content and never block taps',
   await page.evaluate(() => { localStorage.setItem('sprintlog:appearance', JSON.stringify({ theme: 'pitch', scheme: 'dark' })); });
   await page.reload();
   await page.waitForSelector('[data-test=start-panel]');
+  assert.equal(await page.locator('[data-test=halloween-decor]').count(), 0);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('Stability: switching Gym/Field keeps the page alive, Escape closes every sheet', async () => {
+  const { page, errors, context } = await newPage();
+  await register(page, `stab_${Date.now()}`);
+  // Hin und her wie beim Absturz auf dem iPhone: Bereich bleibt gemountet (kein Übergang über den ganzen Katalog), keine Fehler
+  const marker = await page.evaluate(() => { const c = document.querySelector('[data-test=start-panel]'); c.dataset.probe = 'kept'; return true; });
+  assert.ok(marker);
+  for (let i = 0; i < 10; i++) {
+    await page.click('[role=tab] >> nth=1');
+    await page.click('[role=tab] >> nth=0');
+  }
+  await page.waitForSelector('[data-test=start-panel]');
+  assert.equal(await page.getAttribute('[data-test=start-panel]', 'data-probe'), 'kept', 'start area not remounted on Gym/Field switch');
+
+  const sheets = () => page.locator('[aria-modal="true"]').count();
+  // Übungsauswahl (Picker) und Zusammenfassung haben keinen eigenen Tastatur-Handler - Escape schließt sie trotzdem
+  await page.click('[data-add="1"]');
+  await page.click('[data-test=add-exercise]');
+  await page.waitForFunction(() => document.querySelectorAll('[aria-modal="true"]').length === 1);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.querySelectorAll('[aria-modal="true"]').length === 0);
+  await page.fill('[data-test=ghost-weight]', '50');
+  await page.fill('[data-test=ghost-reps]', '5');
+  await page.click('[data-test=log-ghost]');
+  await page.click('[data-test=finish-workout]');
+  await page.click('form[role=dialog] button[type=submit]');
+  await page.waitForSelector('[data-test=workout-summary]');
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('[data-test=workout-summary]', { state: 'detached' });
+  // Planer
+  await page.click('[role=tab] >> nth=2');
+  await page.click('[data-test=open-builder]');
+  await page.waitForFunction(() => document.querySelectorAll('[aria-modal="true"]').length === 1);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.querySelectorAll('[aria-modal="true"]').length === 0);
+  assert.equal(await sheets(), 0);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('Calendar: month grid with load and kinds, browse months and years, open a month from the year view', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `cal_${Date.now()}`);
+  const now = new Date();
+  const ym = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const day = (y, m, d, h = 18) => new Date(y, m, d, h).toISOString();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const set = (n) => Array.from({ length: n }, () => ({ exerciseId: 1, weight: 100, reps: 5, clientId: crypto.randomUUID() }));
+  // Dieser Monat: ein starker Halle-Tag und ein Spiel; letztes Jahr: eine Einheit im März
+  await api('POST', '/api/workouts', token, { clientId: crypto.randomUUID(), date: day(y, m, 1), workoutType: 'Gym', durationSeconds: 3600, sessionRpe: 8, sets: set(10) });
+  await api('POST', '/api/workouts', token, { clientId: crypto.randomUUID(), date: day(y, m, 1, 10), workoutType: 'Match', durationSeconds: 5400, sessionRpe: 8, sets: [] });
+  await api('POST', '/api/workouts', token, { clientId: crypto.randomUUID(), date: day(y - 1, 2, 10), workoutType: 'Gym', durationSeconds: 1800, sessionRpe: 6, sets: set(2) });
+  await page.reload();
+  await page.waitForSelector('[data-test=start-panel]');
+  await page.click('[role=tab] >> nth=3');
+  await page.click('[data-subtab=calendar]');
+  const cal = page.locator('[data-test=calendar]');
+  await cal.waitFor();
+
+  // Monat: Tag 1 stark, mit Punkten für Spiel und Halle; Kennzahlen
+  const first = cal.locator(`[data-day="${ym(now)}-01"]`);
+  assert.equal(await first.getAttribute('data-level'), '4');
+  assert.equal(await first.locator('.cal-dots i').count(), 2);
+  assert.equal(await cal.locator('[data-stat=sessions]').innerText(), '2');
+  assert.equal(await cal.locator('[data-stat=matches]').innerText(), '1');
+  await first.click();
+  assert.equal(await cal.locator('[data-test=calendar-workout]').count(), 2);
+
+  // Blättern: zurück, "Heute" bringt zurück; Wischen nach links = nächster Monat
+  const title = () => cal.locator('[data-test=calendar-title]').innerText();
+  const current = await title();
+  await cal.locator('[data-test=calendar-prev]').click();
+  await page.waitForFunction((t) => document.querySelector('[data-test=calendar-title]').innerText !== t, current);
+  await cal.locator('[data-test=calendar-today]').click();
+  await page.waitForFunction((t) => document.querySelector('[data-test=calendar-title]').innerText === t, current);
+  const grid = await cal.locator('.cal-swipe').boundingBox();
+  await page.mouse.move(grid.x + grid.width - 30, grid.y + 60);
+  await page.mouse.down();
+  await page.mouse.move(grid.x + 30, grid.y + 70, { steps: 6 });
+  await page.mouse.up();
+  await page.waitForFunction((t) => document.querySelector('[data-test=calendar-title]').innerText !== t, current);
+
+  // Jahr: Vorjahr hat eine Einheit im März; Mini-Monat öffnet den Monat
+  await cal.locator('[data-test=calendar-view-year]').click();
+  await cal.locator('[data-test=calendar-prev]').click();
+  await page.waitForFunction((yy) => document.querySelector('[data-test=calendar-title]').innerText === String(yy), y - 1);
+  assert.equal(await cal.locator('[data-stat=sessions]').innerText(), '1');
+  await cal.locator('[data-month="2"]').click();
+  await cal.locator(`[data-day="${y - 1}-03-10"]:not([data-level="0"])`).waitFor(); // Stufe relativ zum stärksten Tag
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('Neon Striker theme: selectable in settings, decor behind content, shot only once per session', async () => {
+  const { page, errors, context } = await newPage();
+  await register(page, `st_${Date.now()}`);
+  await page.click('button[aria-label=Settings]');
+  await page.click('[data-theme-option=striker]');
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'striker');
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('[data-test=striker-decor]');
+  await page.waitForSelector('[data-test=start-panel].st-card');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.st-decor')).pointerEvents), 'none');
+  assert.equal(await page.evaluate(() => !!document.elementFromPoint(window.innerWidth - 6, 6)?.closest('.st-decor')), false);
+  // Schuss: einmal pro Sitzung (nach dem Neuladen nicht wieder)
+  await page.waitForSelector('.st-shot', { timeout: 3000 });
+  await page.reload();
+  await page.waitForSelector('[data-test=striker-decor]');
+  await page.waitForTimeout(1500);
+  assert.equal(await page.locator('.st-shot').count(), 0);
   assert.equal(await page.locator('[data-test=halloween-decor]').count(), 0);
   assert.deepEqual(errors, []);
   await context.close();

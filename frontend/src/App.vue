@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineAsyncComponent, onMounted, reactive, ref, watch, watchEffect } from 'vue';
+import { defineAsyncComponent, onMounted, reactive, watchEffect } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
 import ToastStack from '@/components/ToastStack.vue';
@@ -41,6 +41,7 @@ const AthleteProfileSheet = defineAsyncComponent(() => import('@/components/Athl
 const CoachMemorySheet = defineAsyncComponent(() => import('@/components/CoachMemorySheet.vue'));
 // Saison-Deko nur im Halloween-Theme laden
 const HalloweenDecor = defineAsyncComponent(() => import('@/components/decor/HalloweenDecor.vue'));
+const StrikerDecor = defineAsyncComponent(() => import('@/components/decor/StrikerDecor.vue'));
 
 const app = useAppStore();
 const goals = useGoalsStore();
@@ -68,10 +69,6 @@ watchEffect(() => {
 
 onMounted(() => { void app.init(); });
 
-// Richtung des Tabwechsels für den Übergang (Reihenfolge wie in der Tab-Leiste)
-const ORDER = ['Gym', 'Football', 'Plan', 'Data'];
-const tabTransition = ref('tab-next');
-watch(tab, (next, prev) => { tabTransition.value = ORDER.indexOf(next) >= ORDER.indexOf(prev) ? 'tab-next' : 'tab-prev'; });
 </script>
 
 <template>
@@ -79,6 +76,7 @@ watch(tab, (next, prev) => { tabTransition.value = ORDER.indexOf(next) >= ORDER.
     <div class="bg-orb-1"></div>
     <div class="bg-orb-2"></div>
     <HalloweenDecor v-if="appearance.theme === 'halloween'" />
+    <StrikerDecor v-else-if="appearance.theme === 'striker'" />
 
     <ToastStack />
     <UpdateBanner />
@@ -90,9 +88,9 @@ watch(tab, (next, prev) => { tabTransition.value = ORDER.indexOf(next) >= ORDER.
     <template v-else>
       <AppHeader />
 
-      <transition :name="tabTransition" mode="out-in">
-      <!-- key: Gym/Feld teilen sich den Bereich - ohne laufende Einheit trotzdem ein Übergang, mit Einheit bleibt sie gemountet -->
-      <section v-if="tab === 'Gym' || tab === 'Football'" :key="sessionActive ? 'session' : tab">
+      <!-- Kein animierter Tabwechsel: Transform/Opacity über den ganzen Katalog brachte Safari auf dem iPhone zum Absturz.
+           Halle/Feld teilen sich den Bereich und bleiben gemountet (nur Inhalte wechseln). -->
+      <section v-if="tab === 'Gym' || tab === 'Football'">
         <!-- Läuft eine Einheit: Blöcke mit Sätzen. Sonst: Einstieg + Katalog zum Stöbern. -->
         <WorkoutView v-if="sessionActive" />
         <template v-else>
@@ -108,7 +106,6 @@ watch(tab, (next, prev) => { tabTransition.value = ORDER.indexOf(next) >= ORDER.
       </section>
       <PlanView v-else-if="tab === 'Plan'" :class="{ 'pb-28': app.sessionActive }" />
       <DataView v-else-if="tab === 'Data'" />
-      </transition>
 
       <SessionBar />
       <ExercisePicker />

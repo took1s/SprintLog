@@ -7,7 +7,7 @@ import { ref, watch } from 'vue';
 import { readJson, writeJson } from './storage';
 import { syncStatusBar } from './native';
 
-export const THEMES = ['pitch', 'clean', 'midnight', 'mono', 'halloween'] as const;
+export const THEMES = ['pitch', 'clean', 'midnight', 'mono', 'striker', 'halloween'] as const;
 export type ThemeName = (typeof THEMES)[number];
 export const SCHEMES = ['auto', 'light', 'dark'] as const;
 export type SchemePreference = (typeof SCHEMES)[number];
@@ -23,6 +23,7 @@ export const THEME_SWATCHES: Record<ThemeName, Record<'light' | 'dark', [string,
   clean: { dark: ['#11110f', '#1c1b18', '#ff6a33'], light: ['#f6f5f2', '#ffffff', '#e84810'] },
   midnight: { dark: ['#090b14', '#131727', '#7c8cff'], light: ['#f3f4fb', '#ffffff', '#4f46e5'] },
   mono: { dark: ['#080808', '#121212', '#ff3328'], light: ['#f2f2f0', '#ffffff', '#d60600'] },
+  striker: { dark: ['#060a18', '#0c1328', '#2e8cff'], light: ['#f0f5fc', '#ffffff', '#146ef5'] },
   halloween: { dark: ['#120c1c', '#1c142a', '#ff7a1a'], light: ['#f8f4ef', '#ffffff', '#ff7a1a'] },
 };
 

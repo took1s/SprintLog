@@ -34,7 +34,7 @@ const lastCount = computed(() => new Set((lastWorkout.value?.sets ?? []).map((s)
 </script>
 
 <template>
-  <section class="glass-panel mb-6 rounded-3xl p-5" :class="{ 'hw-card': appearance.theme === 'halloween' }" data-test="start-panel">
+  <section class="glass-panel mb-6 rounded-3xl p-5" :class="{ 'hw-card': appearance.theme === 'halloween', 'st-card': appearance.theme === 'striker' }" data-test="start-panel">
       <HalloweenSpider v-if="appearance.theme === 'halloween'" />
       <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ isField ? t('start.kickerField') : t('start.kicker') }}</p>
       <h2 class="display mt-1 text-3xl text-white">{{ isField ? t('start.titleField') : t('start.title') }}</h2>
