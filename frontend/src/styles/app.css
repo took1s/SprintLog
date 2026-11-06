@@ -212,6 +212,41 @@
   .heat-4 { background: rgb(var(--c-accent)); }
 }
 
+/* ---------- Kalender (Monat/Jahr) ---------- */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.cal-nav {
+  display: flex; height: 2.75rem; width: 2.75rem; align-items: center; justify-content: center; border-radius: 0.75rem;
+  border: 1px solid rgb(var(--c-fg) / 0.1); background: rgb(var(--c-fg) / 0.04); color: rgb(var(--c-fg) / 0.75);
+}
+.cal-nav:hover { color: rgb(var(--c-fg)); }
+.cal-swipe { touch-action: pan-y; }
+.cal-day {
+  position: relative; display: flex; aspect-ratio: 1 / 1; align-items: center; justify-content: center; border-radius: 0.75rem;
+  transition: transform 0.15s var(--ease-out), box-shadow 0.15s ease;
+}
+.cal-day:active { transform: scale(0.94); }
+.cal-num { font-family: var(--font-num); font-size: 13px; font-weight: 700; color: rgb(var(--c-fg) / 0.85); font-variant-numeric: tabular-nums; }
+.cal-day.is-out { opacity: 0.3; }
+.cal-day.is-strong .cal-num { color: rgb(var(--c-on-accent)); }
+.cal-day.is-today { box-shadow: inset 0 0 0 2px rgb(var(--c-accent)); }
+.cal-day.is-today.is-strong { box-shadow: inset 0 0 0 2px rgb(var(--c-fg)); }
+.cal-day.is-selected { box-shadow: 0 0 0 2px rgb(var(--c-fg)), 0 8px 18px -8px rgb(var(--c-accent) / 0.7); transform: translateY(-1px); }
+/* Plan-Vorschau: gestrichelter Rand (Training) bzw. kleiner Ball (Spiel) */
+.cal-day.is-planned, .cal-day.is-planned-match { outline: 1.5px dashed rgb(var(--c-accent) / 0.55); outline-offset: -3px; }
+.cal-day.is-planned-match { outline-color: rgb(var(--c-gold) / 0.6); }
+.cal-dots { position: absolute; bottom: 4px; left: 0; right: 0; display: flex; justify-content: center; gap: 2px; }
+.cal-dots > i { width: 4px; height: 4px; border-radius: 9999px; box-shadow: 0 0 0 1px rgb(var(--c-bg) / 0.55); }
+.cal-ball { position: absolute; bottom: 3px; width: 10px; height: 10px; color: rgb(var(--c-gold)); }
+.cal-mini-today { background: rgb(var(--c-fg) / 0.85); }
+.cal-bar { transition: height 0.4s var(--ease-out); }
+.cal-next-enter-active, .cal-prev-enter-active { transition: opacity 0.18s ease, transform 0.22s var(--ease-out); }
+.cal-next-leave-active, .cal-prev-leave-active { transition: opacity 0.1s ease, transform 0.1s var(--ease-in); }
+.cal-next-enter-from { opacity: 0; transform: translate3d(20px, 0, 0); }
+.cal-next-leave-to { opacity: 0; transform: translate3d(-12px, 0, 0); }
+.cal-prev-enter-from { opacity: 0; transform: translate3d(-20px, 0, 0); }
+.cal-prev-leave-to { opacity: 0; transform: translate3d(12px, 0, 0); }
+
 /* ---------- Saison-Deko: Halloween (nur data-theme="halloween") ----------
    Hinter dem Inhalt, ohne Klickfläche; Farben aus Tokens (Spinnennetz als Maske, gefärbt mit --c-fg). */
 .hw-decor { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }

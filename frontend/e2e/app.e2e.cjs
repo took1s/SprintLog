@@ -1342,3 +1342,57 @@ test('Stability: switching Gym/Field keeps the page alive, Escape closes every s
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('Calendar: month grid with load and kinds, browse months and years, open a month from the year view', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `cal_${Date.now()}`);
+  const now = new Date();
+  const ym = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const day = (y, m, d, h = 18) => new Date(y, m, d, h).toISOString();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const set = (n) => Array.from({ length: n }, () => ({ exerciseId: 1, weight: 100, reps: 5, clientId: crypto.randomUUID() }));
+  // Dieser Monat: ein starker Halle-Tag und ein Spiel; letztes Jahr: eine Einheit im März
+  await api('POST', '/api/workouts', token, { clientId: crypto.randomUUID(), date: day(y, m, 1), workoutType: 'Gym', durationSeconds: 3600, sessionRpe: 8, sets: set(10) });
+  await api('POST', '/api/workouts', token, { clientId: crypto.randomUUID(), date: day(y, m, 1, 10), workoutType: 'Match', durationSeconds: 5400, sessionRpe: 8, sets: [] });
+  await api('POST', '/api/workouts', token, { clientId: crypto.randomUUID(), date: day(y - 1, 2, 10), workoutType: 'Gym', durationSeconds: 1800, sessionRpe: 6, sets: set(2) });
+  await page.reload();
+  await page.waitForSelector('[data-test=start-panel]');
+  await page.click('[role=tab] >> nth=3');
+  await page.click('[data-subtab=calendar]');
+  const cal = page.locator('[data-test=calendar]');
+  await cal.waitFor();
+
+  // Monat: Tag 1 stark, mit Punkten für Spiel und Halle; Kennzahlen
+  const first = cal.locator(`[data-day="${ym(now)}-01"]`);
+  assert.equal(await first.getAttribute('data-level'), '4');
+  assert.equal(await first.locator('.cal-dots i').count(), 2);
+  assert.equal(await cal.locator('[data-stat=sessions]').innerText(), '2');
+  assert.equal(await cal.locator('[data-stat=matches]').innerText(), '1');
+  await first.click();
+  assert.equal(await cal.locator('[data-test=calendar-workout]').count(), 2);
+
+  // Blättern: zurück, "Heute" bringt zurück; Wischen nach links = nächster Monat
+  const title = () => cal.locator('[data-test=calendar-title]').innerText();
+  const current = await title();
+  await cal.locator('[data-test=calendar-prev]').click();
+  await page.waitForFunction((t) => document.querySelector('[data-test=calendar-title]').innerText !== t, current);
+  await cal.locator('[data-test=calendar-today]').click();
+  await page.waitForFunction((t) => document.querySelector('[data-test=calendar-title]').innerText === t, current);
+  const grid = await cal.locator('.cal-swipe').boundingBox();
+  await page.mouse.move(grid.x + grid.width - 30, grid.y + 60);
+  await page.mouse.down();
+  await page.mouse.move(grid.x + 30, grid.y + 70, { steps: 6 });
+  await page.mouse.up();
+  await page.waitForFunction((t) => document.querySelector('[data-test=calendar-title]').innerText !== t, current);
+
+  // Jahr: Vorjahr hat eine Einheit im März; Mini-Monat öffnet den Monat
+  await cal.locator('[data-test=calendar-view-year]').click();
+  await cal.locator('[data-test=calendar-prev]').click();
+  await page.waitForFunction((yy) => document.querySelector('[data-test=calendar-title]').innerText === String(yy), y - 1);
+  assert.equal(await cal.locator('[data-stat=sessions]').innerText(), '1');
+  await cal.locator('[data-month="2"]').click();
+  await cal.locator(`[data-day="${y - 1}-03-10"]:not([data-level="0"])`).waitFor(); // Stufe relativ zum stärksten Tag
+  assert.deepEqual(errors, []);
+  await context.close();
+});
