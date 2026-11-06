@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, useTemplateRef } from 'vue';
 import { t } from '@/i18n';
 import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
@@ -10,6 +10,7 @@ const { openSettings, syncNow } = app;
 import BrandMark from '@/components/BrandMark.vue';
 import { appearance } from '@/lib/theme';
 import { tap } from '@/lib/native';
+import { useScrub } from '@/lib/scrub';
 
 // Reihenfolge = Richtung der Übergänge (App.vue) und Position des gleitenden Markers
 const TABS = [
@@ -21,6 +22,14 @@ function select(key: (typeof TABS)[number]['key']) {
   tap();
   tab.value = key;
 }
+
+// Halten oder seitlich ziehen: Marker folgt dem Finger, Loslassen wählt (gewechselt wird erst dann - kein Neuaufbau je Abschnitt)
+const bar = useTemplateRef<HTMLElement>('bar');
+const scrub = useScrub(bar, { count: () => TABS.length, current: () => index.value, select: (i) => { tab.value = TABS[i]!.key; } });
+const shown = computed(() => (scrub.dragging.value ? scrub.hover.value : index.value));
+const markerStyle = computed(() => ({
+  transform: scrub.dragging.value ? `translate3d(${scrub.offset.value}px, 0, 0)` : `translate3d(${index.value * 100}%, 0, 0)`,
+}));
 </script>
 
 <template>
@@ -52,10 +61,10 @@ function select(key: (typeof TABS)[number]['key']) {
   </header>
 
   <nav class="mb-8 flex justify-center">
-      <div class="tab-container relative w-full max-w-md" role="tablist">
-          <!-- Gleitender Marker statt springender Hintergrund: zeigt, woher man kommt -->
-          <span class="tab-indicator" :style="{ transform: `translate3d(${index * 100}%, 0, 0)` }" aria-hidden="true"></span>
-          <button v-for="x in TABS" :key="x.key" role="tab" :aria-selected="tab === x.key" @click="select(x.key)" class="tab-btn relative" :class="{ 'tab-active': tab === x.key }">{{ t(x.label) }}</button>
+      <div ref="bar" class="tab-container scrub-bar relative w-full max-w-md" :class="{ 'is-scrubbing': scrub.dragging.value }" role="tablist" data-test="main-tabs">
+          <!-- Gleitender Marker statt springender Hintergrund: zeigt, woher man kommt; beim Ziehen klebt er am Finger -->
+          <span class="tab-indicator" :style="markerStyle" aria-hidden="true"></span>
+          <button v-for="(x, i) in TABS" :key="x.key" role="tab" :aria-selected="tab === x.key" @click="select(x.key)" class="tab-btn relative" :class="{ 'tab-active': shown === i }">{{ t(x.label) }}</button>
       </div>
   </nav>
 </template>

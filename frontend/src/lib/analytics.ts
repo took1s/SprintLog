@@ -302,12 +302,18 @@ export const ChartMetric = Object.freeze({
   BestTime: 'bestTime',
   Distance: 'distance',
   Longest: 'longest',
+  MaxReps: 'maxReps',
+  TotalReps: 'totalReps',
 } as const);
 export type ChartMetricValue = (typeof ChartMetric)[keyof typeof ChartMetric];
 
 export interface MetricOption { key: ChartMetricValue; label: string; unit: string; lowerIsBetter?: boolean }
 
-export function metricsFor(trackingType: TrackingTypeValue | null | undefined): MetricOption[] {
+/**
+ * Kennzahlen für den Verlauf. Ohne Zusatzgewicht (Klimmzüge, Liegestütze) sind Gewicht, 1RM und Volumen immer 0 -
+ * dort zählen die Wiederholungen.
+ */
+export function metricsFor(trackingType: TrackingTypeValue | null | undefined, hasWeight = true): MetricOption[] {
   switch (trackingType) {
     case TrackingType.DistanceTime:
       return [
@@ -318,38 +324,49 @@ export function metricsFor(trackingType: TrackingTypeValue | null | undefined): 
     case TrackingType.Duration:
       return [{ key: ChartMetric.Longest, label: 'Longest', unit: 's' }];
     default:
+      if (!hasWeight) {
+        return [
+          { key: ChartMetric.MaxReps, label: 'Max reps', unit: 'reps' },
+          { key: ChartMetric.TotalReps, label: 'Total reps', unit: 'reps' },
+        ];
+      }
       return [
         { key: ChartMetric.MaxWeight, label: 'Max weight', unit: 'kg' },
         { key: ChartMetric.E1RM, label: 'Est. 1RM', unit: 'kg' },
         { key: ChartMetric.Volume, label: 'Volume', unit: 'kg' },
+        { key: ChartMetric.MaxReps, label: 'Max reps', unit: 'reps' },
       ];
   }
 }
 
 export interface SeriesPoint { date: string; value: number }
 
+/** Wert einer Kennzahl für die Arbeitssätze einer Übung in einer Einheit (0 = nichts Messbares). */
+export function metricValue(sets: readonly WorkoutSet[], metric: ChartMetricValue | string): number {
+  if (sets.length === 0) return 0;
+  switch (metric) {
+    case ChartMetric.MaxWeight: return round2(Math.max(...sets.map((s) => s.weight ?? 0)));
+    case ChartMetric.E1RM: return round2(Math.max(...sets.map((s) => epley1RM(s.weight, s.reps))));
+    case ChartMetric.Volume: return round2(sets.reduce((sum, s) => sum + setVolume(s), 0));
+    case ChartMetric.TopSpeed: return round2(msToKmh(Math.max(...sets.map(setSpeed))));
+    case ChartMetric.BestTime: {
+      const times = sets.map((s) => s.time ?? 0).filter((t) => t > 0);
+      return times.length ? round2(Math.min(...times)) : 0;
+    }
+    case ChartMetric.Distance: return round2(sets.reduce((sum, s) => sum + (s.distance ?? 0), 0));
+    case ChartMetric.Longest: return round2(Math.max(...sets.map((s) => s.time ?? 0)));
+    case ChartMetric.MaxReps: return Math.max(...sets.map((s) => s.reps ?? 0));
+    case ChartMetric.TotalReps: return sets.reduce((sum, s) => sum + (s.reps ?? 0), 0);
+    default: return 0;
+  }
+}
+
 /** Ein Wert pro Einheit für die gewählte Übung und Kennzahl - chronologisch. */
 export function exerciseSeries(workouts: readonly Workout[] | null | undefined, key: string, metric: ChartMetricValue | string): SeriesPoint[] {
   const points: SeriesPoint[] = [];
   for (const w of chronological(workouts)) {
-    const sets = (w.sets ?? []).filter((s) => exerciseKey(s) === key && isWorkingSet(s));
-    if (sets.length === 0) continue;
-    let value: number;
-    switch (metric) {
-      case ChartMetric.MaxWeight: value = Math.max(...sets.map((s) => s.weight ?? 0)); break;
-      case ChartMetric.E1RM: value = Math.max(...sets.map((s) => epley1RM(s.weight, s.reps))); break;
-      case ChartMetric.Volume: value = sets.reduce((sum, s) => sum + setVolume(s), 0); break;
-      case ChartMetric.TopSpeed: value = msToKmh(Math.max(...sets.map(setSpeed))); break;
-      case ChartMetric.BestTime: {
-        const times = sets.map((s) => s.time ?? 0).filter((t) => t > 0);
-        value = times.length ? Math.min(...times) : 0;
-        break;
-      }
-      case ChartMetric.Distance: value = sets.reduce((sum, s) => sum + (s.distance ?? 0), 0); break;
-      case ChartMetric.Longest: value = Math.max(...sets.map((s) => s.time ?? 0)); break;
-      default: value = 0;
-    }
-    if (value > 0) points.push({ date: w.date, value: round2(value) });
+    const value = metricValue((w.sets ?? []).filter((s) => exerciseKey(s) === key && isWorkingSet(s)), metric);
+    if (value > 0) points.push({ date: w.date, value });
   }
   return points;
 }
