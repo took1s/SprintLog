@@ -55,6 +55,17 @@ function goal() {
               </div>
 
               <div class="flex-1 overflow-y-auto px-6 pb-6">
+                  <!-- Eigene Übung: Eigenschaften nachträglich setzen (z. B. "Gravitron" = Hilfe, weniger ist besser) -->
+                  <div v-if="ex.isCustom" class="mb-4 space-y-2" data-test="info-flags">
+                      <label v-if="isWeight" class="flex min-h-[2.75rem] cursor-pointer items-center gap-3 rounded-xl border border-white/5 bg-black/20 px-3 py-2">
+                          <input type="checkbox" class="h-5 w-5 flex-shrink-0" :checked="!!ex.isAssisted" @change="app.updateExerciseFlags(ex!, { isAssisted: ($event.target as HTMLInputElement).checked })" data-test="info-assisted" />
+                          <span class="text-sm text-slate-200">{{ t('workout.assisted') }}</span>
+                      </label>
+                      <label class="flex min-h-[2.75rem] cursor-pointer items-center gap-3 rounded-xl border border-white/5 bg-black/20 px-3 py-2">
+                          <input type="checkbox" class="h-5 w-5 flex-shrink-0" :checked="!!ex.perSide" @change="app.updateExerciseFlags(ex!, { perSide: ($event.target as HTMLInputElement).checked })" data-test="info-per-side" />
+                          <span class="text-sm text-slate-200">{{ t('workout.perSide') }}</span>
+                      </label>
+                  </div>
                   <!-- Technik -->
                   <div v-if="technique.motion || technique.technique" class="overflow-hidden rounded-2xl border border-white/5 bg-black/30">
                       <ExerciseFigure v-if="technique.motion" :motion="technique.motion" class="fx-stage block h-48 w-full" />

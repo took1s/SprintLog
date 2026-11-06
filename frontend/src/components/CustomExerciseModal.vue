@@ -35,12 +35,24 @@ const { saveCustomExercise } = app;
 
               <label class="label-xs mb-2">{{ t('custom.tracking') }}</label>
               <div class="mb-6 space-y-2">
-                  <button type="button" v-for="type in (['WeightReps', 'DistanceTime', 'Duration'] as const)" :key="type"
+                  <button type="button" v-for="type in (['WeightReps', 'DistanceTime', 'Duration', 'Cardio'] as const)" :key="type"
                           @click="customModal.trackingType = type" class="flex w-full items-center justify-between rounded-xl border p-3 text-left transition-all"
                           :class="customModal.trackingType === type ? 'border-accent/60 bg-accent/10' : 'border-white/5 bg-black/20 hover:border-white/20'">
                       <span><span class="block text-sm font-bold text-white">{{ t(`tracking.${type}`) }}</span><span class="font-mono text-[10px] text-slate-500">{{ t(`tracking.hint.${type}`) }}</span></span>
                       <span v-if="customModal.trackingType === type" class="text-accent">●</span>
                   </button>
+              </div>
+
+              <!-- Eigenschaften: Gravitron = weniger ist besser; Seitstütz = Werte pro Seite -->
+              <div class="mb-6 space-y-2">
+                  <label v-if="customModal.trackingType === 'WeightReps'" class="flex min-h-[2.75rem] cursor-pointer items-center gap-3 rounded-xl border border-white/5 bg-black/20 p-3">
+                      <input v-model="customModal.isAssisted" type="checkbox" class="h-5 w-5 flex-shrink-0" data-test="cx-assisted" />
+                      <span class="text-sm text-slate-200">{{ t('workout.assisted') }}</span>
+                  </label>
+                  <label class="flex min-h-[2.75rem] cursor-pointer items-center gap-3 rounded-xl border border-white/5 bg-black/20 p-3">
+                      <input v-model="customModal.perSide" type="checkbox" class="h-5 w-5 flex-shrink-0" data-test="cx-per-side" />
+                      <span class="text-sm text-slate-200">{{ t('workout.perSide') }}</span>
+                  </label>
               </div>
 
               <p v-if="customModal.error" class="mb-3 font-mono text-xs text-red-400" role="alert">{{ customModal.error }}</p>

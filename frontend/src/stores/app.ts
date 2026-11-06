@@ -698,7 +698,7 @@ export const useAppStore = defineStore('app', () => {
 
   const progressOptions = computed(() => [...records.value.values()].filter((r) => r.sessions > 0).sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')));
   const progressRecord = computed(() => records.value.get(progress.value.key) ?? null);
-  const progressMetrics = computed<MetricOption[]>(() => metricsFor(progressRecord.value?.trackingType, (progressRecord.value?.maxWeight?.value ?? 0) > 0));
+  const progressMetrics = computed<MetricOption[]>(() => metricsFor(progressRecord.value?.trackingType, (progressRecord.value?.maxWeight?.value ?? 0) > 0, !!progressRecord.value?.isAssisted));
   const progressMetric = computed<MetricOption>(() => progressMetrics.value.find((m) => m.key === progress.value.metric) ?? progressMetrics.value[0]);
   const progressSeries = computed(() => (progressRecord.value ? exerciseSeries(allWorkouts.value, progress.value.key, progressMetric.value.key) : []));
   const progressDelta = computed(() => {
@@ -2881,7 +2881,11 @@ export function workoutStats(workout: Workout): string {
   return parts.join(' · ');
 }
 export function recordHeadline(r: ExerciseRecord): string {
+  // Unterstützte Maschine: geringste Hilfe (mit Wdh.) ist der Rekord, nicht das größte Gewicht
+  if (r.isAssisted) return r.minAssist ? `−${formatNumber(r.minAssist.value, 2)} ${t('units.kg')} × ${r.minAssist.reps}` : '--';
   switch (r.trackingType) {
+    case TrackingType.Cardio:
+      return r.longest ? formatClock(Math.round(r.longest.value)) : r.maxDistance ? `${formatNumber(r.maxDistance.value / 1000, 2)} ${t('units.km')}` : '--';
     case TrackingType.DistanceTime:
       return r.topSpeed ? `${formatNumber(msToKmh(r.topSpeed.value))} km/h` : r.maxDistance ? `${formatNumber(r.maxDistance.value)} m` : '--';
     case TrackingType.Duration:
@@ -2895,6 +2899,7 @@ export function prValue(event: { field: string; value: number }): string {
     case 'topSpeed': return `${formatNumber(msToKmh(event.value))} km/h`;
     case 'maxDistance': return `${formatNumber(event.value)} m`;
     case 'longest': return formatSeconds(event.value);
+    case 'minAssist': return `−${formatNumber(event.value)} kg`;
     default: return `${formatNumber(event.value)} kg`;
   }
 }

@@ -4,6 +4,7 @@ import type { Messages } from '.';
 
 export const de: Messages = {
   common: {
+    done: 'Fertig',
     sessionBusy: 'Die Sitzung wird gerade erneuert - bitte gleich nochmal versuchen.',
     cancel: 'Abbrechen',
     close: 'Schließen',

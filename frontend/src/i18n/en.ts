@@ -3,6 +3,7 @@
 
 export const en = {
   common: {
+    done: 'Done',
     sessionBusy: 'Session is being refreshed - please try again in a moment.',
     cancel: 'Cancel',
     close: 'Close',

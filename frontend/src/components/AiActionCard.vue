@@ -10,6 +10,7 @@ import { WEEKDAYS, bit } from '@/lib/schedule';
 import { programDiff, type DayDiff, type DiffItem } from '@/lib/programDiff';
 import { useAppStore } from '@/stores/app';
 import type { AiAction } from '@/stores/ai';
+import type { WorkoutOp } from '@/lib/liveWorkout';
 
 const props = defineProps<{ action: AiAction; applied: boolean; busy: boolean }>();
 const emit = defineEmits<{ apply: [] }>();
@@ -43,7 +44,25 @@ const showDiff = computed(() => !props.applied || frozenDiff.value !== null);
 const title = computed(() => t(`ai.actions.${props.action.type}`));
 const button = computed(() => ({
   program: t('ai.actions.saveProgram'), programUpdate: t('ai.actions.applyUpdate'), goal: t('ai.actions.saveGoal'), schedule: t('ai.actions.applySchedule'),
+  workout: t('ai.actions.applyWorkout'),
 })[props.action.type]);
+
+// Änderung am laufenden Training: was genau, mit welchen Vorgaben
+const opName = (id: number | undefined, fallback?: string) => (id == null ? fallback ?? '' : exercisesById.value.has(id) ? nameOf(id) : fallback ?? `#${id}`);
+function opDose(o: WorkoutOp): string {
+  if (o.op === 'remove') return '';
+  const kg = o.weight != null ? `${formatNumber(o.weight, 2)} ${t('units.kg')}` : '';
+  const what = o.trackingType === 'Cardio' || o.trackingType === 'Duration'
+    ? (o.time ? (o.time >= 120 ? `${Math.round(o.time / 60)} ${t('units.min')}` : `${o.time} ${t('units.s')}`) : '')
+    : o.trackingType === 'DistanceTime' ? (o.distance ? `${o.distance} ${t('units.m')}` : '')
+    : [o.reps ? String(o.reps) : '', kg].filter(Boolean).join(' · ');
+  const sets = o.sets ? (o.op === 'adjust' ? t('ai.actions.remaining', { sets: o.sets }) : `${o.sets}×`) : '';
+  const rpe = o.targetRpe ? `@RPE ${formatNumber(o.targetRpe, 1)}` : '';
+  return [sets, what, rpe].filter(Boolean).join(' ');
+}
+const OP_TONE: Record<WorkoutOp['op'], string> = {
+  add: 'border-emerald-400/60 text-emerald-300', replace: 'border-accent/60 text-accent', remove: 'border-red-500/60 text-red-300', adjust: 'border-orange-400/60 text-orange-300',
+};
 const goalExercise = computed(() => {
   if (props.action.type !== 'goal') return '';
   const ex = exercisesById.value.get(props.action.exerciseId);
@@ -116,6 +135,23 @@ const apply = () => { if (!locked.value) emit('apply'); };
                   </li>
               </ol>
           </details>
+      </template>
+
+      <template v-else-if="action.type === 'workout'">
+          <ul v-if="action.changes.length" class="mt-1.5 space-y-1">
+              <li v-for="(c, i) in action.changes" :key="i" class="flex gap-2 text-sm leading-snug text-slate-200"><span class="text-accent" aria-hidden="true">•</span><span class="min-w-0 break-words">{{ c }}</span></li>
+          </ul>
+          <ol class="mt-2 space-y-1.5" data-test="ai-workout-ops">
+              <li v-for="(o, i) in action.operations" :key="i" class="rounded-xl border border-white/5 bg-black/20 px-3 py-2.5" :data-op="o.op">
+                  <p class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-label" :class="OP_TONE[o.op]">{{ t(`ai.actions.ops.${o.op}`) }}</span>
+                      <span class="min-w-0 break-words text-sm font-bold" :class="o.op === 'remove' ? 'text-slate-400 line-through' : o.op === 'replace' ? 'text-slate-400' : 'text-white'">{{ opName(o.exerciseId, o.name) }}</span>
+                      <template v-if="o.op === 'replace'"><span class="text-slate-400" aria-hidden="true">→</span><span class="min-w-0 break-words text-sm font-bold text-white">{{ opName(o.withExerciseId, o.withName) }}</span></template>
+                  </p>
+                  <p v-if="opDose(o)" class="mt-1 font-mono text-[11px] text-slate-300">{{ opDose(o) }}</p>
+                  <p v-if="o.note" class="mt-0.5 text-[11px] leading-snug text-slate-400">{{ o.note }}</p>
+              </li>
+          </ol>
       </template>
 
       <template v-else-if="action.type === 'goal'">

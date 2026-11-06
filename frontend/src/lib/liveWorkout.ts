@@ -159,6 +159,9 @@ export function applyWorkoutOps<T extends EditableSession>(session: T, ops: read
       if (order.includes(to)) continue;
       const at = order.indexOf(id);
       const t = target(id);
+      const workingDone = logged.filter((x) => !x.isWarmup).length;
+      // Der Ersatz bekommt, was von der Vorgabe noch offen ist (oder was die KI sagt)
+      const remaining = Math.max(1, op.sets ?? (t ? t.sets - workingDone : 3));
       if (logged.length) {
         order.splice(at < 0 ? order.length : at + 1, 0, to);
         done.add(id);
@@ -168,13 +171,12 @@ export function applyWorkoutOps<T extends EditableSession>(session: T, ops: read
         done.delete(id);
       }
       if (t && s.plan) {
-        const workingDone = logged.filter((x) => !x.isWarmup).length;
-        const copy = { ...t, exerciseId: to, sets: Math.max(1, op.sets ?? t.sets - workingDone), replacedFrom: t.exerciseName ?? t.name ?? op.name };
+        const copy = { ...t, exerciseId: to, sets: remaining, replacedFrom: t.exerciseName ?? t.name ?? op.name };
         s.plan.targets = logged.length
           ? [...s.plan.targets.map((x) => (x.exerciseId === id ? { ...x, sets: Math.max(1, workingDone) } : x)), copy]
           : s.plan.targets.map((x) => (x.exerciseId === id ? copy : x));
       }
-      templates[to] = plannedSets(op, undefined, op.sets ?? t?.sets ?? 3);
+      templates[to] = plannedSets(op, undefined, remaining);
       touched.add(to);
     } else if (op.op === 'remove') {
       if (logged.length) {

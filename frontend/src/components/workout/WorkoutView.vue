@@ -4,14 +4,17 @@
 // - Satz nach links wischen = löschen (mit Rückgängig).
 // - "Fertig" schließt eine Übung ab: kein hängender nächster Satz mehr; automatisch, sobald das Plan-Ziel erfüllt ist.
 // - ⋯ öffnet ein Aktions-Sheet (über allen Blöcken, nichts wird verdeckt).
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, defineAsyncComponent, onBeforeUnmount, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t, tn, intlLocale } from '@/i18n';
 import { dayName, exerciseName, muscleName, noteText, programName } from '@/i18n/content';
 import { useAppStore, rpeText, rpeToRir, SET_RPE } from '@/stores/app';
 import { useGoalsStore } from '@/stores/goals';
+import { useAiStore } from '@/stores/ai';
 import ElapsedClock from './ElapsedClock.vue';
-import { formatCompact, formatDate, formatNumber } from '@/lib/format';
+import { cardioText, formatClock, formatCompact, formatDate, formatNumber } from '@/lib/format';
+import DurationInput from '@/components/DurationInput.vue';
+import type { Exercise } from '@/types';
 import { prescriptionText } from '@/lib/program';
 import { previousForRow } from '@/lib/workout';
 import { goalTargetLabel, prescriptionLabel } from '@/lib/goalText';
@@ -21,10 +24,26 @@ import DecimalInput from '@/components/DecimalInput.vue';
 import { tap } from '@/lib/native';
 import { vLongPress, vSheetDrag } from '@/lib/gestures';
 import HoldButton from '@/components/HoldButton.vue';
+// Erst beim ersten Öffnen laden (Start-Bundle klein halten)
+const GymSheet = defineAsyncComponent(() => import('@/components/workout/GymSheet.vue'));
+const ExerciseNoteSheet = defineAsyncComponent(() => import('@/components/workout/ExerciseNoteSheet.vue'));
 
 const app = useAppStore();
 const goals = useGoalsStore();
-const { hasSets, isEditing, lastLogged, planProgress, programs, rpePrompt, session, sessionSummary, settings, workoutBlocks } = storeToRefs(app);
+const ai = useAiStore();
+const { hasSets, isEditing, lastLogged, planProgress, programs, rpePrompt, session, sessionGym, sessionSummary, settings, workoutBlocks, noteSheetFor } = storeToRefs(app);
+
+// Studio der Einheit und KI im Training
+const gymOpen = ref(false);
+const usedGym = ref(false);
+const usedNote = ref(false);
+function openGym() { usedGym.value = true; gymOpen.value = true; }
+function openNote(id: number) { usedNote.value = true; app.openNoteSheet(id); }
+/** Ausgelassen: Grund statt "fertig". */
+const reasonText = (r: string | null | undefined) => (r ? t(`exnote.reasons.${r as 'pain'}`) : t('exnote.skipped'));
+
+const isCardio = (ex: Exercise) => ex.trackingType === 'Cardio';
+const km = (m: number | null | undefined) => (m ? Math.round((m / 1000) * 100) / 100 : 0);
 const {
   abortSession, completeBlock, reorderBlock, deleteSessionSet, dismissRpePrompt, editSessionSet, finishSession, moveBlock, openExerciseInfo, openPicker,
   openReplace, openSetModal, quickLog, removeBlock, startHold, reopenBlock, setGhostValue, setSetRpe, toggleGhostWarmup,
@@ -133,6 +152,7 @@ const num = (v: number | null | undefined, decimals = 2) => (v == null ? '' : fo
 
 function prevText(set: WorkoutSet | null, type: string | undefined): string {
   if (!set) return '-';
+  if (type === 'Cardio') return cardioText(set, false) || '-';
   if (type === 'DistanceTime') return `${num(set.distance, 1)}·${num(set.time, 2)}`;
   if (type === 'Duration') return `${num(set.time, 0)} ${t('units.s')}`;
   return `${num(set.weight)}×${set.reps ?? '-'}`;
@@ -179,6 +199,19 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
           </button>
       </div>
 
+      <!-- Studio (Rekorde an Maschinen pro Studio) und KI, die das Training sieht und ändern kann -->
+      <div class="mb-4 flex items-center gap-2">
+          <button type="button" class="workout-chip min-w-0" @click="openGym" data-test="gym-chip" :aria-label="t('gym.choose')">
+              <svg class="h-4 w-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+              <span class="truncate">{{ sessionGym || t('workout.gymNone') }}</span>
+              <svg class="h-3 w-3 flex-shrink-0 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <button v-if="ai.enabled && !isEditing" type="button" class="workout-chip workout-chip-ai ml-auto flex-shrink-0" @click="ai.openChat()" :title="t('workout.askAiHint')" data-test="workout-ai">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
+              {{ t('workout.askAi') }}
+          </button>
+      </div>
+
       <div v-if="session.plan" class="mb-4 h-1 overflow-hidden rounded-full bg-white/5" aria-hidden="true">
           <div class="h-full rounded-full bg-accent transition-all" :style="{ width: planProgress.percent + '%' }"></div>
       </div>
@@ -210,6 +243,15 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                           <svg class="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.5"/></svg>
                           <span class="truncate">{{ goalTargetLabel(block.goal.goal) }} · {{ prescriptionLabel(block.goal.next, block.goal.goal) }}</span>
                       </p>
+                      <!-- Eigenschaften der Übung: Hilfe statt Last, Werte pro Seite -->
+                      <p v-if="block.exercise.isAssisted || block.exercise.perSide" class="mt-1 flex flex-wrap gap-1.5">
+                          <span v-if="block.exercise.isAssisted" class="ex-tag" data-test="tag-assisted">{{ t('workout.assisted') }}</span>
+                          <span v-if="block.exercise.perSide" class="ex-tag" data-test="tag-per-side">{{ t('workout.perSide') }}</span>
+                      </p>
+                      <p v-if="block.hint" class="mt-1 line-clamp-2 text-[11px] leading-snug text-accent" data-test="block-hint">✦ {{ block.hint }}</p>
+                      <p v-if="block.note && (block.note.note || block.note.reason) && !block.note.skipped" class="mt-1 line-clamp-2 text-[11px] leading-snug text-slate-300" data-test="block-note">
+                          ✎ <template v-if="block.note.reason">{{ reasonText(block.note.reason) }}<template v-if="block.note.note"> · </template></template>{{ block.note.note }}
+                      </p>
                   </button>
                   <div class="-mr-2 flex flex-shrink-0 items-start">
                   <!-- Griff: gedrückt halten und ziehen -->
@@ -231,7 +273,8 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                   <span>{{ t('workout.col.previous') }}</span>
                   <template v-if="block.exercise.trackingType === 'DistanceTime'"><span class="text-center">{{ t('units.m') }}</span><span class="text-center">{{ t('units.s') }}</span></template>
                   <template v-else-if="block.exercise.trackingType === 'Duration'"><span></span><span class="text-center">{{ t('units.s') }}</span></template>
-                  <template v-else><span class="text-center">{{ t('units.kg') }}</span><span class="text-center">{{ t('workout.col.reps') }}</span></template>
+                  <template v-else-if="isCardio(block.exercise)"><span class="text-center">{{ t('workout.col.time') }}</span><span class="text-center">{{ t('workout.col.km') }}</span></template>
+                  <template v-else><span class="truncate text-center">{{ block.exercise.isAssisted ? t('workout.col.assist') : t('units.kg') }}</span><span class="text-center">{{ t('workout.col.reps') }}</span></template>
                   <span></span>
               </div>
 
@@ -252,6 +295,10 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                           </template>
                           <template v-else-if="block.exercise.trackingType === 'Duration'">
                               <span></span><span class="text-center font-mono text-base font-bold text-white">{{ num(set.time, 0) }}</span>
+                          </template>
+                          <template v-else-if="isCardio(block.exercise)">
+                              <span class="text-center font-mono text-base font-bold text-white">{{ set.time ? formatClock(set.time) : '-' }}</span>
+                              <span class="text-center font-mono text-base font-bold text-white">{{ set.distance ? num(km(set.distance)) : '-' }}</span>
                           </template>
                           <template v-else>
                               <span class="text-center font-mono text-base font-bold text-white">{{ (set.weight ?? 0) > 0 ? num(set.weight) : t('workout.bw') }}</span>
@@ -305,6 +352,12 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                           <DecimalInput :model-value="block.ghost.time" @update:model-value="setGhostValue(block.exercise.id, 'time', $event ?? 0)" select-on-focus integer
                                  class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.s')" />
                       </template>
+                      <template v-else-if="isCardio(block.exercise)">
+                          <DurationInput :model-value="block.ghost.time" @update:model-value="setGhostValue(block.exercise.id, 'time', $event ?? 0)"
+                                 class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('cardio.durationInput')" data-test="ghost-time" />
+                          <DecimalInput :model-value="km(block.ghost.distance)" @update:model-value="setGhostValue(block.exercise.id, 'distance', Math.round(($event ?? 0) * 1000))" select-on-focus
+                                 class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('cardio.distance')" data-test="ghost-km" />
+                      </template>
                       <template v-else>
                           <DecimalInput :model-value="block.ghost.weight" @update:model-value="setGhostValue(block.exercise.id, 'weight', $event ?? 0)" select-on-focus
                                  class="field h-11 w-full rounded-lg text-center font-mono text-base font-bold" :aria-label="t('units.kg')" data-test="ghost-weight" />
@@ -317,6 +370,10 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                           <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                       </button>
                   </div>
+                  <button v-if="isCardio(block.exercise)" type="button" @click="openSetModal(block.exercise)" data-test="cardio-more"
+                          class="mt-1 flex min-h-[2.75rem] w-full items-center gap-2 rounded-lg px-2 text-left text-[11px] font-bold uppercase text-accent tracking-label hover:bg-accent/5">
+                      <span aria-hidden="true">+</span> {{ t('workout.cardioMore') }}
+                  </button>
                   <div v-if="block.workingDone || block.target?.sets" class="mt-1 flex min-h-[2.75rem] items-center justify-between gap-2 px-1">
                       <span class="font-mono text-[10px]" :class="block.target?.sets && block.workingDone >= block.target.sets ? 'text-emerald-400' : 'text-slate-500'">
                           <template v-if="block.target?.sets">{{ t('workout.planProgress', { done: Math.min(block.workingDone, block.target.sets), total: block.target.sets }) }}</template>
@@ -331,9 +388,13 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
 
               <!-- Abgeschlossen: Zusammenfassung + "Satz hinzufügen" -->
               <div v-else class="mt-1 flex min-h-[2.75rem] items-center justify-between gap-2 border-t border-white/5 px-1 pt-1">
-                  <span class="font-mono text-[11px] text-emerald-400">{{ t('workout.completed') }} · {{ tn('units.sets', block.workingDone) }}</span>
+                  <button v-if="block.note?.skipped" type="button" class="min-w-0 text-left" @click="openNote(block.exercise.id)" data-test="block-skipped">
+                      <span class="block truncate font-mono text-[11px] text-orange-300">{{ t('workout.skippedLine', { reason: reasonText(block.note.reason) }) }}</span>
+                      <span v-if="block.note.note" class="block truncate text-[11px] text-slate-400">{{ block.note.note }}</span>
+                  </button>
+                  <span v-else class="font-mono text-[11px] text-emerald-400">{{ t('workout.completed') }} · {{ tn('units.sets', block.workingDone) }}</span>
                   <button type="button" @click="reopenBlock(block.exercise.id)" data-test="reopen-block"
-                          class="flex min-h-[2.75rem] items-center rounded-lg px-3 text-[11px] font-bold uppercase text-accent tracking-label hover:bg-accent/10">
+                          class="flex min-h-[2.75rem] flex-shrink-0 items-center rounded-lg px-3 text-[11px] font-bold uppercase text-accent tracking-label hover:bg-accent/10">
                       + {{ t('workout.addSet') }}
                   </button>
               </div>
@@ -367,6 +428,9 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                           <button role="menuitem" class="sheet-item" @click="act(() => openSetModal(sheetBlock!.exercise))">
                               <span>{{ t('workout.detailedSet') }}</span><span class="sheet-hint">{{ t('workout.detailedSetHint') }}</span>
                           </button>
+                          <button role="menuitem" class="sheet-item" @click="act(() => openNote(sheetBlock!.exercise.id))" data-test="sheet-note">
+                              <span>{{ t('workout.noteMenu') }}</span><span class="sheet-hint">{{ t('workout.noteMenuHint') }}</span>
+                          </button>
                           <button v-if="(sheetBlock.exercise.trackingType ?? 'WeightReps') === 'WeightReps'" role="menuitem" class="sheet-item" @click="act(() => goals.openGoal(sheetBlock!.exercise.id))">
                               <span>{{ sheetBlock.goal ? t('goals.editGoal') : t('goals.setGoal') }}</span>
                               <span class="sheet-hint">{{ sheetBlock.goal ? goalTargetLabel(sheetBlock.goal.goal) : t('goals.setGoalHint') }}</span>
@@ -386,5 +450,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
               </div>
           </transition>
       </Teleport>
+      <GymSheet v-if="usedGym" :open="gymOpen" @close="gymOpen = false" />
+      <ExerciseNoteSheet v-if="usedNote || noteSheetFor != null" />
   </section>
 </template>

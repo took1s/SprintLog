@@ -42,13 +42,26 @@ function setsText(sets: WorkoutSet[]): string {
   const work = sets.filter((s) => !s.isWarmup);
   const list = work.length ? work : sets;
   const first = list[0];
+  const side = first?.perSide ? ' per side' : '';
+  // Ausdauergerät: "20:00 min, 8.4 km, L8, 165 W, HR 142"
+  if (first?.trackingType === 'Cardio') {
+    return list.map((s) => [
+      s.time ? `${Math.floor(s.time / 60)}:${String(Math.round(s.time % 60)).padStart(2, '0')} min` : '',
+      s.distance ? `${num(s.distance / 1000)} km` : '',
+      s.level != null ? `L${num(s.level)}` : '',
+      s.power != null ? `${s.power} W` : '',
+      s.heartRate != null ? `HR ${s.heartRate}` : '',
+    ].filter(Boolean).join(', ')).join(' + ');
+  }
+  // Unterstützte Maschine: Gewicht = Hilfe (weniger ist besser)
+  if (first?.isAssisted) return `assistance (less = better) ${list.map((s) => `${num(s.weight ?? 0)} kg x${s.reps ?? '?'}`).join(', ')}${side}`;
   if (first?.distance != null) {
     const times = list.map((s) => s.time).filter((x): x is number => x != null && x > 0);
     return `${list.length}x ${num(first.distance)} m${times.length ? `, best ${num(Math.min(...times))} s` : ''}`;
   }
-  if (first?.time != null && first.weight == null && first.reps == null) return `${list.length}x ${list.map((s) => num(s.time ?? 0)).join('/')} s`;
+  if (first?.time != null && first.weight == null && first.reps == null) return `${list.length}x ${list.map((s) => num(s.time ?? 0)).join('/')} s${side}`;
   const parts = list.map((s) => `${s.weight ? num(s.weight) : 'BW'}x${s.reps ?? '?'}${s.rpe ? ` @${s.rpe}` : ''}`);
-  return parts.length > 6 ? `${parts.slice(0, 6).join(', ')} (+${parts.length - 6} sets)` : parts.join(', ');
+  return (parts.length > 6 ? `${parts.slice(0, 6).join(', ')} (+${parts.length - 6} sets)` : parts.join(', ')) + side;
 }
 
 function workoutLine(w: Workout, name: AiContextInput['exerciseName']): string {
@@ -56,6 +69,7 @@ function workoutLine(w: Workout, name: AiContextInput['exerciseName']): string {
   const head = [`${day(d)} ${weekday(d)}`, String(w.workoutType)];
   if (w.durationSeconds) head.push(`${Math.round(w.durationSeconds / 60)} min`);
   if (w.sessionRpe) head.push(`session RPE ${w.sessionRpe}`);
+  if (w.gym) head.push(`gym ${w.gym}`);
   if (w.match && (w.match.goals || w.match.assists)) head.push(`${w.match.goals ?? 0} goals, ${w.match.assists ?? 0} assists`);
   const byExercise = new Map<string, WorkoutSet[]>();
   for (const s of w.sets) {
@@ -63,7 +77,12 @@ function workoutLine(w: Workout, name: AiContextInput['exerciseName']): string {
     byExercise.set(key, [...(byExercise.get(key) ?? []), s]);
   }
   const body = [...byExercise.entries()].map(([n, sets]) => `${n} ${setsText(sets)}`).join('; ');
-  return `- ${head.join(', ')}${body ? `: ${body}` : ''}${w.notes ? ` | note: ${w.notes.slice(0, 120)}` : ''}`;
+  // Notizen und Auslassungen pro Übung: warum etwas fehlt oder anders lief
+  const exNotes = (w.exerciseNotes ?? []).map((n) => {
+    const who = name({ exerciseId: n.exerciseId } as WorkoutSet);
+    return `${who}: ${n.skipped ? `skipped${n.reason ? ` (${n.reason})` : ''}` : n.reason ?? 'note'}${n.note ? ` "${n.note.slice(0, 80)}"` : ''}`;
+  });
+  return `- ${head.join(', ')}${body ? `: ${body}` : ''}${exNotes.length ? ` | exercise notes: ${exNotes.join('; ')}` : ''}${w.notes ? ` | note: ${w.notes.slice(0, 120)}` : ''}`;
 }
 
 export function buildAiContext(c: AiContextInput): string {

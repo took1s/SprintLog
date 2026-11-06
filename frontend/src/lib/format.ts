@@ -72,11 +72,45 @@ export function describeSet(set: WorkoutSet, trackingType: TrackingType | undefi
       return parts.join(' / ') || t('set.noMetrics');
     }
     case 'Duration':
-      return formatSeconds(set.time);
-    default:
+      return formatSeconds(set.time) + (set.perSide ? ` ${t('workout.perSide')}` : '');
+    case 'Cardio':
+      return cardioText(set) || t('set.noMetrics');
+    default: {
       if (!((set.reps ?? 0) > 0)) return t('set.noMetrics');
-      return (set.weight ?? 0) > 0 ? `${formatNumber(set.weight, 2)} ${t('units.kg')} × ${set.reps}` : `${t('set.bodyweight')} × ${set.reps}`;
+      const side = set.perSide ? ` ${t('workout.perSide')}` : '';
+      // Unterstützte Maschine: "−25 kg × 8" (Hilfe, nicht Last)
+      if (set.isAssisted) return `${(set.weight ?? 0) > 0 ? `−${formatNumber(set.weight, 2)}` : '0'} ${t('units.kg')} × ${set.reps}${side}`;
+      return (set.weight ?? 0) > 0 ? `${formatNumber(set.weight, 2)} ${t('units.kg')} × ${set.reps}${side}` : `${t('set.bodyweight')} × ${set.reps}${side}`;
+    }
   }
+}
+
+/** Ausdauergerät: "20:00 · 8,4 km · L8 · 165 W · 142 bpm" - nur, was erfasst wurde. */
+export function cardioText(set: Pick<WorkoutSet, 'time' | 'distance' | 'level' | 'power' | 'heartRate' | 'cadence' | 'calories'>, full = true): string {
+  const parts: string[] = [];
+  if ((set.time ?? 0) > 0) parts.push(formatClock(Math.round(set.time!)));
+  if ((set.distance ?? 0) > 0) parts.push(`${formatNumber(set.distance! / 1000, 2)} ${t('units.km')}`);
+  if (set.level != null) parts.push(`L${formatNumber(set.level, 1)}`);
+  if (set.power != null) parts.push(`${set.power} ${t('units.w')}`);
+  if (full && set.heartRate != null) parts.push(`${set.heartRate} ${t('units.bpm')}`);
+  if (full && set.cadence != null) parts.push(`${set.cadence} ${t('units.rpm')}`);
+  if (full && set.calories != null) parts.push(`${set.calories} ${t('units.kcal')}`);
+  return parts.join(' · ');
+}
+
+/** "20:00", "1:05:00" oder "20" (Minuten) -> Sekunden; null bei Unsinn. */
+export function parseDuration(text: string | null | undefined): number | null {
+  const v = String(text ?? '').trim().replace(',', '.');
+  if (!v) return null;
+  if (v.includes(':')) {
+    const parts = v.split(':').map((p) => Number(p));
+    if (parts.some((p) => !Number.isFinite(p) || p < 0) || parts.length > 3) return null;
+    const [a, b, c] = parts;
+    const seconds = parts.length === 3 ? a! * 3600 + b! * 60 + c! : a! * 60 + b!;
+    return Math.round(seconds);
+  }
+  const minutes = Number(v);
+  return Number.isFinite(minutes) && minutes >= 0 ? Math.round(minutes * 60) : null;
 }
 
 /** ISO-Datum -> Wert für <input type="datetime-local"> (lokale Zeit). */

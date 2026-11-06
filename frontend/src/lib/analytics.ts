@@ -408,7 +408,7 @@ export const hasMetricValue = (metric: ChartMetricValue | string, value: number)
 
 /** Wert einer Kennzahl für die Arbeitssätze einer Übung in einer Einheit (0 = nichts Messbares). */
 export function metricValue(sets: readonly WorkoutSet[], metric: ChartMetricValue | string): number {
-  if (sets.length === 0) return 0;
+  if (sets.length === 0) return metric === ChartMetric.MinAssist ? -1 : 0;
   switch (metric) {
     case ChartMetric.MaxWeight: return round2(Math.max(...sets.map((s) => s.weight ?? 0)));
     case ChartMetric.E1RM: return round2(Math.max(...sets.map((s) => epley1RM(s.weight, s.reps))));

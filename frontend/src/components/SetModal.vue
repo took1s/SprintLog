@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import DecimalInput from '@/components/DecimalInput.vue';
+import DurationInput from '@/components/DurationInput.vue';
 import { computed } from 'vue';
 import { techniqueFor } from '@/lib/figure';
 import { localizedTechnique } from '@/i18n/techniqueText';
@@ -23,6 +24,19 @@ function deleteEditedSet() {
   closeSetModal();
   deleteSessionSet(index);
 }
+
+// Ausdauergerät: Distanz in km eingeben, gespeichert wird in Metern
+const cardioKm = computed<number | null>({
+  get: () => (setModal.value.distance > 0 ? Math.round((setModal.value.distance / 1000) * 100) / 100 : null),
+  set: (v) => { setModal.value.distance = v && v > 0 ? Math.round(v * 1000) : 0; },
+});
+const optionalInt = (v: unknown) => (v === '' || v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v));
+const CARDIO_FIELDS = [
+  { key: 'power', label: 'cardio.power', unit: 'units.w', max: 3000 },
+  { key: 'heartRate', label: 'cardio.heartRate', unit: 'units.bpm', max: 250 },
+  { key: 'cadence', label: 'cardio.cadence', unit: 'units.rpm', max: 300 },
+  { key: 'calories', label: 'cardio.calories', unit: 'units.kcal', max: 10000 },
+] as const;
 
 // Animation + Technik-Hinweise (figure.ts liegt mit diesem Dialog in einem eigenen Chunk)
 const modalTechnique = computed(() => {
@@ -88,7 +102,11 @@ const modalTechnique = computed(() => {
 
               <!-- Gewicht × Wiederholungen -->
               <template v-if="modalType === 'WeightReps'">
-                  <div class="mb-6 rounded-2xl border border-white/5 bg-black/30 p-4">
+                  <!-- Unterstützte Maschine: 1RM und %-Vorgaben ergeben keinen Sinn (das Gewicht hilft) -->
+                  <p v-if="modalEx.isAssisted" class="mb-5 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs leading-relaxed text-slate-300" data-test="assist-hint">
+                      {{ t('workout.assisted') }}<template v-if="modalRecord?.minAssist"> · {{ t('records.minAssist', { value: formatNumber(modalRecord.minAssist.value, 2), reps: modalRecord.minAssist.reps }) }}</template>
+                  </p>
+                  <div v-else class="mb-6 rounded-2xl border border-white/5 bg-black/30 p-4">
                       <div class="mb-3 flex items-center justify-between">
                           <span class="label-xs">{{ t('set.telemetry') }}</span>
                           <span class="rounded border border-white/5 bg-black/40 px-2 py-1 text-[9px] font-black uppercase tracking-widest" :class="modalZone.color">{{ tDynamic(`set.zones.${modalZone.key}`, modalZone.key) }}</span>
@@ -110,7 +128,7 @@ const modalTechnique = computed(() => {
                   </div>
 
                   <div class="mb-5">
-                      <label class="label-xs mb-3" for="in-weight">{{ t('set.weight') }}</label>
+                      <label class="label-xs mb-3" for="in-weight">{{ modalEx.isAssisted ? t('workout.col.assist') : t('set.weight') }}<span v-if="modalEx.perSide" class="ml-1 normal-case tracking-normal text-slate-500">· {{ t('workout.perSide') }}</span></label>
                       <div class="stepper">
                           <button @click="step('weight', -2.5)" class="stepper-btn" :aria-label="t('set.decrease', { what: t('set.fields.weight') })">-</button>
                           <DecimalInput id="in-weight" v-model="setModal.weight" class="stepper-input" />
@@ -171,10 +189,45 @@ const modalTechnique = computed(() => {
                   </div>
               </template>
 
+              <!-- Ausdauergerät: Werte vom Display, nur die Dauer ist Pflicht -->
+              <template v-else-if="modalType === 'Cardio'">
+                  <p class="mb-4 text-xs leading-relaxed text-slate-400">{{ t('cardio.hint') }}</p>
+                  <div class="mb-5">
+                      <label class="label-xs mb-3" for="in-cardio-time">{{ t('cardio.duration') }}</label>
+                      <div class="mb-2 flex flex-wrap gap-2">
+                          <button v-for="m in [10, 15, 20, 30, 45, 60]" :key="m" type="button" @click="setModal.time = m * 60" class="preset-btn" :class="{ '!border-accent/50 !text-accent': setModal.time === m * 60 }">{{ m }}′</button>
+                      </div>
+                      <div class="stepper">
+                          <button type="button" @click="step('time', -60, 0, 0)" class="stepper-btn" :aria-label="t('set.decrease', { what: t('cardio.duration') })">-</button>
+                          <DurationInput id="in-cardio-time" v-model="setModal.time" class="stepper-input" :aria-describedby="'in-cardio-hint'" data-test="cardio-time" />
+                          <button type="button" @click="step('time', 60, 0, 0)" class="stepper-btn" :aria-label="t('set.increase', { what: t('cardio.duration') })">+</button>
+                      </div>
+                      <p id="in-cardio-hint" class="mt-1.5 text-[11px] text-slate-500">{{ t('cardio.durationInput') }}</p>
+                  </div>
+                  <div class="mb-6 grid grid-cols-2 gap-3">
+                      <label class="cardio-field">
+                          <span class="cardio-label">{{ t('cardio.distance') }}</span>
+                          <span class="cardio-box"><DecimalInput v-model="cardioKm" class="cardio-input" data-test="cardio-km" /><span class="cardio-unit">{{ t('units.km') }}</span></span>
+                      </label>
+                      <label class="cardio-field">
+                          <span class="cardio-label">{{ t('cardio.level') }}</span>
+                          <span class="cardio-box"><DecimalInput :model-value="setModal.level" @update:model-value="setModal.level = $event" class="cardio-input" data-test="cardio-level" /></span>
+                      </label>
+                      <label v-for="f in CARDIO_FIELDS" :key="f.key" class="cardio-field">
+                          <span class="cardio-label">{{ t(f.label) }}</span>
+                          <span class="cardio-box">
+                              <input :value="setModal[f.key] ?? ''" @input="setModal[f.key] = optionalInt(($event.target as HTMLInputElement).value)"
+                                     type="number" inputmode="numeric" min="0" :max="f.max" step="1" class="cardio-input" :data-test="`cardio-${f.key}`" />
+                              <span class="cardio-unit">{{ t(f.unit) }}</span>
+                          </span>
+                      </label>
+                  </div>
+              </template>
+
               <!-- Dauer -->
               <template v-else>
                   <div class="mb-6">
-                      <label class="label-xs mb-3" for="in-duration">{{ t('set.duration', { time: formatClock(setModal.time || 0) }) }}</label>
+                      <label class="label-xs mb-3" for="in-duration">{{ t('set.duration', { time: formatClock(setModal.time || 0) }) }}<span v-if="modalEx.perSide" class="ml-1 normal-case tracking-normal text-slate-500">· {{ t('workout.perSide') }}</span></label>
                       <div class="mb-2 flex gap-2">
                           <button v-for="d in [30, 45, 60, 90, 120]" :key="d" @click="setModal.time = d" class="preset-btn" :class="{ '!border-accent/50 !text-accent': setModal.time === d }">{{ d }}s</button>
                       </div>

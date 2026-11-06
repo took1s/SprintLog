@@ -5,6 +5,7 @@ import type { Messages } from '.';
 
 export const ru: Messages = {
   common: {
+    done: 'Готово',
     sessionBusy: 'Сессия обновляется - попробуй ещё раз через секунду.',
     cancel: 'Отмена',
     close: 'Закрыть',
