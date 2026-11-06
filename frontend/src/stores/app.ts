@@ -1,6 +1,7 @@
 // Zentraler App-Zustand (Pinia Setup-Store): Auth, Daten + Offline-Sync, laufende Einheit, Pläne, Einstellungen.
 // Fachlogik liegt in src/lib (unit-getestet); hier wird sie mit Zustand, API und Persistenz verbunden.
 
+import { closeTopSheet } from '@/lib/gestures';
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import { createApi, type Api, type FieldErrors, isApiError } from '../lib/api';
@@ -2329,6 +2330,8 @@ export const useAppStore = defineStore('app', () => {
   // =====================================================================
   function closeTopLayer() {
     if (ui.dialog.open) return ui.resolveDialog(false);
+    // Jedes Bottom-Sheet (v-sheet-drag) - auch die ohne eigenen Eintrag unten (Match, Übungsauswahl, Zusammenfassung, Planer ...)
+    if (closeTopSheet()) return;
     if (goalsStore.draft.open) return goalsStore.closeGoal();
     if (exerciseInfo.value) { exerciseInfo.value = null; return; }
     if (finishModal.value.open) { finishModal.value.open = false; return; }

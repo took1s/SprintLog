@@ -29,7 +29,7 @@ const { addFromCatalog, lastSetLabel, openCustomModal, openExerciseInfo, openSet
               <svg :class="{ 'rotate-180': sortOpen }" class="mr-1 h-4 w-4 text-accent transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </button>
           <transition name="slide-up">
-              <div v-if="sortOpen" class="glass-panel absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-accent/30">
+              <div v-if="sortOpen" class="glass-panel glass-float absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-accent/30">
                   <button v-for="o in sortOptions" :key="o.key" @click="selectSort(o.key)"
                           class="flex w-full items-center gap-2 border-t border-white/5 p-4 text-left text-[10px] font-bold uppercase tracking-widest transition-colors first:border-t-0 hover:bg-accent/20"
                           :class="sortMode === o.key ? 'bg-accent/10 text-accent' : 'text-slate-300'">

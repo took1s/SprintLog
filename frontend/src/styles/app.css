@@ -77,13 +77,15 @@
   }
 
   /* Karten */
+  /* Karten im Fluss ohne backdrop-filter: hinter ihnen liegen nur weiche Verläufe (Blur unsichtbar), aber hunderte
+     geblurte Karten (Katalog) kosten auf iPhones so viel Grafikspeicher, dass Safari den Tab abstürzen ließ.
+     Nur was über scrollendem Inhalt schwebt (.glass-float), wird geblurt. */
   .glass-panel {
     background: var(--panel-bg);
-    backdrop-filter: blur(var(--panel-blur));
-    -webkit-backdrop-filter: blur(var(--panel-blur));
     border: var(--border-w) solid var(--panel-border);
     box-shadow: var(--panel-shadow);
   }
+  .glass-float { backdrop-filter: blur(var(--panel-blur)); -webkit-backdrop-filter: blur(var(--panel-blur)); }
 
   /* Dialoge: deckend, damit nichts durchscheint */
   .modal-panel { background: var(--modal-bg); backdrop-filter: none; -webkit-backdrop-filter: none; } /* deckend: Blur dahinter wäre unsichtbare Arbeit */
@@ -250,12 +252,15 @@
   border-top-left-radius: inherit; background-color: rgb(var(--c-fg) / 0.1); pointer-events: none;
   -webkit-mask: url('/deco/web.svg') no-repeat 0 0 / 100% 100%; mask: url('/deco/web.svg') no-repeat 0 0 / 100% 100%;
 }
-.hw-spider { position: absolute; top: 0; right: 28px; width: 18px; height: 36px; color: rgb(var(--c-fg) / 0.72); pointer-events: none; overflow: visible; }
+.hw-spider { position: absolute; top: 0; right: 28px; width: 18px; height: 36px; color: rgb(var(--c-fg) / 0.72); pointer-events: none; }
 .hw-spider-eye { fill: rgb(var(--c-accent)); }
-.hw-spider-thread { transform-box: fill-box; transform-origin: top; animation: hw-thread 5s ease-in-out 2; }
-.hw-spider-body { animation: hw-bob 5s ease-in-out 2; } /* zweimal wippen, dann Ruhe (Akku, nichts zappelt neben dem Titel) */
+.hw-spider-thread {
+  position: absolute; top: 0; left: 50%; width: 1px; height: 17px; margin-left: -0.5px; background: currentColor;
+  transform-origin: top; animation: hw-thread 5s ease-in-out 2;
+}
+.hw-spider-body { position: absolute; top: 16px; left: 0; width: 18px; height: 14px; overflow: visible; animation: hw-bob 5s ease-in-out 2; } /* zweimal wippen, dann Ruhe */
 @keyframes hw-thread { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.3); } }
-@keyframes hw-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(7.8px); } }
+@keyframes hw-bob { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, 5px, 0); } }
 /* Sheets: feines Netz oben rechts hinter dem Schließen-Knopf */
 [data-theme='halloween'] [data-sheet] { isolation: isolate; }
 [data-theme='halloween'] [data-sheet]::after { width: 96px; height: 96px; background-color: rgb(var(--c-fg) / 0.07); }
@@ -294,14 +299,6 @@ input[type="number"] { -moz-appearance: textfield; }
 .pop-leave-active > [aria-modal] { transition: transform 0.16s var(--ease-in); }
 .pop-enter-from > [aria-modal] { transform: scale(0.92); }
 .pop-leave-to > [aria-modal] { transform: scale(0.97); }
-
-/* Tabwechsel: Inhalt kommt aus der Richtung des Tabs (rechts = weiter, links = zurück) */
-.tab-next-enter-active, .tab-prev-enter-active { transition: opacity 0.16s ease, transform 0.22s var(--ease-out); }
-.tab-next-leave-active, .tab-prev-leave-active { transition: opacity 0.1s ease, transform 0.1s var(--ease-in); }
-.tab-next-enter-from { opacity: 0; transform: translate3d(16px, 0, 0); }
-.tab-next-leave-to { opacity: 0; transform: translate3d(-8px, 0, 0); }
-.tab-prev-enter-from { opacity: 0; transform: translate3d(-16px, 0, 0); }
-.tab-prev-leave-to { opacity: 0; transform: translate3d(8px, 0, 0); }
 
 /* Gedrückt halten (HoldButton): Füllung bzw. Ring laufen linear voll, beim Loslassen schnell zurück */
 .hold-btn { -webkit-touch-callout: none; touch-action: manipulation; }

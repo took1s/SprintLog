@@ -1303,3 +1303,42 @@ test('Halloween theme: decorations are behind the content and never block taps',
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('Stability: switching Gym/Field keeps the page alive, Escape closes every sheet', async () => {
+  const { page, errors, context } = await newPage();
+  await register(page, `stab_${Date.now()}`);
+  // Hin und her wie beim Absturz auf dem iPhone: Bereich bleibt gemountet (kein Übergang über den ganzen Katalog), keine Fehler
+  const marker = await page.evaluate(() => { const c = document.querySelector('[data-test=start-panel]'); c.dataset.probe = 'kept'; return true; });
+  assert.ok(marker);
+  for (let i = 0; i < 10; i++) {
+    await page.click('[role=tab] >> nth=1');
+    await page.click('[role=tab] >> nth=0');
+  }
+  await page.waitForSelector('[data-test=start-panel]');
+  assert.equal(await page.getAttribute('[data-test=start-panel]', 'data-probe'), 'kept', 'start area not remounted on Gym/Field switch');
+
+  const sheets = () => page.locator('[aria-modal="true"]').count();
+  // Übungsauswahl (Picker) und Zusammenfassung haben keinen eigenen Tastatur-Handler - Escape schließt sie trotzdem
+  await page.click('[data-add="1"]');
+  await page.click('[data-test=add-exercise]');
+  await page.waitForFunction(() => document.querySelectorAll('[aria-modal="true"]').length === 1);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.querySelectorAll('[aria-modal="true"]').length === 0);
+  await page.fill('[data-test=ghost-weight]', '50');
+  await page.fill('[data-test=ghost-reps]', '5');
+  await page.click('[data-test=log-ghost]');
+  await page.click('[data-test=finish-workout]');
+  await page.click('form[role=dialog] button[type=submit]');
+  await page.waitForSelector('[data-test=workout-summary]');
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('[data-test=workout-summary]', { state: 'detached' });
+  // Planer
+  await page.click('[role=tab] >> nth=2');
+  await page.click('[data-test=open-builder]');
+  await page.waitForFunction(() => document.querySelectorAll('[aria-modal="true"]').length === 1);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.querySelectorAll('[aria-modal="true"]').length === 0);
+  assert.equal(await sheets(), 0);
+  assert.deepEqual(errors, []);
+  await context.close();
+});

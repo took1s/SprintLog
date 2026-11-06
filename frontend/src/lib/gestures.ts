@@ -55,6 +55,21 @@ interface DragState {
 
 const states = new WeakMap<HTMLElement, DragState>();
 
+/** Offene Sheets in Öffnungsreihenfolge - Escape schließt das oberste (auch Sheets ohne eigenen Tastatur-Handler). */
+const openSheets: HTMLElement[] = [];
+
+/** Oberstes offenes Sheet schließen. false = keins offen. */
+export function closeTopSheet(): boolean {
+  for (let i = openSheets.length - 1; i >= 0; i--) {
+    const el = openSheets[i]!;
+    // Schon im Ausblenden (Leave-Übergang)? Dann das darunter
+    if (el.parentElement?.className.includes('leave')) continue;
+    states.get(el)?.close();
+    return true;
+  }
+  return false;
+}
+
 /** Nächster eigene Scrollbereich zwischen Ziel und Sheet (inklusive Sheet). */
 function scrollerAt(target: Element, panel: HTMLElement): HTMLElement | null {
   for (let el: Element | null = target; el && el !== panel.parentElement; el = el.parentElement) {
@@ -194,10 +209,16 @@ export const vSheetDrag: Directive<HTMLElement, () => void> = {
       active: false, decided: true, samples: [], backdrop: null, armed: false, cleanup: () => {},
     };
     states.set(el, s);
+    openSheets.push(el);
     attach(el, s);
   },
   updated(el, binding) { const s = states.get(el); if (s) s.close = binding.value; },
-  beforeUnmount(el) { states.get(el)?.cleanup(); states.delete(el); },
+  beforeUnmount(el) {
+    states.get(el)?.cleanup();
+    states.delete(el);
+    const i = openSheets.indexOf(el);
+    if (i >= 0) openSheets.splice(i, 1);
+  },
 };
 
 // ---------------------------------------------------------------------
