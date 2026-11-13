@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Chat mit dem KI-Coach. Antworten sind reiner Text (kein HTML/Markdown-Rendering - sicher und CSP-konform).
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t, tn } from '@/i18n';
 import { deviceOnline, useAiStore } from '@/stores/ai';
@@ -109,6 +109,24 @@ function focusStart() {
  */
 const announce = ref('');
 watch(busy, (b) => { if (b) announce.value = t('ai.thinking'); });
+
+// "Denkt nach": statt Punkten UND "…" ein Satz, der zeigt, woran der Coach gerade arbeitet (nach Zeit, nicht echt gemessen)
+const thinkingFor = ref(0);
+let thinkTimer = 0;
+watch(busy, (b) => {
+  window.clearInterval(thinkTimer);
+  thinkingFor.value = 0;
+  if (b) thinkTimer = window.setInterval(() => { thinkingFor.value += 1; }, 1000);
+});
+onBeforeUnmount(() => window.clearInterval(thinkTimer));
+const thinkingStage = computed(() => {
+  const s = thinkingFor.value;
+  const deepRun = mode.value === 'deep';
+  if (s < 3) return t('ai.stages.reading');
+  if (s < (deepRun ? 10 : 6)) return t('ai.stages.data');
+  if (deepRun && s < 22) return t('ai.stages.analysing');
+  return t('ai.stages.writing');
+});
 watch(() => messages.value.length, (n, prev) => {
   const last = messages.value[n - 1];
   if (n > prev && last?.role === 'assistant') {
@@ -245,14 +263,15 @@ const close = () => {
                       </TransitionGroup>
 
                       <div v-if="busy" class="flex justify-start" data-test="ai-thinking">
-                          <div class="flex items-center gap-2 rounded-2xl rounded-bl-md border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-slate-300">
-                              <!-- motion-reduce: die globale 0.01ms-Regel ließe die Endlos-Animation flackern -->
-                              <span class="flex gap-1" aria-hidden="true">
-                                  <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-400 motion-reduce:animate-none"></span>
-                                  <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-400 [animation-delay:150ms] motion-reduce:animate-none"></span>
-                                  <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-400 [animation-delay:300ms] motion-reduce:animate-none"></span>
+                          <div class="ai-thinking">
+                              <!-- Pulsierender Funke statt drei Punkte; der Satz darunter wechselt mit der Zeit -->
+                              <span class="ai-thinking-orb" aria-hidden="true">
+                                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.2 5.3 5.3 2.2-5.3 2.2L12 17.5l-2.2-5.3L4.5 10l5.3-2.2z"/><path d="M19 15.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z" opacity=".7"/></svg>
                               </span>
-                              {{ t('ai.thinking') }}
+                              <span class="min-w-0">
+                                  <span class="ai-thinking-text block" data-test="ai-stage">{{ thinkingStage }}</span>
+                                  <span class="mt-0.5 block font-mono text-[10px] text-slate-500">{{ t('ai.thinkingTime', { s: thinkingFor }) }}</span>
+                              </span>
                           </div>
                       </div>
 

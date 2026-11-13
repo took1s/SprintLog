@@ -52,6 +52,7 @@ export const userKeys = (userId: number) => ({
   templates: `${PREFIX}:${userId}:templates`,
   wellness: `${PREFIX}:${userId}:wellness`,
   goals: `${PREFIX}:${userId}:goals`,
+  routines: `${PREFIX}:${userId}:routines`,
   aiChat: `${PREFIX}:${userId}:aiChat`,
   aiAnalysis: `${PREFIX}:${userId}:aiAnalysis`,
   athlete: `${PREFIX}:${userId}:athlete`,

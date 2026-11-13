@@ -35,6 +35,7 @@ import type {
 import { applyWorkoutOps, gymKey, isGymDependent, liveSessionText, type WorkoutOp } from '../lib/liveWorkout';
 import { useUiStore } from './ui';
 import { useGoalsStore, type GoalView } from './goals';
+import { useRoutinesStore } from './routines';
 import { alternativesFor, type Alternative } from '../lib/alternatives';
 import { hasSchedule, kindOf, nextDayOf, weekdayOf, type Schedule } from '../lib/schedule';
 import { estimateRecovery, recoveryStatus, type RecoveryEstimate } from '../lib/recovery';
@@ -45,7 +46,7 @@ import { regionOf } from '../lib/recovery';
 import { isLocalExerciseId, localExerciseId, mergeExercises, queueHasLocalExercises, remapIds, remapKeys, remapQueue, remapSets } from '../lib/offlineExercises';
 import type { ProgressRange } from '../lib/progress';
 import { t, tn, tDynamic, intlLocale, textIn, loadAllLocales, SUPPORTED_LOCALES } from '../i18n';
-import { templateText, exerciseName as trExerciseName, dayName as trDayName, programName as trProgramName } from '../i18n/content';
+import { setPlanTranslations, templateText, exerciseName as trExerciseName, dayName as trDayName, programName as trProgramName } from '../i18n/content';
 
 // ---------- Konstanten ----------
 
@@ -217,6 +218,7 @@ export const useAppStore = defineStore('app', () => {
   const ui = useUiStore();
   const { toast, confirm } = ui;
   const goalsStore = useGoalsStore();
+  const routinesStore = useRoutinesStore();
 
   // =====================================================================
   // Zustand
@@ -398,8 +400,11 @@ export const useAppStore = defineStore('app', () => {
     userId: user.value?.userId ?? null, online: online.value, allWorkouts: allWorkouts.value,
     exercisesById: exercisesById.value, clockDate: clockDate.value, api: () => client,
   }));
+  routinesStore.connect(() => ({ userId: user.value?.userId ?? null, online: online.value, clockDate: clockDate.value, api: () => client }));
 
   // ---------- Trainingspläne ----------
+  // Übersetzte Plan-Texte (KI) für programName/dayName/noteText bereitstellen
+  watch(programs, (list) => setPlanTranslations(list), { immediate: true });
   const activeProgram = computed(() => programs.value.find((p) => p.isActive) ?? null);
   const otherPrograms = computed(() => programs.value.filter((p) => !p.isActive));
   const programInfo = computed(() => (activeProgram.value ? programStatus(activeProgram.value, allWorkouts.value, clockDate.value) : null));
@@ -871,12 +876,14 @@ export const useAppStore = defineStore('app', () => {
       remove(k.programs);
       remove(k.wellness);
       remove(k.goals);
+      remove(k.routines);
       remove(k.aiChat); // Gespräche mit dem KI-Coach sind privat (geteilte Geräte)
       remove(k.aiAnalysis);
       remove(k.athlete);
       remove(k.aiMemory); // Gedächtnis des Coachs: Kopie auf dem Gerät (das Original bleibt im Konto)
     }
     goalsStore.clear();
+    routinesStore.clear();
     removeLegacyToken();
     void nativeSession.clear();
     remove(Keys.user);
@@ -941,7 +948,7 @@ export const useAppStore = defineStore('app', () => {
     // Offline angelegte Übungen zuerst zum Server - Favoriten und Ziele können sonst noch auf lokale IDs zeigen
     const exercisesReady = (async () => { await loadExercises(); await pushLocalExercises(); })();
     await Promise.allSettled([exercisesReady, loadPrograms(), loadTemplates(), loadWellness()]);
-    await Promise.allSettled([loadFavorites(), goalsStore.load()]);
+    await Promise.allSettled([loadFavorites(), goalsStore.load(), routinesStore.load()]);
     await syncNow({ reload: false });
     await loadHistory();
   }
@@ -1634,8 +1641,9 @@ export const useAppStore = defineStore('app', () => {
 
   // ---------- Übungs-Info (Technik, eigene Werte, Ziel) ----------
   /** Geöffnete Info-Seite einer Übung; `source` = von wo (im Picker gibt es "Auswählen"). */
-  const exerciseInfo = ref<{ id: number; source: 'picker' | 'workout' | 'catalog' } | null>(null);
-  function openExerciseInfo(id: number, source: 'picker' | 'workout' | 'catalog' = 'workout') { exerciseInfo.value = { id, source }; }
+  /** source "overlay": geöffnet aus einem Sheet darüber (Routine, Coach-Karte) - liegt dann ganz oben. */
+  const exerciseInfo = ref<{ id: number; source: 'picker' | 'workout' | 'catalog' | 'overlay' } | null>(null);
+  function openExerciseInfo(id: number, source: 'picker' | 'workout' | 'catalog' | 'overlay' = 'workout') { exerciseInfo.value = { id, source }; }
   function closeExerciseInfo() { exerciseInfo.value = null; }
 
   // ---------- Übung abschließen / Satz löschen / RPE nachtragen ----------
@@ -2592,6 +2600,7 @@ export const useAppStore = defineStore('app', () => {
     // Jedes Bottom-Sheet (v-sheet-drag) - auch die ohne eigenen Eintrag unten (Match, Übungsauswahl, Zusammenfassung, Planer ...)
     if (closeTopSheet()) return;
     if (goalsStore.draft.open) return goalsStore.closeGoal();
+    if (routinesStore.editor.open) return routinesStore.close();
     if (exerciseInfo.value) { exerciseInfo.value = null; return; }
     if (finishModal.value.open) { finishModal.value.open = false; return; }
     if (programEditor.value.open) { programEditor.value.open = false; return; }
@@ -2606,6 +2615,7 @@ export const useAppStore = defineStore('app', () => {
   function closeAllLayers() {
     if (ui.dialog.open) ui.resolveDialog(false);
     goalsStore.closeGoal();
+    routinesStore.close();
     exerciseInfo.value = null;
     setModal.value.open = false;
     customModal.value.open = false;

@@ -21,6 +21,7 @@ import { readJson, userKeys, writeJson } from '../lib/storage';
 import type { TrainingProgram } from '../types';
 import { useAppStore } from './app';
 import { useGoalsStore } from './goals';
+import { useRoutinesStore, type RoutineDraft } from './routines';
 import { useUiStore } from './ui';
 
 export type AiMode = 'quick' | 'deep';
@@ -42,7 +43,9 @@ export type AiAction =
   | { type: 'goal'; exerciseId: number; exerciseName: string; targetWeight: number; targetReps: number; targetDate: string | null; reason: string }
   | { type: 'schedule'; trainingDays: number; matchDays: number; reason: string }
   /** Änderung an der laufenden Einheit (nur im Training) - wird lokal angewendet, nichts geht an den Server. */
-  | { type: 'workout'; operations: WorkoutOp[]; changes: string[] };
+  | { type: 'workout'; operations: WorkoutOp[]; changes: string[] }
+  /** Routine neben dem Plan (Dehnen, Reha ...); replacesId = Änderung einer bestehenden. */
+  | { type: 'routine'; routine: RoutineDraft; replacesId: string | null };
 export type MemoryCategory = 'injury' | 'health' | 'goal' | 'schedule' | 'preference' | 'equipment' | 'insight' | 'other';
 export const MEMORY_CATEGORIES: readonly MemoryCategory[] = ['injury', 'health', 'goal', 'schedule', 'preference', 'equipment', 'insight', 'other'];
 export interface CoachMemory {
@@ -51,7 +54,7 @@ export interface CoachMemory {
 }
 /** Was der Coach in einer Antwort an seinem Gedächtnis geändert hat (Hinweis unter der Antwort). */
 export interface MemoryChange { action: 'saved' | 'updated' | 'forgotten'; id: number; category: MemoryCategory; content: string; undone?: boolean }
-export interface AiChatMessage { role: 'user' | 'assistant'; content: string; at: string; mode?: AiMode; actions?: AiAction[]; applied?: number[]; memory?: MemoryChange[] }
+export interface AiChatMessage { role: 'user' | 'assistant'; content: string; at: string; mode?: AiMode; actions?: AiAction[]; applied?: number[]; memory?: MemoryChange[]; /** Nur Fragen: gleiche Id beim Wiederholen. */ requestId?: string }
 
 export interface AiReportSection { area?: string; title: string; status: 'good' | 'watch' | 'risk'; points: string[] }
 export interface AiReport { headline: string; summary: string; sections: AiReportSection[]; recommendations: { title: string; why: string; action: string }[]; nextWeekFocus: string }
@@ -89,6 +92,9 @@ function errorCode(e: unknown): AiErrorCode {
 const readMode = (): AiMode => { try { return localStorage.getItem(MODE_KEY) === 'quick' ? 'quick' : 'deep'; } catch { return 'deep'; } };
 
 /** Pausen vor automatischen Wiederholungen nach einem Netzwerkfehler (z. B. eingeschlafene Verbindung nach dem Aufwachen). */
+/** Id je KI-Anfrage (Wiederholungen nach Netzabbruch kosten so nichts extra). */
+const newRequestId = (): string =>
+  (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`).replace(/[^A-Za-z0-9_-]/g, '');
 const RETRY_DELAYS = [1200, 3500];
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -225,13 +231,17 @@ export const useAiStore = defineStore('ai', () => {
     void loadStatus();
   }
 
-  async function ask(question: string) {
+  /**
+   * @param requestId gleiche Id = gleiche Frage: nach Netzabbruch oder geschlossener App liefert der Server die schon
+   * bezahlte Antwort erneut aus, statt ein zweites Mal abzubuchen.
+   */
+  async function ask(question: string, requestId: string = newRequestId()) {
     const q = question.trim();
     if (q.length < 2 || busy.value) return;
     if (!deviceOnline.value) { error.value = 'offline'; return; }
     const history = messages.value.slice(-HISTORY).map(({ role, content }) => ({ role, content: content.slice(0, 2000) }));
     const m = mode.value;
-    messages.value = [...messages.value, { role: 'user', content: q, at: new Date().toISOString(), mode: m }];
+    messages.value = [...messages.value, { role: 'user', content: q, at: new Date().toISOString(), mode: m, requestId }];
     persist();
     busy.value = true;
     error.value = null;
@@ -239,7 +249,7 @@ export const useAiStore = defineStore('ai', () => {
       // Im Training sieht der Coach die laufende Einheit und darf sie (per Karte) ändern
       const session = app.isEditing ? null : app.liveSessionForAi();
       const res = await aiPost<{ answer: string; remaining: number; actions?: AiAction[]; memory?: MemoryChange[] }>('/api/ai/ask', {
-        question: q, context: context(), history, locale: locale.value, mode: m, ...(session ? { session } : {}),
+        question: q, context: context(), history, locale: locale.value, mode: m, requestId, ...(session ? { session } : {}),
       });
       messages.value = [...messages.value, {
         role: 'assistant', content: res.answer, at: new Date().toISOString(), mode: m,
@@ -263,7 +273,7 @@ export const useAiStore = defineStore('ai', () => {
     if (!last || last.role !== 'user') return;
     messages.value = messages.value.slice(0, -1);
     if (last.mode) mode.value = last.mode;
-    await ask(last.content);
+    await ask(last.content, last.requestId ?? newRequestId());
   }
 
   /** Chat öffnen und direkt eine Frage stellen (z. B. "Mit dem Coach besprechen" aus der Analyse). */
@@ -290,10 +300,40 @@ export const useAiStore = defineStore('ai', () => {
       const active = app.activeProgram;
       if (schedule && active?.id === created.id) await app.setSchedule(active, schedule);
       ui.toast(t('plan.toast.started', { name: created.name }), 'success');
+      void translateProgram(created.id, { silent: true }); // Plan auch auf Englisch/Deutsch/Russisch lesbar
       return true;
     } catch (e) {
       ui.toast(isApiError(e) && e.isNetwork ? t('plan.toast.needsConnection') : t('ai.errors.unknown'), 'error');
       return false;
+    }
+  }
+
+  // ---------- Plan übersetzen ----------
+
+  /** Plan, dessen Texte gerade übersetzt werden. */
+  const translating = ref<number | null>(null);
+
+  /**
+   * Frei geschriebene Texte eines Plans nach en/de/ru übersetzen lassen (Kosten wie eine schnelle Frage).
+   * silent: nach dem Speichern eines KI-Plans im Hintergrund - ohne Meldungen, Fehler sind dann egal.
+   */
+  async function translateProgram(id: number, { silent = false } = {}): Promise<boolean> {
+    const ui = useUiStore();
+    if (!enabled.value || translating.value != null) return false;
+    if (!deviceOnline.value) { if (!silent) ui.toast(t('plan.toast.needsConnection'), 'error'); return false; }
+    if (silent && left('quick') < 1) return false;
+    translating.value = id;
+    try {
+      const res = await aiPost<{ program: TrainingProgram; remaining: number }>(`/api/ai/translate-program/${id}`, { requestId: newRequestId() });
+      setRemaining(res.remaining);
+      await app.loadPrograms();
+      if (!silent) ui.toast(t('plan.translated'), 'success');
+      return true;
+    } catch (e) {
+      if (!silent) ui.toast(t(`ai.errors.${errorCode(e)}`), 'error');
+      return false;
+    } finally {
+      translating.value = null;
     }
   }
 
@@ -305,6 +345,7 @@ export const useAiStore = defineStore('ai', () => {
     try {
       await app.api().put(`/api/programs/${action.programId}`, action.program);
       await app.loadPrograms();
+      void translateProgram(action.programId, { silent: true });
       ui.toast(t('ai.actions.updateSaved', { name: action.program.name }), 'success');
       return true;
     } catch (e) {
@@ -330,6 +371,9 @@ export const useAiStore = defineStore('ai', () => {
         ok = await saveProgramDraft(action.program, null);
       } else if (action.type === 'workout') {
         ok = app.applyWorkoutChange(action.operations);
+      } else if (action.type === 'routine') {
+        useRoutinesStore().applyFromCoach(action.routine, action.replacesId);
+        ok = true;
       } else if (action.type === 'goal') {
         const goals = useGoalsStore();
         goals.draft = {
@@ -362,7 +406,7 @@ export const useAiStore = defineStore('ai', () => {
     analysisBusy.value = period;
     analysisError.value = null;
     try {
-      const res = await aiPost<{ report: AiReport; generatedAt: string; remaining: number }>('/api/ai/analysis', { context: context(), locale: locale.value, period });
+      const res = await aiPost<{ report: AiReport; generatedAt: string; remaining: number }>('/api/ai/analysis', { context: context(), locale: locale.value, period, requestId: newRequestId() });
       analysis.value = { report: res.report, generatedAt: res.generatedAt, period };
       if (keys.value) writeJson(keys.value.aiAnalysis, analysis.value);
       setRemaining(res.remaining);
@@ -526,7 +570,7 @@ export const useAiStore = defineStore('ai', () => {
     pl.result = null;
     try {
       const res = await aiPost<{ program: AiProgramDraft; summary: string; remaining: number }>('/api/ai/plan', {
-        answers: { ...answers }, notes: pl.notes.trim() || null, context: context(), locale: locale.value,
+        answers: { ...answers }, notes: pl.notes.trim() || null, context: context(), locale: locale.value, requestId: newRequestId(),
       });
       pl.result = { program: res.program, summary: res.summary, answers: { ...answers } };
       if (status.value) status.value = { ...status.value, remaining: res.remaining };
@@ -559,7 +603,7 @@ export const useAiStore = defineStore('ai', () => {
   return {
     status, enabled, open, messages, busy, error, mode, applying, plan, analysis, analysisBusy, analysisError,
     profile, profileOpen, profileBusy, profileFilled, cost, left, deviceOnline,
-    loadStatus, openChat, ask, retry, askFromElsewhere, clearChat, applyAction, generatePlan, discardPlan, acceptPlan,
+    loadStatus, openChat, ask, retry, askFromElsewhere, clearChat, applyAction, generatePlan, discardPlan, acceptPlan, translating, translateProgram,
     runAnalysis, loadProfile, openProfile, saveProfile, context,
     memory, memoryOpen, memoryLoading, loadMemory, openMemory, addMemory, updateMemory, forgetMemory, undoMemory, clearMemory,
   };

@@ -141,6 +141,8 @@ public static class ProgramEndpoints
             db.ProgramExercises.RemoveRange(existing.Exercises);
             existing.Exercises = dayInput.Exercises!.Select((x, p) => NewExercise(x, p)).ToList();
         }
+        // Übersetzungen geänderter oder entfernter Texte verwerfen (die App zeigt dann den Text, wie er ist)
+        program.Translations = ProgramTranslations.Prune(program.Translations, program);
 
         await db.SaveChangesAsync(ct);
         var updated = await Load(db, userId.Value).FirstAsync(p => p.Id == id, ct);
@@ -246,13 +248,13 @@ public static class ProgramEndpoints
             : null;
     }
 
-    private static IQueryable<TrainingProgram> Load(AppDbContext db, int userId) =>
+    internal static IQueryable<TrainingProgram> Load(AppDbContext db, int userId) =>
         db.Programs.AsNoTracking()
             .Where(p => p.UserId == userId)
             .Include(p => p.Days).ThenInclude(d => d.Exercises).ThenInclude(x => x.Exercise)
             .AsSplitQuery();
 
-    private static ProgramResponse ToResponse(TrainingProgram p) => new(
+    internal static ProgramResponse ToResponse(TrainingProgram p) => new(
         p.Id, p.Name, p.Goal, p.Weeks, p.IsActive, p.StartedAt, p.CreatedAt, p.TemplateKey,
         p.Days.OrderBy(d => d.Position).Select(d => new ProgramDayResponse(
             d.Id, d.Position, d.Name, d.Notes,
@@ -260,5 +262,6 @@ public static class ProgramEndpoints
                 x.Id, x.Position, x.ExerciseId, x.Exercise.Name, x.Exercise.TrackingType, x.Exercise.MuscleGroup,
                 x.Sets, x.RepsMin, x.RepsMax, x.Distance, x.Time, x.TargetRpe, x.RestSeconds, x.ProgressionStep,
                 x.PercentOf1Rm, x.Note, (x.WeekSteps ?? new()).OrderBy(s => s.FromWeek).Select(WeekStepDto.From).ToList())).ToList()
-        )).ToList(), p.CycleWeeks, p.DeloadEvery, p.TrainingDays, p.MatchDays);
+        )).ToList(), p.CycleWeeks, p.DeloadEvery, p.TrainingDays, p.MatchDays,
+        ProgramTranslations.Parse(p.Translations) is { Count: > 0 } tr ? tr : null);
 }

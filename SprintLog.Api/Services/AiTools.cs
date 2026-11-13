@@ -23,6 +23,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
     public const string Remember = "remember";
     public const string ForgetMemory = "forget_memory";
     public const string ProposeWorkoutChange = "propose_workout_change";
+    public const string ProposeRoutine = "propose_routine";
     public const int MaxWorkoutOps = 10;
 
     /// <summary>Gedächtnis-Änderungen dieser Anfrage (Hinweise im Chat). AiTools lebt pro Request.</summary>
@@ -155,8 +156,27 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
             "targetRpe":{"type":"number","minimum":5,"maximum":10},"note":{"type":"string","description":"max 120 characters"}}}}}}
         """));
 
+    public static readonly AiTool ProposeRoutineTool = new(ProposeRoutine,
+        "Propose a routine next to the training plan: a short recurring task with a period, e.g. daily hamstring rehab for 3 weeks, " +
+        "stretching after every session until the end of the month, ankle prevention on training days. The athlete sees a card and adds it with one tap; " +
+        "the app shows it as a checklist on the scheduled days until endDate. To change or end an existing routine (see <routines>), send its id as replacesId " +
+        "with the complete new version (to end it, set endDate to today). Steps are concrete: name + dose; link catalog exercises via exerciseId when one fits (the app shows its animation).",
+        Schema("""
+        {"type":"object","required":["title","kind","days","steps","reason"],"properties":{
+          "title":{"type":"string","description":"max 40 characters, in the athlete's language"},
+          "kind":{"type":"string","enum":["mobility","rehab","prevention","activation","recovery","other"]},
+          "days":{"type":"array","items":{"type":"integer","minimum":0,"maximum":6},"description":"Weekdays 0 = Monday ... 6 = Sunday; all 7 = daily"},
+          "startDate":{"type":"string","description":"yyyy-MM-dd, default today"},
+          "endDate":{"type":"string","description":"yyyy-MM-dd until when (inclusive); omit only for permanent habits"},
+          "reason":{"type":"string","description":"Why, max 200 characters (e.g. injury, what the physio said)"},
+          "steps":{"type":"array","minItems":1,"maxItems":10,"items":{"type":"object","required":["name"],"properties":{
+            "name":{"type":"string","description":"max 60 characters"},"dose":{"type":"string","description":"e.g. '2 x 30 s per side', max 40 characters"},
+            "exerciseId":{"type":"integer","description":"Optional catalog exercise"}}}},
+          "replacesId":{"type":"string","description":"id of an existing routine to change or end"}}}
+        """));
+
     public static readonly IReadOnlyList<AiTool> DataTools = new[] { Programs, ExerciseHistory, PersonalRecords, TrainingSummary, LoadMetrics, WellnessTrend, MatchStats, SearchExercises };
-    public static readonly IReadOnlyList<AiTool> ChatTools = DataTools.Concat(new[] { ProposeProgramTool, ProposeProgramUpdateTool, ProposeGoalTool, ProposeScheduleTool, RememberTool, ForgetMemoryTool }).ToList();
+    public static readonly IReadOnlyList<AiTool> ChatTools = DataTools.Concat(new[] { ProposeProgramTool, ProposeProgramUpdateTool, ProposeGoalTool, ProposeScheduleTool, ProposeRoutineTool, RememberTool, ForgetMemoryTool }).ToList();
 
     /// <summary>Im Training: zusätzlich die laufende Einheit ändern.</summary>
     public static readonly IReadOnlyList<AiTool> LiveWorkoutTools = ChatTools.Append(ProposeWorkoutChangeTool).ToList();
@@ -183,6 +203,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
                 ProposeGoal => await GoalActionAsync(userId, use.Input, actions, ct),
                 ProposeSchedule => ScheduleAction(use.Input, actions),
                 ProposeWorkoutChange => await WorkoutChangeActionAsync(userId, use.Input, actions, ct),
+                ProposeRoutine => await RoutineActionAsync(userId, use.Input, actions, ct),
                 Remember => await RememberAsync(userId, use.Input, ct),
                 ForgetMemory => await ForgetAsync(userId, Int(use.Input, "id"), ct),
                 _ => new { error = $"Unknown tool {use.Name}" },
@@ -194,6 +215,106 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
         {
             return JsonSerializer.Serialize(new { error = "Tool failed: " + e.Message }, JsonOpts);
         }
+    }
+
+    // ---------- Routinen ----------
+
+    private static readonly string[] DayCodes = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+    /// <summary>Wochentag als Bit (Montag = Bit 0).</summary>
+    public static int DayBit(DateOnly d) => 1 << (((int)d.DayOfWeek + 6) % 7);
+
+    private static string DaysText(int mask) => mask == 127 ? "daily" : string.Join(",", Enumerable.Range(0, 7).Where(i => (mask & (1 << i)) != 0).Select(i => DayCodes[i]));
+
+    /// <summary>Laufende und kürzlich beendete Routinen mit Erfüllung der letzten 14 Tage - Block im Prompt.</summary>
+    public async Task<string> RoutinesPromptAsync(int userId, CancellationToken ct)
+    {
+        var today = DateOnly.FromDateTime(Now);
+        var list = await db.Routines.AsNoTracking().Where(r => r.UserId == userId && (r.EndDate == null || r.EndDate >= today.AddDays(-14)))
+            .OrderBy(r => r.StartDate).Take(RoutineEndpoints.MaxRoutines).ToListAsync(ct);
+        if (list.Count == 0) return "(none)";
+        var sb = new System.Text.StringBuilder();
+        foreach (var r in list)
+        {
+            var from = r.StartDate > today.AddDays(-13) ? r.StartDate : today.AddDays(-13);
+            var to = r.EndDate is { } e && e < today ? e : today;
+            var due = 0;
+            for (var d = from; d <= to; d = d.AddDays(1)) if ((r.Days & DayBit(d)) != 0) due++;
+            var done = r.DoneDates.Count(d => d >= from && d <= to && (r.Days & DayBit(d)) != 0);
+            var state = r.StartDate > today ? "upcoming" : r.EndDate is { } end && end < today ? "ended" : "active";
+            sb.Append("- id ").Append(r.ClientId).Append(" | ").Append(r.Title).Append(" | ").Append(r.Kind).Append(" | ").Append(state)
+              .Append(" | ").Append(DaysText(r.Days)).Append(" | ").Append(r.StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
+              .Append(" -> ").Append(r.EndDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "open")
+              .Append(" | done ").Append(done).Append('/').Append(due).Append(" scheduled days in the last 14")
+              .Append(r.DoneDates.Contains(today) ? " | done today" : string.Empty)
+              .Append(" | by ").Append(r.Source);
+            if (r.Reason is { } why) sb.Append(" | reason: ").Append(why);
+            sb.Append(" | steps: ").Append(string.Join("; ", r.Steps.Select(s => s.Dose is null ? s.Name : $"{s.Name} ({s.Dose})"))).Append('\n');
+        }
+        return sb.ToString().TrimEnd();
+    }
+
+    /// <summary>Routine vorschlagen oder ändern: Karte im Client, gespeichert erst nach Bestätigung (PUT /api/routines/{id}).</summary>
+    private async Task<object> RoutineActionAsync(int userId, JsonElement input, List<JsonObject> actions, CancellationToken ct)
+    {
+        var today = DateOnly.FromDateTime(Now);
+        var kind = Str(input, "kind") is { } k && RoutineInput.Kinds.Contains(k) ? k : "other";
+        var title = Clip(Str(input, "title"), 40);
+        if (title.Length == 0) return new { error = "title is required." };
+
+        var days = input.TryGetProperty("days", out var dEl) && dEl.ValueKind == JsonValueKind.Array
+            ? dEl.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Number).Select(x => x.GetInt32()).Where(x => x is >= 0 and <= 6).Aggregate(0, (m, x) => m | (1 << x))
+            : 0;
+        if (days == 0) days = 127;
+
+        static DateOnly? Date(string? s) => DateOnly.TryParseExact(s ?? string.Empty, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
+        var start = Date(Str(input, "startDate")) is { } sd && sd >= today.AddDays(-7) && sd <= today.AddDays(60) ? sd : today;
+        var end = Date(Str(input, "endDate"));
+        if (end is { } e && (e < start || e > start.AddYears(1))) return new { error = "endDate must be after startDate and within one year." };
+
+        var replaces = Str(input, "replacesId");
+        Routine? existing = null;
+        if (replaces is not null)
+        {
+            existing = await db.Routines.AsNoTracking().FirstOrDefaultAsync(r => r.UserId == userId && r.ClientId == replaces, ct);
+            if (existing is null) return new { error = $"Routine {replaces} not found. Use an id from <routines>." };
+            if (Date(Str(input, "startDate")) is null) start = existing.StartDate; // Änderung: Beginn bleibt
+            if (end is { } e2 && e2 < start) return new { error = "endDate must not be before the routine's start." };
+        }
+
+        if (!input.TryGetProperty("steps", out var stepsEl) || stepsEl.ValueKind != JsonValueKind.Array) return new { error = "steps are required." };
+        var ids = stepsEl.EnumerateArray().Select(x => Int(x, "exerciseId")).Where(x => x is not null).Select(x => x!.Value).Distinct().ToList();
+        var catalog = ids.Count == 0 ? new Dictionary<int, string>()
+            : await db.Exercises.AsNoTracking().VisibleTo(userId).Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x.Name, ct);
+        var steps = new JsonArray();
+        foreach (var x in stepsEl.EnumerateArray())
+        {
+            if (steps.Count >= 10 || x.ValueKind != JsonValueKind.Object) break;
+            var exId = Int(x, "exerciseId") is { } id && catalog.ContainsKey(id) ? id : (int?)null;
+            var name = Clip(Str(x, "name"), 60);
+            if (name.Length == 0 && exId is { } known) name = Clip(catalog[known], 60);
+            if (name.Length == 0) continue;
+            var step = new JsonObject { ["name"] = name };
+            if (Clip(Str(x, "dose"), 40) is { Length: > 0 } dose) step["dose"] = dose;
+            if (exId is not null) step["exerciseId"] = exId;
+            steps.Add(step);
+        }
+        if (steps.Count == 0) return new { error = "At least one step with a name is required." };
+
+        actions.Add(new JsonObject
+        {
+            ["type"] = "routine",
+            ["replacesId"] = existing?.ClientId,
+            ["routine"] = new JsonObject
+            {
+                ["title"] = title, ["kind"] = kind, ["days"] = days,
+                ["startDate"] = start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                ["endDate"] = end?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                ["reason"] = Clip(Str(input, "reason"), 200) is { Length: > 0 } why ? why : null,
+                ["steps"] = steps,
+            },
+        });
+        return new { shown = true, note = existing is null ? "The athlete adds it with one tap. Say in one sentence why and until when." : "The athlete confirms the change with one tap." };
     }
 
     // ---------- Gedächtnis ----------

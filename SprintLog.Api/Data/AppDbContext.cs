@@ -25,6 +25,7 @@ public class AppDbContext : DbContext
     public DbSet<LiftGoal> Goals => Set<LiftGoal>();
     public DbSet<AthleteProfile> AthleteProfiles => Set<AthleteProfile>();
     public DbSet<CoachMemory> CoachMemories => Set<CoachMemory>();
+    public DbSet<Routine> Routines => Set<Routine>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -152,6 +153,27 @@ public class AppDbContext : DbContext
             e.HasOne(g => g.Exercise).WithMany().HasForeignKey(g => g.ExerciseId).OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<Routine>(e =>
+        {
+            e.ToTable("Routines", t =>
+            {
+                t.HasCheckConstraint("CK_Routines_Days", "\"Days\" BETWEEN 1 AND 127");
+                t.HasCheckConstraint("CK_Routines_Period", "\"EndDate\" IS NULL OR \"EndDate\" >= \"StartDate\"");
+            });
+            e.HasIndex(r => new { r.UserId, r.ClientId }).IsUnique();
+            e.Property(r => r.ClientId).HasMaxLength(64);
+            e.Property(r => r.Title).HasMaxLength(60);
+            e.Property(r => r.Kind).HasMaxLength(16);
+            e.Property(r => r.Source).HasMaxLength(8);
+            e.Property(r => r.Reason).HasMaxLength(300);
+            // Schritte als jsonb: gehören fest zur Routine, werden nie einzeln abgefragt
+            e.OwnsMany(r => r.Steps, b =>
+            {
+                b.ToJson();
+            });
+            e.HasOne<User>().WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<DeletedWorkout>(e =>
         {
             e.HasIndex(d => new { d.UserId, d.DeletedAt });
@@ -163,6 +185,7 @@ public class AppDbContext : DbContext
             e.Property(p => p.Name).HasMaxLength(60);
             e.Property(p => p.Goal).HasMaxLength(20);
             e.Property(p => p.TemplateKey).HasMaxLength(40);
+            e.Property(p => p.Translations).HasColumnType("jsonb");
             e.ToTable("Programs", t =>
             {
                 t.HasCheckConstraint("CK_Programs_CycleWeeks", "\"CycleWeeks\" IS NULL OR \"CycleWeeks\" BETWEEN 1 AND 12");

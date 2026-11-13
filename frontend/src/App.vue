@@ -16,6 +16,7 @@ import FinishModal from '@/components/FinishModal.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { t } from '@/i18n';
 import { useGoalsStore } from '@/stores/goals';
+import { useRoutinesStore } from '@/stores/routines';
 import { useAiStore } from '@/stores/ai';
 import { appearance } from '@/lib/theme';
 
@@ -33,6 +34,7 @@ const MatchModal = defineAsyncComponent(() => import('@/components/MatchModal.vu
 const RecoveryCodesModal = defineAsyncComponent(() => import('@/components/RecoveryCodesModal.vue'));
 const ExerciseInfoSheet = defineAsyncComponent(() => import('@/components/ExerciseInfoSheet.vue'));
 const GoalSheet = defineAsyncComponent(() => import('@/components/GoalSheet.vue'));
+const RoutineSheet = defineAsyncComponent(() => import('@/components/RoutineSheet.vue'));
 const HoldTimer = defineAsyncComponent(() => import('@/components/workout/HoldTimer.vue'));
 const PlanBuilderSheet = defineAsyncComponent(() => import('@/components/PlanBuilderSheet.vue'));
 const WorkoutSummarySheet = defineAsyncComponent(() => import('@/components/WorkoutSummarySheet.vue'));
@@ -45,11 +47,12 @@ const StrikerDecor = defineAsyncComponent(() => import('@/components/decor/Strik
 
 const app = useAppStore();
 const goals = useGoalsStore();
+const routines = useRoutinesStore();
 const aiStore = useAiStore();
 const { booting, isAuthenticated, tab, authMode, sessionActive } = storeToRefs(app);
 
 /** Dialog-Chunks erst beim ersten Öffnen laden - danach bleiben sie gemountet (Schließen-Animation bleibt erhalten). */
-const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, hold: false, builder: false, summary: false, ai: false, profile: false, memory: false });
+const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, routine: false, hold: false, builder: false, summary: false, ai: false, profile: false, memory: false });
 watchEffect(() => {
   if (app.setModal.open) used.set = true;
   if (app.customModal.open) used.custom = true;
@@ -59,6 +62,7 @@ watchEffect(() => {
   if (app.recoveryCodes) used.codes = true;
   if (app.exerciseInfo) used.info = true;
   if (goals.draft.open) used.goal = true;
+  if (routines.editor.open) used.routine = true;
   if (app.holdTimer) used.hold = true;
   if (app.planBuilder.open) used.builder = true;
   if (app.summary) used.summary = true;
@@ -117,6 +121,7 @@ onMounted(() => { void app.init(); });
       <MatchModal v-if="used.match" />
       <ExerciseInfoSheet v-if="used.info" />
       <GoalSheet v-if="used.goal" />
+      <RoutineSheet v-if="used.routine" />
       <HoldTimer v-if="used.hold" />
       <PlanBuilderSheet v-if="used.builder" />
       <WorkoutSummarySheet v-if="used.summary" />

@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { t, tn } from '@/i18n';
-import { exerciseName, goalName, levelName, programName, dayName, dayNotes, noteText, templateText, templateDay } from '@/i18n/content';
+import { exerciseName, goalName, levelName, programName, dayName, dayNotes, noteText, templateText, templateDay, untranslatedTexts } from '@/i18n/content';
+import { computed } from 'vue';
+import { useAiStore } from '@/stores/ai';
 import { storeToRefs } from 'pinia';
 import { useAppStore, zoneClass } from '@/stores/app';
 import WellnessCard from '@/components/WellnessCard.vue';
 import GoalsPanel from '@/components/GoalsPanel.vue';
+import RoutinesPanel from '@/components/RoutinesPanel.vue';
 import WeekSchedule from '@/components/WeekSchedule.vue';
 import { formatNumber } from '@/lib/format';
 import { formatRelative } from '@/lib/format';
@@ -15,6 +18,9 @@ const { activeProgram, clockDate, expandedDay, filteredTemplates, isDeloadNow, l
 const FILTERS = ['all', 'Football', 'Gym'] as const;
 const { activateProgram, currentPrescription, dayLabel, openPlanBuilder, openProgramEditor, startProgramDay, startTemplate, stopProgram } = app;
 /** Ziel-Einheiten pro Woche: aus der Vorlage, sonst Anzahl der Plan-Tage. */
+const ai = useAiStore();
+/** Plan mit Texten, die es in der aktuellen Sprache noch nicht gibt (z. B. KI-Plan auf Russisch, App auf Deutsch). */
+const needsTranslation = computed(() => !!activeProgram.value && ai.enabled && untranslatedTexts(activeProgram.value).length > 0);
 const sessionsPerWeek = (key: string | null | undefined, days: number) => templates.value.find((x) => x.key === key)?.sessionsPerWeek ?? days;
 </script>
 
@@ -26,6 +32,7 @@ const sessionsPerWeek = (key: string | null | undefined, days: number) => templa
 
       <template v-else>
           <WellnessCard />
+          <RoutinesPanel />
           <GoalsPanel />
 
           <!-- Aktiver Plan -->
@@ -39,6 +46,11 @@ const sessionsPerWeek = (key: string | null | undefined, days: number) => templa
                           <template v-if="programInfo.lastDate"> · {{ t('plan.lastRelative', { when: formatRelative(programInfo.lastDate, clockDate) }) }}</template>
                           <template v-if="activeProgram.cycleWeeks"> · {{ t('plan.cycleWeek', { week: cycleWeek(activeProgram, planWeek), cycle: activeProgram.cycleWeeks }) }}</template>
                       </div>
+                      <button v-if="needsTranslation" type="button" @click="ai.translateProgram(activeProgram.id)" :aria-busy="ai.translating === activeProgram.id" :title="t('plan.translateHint')"
+                              class="plan-translate mt-2" data-test="plan-translate">
+                          <svg class="h-3.5 w-3.5 flex-shrink-0" :class="{ 'animate-spin motion-reduce:animate-none': ai.translating === activeProgram.id }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>
+                          {{ ai.translating === activeProgram.id ? t('plan.translating') : t('plan.translate') }}
+                      </button>
                       <span v-if="isDeloadNow" class="mt-2 inline-block rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-300" data-test="deload-badge">{{ t('plan.deloadWeek') }}</span>
                   </div>
                   <div class="flex flex-shrink-0 gap-2">

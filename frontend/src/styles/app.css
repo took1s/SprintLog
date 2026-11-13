@@ -335,6 +335,99 @@
 @keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgb(var(--c-success) / 0.55); } 70%, 100% { box-shadow: 0 0 0 7px rgb(var(--c-success) / 0); } }
 @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
 
+/* KI denkt nach: Funke + wechselnder Satz mit sanftem Schimmer */
+.ai-thinking {
+  display: flex; align-items: center; gap: 12px; border-radius: 18px; border-bottom-left-radius: 6px; padding: 10px 16px 10px 10px;
+  background: rgb(var(--c-fg) / 0.05); border: var(--border-w) solid rgb(var(--c-fg) / 0.1);
+}
+.ai-thinking-orb {
+  position: relative; display: flex; height: 2rem; width: 2rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9999px;
+  color: rgb(var(--c-accent-text)); background: rgb(var(--c-accent) / 0.14);
+}
+.ai-thinking-orb svg { width: 16px; height: 16px; animation: ai-spark 1.6s ease-in-out infinite; }
+.ai-thinking-orb::after {
+  content: ''; position: absolute; inset: -3px; border-radius: inherit; border: 1.5px solid rgb(var(--accent-ring) / 0.6);
+  animation: ai-ring 1.6s ease-out infinite;
+}
+.ai-thinking-text {
+  font-size: 13px; font-weight: 600; color: rgb(var(--c-muted));
+  background: linear-gradient(90deg, rgb(var(--c-muted)) 0%, rgb(var(--c-fg)) 45%, rgb(var(--c-muted)) 90%); background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: ai-shimmer 2.2s linear infinite;
+}
+@keyframes ai-spark { 0%, 100% { transform: scale(0.9) rotate(0deg); } 50% { transform: scale(1.1) rotate(12deg); } }
+@keyframes ai-ring { 0% { opacity: 0.8; transform: scale(0.85); } 100% { opacity: 0; transform: scale(1.35); } }
+@keyframes ai-shimmer { 0% { background-position: 120% 0; } 100% { background-position: -120% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .ai-thinking-orb svg, .ai-thinking-orb::after, .ai-thinking-text { animation: none; }
+  .ai-thinking-text { -webkit-text-fill-color: currentColor; background: none; }
+}
+
+/* Plan übersetzen: kleiner Knopf unter dem Plannamen */
+.plan-translate {
+  display: inline-flex; min-height: 2.25rem; align-items: center; gap: 6px; border-radius: 9999px; padding: 4px 12px;
+  font-size: 11px; font-weight: 700; color: rgb(var(--c-accent-text)); background: rgb(var(--c-accent) / 0.1);
+  border: var(--border-w) solid rgb(var(--accent-ring) / 0.4); transition: background-color 0.15s ease;
+}
+.plan-translate:hover { background: rgb(var(--c-accent) / 0.18); }
+.plan-translate:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: 2px; }
+
+/* ---------- Routinen ---------- */
+.routine-today {
+  border-color: rgb(var(--accent-ring) / 0.35); background: rgb(var(--c-accent) / 0.05);
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+.routine-today.is-complete { border-color: rgb(var(--c-success) / 0.45); background: rgb(var(--c-success) / 0.06); }
+/* Großer Haken (44 px Trefferfläche), Häkchen zeichnet sich beim Abhaken */
+.routine-check {
+  display: flex; height: 2.75rem; width: 2.75rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9999px;
+  color: transparent; background: rgb(var(--c-fg) / 0.04); box-shadow: inset 0 0 0 2px rgb(var(--c-fg) / 0.22);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.routine-check svg { width: 20px; height: 20px; }
+.routine-check:hover { box-shadow: inset 0 0 0 2px rgb(var(--accent-ring) / 0.7); }
+.routine-check:active { transform: scale(0.92); }
+.routine-check:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: 2px; }
+.routine-check.is-done { color: rgb(var(--c-bg)); background: rgb(var(--c-success)); box-shadow: inset 0 0 0 2px rgb(var(--c-success)); }
+.routine-check-path { stroke-dasharray: 24; stroke-dashoffset: 0; }
+.routine-check.is-pop { animation: routine-pop 0.45s var(--ease-out, ease-out); }
+.routine-check.is-pop .routine-check-path { animation: routine-draw 0.35s 0.05s ease-out both; }
+@keyframes routine-pop { 0% { transform: scale(0.85); } 55% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@keyframes routine-draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .routine-check.is-pop, .routine-check.is-pop .routine-check-path { animation: none; } }
+
+.routine-icon-btn {
+  display: flex; height: 2.75rem; width: 2.75rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 12px;
+  color: rgb(var(--c-subtle)); background: rgb(var(--c-fg) / 0.04); border: var(--border-w) solid rgb(var(--c-fg) / 0.08);
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.routine-icon-btn:hover { color: rgb(var(--c-fg)); background: rgb(var(--c-fg) / 0.08); }
+.routine-icon-btn:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: 1px; }
+
+.routine-day {
+  min-height: 2.75rem; border-radius: 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: var(--label-tracking);
+  color: rgb(var(--c-subtle)); background: rgb(var(--c-fg) / 0.03); border: var(--border-w) solid rgb(var(--c-fg) / 0.1);
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.routine-day.is-on { color: rgb(var(--c-on-accent)); background: rgb(var(--c-accent)); border-color: rgb(var(--accent-ring)); }
+.routine-day:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: 1px; }
+
+.routine-step-no {
+  display: flex; height: 1.5rem; width: 1.5rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9999px;
+  font-family: var(--font-num, ui-monospace, monospace); font-size: 11px; font-weight: 800;
+  color: rgb(var(--c-accent-text)); background: rgb(var(--c-accent) / 0.14);
+}
+.routine-kind { font-weight: 800; color: rgb(var(--c-accent-text)); }
+.routine-kind[data-kind='rehab'] { color: rgb(var(--c-danger-text)); }
+.routine-kind[data-kind='prevention'] { color: rgb(var(--c-warn-text)); }
+.routine-kind[data-kind='recovery'] { color: rgb(var(--c-success-text)); }
+.routine-streak { font-weight: 800; color: rgb(var(--c-accent-text)); }
+.routine-coach-tag {
+  border-radius: 9999px; padding: 1px 7px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: var(--label-tracking);
+  color: rgb(var(--c-accent-text)); background: rgb(var(--c-accent) / 0.12);
+}
+
 /* ---------- Fortschritt ---------- */
 .prog-title { border-radius: var(--r-lg, 12px); }
 .prog-title:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: 4px; }
@@ -600,6 +693,10 @@ input[type="number"] { -moz-appearance: textfield; }
 
 /* Lange drücken: Karte sinkt leicht ein, bevor die Schnellaktion kommt; kein iOS-Textmenü */
 .long-pressable { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* Griff zum Umsortieren: keine Textauswahl, kein Kontextmenü, keine Scroll-Geste */
+.drag-handle, .drag-handle * { touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* Während des Ziehens nirgends Text markieren (der Finger fährt über Titel und Zahlen) */
+.is-reordering, .is-reordering * { -webkit-user-select: none !important; user-select: none !important; -webkit-touch-callout: none !important; }
 @media (prefers-reduced-motion: no-preference) {
   .long-pressable[data-pressing] { transform: scale(0.97); transition: transform 0.45s var(--ease-out) !important; }
 }

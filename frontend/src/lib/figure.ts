@@ -724,6 +724,288 @@ export const MOTIONS: Record<string, Motion> = {
       { torso: -90, head: -88, aN: 180, fN: 180, aF: -96, fF: -96, tN: 98, sN: 98, tF: 178, sF: 88, ftN: 120, ftF: 180 },
     ],
   },
+
+  // ---------- v9: bisher ohne Animation (Mobilität, Reha, Prävention, Fußball, Ausdauer) ----------
+  wristCurl: {
+    label: 'Wrist curl', duration: 1600, anchor: 'ground', at: [CX - 10, GROUND], props: ['seat', 'dumbbells'],
+    frames: [
+      pose({ torso: 140, head: 130, aN: -10, fN: 70, aF: -14, fF: 66, tN: 90, sN: 0, tF: 88, sF: 0 }),
+      pose({ torso: 140, head: 130, aN: -10, fN: 112, aF: -14, fF: 108, tN: 90, sN: 0, tF: 88, sF: 0 }),
+    ],
+  },
+  landminePress: {
+    label: 'Landmine press', duration: 2400, anchor: 'ground', at: [CX - 20, GROUND], props: ['landmine'],
+    frames: [
+      pose({ torso: 172, aN: 12, fN: 168, aF: -20, fF: 20, tN: 18, sN: -2, tF: -14, sF: -6 }),
+      pose({ torso: 168, aN: 128, fN: 132, aF: -20, fF: 20, tN: 18, sN: -2, tF: -14, sF: -6 }),
+    ],
+  },
+  superman: {
+    label: 'Superman', duration: 2600, anchor: 'lowest', at: [CX - 15, GROUND], props: [],
+    frames: [
+      { torso: 90, head: 92, aN: 90, fN: 90, aF: 88, fF: 88, tN: -90, sN: -90, tF: -90, sF: -90, ftN: 0, ftF: 0 },
+      { torso: 102, head: 110, aN: 110, fN: 112, aF: 108, fF: 110, tN: -100, sN: -102, tF: -98, sF: -100, ftN: -10, ftF: -10 },
+    ],
+  },
+  uprightRow: {
+    label: 'Upright row', view: 'front', duration: 2200, anchor: 'ground', at: GROUND_AT, props: ['dumbbells'],
+    frames: [
+      { aR: 6, fR: -8, tR: 3, sR: 0 },
+      { aR: 100, fR: -125, tR: 3, sR: 0, shrug: 1 },
+    ],
+  },
+  handstandPushup: {
+    label: 'Handstand push-up', duration: 2600, anchor: 'handN', at: [W - 40, GROUND - 3], props: ['wall'],
+    frames: [
+      { torso: 0, head: 0, aN: 0, fN: 0, aF: 2, fF: 2, tN: 172, sN: 172, tF: 170, sF: 170, ftN: 90, ftF: 90 },
+      { torso: 4, head: 4, aN: 50, fN: -50, aF: 52, fF: -48, tN: 176, sN: 176, tF: 174, sF: 174, ftN: 90, ftF: 90 },
+    ],
+  },
+  tibialis: {
+    label: 'Tibialis raise', duration: 1600, anchor: 'ground', at: [48, GROUND], props: ['wallLeft'],
+    frames: [
+      pose({ torso: 192, head: 186, aN: 8, fN: 8, aF: 4, fF: 4, tN: 12, sN: 12, tF: 10, sF: 10, ftN: 90, ftF: 90 }),
+      pose({ torso: 192, head: 186, aN: 8, fN: 8, aF: 4, fF: 4, tN: 12, sN: 12, tF: 10, sF: 10, ftN: 135, ftF: 135 }),
+    ],
+  },
+  reverseNordic: {
+    label: 'Reverse Nordic', duration: 3200, anchor: 'kneeN', at: [CX + 20, GROUND - 3], props: [],
+    frames: [
+      { torso: 180, head: 180, aN: 90, fN: 90, aF: 86, fF: 86, tN: 0, sN: -90, tF: -2, sF: -90, ftN: -100, ftF: -100 },
+      { torso: 212, head: 206, aN: 120, fN: 120, aF: 116, fF: 116, tN: 32, sN: -90, tF: 30, sF: -90, ftN: -100, ftF: -100 },
+    ],
+  },
+  spanishSquat: {
+    label: 'Spanish squat', duration: 3200, anchor: 'ground', at: [CX - 10, GROUND], props: ['bandKnee'],
+    frames: [
+      pose({ torso: 172, aN: 80, fN: 86, aF: 76, fF: 82, tN: 80, sN: 4, tF: 76, sF: 4 }),
+      pose({ torso: 168, aN: 84, fN: 90, aF: 80, fF: 86, tN: 88, sN: 2, tF: 84, sF: 2 }),
+    ],
+  },
+  wallSit: {
+    label: 'Wall sit', duration: 3200, anchor: 'ground', at: [60, GROUND], props: ['wallLeft'],
+    frames: [
+      pose({ torso: 180, head: 180, aN: 40, fN: 84, aF: 36, fF: 80, tN: 90, sN: 0, tF: 88, sF: 0 }),
+      pose({ torso: 181, head: 182, aN: 42, fN: 86, aF: 38, fF: 82, tN: 90, sN: 0, tF: 88, sF: 0 }),
+    ],
+  },
+  mountainClimber: {
+    label: 'Mountain climbers', duration: 900, anchor: 'handN', at: [CX + 40, GROUND - 3],
+    frames: (() => {
+      // Knie zur Brust (80/-50), Zwischenstellung knapp über dem Boden (10/-100), Bein hinten gestreckt (-68/-68)
+      const base = { torso: 112, head: 115, aN: 2, fN: 2, aF: -2, fF: -2, ftN: -5, ftF: -5 };
+      return [
+        { ...base, tN: 80, sN: -50, tF: -68, sF: -68 },
+        { ...base, tN: 10, sN: -100, tF: 10, sF: -100 },
+        { ...base, tN: -68, sN: -68, tF: 80, sF: -50 },
+        { ...base, tN: 10, sN: -100, tF: 10, sF: -100 },
+      ];
+    })(),
+  },
+  birdDog: {
+    label: 'Bird dog', duration: 4000, anchor: 'lowest', at: [CX - 10, GROUND],
+    frames: (() => {
+      const q = { torso: 109, head: 112, aN: 0, fN: 0, aF: 2, fF: 2, tN: 0, sN: -90, tF: 2, sF: -90, ftN: -90, ftF: -90 };
+      return [q, { ...q, aN: 100, fN: 100, head: 100, tF: -96, sF: -96, ftF: -96 }, q, { ...q, aF: 100, fF: 100, head: 100, tN: -96, sN: -96, ftN: -96 }];
+    })(),
+  },
+  getUp: {
+    label: 'Turkish get-up', duration: 7200, anchor: 'lowest', at: [CX, GROUND], props: ['kbHandN'],
+    frames: (() => {
+      const lie = { torso: -90, head: -90, aN: 180, fN: 180, aF: -110, fF: -110, tN: 145, sN: 35, tF: 90, sF: 90, ftN: 90, ftF: 180 };
+      const sit = { torso: -150, head: -160, aN: 180, fN: 180, aF: -35, fF: -35, tN: 140, sN: 30, tF: 90, sF: 90, ftN: 90, ftF: 180 };
+      const kneel = pose({ torso: 180, aN: 180, fN: 180, aF: -4, fF: -4, tN: 90, sN: 0, tF: -20, sF: -90, ftF: -90 });
+      const stand = pose({ aN: 180, fN: 180, aF: -4, fF: -4 });
+      return [lie, sit, kneel, stand, kneel, sit];
+    })(),
+  },
+  burpee: {
+    label: 'Burpee', duration: 3000, anchor: 'lowest', at: [CX - 10, GROUND],
+    frames: (() => {
+      const squat = pose({ torso: 130, aN: 20, fN: 20, aF: 16, fF: 16, tN: 120, sN: -10, tF: 116, sF: -10 });
+      return [
+        pose({}),
+        squat,
+        { torso: 112, head: 115, aN: 2, fN: 2, aF: -2, fF: -2, tN: -68, sN: -68, tF: -69, sF: -69, ftN: -5, ftF: -5 },
+        squat,
+        pose({ aN: 175, fN: 178, aF: 171, fF: 174, ftN: 50, ftF: 50, at: [CX - 10, GROUND - 14] }),
+      ];
+    })(),
+  },
+  externalRotation: {
+    label: 'External rotation', view: 'front', duration: 2400, anchor: 'ground', at: GROUND_AT, props: ['bandHands'],
+    frames: [
+      { aR: 4, fR: -75, tR: 3, sR: 0 },
+      { aR: 6, fR: 70, tR: 3, sR: 0 },
+    ],
+  },
+  bandWalk: {
+    label: 'Banded lateral walk', view: 'front', duration: 2800, anchor: 'ground', at: [CX - 8, GROUND], props: ['miniBand'],
+    frames: [
+      { aR: 14, fR: 40, tR: 8, sR: -4, tL: 8, sL: -4, thighScale: 0.82, at: [CX - 8, GROUND] },
+      { aR: 14, fR: 40, tR: 28, sR: 6, tL: 8, sL: -4, thighScale: 0.82, at: [CX - 2, GROUND] },
+      { aR: 14, fR: 40, tR: 8, sR: -4, tL: 8, sL: -4, thighScale: 0.82, at: [CX + 8, GROUND] },
+      { aR: 14, fR: 40, tR: 8, sR: -4, tL: 28, sL: 6, thighScale: 0.82, at: [CX + 2, GROUND] },
+    ],
+  },
+  sledPush: {
+    label: 'Sled push', duration: 1000, anchor: 'lowest', at: [CX - 30, GROUND], props: ['sled'],
+    frames: (() => {
+      const a = pose({ torso: 128, head: 120, aN: 95, fN: 95, aF: 91, fF: 91, tN: 62, sN: -12, tF: -38, sF: -62, ftN: 95, ftF: 30 });
+      return [a, { ...swapSides(a), aN: 95, fN: 95, aF: 91, fF: 91 }];
+    })(),
+  },
+  footballDrill: {
+    label: 'Pass', duration: 1600, anchor: 'ankleF', at: [CX - 14, GROUND - 3], props: ['ballKick'],
+    frames: [
+      pose({ torso: 172, aN: 50, fN: 70, aF: -30, fF: -10, tF: 6, sF: -2, tN: -30, sN: -80, ftN: 20 }),
+      pose({ torso: 176, aN: 30, fN: 50, aF: -10, fF: 0, tF: 6, sF: -2, tN: 12, sN: 8, ftN: 90 }),
+      pose({ torso: 170, aN: -10, fN: 20, aF: 40, fF: 70, tF: 6, sF: -2, tN: 55, sN: 50, ftN: 115 }),
+    ],
+  },
+  juggle: {
+    label: 'Ball juggling', duration: 1000, anchor: 'ankleF', at: [CX - 6, GROUND - 3], props: ['ballJuggle'],
+    frames: [
+      pose({ torso: 176, aN: 30, fN: 50, aF: -20, fF: 0, tF: 4, sF: -2, tN: 22, sN: -8, ftN: 92 }),
+      pose({ torso: 174, aN: 36, fN: 56, aF: -16, fF: 4, tF: 4, sF: -2, tN: 62, sN: -2, ftN: 104 }),
+    ],
+  },
+  hip9090: {
+    label: '90/90 hip stretch', duration: 4000, anchor: 'lowest', at: [CX - 10, GROUND],
+    frames: [
+      { torso: 180, head: 180, aN: 30, fN: 60, aF: 26, fF: 56, tN: 90, sN: 90, tF: -95, sF: -95, ftN: 180, ftF: -95 },
+      { torso: 132, head: 128, aN: 88, fN: 94, aF: 84, fF: 90, tN: 90, sN: 90, tF: -95, sF: -95, ftN: 180, ftF: -95 },
+    ],
+  },
+  couchStretch: {
+    label: 'Couch stretch', duration: 4000, anchor: 'kneeF', at: [30, GROUND - 3], props: ['wallLeft'],
+    frames: [
+      { torso: 180, head: 180, aN: 60, fN: 80, aF: 56, fF: 76, tN: 90, sN: 0, tF: -20, sF: 180, ftN: 90, ftF: 180 },
+      { torso: 188, head: 184, aN: 172, fN: 176, aF: 168, fF: 172, tN: 95, sN: -5, tF: -30, sF: 180, ftN: 90, ftF: 180 },
+    ],
+  },
+  hipFlexorStretch: {
+    label: 'Hip flexor stretch', duration: 4000, anchor: 'kneeF', at: [CX - 25, GROUND - 3],
+    frames: [
+      { torso: 180, head: 180, aN: 4, fN: 4, aF: -4, fF: -4, tN: 90, sN: 0, tF: -20, sF: -90, ftN: 90, ftF: -90 },
+      { torso: 184, head: 182, aN: 170, fN: 176, aF: 166, fF: 172, tN: 95, sN: -10, tF: -35, sF: -90, ftN: 90, ftF: -90 },
+    ],
+  },
+  hamstringStretch: {
+    label: 'Hamstring stretch', duration: 4000, anchor: 'ankleF', at: [CX - 10, GROUND - 3],
+    frames: [
+      pose({ torso: 178, aN: 4, fN: 4, aF: -4, fF: -4, tN: 25, sN: 25, ftN: 150, tF: 25, sF: -15 }),
+      pose({ torso: 112, head: 118, aN: 52, fN: 52, aF: 48, fF: 48, tN: 25, sN: 25, ftN: 150, tF: 25, sF: -15 }),
+    ],
+  },
+  adductorStretch: {
+    label: 'Adductor stretch', view: 'front', duration: 4000, anchor: 'ground', at: GROUND_AT,
+    frames: [
+      { lean: -8, aR: 30, fR: 80, aL: 30, fL: 80, tR: 70, sR: -2, tL: 50, sL: 50 },
+      { lean: -10, aR: 32, fR: 82, aL: 32, fL: 82, tR: 78, sR: -6, tL: 54, sL: 54 },
+    ],
+  },
+  ankleMobility: {
+    label: 'Ankle mobility', duration: 3000, anchor: 'ankleN', at: [W - 36, GROUND - 3], props: ['wall'],
+    frames: [
+      { torso: 180, head: 180, aN: 62, fN: 90, aF: 58, fF: 86, tN: 90, sN: 0, tF: -20, sF: -90, ftN: 90, ftF: -90 },
+      { torso: 180, head: 180, aN: 70, fN: 92, aF: 66, fF: 88, tN: 83, sN: 30, tF: -20, sF: -90, ftN: 90, ftF: -90 },
+    ],
+  },
+  worldsGreatest: {
+    label: "World's greatest stretch", duration: 4400, anchor: 'ankleN', at: [CX + 30, GROUND - 3],
+    frames: [
+      { torso: 115, head: 120, aN: 2, fN: 2, aF: -2, fF: -2, tN: 85, sN: 10, tF: -60, sF: -60, ftN: 90, ftF: 20 },
+      { torso: 115, head: 160, aN: 180, fN: 180, aF: -2, fF: -2, tN: 85, sN: 10, tF: -60, sF: -60, ftN: 90, ftF: 20 },
+    ],
+  },
+  thoracicRotation: {
+    label: 'Thoracic rotation', duration: 3600, anchor: 'lowest', at: [CX - 10, GROUND],
+    frames: [
+      { torso: 109, head: 100, aN: -30, fN: -60, aF: 2, fF: 2, tN: 0, sN: -90, tF: 2, sF: -90, ftN: -90, ftF: -90 },
+      { torso: 109, head: 160, aN: 180, fN: 180, aF: 2, fF: 2, tN: 0, sN: -90, tF: 2, sF: -90, ftN: -90, ftF: -90 },
+    ],
+  },
+  catCow: {
+    label: 'Cat-cow', duration: 3600, anchor: 'lowest', at: [CX - 10, GROUND],
+    frames: [
+      { torso: 104, head: 140, shrug: -2, aN: 0, fN: 0, aF: 2, fF: 2, tN: 0, sN: -90, tF: 2, sF: -90, ftN: -90, ftF: -90 },
+      { torso: 114, head: 60, shrug: 2, aN: 0, fN: 0, aF: 2, fF: 2, tN: 0, sN: -90, tF: 2, sF: -90, ftN: -90, ftF: -90 },
+    ],
+  },
+  legSwing: {
+    label: 'Leg swings', duration: 1400, anchor: 'ankleF', at: [W - 70, GROUND - 3], props: ['wall'],
+    frames: [
+      pose({ aN: 90, fN: 90, aF: 86, fF: 86, tF: 0, sF: 0, tN: -38, sN: -52, ftN: 60 }),
+      pose({ aN: 90, fN: 90, aF: 86, fF: 86, tF: 0, sF: 0, tN: 72, sN: 62, ftN: 130 }),
+    ],
+  },
+  foamRoll: {
+    label: 'Foam rolling', duration: 2600, anchor: 'hip', at: [CX - 14, GROUND - 18], props: ['roller'],
+    frames: [
+      { torso: 220, head: 205, aN: -10, fN: -10, aF: -14, fF: -14, tN: 90, sN: 90, tF: 88, sF: 88, ftN: 180, ftF: 180, at: [CX - 14, GROUND - 18] },
+      { torso: 220, head: 205, aN: -10, fN: -10, aF: -14, fF: -14, tN: 90, sN: 90, tF: 88, sF: 88, ftN: 180, ftF: 180, at: [CX + 12, GROUND - 18] },
+    ],
+  },
+  skiErg: {
+    label: 'SkiErg', duration: 1800, anchor: 'ground', at: [CX - 20, GROUND], props: ['cableFrontHigh'],
+    frames: [
+      pose({ torso: 182, aN: 160, fN: 166, aF: 156, fF: 162 }),
+      pose({ torso: 128, head: 122, aN: -12, fN: -6, aF: -16, fF: -10, tN: 40, sN: -20, tF: 36, sF: -20 }),
+    ],
+  },
+  battleRope: {
+    label: 'Battle ropes', duration: 700, anchor: 'ground', at: [CX - 30, GROUND], props: ['ropes'],
+    frames: [
+      pose({ torso: 160, aN: 70, fN: 105, aF: 25, fF: 60, tN: 60, sN: -20, tF: 56, sF: -20 }),
+      pose({ torso: 160, aN: 25, fN: 60, aF: 70, fF: 105, tN: 60, sN: -20, tF: 56, sF: -20 }),
+    ],
+  },
+  swim: {
+    label: 'Swimming', duration: 2400, anchor: 'hip', at: [CX - 20, GROUND - 70], props: ['water'], snap: true,
+    frames: [
+      { torso: 90, head: 96, aN: 90, fN: 90, aF: -90, fF: -80, tN: -84, sN: -84, tF: -96, sF: -96, ftN: -90, ftF: -90 },
+      { torso: 90, head: 96, aN: 0, fN: 10, aF: -180, fF: -230, tN: -96, sN: -96, tF: -84, sF: -84, ftN: -90, ftF: -90 },
+      { torso: 90, head: 120, aN: -90, fN: -80, aF: -270, fF: -270, tN: -84, sN: -84, tF: -96, sF: -96, ftN: -90, ftF: -90 },
+      { torso: 90, head: 96, aN: -180, fN: -230, aF: -360, fF: -350, tN: -96, sN: -96, tF: -84, sF: -84, ftN: -90, ftF: -90 },
+      { torso: 90, head: 96, aN: -270, fN: -270, aF: -450, fF: -440, tN: -84, sN: -84, tF: -96, sF: -96, ftN: -90, ftF: -90 },
+    ],
+  },
+  asklingExtender: {
+    label: 'Askling extender', duration: 3200, anchor: 'hip', at: [CX + 20, GROUND - 8],
+    frames: [
+      { torso: -90, head: -90, aN: 100, fN: 100, aF: 96, fF: 96, tN: 200, sN: 90, tF: 90, sF: 90, ftN: 90, ftF: 180 },
+      { torso: -90, head: -90, aN: 100, fN: 100, aF: 96, fF: 96, tN: 200, sN: 186, tF: 90, sF: 90, ftN: 110, ftF: 180 },
+    ],
+  },
+  asklingDiver: {
+    label: 'Askling diver', duration: 3600, anchor: 'ankleN', at: [CX + 10, GROUND - 3],
+    frames: [
+      pose({ torso: 178, aN: 4, fN: 4, aF: -4, fF: -4, tN: 4, sN: -2, tF: -2, sF: -4 }),
+      pose({ torso: 100, head: 104, aN: 100, fN: 100, aF: 96, fF: 96, tN: 14, sN: -8, tF: -80, sF: -80, ftF: -10 }),
+    ],
+  },
+  asklingGlider: {
+    label: 'Askling glider', duration: 3600, anchor: 'ankleN', at: [CX + 20, GROUND - 3],
+    frames: [
+      pose({ torso: 178, aN: 70, fN: 90, aF: 66, fF: 86, tN: 6, sN: -4, tF: -6, sF: -6 }),
+      pose({ torso: 166, aN: 74, fN: 92, aF: 70, fF: 88, tN: 45, sN: -15, tF: -35, sF: -35, ftF: 20 }),
+    ],
+  },
+  isoBridge: {
+    label: 'Isometric bridge', duration: 3200, anchor: 'shoulder', at: [86, GROUND - 10],
+    frames: [
+      { torso: -62, head: -72, aN: 104, fN: 92, tN: 94, sN: -4, tF: 90, sF: -4 },
+      { torso: -58, head: -68, aN: 104, fN: 92, tN: 90, sN: -8, tF: 86, sF: -8 },
+    ],
+  },
+  ballCurl: {
+    label: 'Swiss ball hamstring curl', duration: 2800, anchor: 'shoulder', at: [60, GROUND - 10], props: ['swissBall'],
+    frames: [
+      { torso: -75, head: -82, aN: 100, fN: 95, aF: 96, fF: 92, tN: 95, sN: 95, tF: 93, sF: 93, ftN: 160, ftF: 160 },
+      { torso: -60, head: -72, aN: 100, fN: 95, aF: 96, fF: 92, tN: 135, sN: 25, tF: 133, sF: 23, ftN: 120, ftF: 120 },
+    ],
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -733,7 +1015,7 @@ export const MOTIONS: Record<string, Motion> = {
 /** Standard-Katalog (IDs aus AppDbContext.SeedExercises). */
 export const EXERCISE_MOTION: Record<number, string | null> = {
   1: 'bench', 2: 'legExtension', 3: 'legCurl', 4: 'calfRaise', 5: 'abduction', 6: 'adduction', 7: 'legPress',
-  8: 'pushdown', 9: 'barbellCurl', 10: null, 11: null, 12: 'sprint', 13: 'curl', 14: 'cableRow', 15: 'curl',
+  8: 'pushdown', 9: 'barbellCurl', 10: 'wristCurl', 11: 'wristCurl', 12: 'sprint', 13: 'curl', 14: 'cableRow', 15: 'curl',
   16: 'skullCrusher', 17: 'pullup', 18: 'seatedChestPress', 19: 'lateralRaise', 20: 'dip', 21: 'calfRaise', 22: 'barbellCurl',
   23: 'pulldown', 24: 'pushdown', 25: 'overheadExt', 26: 'row', 27: 'rearDelt', 28: 'pulldown', 29: 'deadlift',
   30: 'dbBench', 31: 'row', 32: 'wallBall', 33: 'lunge', 34: 'broadJump', 35: 'squat', 36: 'dbRow', 37: 'gobletSquat',
@@ -750,13 +1032,26 @@ export const EXERCISE_MOTION: Record<number, string | null> = {
   107: 'squat', 108: 'bench', 109: 'seatedPress', 110: 'cableRow', 111: 'pullup', 112: 'dip', 113: 'legCurl', 114: 'kickback', 115: 'hipThrust', 116: 'squat', 117: 'barbellCurl', 118: 'cableCrunch',
   119: 'twist', 120: 'seatedChestPress', 121: 'lateralRaise', 122: 'curl', 123: 'fly', 124: 'calfRaise', 125: 'airSquat', 126: 'kickback', 127: 'jog', 128: 'stepUp', 129: 'jog', 130: 'cycling',
   // v7
-  131: 'bench', 132: 'dbBench', 133: 'fly', 134: 'fly', 135: 'fly', 136: 'straightArm', 137: 'straightArm', 138: 'bench', 139: 'pushup', 140: 'pushup', 141: 'seatedChestPress', 142: 'seatedChestPress', 143: null, 144: 'dip', 145: 'cableRow', 146: 'pulldown', 147: 'pulldown', 148: 'pulldown', 149: 'pullup', 150: 'pullup', 151: 'row', 152: 'dbRow', 153: 'dbRow', 154: 'deadlift', 155: 'deadlift', 156: 'rdl', 157: 'kickback', 158: 'shrug', 159: null, 160: 'dbPress', 161: null, 162: 'rearDelt', 163: 'rearDelt', 164: 'frontRaise', 165: 'frontRaise', 166: 'lateralRaise', 167: 'ohp', 168: null, 169: 'curl', 170: 'curl', 171: 'curl', 172: 'curl', 173: 'barbellCurl', 174: 'curl', 175: 'barbellCurl', 176: 'pushdown', 177: 'overheadExt', 178: 'pushdown', 179: 'skullCrusher', 180: 'pushdown', 181: 'dip', 182: 'dip', 183: null, 184: 'gobletSquat', 185: 'squat', 186: 'squat', 187: 'squat', 188: 'airSquat', 189: 'legPress', 190: 'legCurl', 191: 'legExtension', 192: 'hipThrust', 193: 'rdl', 194: 'rdl', 195: 'rdl', 196: 'calfRaise', 197: null, 198: null, 199: null, 200: null, 201: 'calfRaise', 202: 'abduction', 203: 'lunge', 204: 'nordic', 205: 'crunch', 206: 'crunch', 207: 'crunch', 208: 'legRaise', 209: 'legRaise', 210: 'legRaise', 211: null, 212: null, 213: 'twist', 214: null, 215: 'clean', 216: 'jump', 217: 'jump', 218: 'wallBall', 219: 'wallBall', 220: 'jump', 221: 'jumpRope', 222: 'pushPress', 223: 'kbSwing', 224: null, 225: 'rearDelt', 226: null, 227: null, 228: 'sprint', 229: null, 230: 'sprint', 231: 'sprint', 232: 'shuttle', 233: 'sprint', 234: 'jog', 235: 'jog', 236: null, 237: null, 238: null, 239: 'shuttle', 240: null, 241: null, 242: null, 243: null, 244: null, 245: null, 246: null, 247: null, 248: null, 249: null, 250: null, 251: null, 252: null, 253: 'jog', 254: null, 255: null, 256: null, 257: 'jump',
+  131: 'bench', 132: 'dbBench', 133: 'fly', 134: 'fly', 135: 'fly', 136: 'straightArm', 137: 'straightArm', 138: 'bench', 139: 'pushup', 140: 'pushup', 141: 'seatedChestPress', 142: 'seatedChestPress', 143: 'landminePress', 144: 'dip', 145: 'cableRow', 146: 'pulldown', 147: 'pulldown', 148: 'pulldown', 149: 'pullup', 150: 'pullup', 151: 'row', 152: 'dbRow', 153: 'dbRow', 154: 'deadlift', 155: 'deadlift', 156: 'rdl', 157: 'kickback', 158: 'shrug', 159: 'superman', 160: 'dbPress', 161: 'uprightRow', 162: 'rearDelt', 163: 'rearDelt', 164: 'frontRaise', 165: 'frontRaise', 166: 'lateralRaise', 167: 'ohp', 168: 'handstandPushup', 169: 'curl', 170: 'curl', 171: 'curl', 172: 'curl', 173: 'barbellCurl', 174: 'curl', 175: 'barbellCurl', 176: 'pushdown', 177: 'overheadExt', 178: 'pushdown', 179: 'skullCrusher', 180: 'pushdown', 181: 'dip', 182: 'dip', 183: 'wristCurl', 184: 'gobletSquat', 185: 'squat', 186: 'squat', 187: 'squat', 188: 'airSquat', 189: 'legPress', 190: 'legCurl', 191: 'legExtension', 192: 'hipThrust', 193: 'rdl', 194: 'rdl', 195: 'rdl', 196: 'calfRaise', 197: 'tibialis', 198: 'reverseNordic', 199: 'spanishSquat', 200: 'wallSit', 201: 'calfRaise', 202: 'abduction', 203: 'lunge', 204: 'nordic', 205: 'crunch', 206: 'crunch', 207: 'crunch', 208: 'legRaise', 209: 'legRaise', 210: 'legRaise', 211: 'mountainClimber', 212: 'birdDog', 213: 'twist', 214: 'getUp', 215: 'clean', 216: 'jump', 217: 'jump', 218: 'wallBall', 219: 'wallBall', 220: 'jump', 221: 'jumpRope', 222: 'pushPress', 223: 'kbSwing', 224: 'burpee', 225: 'rearDelt', 226: 'externalRotation', 227: 'bandWalk', 228: 'sprint', 229: 'sledPush', 230: 'sprint', 231: 'sprint', 232: 'shuttle', 233: 'sprint', 234: 'jog', 235: 'jog', 236: 'footballDrill', 237: 'footballDrill', 238: 'footballDrill', 239: 'shuttle', 240: 'footballDrill', 241: 'juggle', 242: 'hip9090', 243: 'couchStretch', 244: 'worldsGreatest', 245: 'hamstringStretch', 246: 'hipFlexorStretch', 247: 'adductorStretch', 248: 'ankleMobility', 249: 'thoracicRotation', 250: 'catCow', 251: 'legSwing', 252: 'foamRoll', 253: 'jog', 254: 'skiErg', 255: 'battleRope', 256: 'swim', 257: 'jump',
   // v8
-  258: null, 259: null, 260: null, 261: null, 262: null, 263: 'bridge', 264: 'nordic',
+  258: 'asklingExtender', 259: 'asklingDiver', 260: 'asklingGlider', 261: 'isoBridge', 262: 'ballCurl', 263: 'bridge', 264: 'nordic',
 };
 
 /** Erkennung für eigene Übungen über den Namen (Reihenfolge = Priorität). */
 const KEYWORDS: [RegExp, string][] = [
+  [/hip flexor|hüftbeuger|сгибател/i, 'hipFlexorStretch'], [/couch stretch|sofa/i, 'couchStretch'], [/90 ?\/ ?90/i, 'hip9090'],
+  [/world'?s greatest/i, 'worldsGreatest'], [/hamstring stretch|beinbeuger.*dehn|растяжк.*бицепс бедра/i, 'hamstringStretch'],
+  [/adductor stretch|adduktoren.*dehn/i, 'adductorStretch'], [/ankle mob|sprunggelenk.*mobil|голеностоп/i, 'ankleMobility'],
+  [/thoracic|t-spine|brustwirbel|грудн/i, 'thoracicRotation'], [/cat[- ]?cow|katze|кошка/i, 'catCow'], [/leg swing|beinschwing|мах/i, 'legSwing'],
+  [/foam roll|faszienroll|blackroll|ролл/i, 'foamRoll'], [/wall sit|wandsitz|стульчик/i, 'wallSit'], [/spanish squat/i, 'spanishSquat'],
+  [/reverse nordic/i, 'reverseNordic'], [/tibialis|toe raise|zehen heben/i, 'tibialis'], [/mountain climber|bergsteiger|скалолаз/i, 'mountainClimber'],
+  [/bird ?dog/i, 'birdDog'], [/burpee|берпи/i, 'burpee'], [/get[- ]?up/i, 'getUp'], [/superman|супермен/i, 'superman'],
+  [/upright row|aufrechtes rudern/i, 'uprightRow'], [/landmine/i, 'landminePress'], [/handstand/i, 'handstandPushup'],
+  [/external rotation|außenrotation/i, 'externalRotation'], [/band walk|monster walk|lateral walk|side walk/i, 'bandWalk'],
+  [/sled push|schlitten schieben/i, 'sledPush'], [/ski ?erg/i, 'skiErg'], [/battle rope/i, 'battleRope'], [/swim|schwimm|плаван/i, 'swim'],
+  [/juggl|jonglier|набивани|чеканк/i, 'juggle'], [/passing|rondo|small[- ]sided|shooting|finishing|torschuss|удар|пас/i, 'footballDrill'],
+  [/wrist|handgelenk/i, 'wristCurl'], [/askling.*extend/i, 'asklingExtender'], [/askling.*diver/i, 'asklingDiver'], [/askling.*glid/i, 'asklingGlider'],
+  [/ball.*(ham|leg) curl|swiss ball curl/i, 'ballCurl'], [/iso.*bridge|bridge hold/i, 'isoBridge'],
   [/chest press|brustpresse/i, 'seatedChestPress'], [/shoulder press machine|machine shoulder press/i, 'seatedPress'],
   [/kickback/i, 'kickback'], [/treadmill|laufband|elliptical|crosstrainer/i, 'jog'], [/stair|stepper/i, 'stepUp'],
   [/air ?bike|assault bike/i, 'cycling'],
@@ -790,7 +1085,7 @@ const KEYWORDS: [RegExp, string][] = [
 
 export { BODYWEIGHT_EXERCISES } from './bodyweight';
 
-/** Übungen ohne Animation, aber mit Technik-Hinweisen. */
+/** Technik-Hinweise für Übungen ohne eigene Animation (Fallback, wenn kein Bewegungsmuster passt). */
 const EXERCISE_TECHNIQUE_ONLY: Record<number, string> = {
   10: 'wristCurl', 11: 'wristCurl',
   143: 'landminePress', 159: 'superman', 161: 'uprightRow', 168: 'handstandPushup', 183: 'wristCurl', 197: 'tibialis', 198: 'reverseNordic', 199: 'spanishSquat', 200: 'wallSit', 211: 'mountainClimber', 212: 'birdDog', 214: 'getUp', 224: 'burpee', 226: 'externalRotation', 227: 'bandWalk', 229: 'sledPush', 236: 'footballDrill', 237: 'footballDrill', 238: 'footballDrill', 240: 'footballDrill', 241: 'footballDrill', 242: 'stretch', 243: 'stretch', 244: 'mobilityFlow', 245: 'stretch', 246: 'stretch', 247: 'stretch', 248: 'mobilityFlow', 249: 'mobilityFlow', 250: 'mobilityFlow', 251: 'mobilityFlow', 252: 'foamRoll', 254: 'skiErg', 255: 'battleRope', 256: 'swim',
@@ -817,6 +1112,18 @@ export function techniqueFor(exercise: ExerciseLike | null | undefined): { motio
 
 /** Technik-Hinweise und Zielmuskulatur pro Bewegungsmuster. */
 export const TECHNIQUE: Record<string, Technique> = {
+  // v9: eigene Animationen für Dehnung, Mobilität und Ball
+  juggle: { muscles: ["Ball skills", "Coordination"], cues: ["Ball dropped from the hands, touch it with the laces", "Ankle locked, small touches to hip height", "Alternate feet, count touches in a row"] },
+  hip9090: { muscles: ["Hip mobility", "Glutes", "Hip flexors"], cues: ["Sit tall: front and back knee both bent at 90\u00b0", "Lean the chest over the front shin with a long back", "Hold 30-60 s, then switch sides"] },
+  couchStretch: { muscles: ["Hip flexors", "Quads"], cues: ["Back knee close to the wall, shin up the wall", "Squeeze the glute and tuck the pelvis", "Raise the trunk slowly, hold 30-60 s per side"] },
+  hipFlexorStretch: { muscles: ["Hip flexors", "Quads"], cues: ["Half-kneeling, front knee over the ankle", "Squeeze the glute of the back leg, pelvis tucked", "Shift the hips forward, arms up, hold 30-60 s"] },
+  hamstringStretch: { muscles: ["Hamstrings", "Calves"], cues: ["Front leg straight, heel down, toes up", "Hinge at the hips with a flat back", "Reach towards the toes, hold 30-60 s per side"] },
+  adductorStretch: { muscles: ["Adductors", "Hip mobility"], cues: ["Wide stance, toes forward", "Shift the weight into one bent knee, other leg straight", "Hold 30-60 s, breathe calmly, switch sides"] },
+  ankleMobility: { muscles: ["Ankle stability", "Calves"], cues: ["Half-kneeling facing a wall, front foot a hand away", "Drive the knee over the toes to the wall", "Heel stays down, 10 slow reps per side"] },
+  worldsGreatest: { muscles: ["Hip mobility", "Thoracic spine", "Hamstrings"], cues: ["Long lunge, both hands inside the front foot", "Elbow down to the instep, then rotate the arm to the ceiling", "Eyes follow the hand, 5 reps per side"] },
+  thoracicRotation: { muscles: ["Thoracic spine", "Upper back"], cues: ["On hands and knees, hips over the knees", "Thread one arm under, then open it to the ceiling", "Rotate through the upper back, 8-10 reps per side"] },
+  catCow: { muscles: ["Thoracic spine", "Lower back", "Core"], cues: ["On hands and knees, hands under the shoulders", "Round the back and tuck the chin (cat)", "Lift the chest and look forward (cow), move slowly with the breath"] },
+  legSwing: { muscles: ["Hip mobility", "Hamstrings", "Hip flexors"], cues: ["Hold on to a wall, stand tall on one leg", "Swing the free leg forward and back, relaxed", "Increase the range gradually, 10-15 swings per side"] },
   // v8: Reha Beinbeuger
   asklingExtender: { muscles: ['Hamstrings'], cues: ['Lie on your back, hold the thigh with both hands at 90\u00b0', 'Slowly straighten the knee until you feel a light stretch', 'Stop before pain, bend back slowly'] },
   asklingDiver: { muscles: ['Hamstrings', 'Glutes'], cues: ['Stand on the injured leg, knee slightly bent', 'Tip forward like a dive: arms forward, other leg straight back', 'Hips level, back straight, return slowly'] },
@@ -1033,13 +1340,36 @@ function renderProp(name: string, s: Skeleton, phase: number): string {
       };
       return `<path class="fx-cable" fill="none" d="${curve(s.handN, 14)} ${curve(s.handF, -14)}"/>`;
     }
+    // v9
+    case 'wallLeft': return rect(6, 0, 8, GROUND, 'fx-gear', 0);
+    case 'landmine': return line(s.handN, [W - 18, GROUND - 2], 'fx-bar') + circle([W - 18, GROUND - 4], 4, 'fx-hub') + circle(s.handN, 3.5, 'fx-hub');
+    case 'bandKnee': { const k = s.kneeN; return line(k, [W - 14, k[1] - 2], 'fx-cable-thick') + rect(W - 18, k[1] - 26, 8, GROUND - k[1] + 26, 'fx-gear', 1); }
+    case 'bandHands': return line(s.handN, s.handF, 'fx-cable-thick');
+    case 'miniBand': return line(s.kneeN, s.kneeF, 'fx-cable-thick');
+    case 'sled': { const x = Math.max(s.handN[0], s.handF[0]) + 1; const y = Math.min(s.handN[1], s.handF[1]) - 4;
+      return rect(x, y, 6, GROUND - y, 'fx-gear', 1) + rect(x - 2, GROUND - 16, 30, 14, 'fx-gear', 2) + rect(x + 6, GROUND - 30, 14, 14, 'fx-plate', 2); }
+    case 'ballKick': return circle([CX + 18, GROUND - 7], 7, 'fx-ball');
+    case 'ballJuggle': { const h = 8 + 30 * (0.5 + 0.5 * Math.cos(2 * Math.PI * phase)); return circle([s.toeN[0] + 2, s.toeN[1] - h], 7, 'fx-ball'); }
+    case 'kbHandN': { const h = s.handN; return circle(add(h, [0, -6]), 6, 'fx-db'); }
+    case 'roller': return circle([CX + 20, GROUND - 7], 7, 'fx-plate');
+    case 'swissBall': return circle([s.ankleN[0] + 2, GROUND - 12], 12, 'fx-ball');
+    case 'water': return `<path class="fx-cable" fill="none" d="M 8 ${GROUND - 78} q 13 -5 26 0 t 26 0 t 26 0 t 26 0 t 26 0 t 26 0 t 26 0 t 26 0"/>`;
+    case 'ropes': {
+      const end: Pt = [W - 12, GROUND - 6];
+      const wave = (h: Pt, off: number) => {
+        const m1: Pt = [h[0] + (end[0] - h[0]) / 3, h[1] + (end[1] - h[1]) / 3 + Math.sin(2 * Math.PI * (phase + off)) * 12];
+        const m2: Pt = [h[0] + (2 * (end[0] - h[0])) / 3, h[1] + (2 * (end[1] - h[1])) / 3 - Math.sin(2 * Math.PI * (phase + off)) * 10];
+        return `M ${f1(h[0])} ${f1(h[1])} C ${f1(m1[0])} ${f1(m1[1])} ${f1(m2[0])} ${f1(m2[1])} ${f1(end[0])} ${f1(end[1])}`;
+      };
+      return `<path class="fx-cable-thick" fill="none" d="${wave(s.handN, 0)} ${wave(s.handF, 0.5)}"/>` + rect(end[0] - 4, end[1] - 6, 8, 12, 'fx-gear', 1);
+    }
     default: return '';
   }
 }
 
 const BACK_PROPS = new Set(['bench', 'benchIncline', 'benchLow', 'seat', 'machineSeat', 'floorSeat', 'pressSeat', 'frontSeat',
   'pullBar', 'dipBars', 'box', 'wall', 'anchorPad', 'rower', 'bike', 'cones', 'ladder', 'cableTop', 'cableHigh', 'cableFront',
-  'cableFrontHigh', 'cableFrontLow', 'cableChop', 'platform']);
+  'cableFrontHigh', 'cableFrontLow', 'cableChop', 'platform', 'wallLeft', 'landmine', 'bandKnee', 'sled', 'roller', 'swissBall', 'water', 'ropes']);
 
 /** Komplettes SVG der Bewegung zum Zeitpunkt `phase` (0..1). */
 export function renderFigureSvg(key: string | null | undefined, phase = 0, { title = '' } = {}): string {

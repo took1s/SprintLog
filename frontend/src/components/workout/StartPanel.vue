@@ -10,6 +10,7 @@ import CoachCard from './CoachCard.vue';
 import HalloweenSpider from '@/components/decor/HalloweenSpider.vue';
 import { appearance } from '@/lib/theme';
 import RecoveryCard from '@/components/RecoveryCard.vue';
+import RoutinesToday from '@/components/RoutinesToday.vue';
 
 const app = useAppStore();
 const { activeProgram, allWorkouts, clockDate, coach, exercisesById, programInfo, startLine, tab } = storeToRefs(app);
@@ -63,6 +64,7 @@ const lastCount = computed(() => new Set((lastWorkout.value?.sets ?? []).map((s)
           </button>
       </div>
 
+      <RoutinesToday />
       <RecoveryCard />
   </section>
 </template>

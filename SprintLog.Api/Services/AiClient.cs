@@ -1,3 +1,5 @@
+using SprintLog.Api.Data;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
@@ -160,9 +162,24 @@ public sealed class AiQuota(IOptions<AiOptions> options, TimeProvider time)
 {
     private readonly ConcurrentDictionary<int, (DateOnly Day, int Used)> _used = new();
 
-    /// <summary>Tageslimit für diesen Nutzer (Inhaber oder normales Konto).</summary>
-    public int LimitFor(ClaimsPrincipal user) =>
-        Math.Max(1, options.Value.IsOwner(user.FindFirstValue(ClaimTypes.Name)) ? options.Value.OwnerDailyLimit : options.Value.DailyLimit);
+    private int? _firstUserId;
+
+    /// <summary>
+    /// Tageslimit für diesen Nutzer. Inhaber = Benutzername aus Ai:Owners; ist dort nichts eingetragen, gilt das
+    /// zuerst registrierte Konto als Inhaber (wer die App betreibt, legt sein Konto als erstes an).
+    /// </summary>
+    public async ValueTask<int> LimitForAsync(ClaimsPrincipal user, AppDbContext db, CancellationToken ct)
+    {
+        var o = options.Value;
+        bool owner;
+        if (o.Owners.Count > 0) owner = o.IsOwner(user.FindFirstValue(ClaimTypes.Name));
+        else
+        {
+            _firstUserId ??= await db.Users.AsNoTracking().OrderBy(u => u.Id).Select(u => (int?)u.Id).FirstOrDefaultAsync(ct);
+            owner = _firstUserId is { } first && user.GetUserId() == first;
+        }
+        return Math.Max(1, owner ? o.OwnerDailyLimit : o.DailyLimit);
+    }
 
     private DateOnly Today => DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime);
 
