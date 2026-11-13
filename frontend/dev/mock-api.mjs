@@ -38,7 +38,7 @@ const templates = JSON.parse(readFileSync(join(root, 'SprintLog.Api', 'Data', 'p
 // Gleiche Content-Security-Policy wie die echte API -> E2E-Tests finden CSP-Verstöße (Konsolenfehler).
 const CSP = JSON.parse(readFileSync(join(root, 'SprintLog.Api', 'appsettings.json'), 'utf8')).Security.ContentSecurityPolicy;
 
-const db = { users: [], wellness: [], goals: [], exercises: [...seed], workouts: [], deleted: [], favorites: [], programs: [], refresh: [], codes: [], links: [], outbox: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
+const db = { users: [], wellness: [], goals: [], routines: [], exercises: [...seed], workouts: [], deleted: [], favorites: [], programs: [], refresh: [], codes: [], links: [], outbox: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
 
 function programResponse(p) {
   return {
@@ -529,6 +529,15 @@ async function handleApi(req, res, url) {
         }
         liveAnswer = `Live workout: ${live?.exercises?.length ?? 0} exercises at ${live?.gym ?? 'unknown gym'}.`;
       }
+      // Routinen wie propose_routine: "stretch"/"растяж"/"dehn" -> neue Dehnroutine; "rehab"/"реаб" -> bestehende Reha beenden/ändern
+      if (/stretch|растяж|dehn|routine|рутин/.test(lower)) {
+        const day = (n) => { const d = new Date(Date.now() + n * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+        actions.push({ type: 'routine', replacesId: null, routine: { title: 'Stretching after training', kind: 'mobility', days: 1 | 4 | 16, startDate: day(0), endDate: day(20), reason: 'Tight hips after sprints.',
+          steps: [{ name: 'Hip flexor stretch', dose: '2 x 45 s per side' }, { name: 'Plank', dose: '3 x 30 s', exerciseId: 47 }, { name: 'Nordic Hamstring Curl', dose: '2 x 5', exerciseId: 50 }] } });
+      } else if (/rehab|реаб/.test(lower)) {
+        const r = db.routines.find((x) => x.userId === user.id && x.kind === 'rehab');
+        if (r) actions.push({ type: 'routine', replacesId: r.clientId, routine: { title: r.title, kind: r.kind, days: r.days, startDate: r.startDate, endDate: r.startDate, reason: 'Pain-free for a week.', steps: r.steps } });
+      }
       if (lower.includes('week') || lower.includes('недел') || lower.includes('woche')) {
         actions.push({ type: 'schedule', trainingDays: 1 | 4 | 16, matchDays: 64, reason: 'Rest before and after the match.' });
       }
@@ -567,6 +576,17 @@ async function handleApi(req, res, url) {
       const days = Array.from({ length: n }, (_, i) => ({ id: null, name: `AI ${String.fromCharCode(65 + i)}`, notes: null, exercises: pool.slice(0, 4).map((e) => ({ exerciseId: e.id, sets: 3, ...target(e) })) }));
       return json(res, 200, { program: { name: 'AI Football Plan', goal: 'Speed', weeks: 6, days }, summary: `Built for ${n} days around your match.${body.notes ? ` Notes: ${String(body.notes).slice(0, 60)}` : ''}`, remaining: limit - used - costs.plan });
     }
+    // Plan übersetzen wie POST /api/ai/translate-program/{id}: Deutsch bekommt "(DE)" angehängt, Englisch/Russisch unverändert
+    const tm = path.match(/^\/api\/ai\/translate-program\/(\d+)$/);
+    if (method === 'POST' && tm) {
+      const p = db.programs.find((x) => x.userId === user.id && x.id === Number(tm[1]));
+      if (!p) return problem(res, 404, 'Not Found');
+      if (used + costs.quick > limit) return quota();
+      db.aiUsed[user.id] = used + costs.quick;
+      const texts = [p.name, ...p.days.flatMap((d) => [d.name, d.notes, ...d.exercises.map((x) => x.note)])].filter(Boolean);
+      p.translations = Object.fromEntries(texts.map((x) => [x, { en: x, de: `${x} (DE)`, ru: x }]));
+      return json(res, 200, { program: programResponse(p), remaining: limit - used - costs.quick });
+    }
     if (method === 'POST' && path === '/api/ai/analysis') {
       if (used + costs.analysis > limit) return quota();
       db.aiUsed[user.id] = used + costs.analysis;
@@ -594,6 +614,35 @@ async function handleApi(req, res, url) {
       });
     }
     return problem(res, 404, 'Not Found');
+  }
+
+  if (method === 'GET' && path === '/api/routines') return json(res, 200, db.routines.filter((r) => r.userId === user.id).map(({ userId, ...rest }) => rest));
+  m = path.match(/^\/api\/routines\/([^/]+)$/);
+  if (m && method === 'PUT') {
+    const body = await readBody(req);
+    const errors = {};
+    if (!/^[A-Za-z0-9_-]{8,64}$/.test(m[1])) errors.clientId = ['Invalid id.'];
+    if (!String(body.title ?? '').trim() || String(body.title).trim().length > 60) errors.title = ['Title is required (max 60 characters).'];
+    if (!['mobility', 'rehab', 'prevention', 'activation', 'recovery', 'other'].includes(body.kind)) errors.kind = ['Unknown kind.'];
+    if (!(body.days >= 1 && body.days <= 127)) errors.days = ['Pick at least one weekday.'];
+    if (body.endDate && body.endDate < body.startDate) errors.endDate = ['End date must be after the start.'];
+    if (!Array.isArray(body.steps) || !body.steps.length || body.steps.some((x) => !String(x?.name ?? '').trim())) errors.steps = ['Add 1 to 12 steps.'];
+    if (Object.keys(errors).length) return problem(res, 400, 'One or more validation errors occurred.', errors);
+    const now = new Date().toISOString();
+    const old = db.routines.find((r) => r.userId === user.id && r.clientId === m[1]);
+    const routine = {
+      userId: user.id, clientId: m[1], title: body.title.trim(), kind: body.kind, days: body.days, startDate: body.startDate, endDate: body.endDate ?? null,
+      reason: body.reason?.trim() || null, source: old?.source ?? body.source ?? 'user',
+      steps: body.steps.map((x) => ({ name: x.name.trim(), dose: x.dose?.trim() || null, exerciseId: db.exercises.some((e) => e.id === x.exerciseId) ? x.exerciseId : null })),
+      doneDates: [...new Set(body.doneDates ?? old?.doneDates ?? [])].sort(), createdAt: old?.createdAt ?? now, updatedAt: now,
+    };
+    db.routines = [...db.routines.filter((r) => r !== old), routine];
+    const { userId, ...rest } = routine;
+    return json(res, 200, rest);
+  }
+  if (m && method === 'DELETE') {
+    db.routines = db.routines.filter((r) => !(r.userId === user.id && r.clientId === m[1]));
+    return noContent(res);
   }
 
   if (method === 'GET' && path === '/api/goals') return json(res, 200, db.goals.filter((g) => g.userId === user.id).map(({ userId, ...rest }) => rest));
@@ -790,6 +839,16 @@ function seedDemo() {
   db.goals.push(
     { userId: user.id, exerciseId: 1, targetWeight: 125, targetReps: 1, increment: 2.5, startE1RM: 100, targetDate: null, createdAt: created, updatedAt: created, achievedAt: null },
     { userId: user.id, exerciseId: 35, targetWeight: 120, targetReps: 3, increment: 2.5, startE1RM: null, targetDate: null, createdAt: created, updatedAt: created, achievedAt: null },
+  );
+  // Routinen für Screenshots: Reha seit 10 Tagen (fast immer erledigt) und Dehnen an Trainingstagen
+  const dayKey = (n) => { const d = new Date(Date.now() + n * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  db.routines.push(
+    { userId: user.id, clientId: 'rt-demo-rehab', title: 'Hamstring rehab (left)', kind: 'rehab', days: 127, startDate: dayKey(-10), endDate: dayKey(11), reason: 'Mild strain, physio cleared progressive loading.', source: 'coach',
+      steps: [{ name: 'Glute bridge hold', dose: '3 x 30 s', exerciseId: null }, { name: 'Nordic Hamstring Curl', dose: '2 x 5, slow', exerciseId: 50 }, { name: 'Tempo runs', dose: '6 x 60 m @ 70 %', exerciseId: null }],
+      doneDates: [-10, -9, -8, -7, -5, -4, -3, -2, -1].map(dayKey), createdAt: created, updatedAt: created },
+    { userId: user.id, clientId: 'rt-demo-stretch', title: 'Stretching after training', kind: 'mobility', days: 127, startDate: dayKey(-3), endDate: dayKey(25), reason: null, source: 'user',
+      steps: [{ name: 'Hip flexor stretch', dose: '2 x 45 s per side', exerciseId: null }, { name: 'Plank', dose: '3 x 30 s', exerciseId: 47 }],
+      doneDates: [-3, -1].map(dayKey), createdAt: created, updatedAt: created },
   );
   console.log(`demo: user "demo" / "demo-password" with ${db.workouts.length} workouts`);
 }

@@ -80,3 +80,7 @@ public record AiAnalysisInput(string? Context, string? Locale, string? Period = 
 
 /// <summary>Bericht im Format von submit_report (headline, summary, sections, recommendations, nextWeekFocus).</summary>
 public record AiAnalysisResponse(JsonObject Report, DateTime GeneratedAt, int Remaining);
+
+public record AiTranslateInput(string? RequestId = null);
+
+public record AiTranslateResponse(ProgramResponse Program, int Remaining);

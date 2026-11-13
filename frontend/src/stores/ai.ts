@@ -21,6 +21,7 @@ import { readJson, userKeys, writeJson } from '../lib/storage';
 import type { TrainingProgram } from '../types';
 import { useAppStore } from './app';
 import { useGoalsStore } from './goals';
+import { useRoutinesStore, type RoutineDraft } from './routines';
 import { useUiStore } from './ui';
 
 export type AiMode = 'quick' | 'deep';
@@ -42,7 +43,9 @@ export type AiAction =
   | { type: 'goal'; exerciseId: number; exerciseName: string; targetWeight: number; targetReps: number; targetDate: string | null; reason: string }
   | { type: 'schedule'; trainingDays: number; matchDays: number; reason: string }
   /** Änderung an der laufenden Einheit (nur im Training) - wird lokal angewendet, nichts geht an den Server. */
-  | { type: 'workout'; operations: WorkoutOp[]; changes: string[] };
+  | { type: 'workout'; operations: WorkoutOp[]; changes: string[] }
+  /** Routine neben dem Plan (Dehnen, Reha ...); replacesId = Änderung einer bestehenden. */
+  | { type: 'routine'; routine: RoutineDraft; replacesId: string | null };
 export type MemoryCategory = 'injury' | 'health' | 'goal' | 'schedule' | 'preference' | 'equipment' | 'insight' | 'other';
 export const MEMORY_CATEGORIES: readonly MemoryCategory[] = ['injury', 'health', 'goal', 'schedule', 'preference', 'equipment', 'insight', 'other'];
 export interface CoachMemory {
@@ -297,10 +300,40 @@ export const useAiStore = defineStore('ai', () => {
       const active = app.activeProgram;
       if (schedule && active?.id === created.id) await app.setSchedule(active, schedule);
       ui.toast(t('plan.toast.started', { name: created.name }), 'success');
+      void translateProgram(created.id, { silent: true }); // Plan auch auf Englisch/Deutsch/Russisch lesbar
       return true;
     } catch (e) {
       ui.toast(isApiError(e) && e.isNetwork ? t('plan.toast.needsConnection') : t('ai.errors.unknown'), 'error');
       return false;
+    }
+  }
+
+  // ---------- Plan übersetzen ----------
+
+  /** Plan, dessen Texte gerade übersetzt werden. */
+  const translating = ref<number | null>(null);
+
+  /**
+   * Frei geschriebene Texte eines Plans nach en/de/ru übersetzen lassen (Kosten wie eine schnelle Frage).
+   * silent: nach dem Speichern eines KI-Plans im Hintergrund - ohne Meldungen, Fehler sind dann egal.
+   */
+  async function translateProgram(id: number, { silent = false } = {}): Promise<boolean> {
+    const ui = useUiStore();
+    if (!enabled.value || translating.value != null) return false;
+    if (!deviceOnline.value) { if (!silent) ui.toast(t('plan.toast.needsConnection'), 'error'); return false; }
+    if (silent && left('quick') < 1) return false;
+    translating.value = id;
+    try {
+      const res = await aiPost<{ program: TrainingProgram; remaining: number }>(`/api/ai/translate-program/${id}`, { requestId: newRequestId() });
+      setRemaining(res.remaining);
+      await app.loadPrograms();
+      if (!silent) ui.toast(t('plan.translated'), 'success');
+      return true;
+    } catch (e) {
+      if (!silent) ui.toast(t(`ai.errors.${errorCode(e)}`), 'error');
+      return false;
+    } finally {
+      translating.value = null;
     }
   }
 
@@ -312,6 +345,7 @@ export const useAiStore = defineStore('ai', () => {
     try {
       await app.api().put(`/api/programs/${action.programId}`, action.program);
       await app.loadPrograms();
+      void translateProgram(action.programId, { silent: true });
       ui.toast(t('ai.actions.updateSaved', { name: action.program.name }), 'success');
       return true;
     } catch (e) {
@@ -337,6 +371,9 @@ export const useAiStore = defineStore('ai', () => {
         ok = await saveProgramDraft(action.program, null);
       } else if (action.type === 'workout') {
         ok = app.applyWorkoutChange(action.operations);
+      } else if (action.type === 'routine') {
+        useRoutinesStore().applyFromCoach(action.routine, action.replacesId);
+        ok = true;
       } else if (action.type === 'goal') {
         const goals = useGoalsStore();
         goals.draft = {
@@ -566,7 +603,7 @@ export const useAiStore = defineStore('ai', () => {
   return {
     status, enabled, open, messages, busy, error, mode, applying, plan, analysis, analysisBusy, analysisError,
     profile, profileOpen, profileBusy, profileFilled, cost, left, deviceOnline,
-    loadStatus, openChat, ask, retry, askFromElsewhere, clearChat, applyAction, generatePlan, discardPlan, acceptPlan,
+    loadStatus, openChat, ask, retry, askFromElsewhere, clearChat, applyAction, generatePlan, discardPlan, acceptPlan, translating, translateProgram,
     runAnalysis, loadProfile, openProfile, saveProfile, context,
     memory, memoryOpen, memoryLoading, loadMemory, openMemory, addMemory, updateMemory, forgetMemory, undoMemory, clearMemory,
   };

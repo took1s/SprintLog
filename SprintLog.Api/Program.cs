@@ -292,6 +292,7 @@ app.MapWorkoutEndpoints();
 app.MapProgramEndpoints();
 app.MapWellnessEndpoints();
 app.MapGoalEndpoints();
+app.MapRoutineEndpoints();
 app.MapMonitoringEndpoints();
 app.MapAiEndpoints();
 app.MapProfileEndpoints();

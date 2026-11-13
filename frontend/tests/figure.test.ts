@@ -57,7 +57,7 @@ test('feet stay on the ground for ground-anchored motions', () => {
 
 test('custom exercises are recognised by name', () => {
   const cases = {
-    'Sled Push': null, 'Kettlebell Goblet Squat': 'gobletSquat', 'Bulgarian split squat': 'lunge',
+    'Sled Push': 'sledPush', 'Couch Stretch': 'couchStretch', 'Spanish Squat (band)': 'spanishSquat', 'Reverse Nordic Curl': 'reverseNordic', 'Hüftbeuger dehnen': 'hipFlexorStretch', 'Wrist Roller': 'wristCurl', 'Kettlebell Goblet Squat': 'gobletSquat', 'Bulgarian split squat': 'lunge',
     'Incline Smith Press': 'inclineBench', 'Kreuzheben': 'deadlift', '40m Sprint': 'sprint',
     'Hammer Curls': 'curl', 'Seated Cable Row': 'cableRow', 'Hollow Hold Plank': 'hollow',
     'Copenhagen Plank': 'copenhagen', 'KB Swing': 'kbSwing', 'Hang Clean': 'clean', 'Pallof Press (Band)': 'pallof',

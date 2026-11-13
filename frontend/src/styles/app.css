@@ -363,6 +363,71 @@
   .ai-thinking-text { -webkit-text-fill-color: currentColor; background: none; }
 }
 
+/* Plan übersetzen: kleiner Knopf unter dem Plannamen */
+.plan-translate {
+  display: inline-flex; min-height: 2.25rem; align-items: center; gap: 6px; border-radius: 9999px; padding: 4px 12px;
+  font-size: 11px; font-weight: 700; color: rgb(var(--c-accent-text)); background: rgb(var(--c-accent) / 0.1);
+  border: var(--border-w) solid rgb(var(--accent-ring) / 0.4); transition: background-color 0.15s ease;
+}
+.plan-translate:hover { background: rgb(var(--c-accent) / 0.18); }
+.plan-translate:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: 2px; }
+
+/* ---------- Routinen ---------- */
+.routine-today {
+  border-color: rgb(var(--accent-ring) / 0.35); background: rgb(var(--c-accent) / 0.05);
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+.routine-today.is-complete { border-color: rgb(var(--c-success) / 0.45); background: rgb(var(--c-success) / 0.06); }
+/* Großer Haken (44 px Trefferfläche), Häkchen zeichnet sich beim Abhaken */
+.routine-check {
+  display: flex; height: 2.75rem; width: 2.75rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9999px;
+  color: transparent; background: rgb(var(--c-fg) / 0.04); box-shadow: inset 0 0 0 2px rgb(var(--c-fg) / 0.22);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.routine-check svg { width: 20px; height: 20px; }
+.routine-check:hover { box-shadow: inset 0 0 0 2px rgb(var(--accent-ring) / 0.7); }
+.routine-check:active { transform: scale(0.92); }
+.routine-check:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: 2px; }
+.routine-check.is-done { color: rgb(var(--c-bg)); background: rgb(var(--c-success)); box-shadow: inset 0 0 0 2px rgb(var(--c-success)); }
+.routine-check-path { stroke-dasharray: 24; stroke-dashoffset: 0; }
+.routine-check.is-pop { animation: routine-pop 0.45s var(--ease-out, ease-out); }
+.routine-check.is-pop .routine-check-path { animation: routine-draw 0.35s 0.05s ease-out both; }
+@keyframes routine-pop { 0% { transform: scale(0.85); } 55% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@keyframes routine-draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .routine-check.is-pop, .routine-check.is-pop .routine-check-path { animation: none; } }
+
+.routine-icon-btn {
+  display: flex; height: 2.75rem; width: 2.75rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 12px;
+  color: rgb(var(--c-subtle)); background: rgb(var(--c-fg) / 0.04); border: var(--border-w) solid rgb(var(--c-fg) / 0.08);
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.routine-icon-btn:hover { color: rgb(var(--c-fg)); background: rgb(var(--c-fg) / 0.08); }
+.routine-icon-btn:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: 1px; }
+
+.routine-day {
+  min-height: 2.75rem; border-radius: 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: var(--label-tracking);
+  color: rgb(var(--c-subtle)); background: rgb(var(--c-fg) / 0.03); border: var(--border-w) solid rgb(var(--c-fg) / 0.1);
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.routine-day.is-on { color: rgb(var(--c-on-accent)); background: rgb(var(--c-accent)); border-color: rgb(var(--accent-ring)); }
+.routine-day:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: 1px; }
+
+.routine-step-no {
+  display: flex; height: 1.5rem; width: 1.5rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9999px;
+  font-family: var(--font-num, ui-monospace, monospace); font-size: 11px; font-weight: 800;
+  color: rgb(var(--c-accent-text)); background: rgb(var(--c-accent) / 0.14);
+}
+.routine-kind { font-weight: 800; color: rgb(var(--c-accent-text)); }
+.routine-kind[data-kind='rehab'] { color: rgb(var(--c-danger-text)); }
+.routine-kind[data-kind='prevention'] { color: rgb(var(--c-warn-text)); }
+.routine-kind[data-kind='recovery'] { color: rgb(var(--c-success-text)); }
+.routine-streak { font-weight: 800; color: rgb(var(--c-accent-text)); }
+.routine-coach-tag {
+  border-radius: 9999px; padding: 1px 7px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: var(--label-tracking);
+  color: rgb(var(--c-accent-text)); background: rgb(var(--c-accent) / 0.12);
+}
+
 /* ---------- Fortschritt ---------- */
 .prog-title { border-radius: var(--r-lg, 12px); }
 .prog-title:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: 4px; }

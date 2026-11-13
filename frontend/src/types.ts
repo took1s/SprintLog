@@ -172,6 +172,8 @@ export interface TrainingProgram {
   trainingDays?: number;
   /** Spieltage, Bitmaske wie trainingDays. */
   matchDays?: number;
+  /** Übersetzungen frei geschriebener Texte: { Originaltext: { en, de, ru } } (KI-Übersetzung auf dem Server). */
+  translations?: Record<string, Partial<Record<'en' | 'de' | 'ru', string>>> | null;
 }
 
 export interface ProgramTemplate {

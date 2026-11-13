@@ -1,9 +1,35 @@
 // Übersetzung von Inhalten, die als Daten kommen: Standard-Übungen, Muskelgruppen, Vorlagen, Technik-Hinweise.
 // Eigene Übungen und selbst benannte Pläne bleiben, wie der Nutzer sie geschrieben hat.
 
-import { t, tDynamic, textIn } from '.';
+import { shallowRef } from 'vue';
+import { locale, t, tDynamic, textIn } from '.';
 import { en } from './en';
 import type { ProgramDay, TrainingProgram } from '../types';
+
+// ---------- Übersetzte Plan-Texte ----------
+
+/** Übersetzungen aller Pläne des Nutzers (Originaltext -> Sprache -> Text); der App-Store setzt sie nach dem Laden. */
+const planTexts = shallowRef<ReadonlyMap<string, Partial<Record<string, string>>>>(new Map());
+
+export function setPlanTranslations(programs: readonly Pick<TrainingProgram, 'translations'>[]): void {
+  const map = new Map<string, Partial<Record<string, string>>>();
+  for (const p of programs) for (const [text, tr] of Object.entries(p.translations ?? {})) map.set(text, { ...map.get(text), ...tr });
+  planTexts.value = map;
+}
+
+/** Frei geschriebener Plan-Text in der aktuellen Sprache (sonst unverändert). */
+export const planText = (text: string): string => planTexts.value.get(text.trim())?.[locale.value] ?? text;
+
+/** Texte eines Plans, denen die aktuelle Sprache fehlt (Vorlagen-Texte übersetzt die App selbst). */
+export function untranslatedTexts(program: TrainingProgram): string[] {
+  const texts = [program.name, ...program.days.flatMap((d) => [d.name, d.notes, ...d.exercises.flatMap((x) => [x.note, ...(x.weekSteps ?? []).map((w) => w.note)])])]
+    .filter((x): x is string => !!x?.trim()).map((x) => x.trim());
+  // Texte aus Vorlagen bzw. bekannte Hinweise übersetzt die App selbst (Quelle ist Englisch)
+  const key = program.templateKey;
+  const isTemplate = (text: string) => noteKeys().has(text) || (!!key && (textIn('en', `templates.${key}.name`) === text
+    || program.days.some((d) => textIn('en', `templates.${key}.days.${d.position}.name`) === text || textIn('en', `templates.${key}.days.${d.position}.notes`) === text)));
+  return [...new Set(texts)].filter((x) => !program.translations?.[x]?.[locale.value] && !isTemplate(x));
+}
 
 type ExerciseLike = { id?: number | null; name?: string | null; isCustom?: boolean | null };
 
@@ -43,23 +69,30 @@ export const templateDay = (key: string, index: number, field: 'name' | 'notes',
 /** Aus einer Vorlage gestartete Pläne übersetzen - solange der Nutzer den Namen nicht geändert hat. */
 export function programName(program: Pick<TrainingProgram, 'name' | 'templateKey'>): string {
   const key = program.templateKey;
-  return key && textIn('en', `templates.${key}.name`) === program.name ? templateText(key, 'name', program.name) : program.name;
+  return key && textIn('en', `templates.${key}.name`) === program.name ? templateText(key, 'name', program.name) : planText(program.name);
 }
 
 export function dayName(program: Pick<TrainingProgram, 'templateKey'> | null | undefined, day: Pick<ProgramDay, 'name' | 'position'>): string {
   const key = program?.templateKey;
-  return key && textIn('en', `templates.${key}.days.${day.position}.name`) === day.name ? templateDay(key, day.position, 'name', day.name) : day.name;
+  return key && textIn('en', `templates.${key}.days.${day.position}.name`) === day.name ? templateDay(key, day.position, 'name', day.name) : planText(day.name);
 }
 
 export function dayNotes(program: Pick<TrainingProgram, 'templateKey'> | null | undefined, day: Pick<ProgramDay, 'notes' | 'position'>): string {
   const key = program?.templateKey;
   if (!day.notes) return '';
-  return key && textIn('en', `templates.${key}.days.${day.position}.notes`) === day.notes ? templateDay(key, day.position, 'notes', day.notes) : day.notes;
+  return key && textIn('en', `templates.${key}.days.${day.position}.notes`) === day.notes ? templateDay(key, day.position, 'notes', day.notes) : planText(day.notes);
 }
 
 // ---------- Hinweise aus Vorlagen ----------
 
-let noteKeys: Map<string, string> | null = null;
+let noteKeyMap: Map<string, string> | null = null;
+function noteKeys(): Map<string, string> {
+  if (!noteKeyMap) {
+    noteKeyMap = new Map();
+    for (const [key, text] of Object.entries(en.notes)) noteKeyMap.set(text, key);
+  }
+  return noteKeyMap;
+}
 
 /**
  * Hinweise der Vorlagen kommen als englischer Text (program-templates.json). Bekannte Texte werden übersetzt,
@@ -67,10 +100,6 @@ let noteKeys: Map<string, string> | null = null;
  */
 export function noteText(note: string | null | undefined): string {
   if (!note) return '';
-  if (!noteKeys) {
-    noteKeys = new Map();
-    for (const [key, text] of Object.entries(en.notes)) noteKeys.set(text, key);
-  }
-  const key = noteKeys.get(note);
-  return key ? tDynamic(`notes.${key}`, note) : note;
+  const key = noteKeys().get(note);
+  return key ? tDynamic(`notes.${key}`, note) : planText(note);
 }

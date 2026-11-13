@@ -125,7 +125,8 @@ public record ProgramDayResponse(int Id, int Position, string Name, string? Note
 
 public record ProgramResponse(
     int Id, string Name, string Goal, int Weeks, bool IsActive, DateTime? StartedAt, DateTime CreatedAt, string? TemplateKey,
-    List<ProgramDayResponse> Days, int? CycleWeeks, int? DeloadEvery, int TrainingDays = 0, int MatchDays = 0);
+    List<ProgramDayResponse> Days, int? CycleWeeks, int? DeloadEvery, int TrainingDays = 0, int MatchDays = 0,
+    Dictionary<string, Dictionary<string, string>>? Translations = null);
 
 /// <summary>Wochenplan eines Programms: Bitmasken Mo = 1 ... So = 64. Ein Tag ist nie gleichzeitig Training und Spiel.</summary>
 public record ScheduleInput(int TrainingDays, int MatchDays)

@@ -7,6 +7,7 @@ import { intlLocale, t, tn } from '@/i18n';
 import { exerciseName, goalName } from '@/i18n/content';
 import { formatDate, formatNumber } from '@/lib/format';
 import { WEEKDAYS, bit } from '@/lib/schedule';
+import { EVERY_DAY, daysBetween, parseDay } from '@/lib/routines';
 import { programDiff, type DayDiff, type DiffItem } from '@/lib/programDiff';
 import { useAppStore } from '@/stores/app';
 import type { AiAction } from '@/stores/ai';
@@ -41,11 +42,28 @@ const diff = computed(() => frozenDiff.value ?? liveDiff.value);
 // Nach Neuladen eines schon übernommenen Vorschlags gibt es keinen Vorher-Stand mehr: dann nur die Änderungsliste
 const showDiff = computed(() => !props.applied || frozenDiff.value !== null);
 
-const title = computed(() => t(`ai.actions.${props.action.type}`));
+const title = computed(() => (props.action.type === 'routine' && props.action.replacesId ? t('ai.actions.routineUpdate') : t(`ai.actions.${props.action.type}`)));
 const button = computed(() => ({
   program: t('ai.actions.saveProgram'), programUpdate: t('ai.actions.applyUpdate'), goal: t('ai.actions.saveGoal'), schedule: t('ai.actions.applySchedule'),
   workout: t('ai.actions.applyWorkout'),
+  routine: props.action.type === 'routine' && props.action.replacesId ? t('ai.actions.applyRoutine') : t('ai.actions.addRoutine'),
 })[props.action.type]);
+
+// Routine: Tage, Zeitraum, Schritte
+const routineDays = computed(() => {
+  if (props.action.type !== 'routine') return '';
+  const m = props.action.routine.days;
+  return m === EVERY_DAY ? t('routines.everyDay') : WEEKDAYS.filter((d) => m & bit(d)).map(dayShort).join(' · ');
+});
+const routinePeriod = computed(() => {
+  if (props.action.type !== 'routine') return '';
+  const r = props.action.routine;
+  const d = (day: string) => parseDay(day).toLocaleDateString(intlLocale(), { day: 'numeric', month: 'short' });
+  if (!r.endDate) return t('routines.noEnd');
+  const weeks = Math.round((daysBetween(r.startDate, r.endDate) + 1) / 7);
+  return `${d(r.startDate)} – ${d(r.endDate)}${weeks >= 1 && (daysBetween(r.startDate, r.endDate) + 1) % 7 === 0 ? ` · ${tn('routines.sheet.durationWeeks', weeks)}` : ''}`;
+});
+const openInfo = (id: number) => useAppStore().openExerciseInfo(id, 'overlay');
 
 // Änderung am laufenden Training: was genau, mit welchen Vorgaben
 const opName = (id: number | undefined, fallback?: string) => (id == null ? fallback ?? '' : exercisesById.value.has(id) ? nameOf(id) : fallback ?? `#${id}`);
@@ -152,6 +170,24 @@ const apply = () => { if (!locked.value) emit('apply'); };
                   <p v-if="o.note" class="mt-0.5 text-[11px] leading-snug text-slate-400">{{ o.note }}</p>
               </li>
           </ol>
+      </template>
+
+      <template v-else-if="action.type === 'routine'">
+          <p class="mt-1 break-words text-lg font-bold leading-tight text-white">{{ action.routine.title }}</p>
+          <p class="mt-1 font-mono text-[11px] text-slate-400">
+              <span class="routine-kind" :data-kind="action.routine.kind">{{ t(`routines.kinds.${action.routine.kind}`) }}</span> · {{ routineDays }} · {{ routinePeriod }}
+          </p>
+          <ol class="mt-2 space-y-1.5" data-test="ai-routine-steps">
+              <li v-for="(s, i) in action.routine.steps" :key="i" class="flex items-center gap-2 rounded-xl border border-white/5 bg-black/20 px-3 py-2">
+                  <span class="routine-step-no" aria-hidden="true">{{ i + 1 }}</span>
+                  <span class="min-w-0 flex-1 break-words text-sm text-slate-200">{{ s.name }}</span>
+                  <span v-if="s.dose" class="flex-shrink-0 font-mono text-[11px] text-slate-400">{{ s.dose }}</span>
+                  <button v-if="s.exerciseId != null" type="button" class="routine-icon-btn !h-9 !w-9" :aria-label="t('routines.showHow', { name: s.name })" @click="openInfo(s.exerciseId)">
+                      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+                  </button>
+              </li>
+          </ol>
+          <p v-if="action.routine.reason" class="mt-2 text-sm leading-relaxed text-slate-300">{{ action.routine.reason }}</p>
       </template>
 
       <template v-else-if="action.type === 'goal'">

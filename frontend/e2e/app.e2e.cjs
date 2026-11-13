@@ -1682,3 +1682,92 @@ test('AI during the workout: sees the live session and changes it with one tap (
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('routines: create in the plan tab, tick off on the start screen, coach proposes one, edits sync to the server', async () => {
+  const { page, errors } = await newPage();
+  const token = await register(page, `routine_${Date.now()}`);
+
+  // Anlegen im Plan-Tab: Name, Art, Tage, Dauer, Schritte (einer mit Katalog-Übung)
+  await page.click('nav >> text=PLAN');
+  await page.click('[data-test=routine-new]');
+  await page.waitForSelector('[data-test=routine-sheet]');
+  await page.fill('[data-test=routine-title]', 'Ankle prevention');
+  await page.click('[data-test=routine-sheet] [data-kind=prevention]');
+  await page.click('[data-test=routine-sheet] [data-weeks="3"]');
+  await page.fill('[data-test=routine-step-name] >> nth=0', 'Single-leg balance');
+  await page.fill('[data-test=routine-step-dose] >> nth=0', '3 x 30 s per side');
+  await page.click('[data-test=routine-add-step]');
+  await page.fill('[data-test=routine-step-name] >> nth=1', 'Plank');
+  await page.click('[data-test=routine-step-link] >> nth=1');
+  await page.fill('[data-test=routine-link-search]', 'plank');
+  await page.click('[data-link-pick="47"]');
+  await page.click('[data-test=routine-save]');
+  await page.waitForSelector('[data-test=routine-sheet]', { state: 'detached' });
+  await page.waitForSelector('[data-test=routines-panel] >> text=Ankle prevention');
+
+  let [routine] = await waitFor(async () => { const list = await api('GET', '/api/routines', token); return list.length === 1 && !list[0].pending ? list : null; });
+  assert.equal(routine.kind, 'prevention');
+  assert.equal(routine.days, 127);
+  assert.deepEqual(routine.steps.map((s) => s.exerciseId ?? null), [null, 47]);
+  assert.equal(Math.round((new Date(routine.endDate) - new Date(routine.startDate)) / 86400_000), 20);
+
+  // Start-Bildschirm: heute fällig -> abhaken (geht zum Server), Schritte aufklappen, Animation öffnen
+  await page.click('nav >> text=GYM');
+  await page.waitForSelector('[data-test=routines-today] >> text=0 of 1 done');
+  await page.click('[data-test=routine-check]');
+  await page.waitForSelector('[data-test=routines-today] >> text=All done for today');
+  routine = (await waitFor(async () => { const [r] = await api('GET', '/api/routines', token); return r.doneDates.length === 1 ? [r] : null; }))[0];
+  await page.click('[data-test=routines-today] >> text=Ankle prevention');
+  await page.click('[data-test=routine-step-info]');
+  await page.waitForSelector('[data-test=exercise-info] >> text=Plank');
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('[data-test=exercise-info]', { state: 'detached' });
+
+  // Coach schlägt eine Routine vor - gespeichert erst nach Tipp
+  await page.click('[data-test=coach-ask]');
+  await page.waitForSelector('[data-test=ai-chat]');
+  await page.fill('[data-test=ai-input]', 'Give me a stretching routine until the end of the month');
+  await page.click('[data-test=ai-send]');
+  await page.waitForSelector('[data-action=routine] >> text=Stretching after training');
+  assert.equal((await api('GET', '/api/routines', token)).length, 1, 'nothing saved before confirming');
+  await page.click('[data-action=routine] [data-test=ai-action-apply]');
+  await page.waitForSelector('[data-action=routine] >> text=Saved');
+  const both = await waitFor(async () => { const list = await api('GET', '/api/routines', token); return list.length === 2 ? list : null; });
+  const coach = both.find((r) => r.title === 'Stretching after training');
+  assert.equal(coach.source, 'coach');
+  assert.equal(coach.days, 1 | 4 | 16);
+  await page.click('[aria-label=Close] >> nth=-1');
+
+  // Bearbeiten und vorzeitig beenden: verschwindet aus "heute", bleibt unter "Beendet"
+  await page.click('nav >> text=PLAN');
+  await page.click('[data-test=routines-panel] >> text=Ankle prevention');
+  await page.click('[data-test=routine-finish]');
+  await page.waitForSelector('[data-test=routines-panel] summary >> text=Finished · 1');
+  await waitFor(async () => { const list = await api('GET', '/api/routines', token); const r = list.find((x) => x.title === 'Ankle prevention'); return r.endDate < r.startDate || r.endDate === r.startDate ? list : null; });
+
+  assert.deepEqual(errors, []);
+});
+
+test('AI plan written in another language can be translated from the plan tab', async () => {
+  const { page, errors } = await newPage();
+  const token = await register(page, `translate_${Date.now()}`);
+  await api('POST', '/api/programs', token, { name: 'Сила и скорость', goal: 'Strength', weeks: 6, days: [{ name: 'Ноги', notes: 'Не накануне матча.', exercises: [{ exerciseId: 1, sets: 3, repsMin: 5, repsMax: 5, note: '~80% 1RM' }] }] });
+  await page.reload();
+  await page.click('nav >> text=PLAN');
+  await page.click('[data-test=plan-translate]');
+  await page.waitForSelector('[data-test=plan-translate]', { state: 'detached' });
+  const [program] = await api('GET', '/api/programs', token);
+  assert.equal(program.translations['Ноги'].de, 'Ноги (DE)');
+  assert.deepEqual(errors, []);
+});
+
+/** Wiederholt fn bis ein Ergebnis kommt (Sync läuft im Hintergrund). */
+async function waitFor(fn, timeout = 5000) {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    const result = await fn();
+    if (result) return result;
+    if (Date.now() > deadline) throw new Error('waitFor timed out');
+    await new Promise((r) => setTimeout(r, 150));
+  }
+}
