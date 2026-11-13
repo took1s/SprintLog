@@ -953,6 +953,8 @@ export const de: Messages = {
     placeholder: 'Deine Frage …',
     send: 'Senden',
     thinking: 'Coach denkt nach …',
+    stages: { reading: 'Liest deine Frage', data: 'Schaut in dein Training', analysing: 'Wägt Belastung und Fortschritt ab', writing: 'Schreibt die Antwort' },
+    thinkingTime: '{s} s',
     remaining: 'Heute noch {n} Fragen',
     empty: 'Frag alles zu heute, Erholung, deinem Plan oder deiner Verletzung. Der Coach sieht deine Einheiten, deinen Wochenplan, die Erholung und dein Befinden.',
     suggestions: {

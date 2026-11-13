@@ -952,6 +952,8 @@ export const en = {
     placeholder: 'Your question …',
     send: 'Send',
     thinking: 'Coach is thinking …',
+    stages: { reading: 'Reading your question', data: 'Looking at your training', analysing: 'Weighing load and progress', writing: 'Writing the answer' },
+    thinkingTime: '{s} s',
     remaining: '{n} questions left today',
     empty: 'Ask anything about today, recovery, your plan or your injury. The coach sees your workouts, week plan, recovery and check-ins.',
     suggestions: {

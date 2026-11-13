@@ -79,6 +79,7 @@ builder.Services.AddOptions<AiOptions>().Configure<IConfiguration>((options, con
         options.Owners.Add(name);
 });
 builder.Services.AddSingleton<AiQuota>();
+builder.Services.AddSingleton<AiRequests>();
 builder.Services.AddScoped<AiTools>();
 builder.Services.AddScoped<CoachMemoryService>();
 if (!string.IsNullOrWhiteSpace(builder.Configuration["Ai:AnthropicApiKey"] ?? builder.Configuration["ANTHROPIC_API_KEY"]))

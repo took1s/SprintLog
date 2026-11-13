@@ -154,14 +154,19 @@ public sealed class FakeAiClient : IAiClient
     {
         lock (_lock) Requests.Clear();
         IsEnabled = true;
+        Delay = null;
         Reply = reply ?? ((_, _) => AiResponse.FromText("ok"));
     }
 
-    public Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct)
+    /// <summary>Wartet vor der Antwort (z. B. bis ein Test parallel nachfragt).</summary>
+    public Func<Task>? Delay { get; set; }
+
+    public async Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct)
     {
         int n;
         // Kopie: der Server hängt nach dem Aufruf weitere Nachrichten an dieselbe Liste
         lock (_lock) { Requests.Add(request with { Messages = (JsonArray)request.Messages.DeepClone() }); n = Requests.Count - 1; }
-        return Task.FromResult(Reply(request, n));
+        if (Delay is { } delay) await delay();
+        return Reply(request, n);
     }
 }

@@ -51,7 +51,7 @@ export interface CoachMemory {
 }
 /** Was der Coach in einer Antwort an seinem Gedächtnis geändert hat (Hinweis unter der Antwort). */
 export interface MemoryChange { action: 'saved' | 'updated' | 'forgotten'; id: number; category: MemoryCategory; content: string; undone?: boolean }
-export interface AiChatMessage { role: 'user' | 'assistant'; content: string; at: string; mode?: AiMode; actions?: AiAction[]; applied?: number[]; memory?: MemoryChange[] }
+export interface AiChatMessage { role: 'user' | 'assistant'; content: string; at: string; mode?: AiMode; actions?: AiAction[]; applied?: number[]; memory?: MemoryChange[]; /** Nur Fragen: gleiche Id beim Wiederholen. */ requestId?: string }
 
 export interface AiReportSection { area?: string; title: string; status: 'good' | 'watch' | 'risk'; points: string[] }
 export interface AiReport { headline: string; summary: string; sections: AiReportSection[]; recommendations: { title: string; why: string; action: string }[]; nextWeekFocus: string }
@@ -89,6 +89,9 @@ function errorCode(e: unknown): AiErrorCode {
 const readMode = (): AiMode => { try { return localStorage.getItem(MODE_KEY) === 'quick' ? 'quick' : 'deep'; } catch { return 'deep'; } };
 
 /** Pausen vor automatischen Wiederholungen nach einem Netzwerkfehler (z. B. eingeschlafene Verbindung nach dem Aufwachen). */
+/** Id je KI-Anfrage (Wiederholungen nach Netzabbruch kosten so nichts extra). */
+const newRequestId = (): string =>
+  (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`).replace(/[^A-Za-z0-9_-]/g, '');
 const RETRY_DELAYS = [1200, 3500];
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -225,13 +228,17 @@ export const useAiStore = defineStore('ai', () => {
     void loadStatus();
   }
 
-  async function ask(question: string) {
+  /**
+   * @param requestId gleiche Id = gleiche Frage: nach Netzabbruch oder geschlossener App liefert der Server die schon
+   * bezahlte Antwort erneut aus, statt ein zweites Mal abzubuchen.
+   */
+  async function ask(question: string, requestId: string = newRequestId()) {
     const q = question.trim();
     if (q.length < 2 || busy.value) return;
     if (!deviceOnline.value) { error.value = 'offline'; return; }
     const history = messages.value.slice(-HISTORY).map(({ role, content }) => ({ role, content: content.slice(0, 2000) }));
     const m = mode.value;
-    messages.value = [...messages.value, { role: 'user', content: q, at: new Date().toISOString(), mode: m }];
+    messages.value = [...messages.value, { role: 'user', content: q, at: new Date().toISOString(), mode: m, requestId }];
     persist();
     busy.value = true;
     error.value = null;
@@ -239,7 +246,7 @@ export const useAiStore = defineStore('ai', () => {
       // Im Training sieht der Coach die laufende Einheit und darf sie (per Karte) ändern
       const session = app.isEditing ? null : app.liveSessionForAi();
       const res = await aiPost<{ answer: string; remaining: number; actions?: AiAction[]; memory?: MemoryChange[] }>('/api/ai/ask', {
-        question: q, context: context(), history, locale: locale.value, mode: m, ...(session ? { session } : {}),
+        question: q, context: context(), history, locale: locale.value, mode: m, requestId, ...(session ? { session } : {}),
       });
       messages.value = [...messages.value, {
         role: 'assistant', content: res.answer, at: new Date().toISOString(), mode: m,
@@ -263,7 +270,7 @@ export const useAiStore = defineStore('ai', () => {
     if (!last || last.role !== 'user') return;
     messages.value = messages.value.slice(0, -1);
     if (last.mode) mode.value = last.mode;
-    await ask(last.content);
+    await ask(last.content, last.requestId ?? newRequestId());
   }
 
   /** Chat öffnen und direkt eine Frage stellen (z. B. "Mit dem Coach besprechen" aus der Analyse). */
@@ -362,7 +369,7 @@ export const useAiStore = defineStore('ai', () => {
     analysisBusy.value = period;
     analysisError.value = null;
     try {
-      const res = await aiPost<{ report: AiReport; generatedAt: string; remaining: number }>('/api/ai/analysis', { context: context(), locale: locale.value, period });
+      const res = await aiPost<{ report: AiReport; generatedAt: string; remaining: number }>('/api/ai/analysis', { context: context(), locale: locale.value, period, requestId: newRequestId() });
       analysis.value = { report: res.report, generatedAt: res.generatedAt, period };
       if (keys.value) writeJson(keys.value.aiAnalysis, analysis.value);
       setRemaining(res.remaining);
@@ -526,7 +533,7 @@ export const useAiStore = defineStore('ai', () => {
     pl.result = null;
     try {
       const res = await aiPost<{ program: AiProgramDraft; summary: string; remaining: number }>('/api/ai/plan', {
-        answers: { ...answers }, notes: pl.notes.trim() || null, context: context(), locale: locale.value,
+        answers: { ...answers }, notes: pl.notes.trim() || null, context: context(), locale: locale.value, requestId: newRequestId(),
       });
       pl.result = { program: res.program, summary: res.summary, answers: { ...answers } };
       if (status.value) status.value = { ...status.value, remaining: res.remaining };

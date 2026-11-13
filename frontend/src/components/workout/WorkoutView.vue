@@ -73,9 +73,14 @@ function measure() {
   });
 }
 
+/** iOS: langes Drücken startet sonst Textauswahl/Lupe, bevor das Ziehen beginnt. */
+function blockTouchSelect(e: TouchEvent) { if (e.cancelable) e.preventDefault(); }
+
 function startDrag(e: PointerEvent, id: number) {
   if (e.pointerType === 'mouse' && e.button !== 0) return;
   e.preventDefault();
+  window.getSelection()?.removeAllRanges();
+  document.documentElement.classList.add('is-reordering');
   (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
   measure();
   const from = tops.findIndex((x) => x.id === id);
@@ -115,12 +120,13 @@ function autoScroll() {
 
 function endDrag() {
   const d = drag.value;
+  document.documentElement.classList.remove('is-reordering');
   cancelAnimationFrame(raf);
   drag.value = null;
   if (d && d.to !== d.from) reorderBlock(d.id, d.to);
 }
 
-onBeforeUnmount(() => cancelAnimationFrame(raf));
+onBeforeUnmount(() => { cancelAnimationFrame(raf); document.documentElement.classList.remove('is-reordering'); });
 
 /** Verschiebung jedes Blocks während des Ziehens. */
 function dragStyle(id: number, index: number): Record<string, string> | undefined {
@@ -255,9 +261,10 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                   </button>
                   <div class="-mr-2 flex flex-shrink-0 items-start">
                   <!-- Griff: gedrückt halten und ziehen -->
-                  <button v-if="workoutBlocks.length > 1" type="button" class="-mt-1 flex h-11 w-11 flex-shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-slate-500 hover:bg-white/5 hover:text-white active:cursor-grabbing"
+                  <button v-if="workoutBlocks.length > 1" type="button" class="drag-handle -mt-1 flex h-11 w-11 flex-shrink-0 cursor-grab items-center justify-center rounded-lg text-slate-500 hover:bg-white/5 hover:text-white active:cursor-grabbing"
                           :aria-label="t('workout.dragHandle')" data-test="drag-handle"
-                          @pointerdown="startDrag($event, block.exercise.id)" @pointermove="moveDrag" @pointerup="endDrag" @pointercancel="endDrag">
+                          @pointerdown="startDrag($event, block.exercise.id)" @pointermove="moveDrag" @pointerup="endDrag" @pointercancel="endDrag"
+                          @touchstart="blockTouchSelect" @contextmenu.prevent @selectstart.prevent>
                       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
                   </button>
                   <button type="button" @click="sheetFor = block.exercise.id"
