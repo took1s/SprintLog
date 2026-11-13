@@ -157,8 +157,8 @@ public static class AiEndpoints
         var errors = input.Validate();
         if (errors.HasErrors) return errors.ToResult();
         var limit = await quota.LimitForAsync(http.User, db, requestCt);
-        return await requests.RunOnceAsync(userId, "analysis", input.RequestId, ct => Charged(quota, userId, Costs["analysis"], limit,
-            () => AnalysisWork(input, userId, limit, ai, quota, tools, db, memory, options, time, logs, ct)));
+        return await requests.RunOnceAsync(userId.Value, "analysis", input.RequestId, ct => Charged(quota, userId.Value, Costs["analysis"], limit,
+            () => AnalysisWork(input, userId.Value, limit, ai, quota, tools, db, memory, options, time, logs, ct)));
     }
 
     private static async Task<IResult> AnalysisWork(AiAnalysisInput input, int userId, int limit, IAiClient ai, AiQuota quota, AiTools tools, AppDbContext db,
