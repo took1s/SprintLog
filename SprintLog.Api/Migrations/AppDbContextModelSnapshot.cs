@@ -3217,6 +3217,12 @@ namespace SprintLog.Api.Migrations
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("date");
 
+                    b.Property<List<string>>("Times")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text[]")
+                        .HasDefaultValueSql("'{}'::text[]");
+
                     b.Property<int>("TimesPerDay")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -3822,6 +3828,31 @@ namespace SprintLog.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.OwnsMany("SprintLog.Api.Models.RoutinePain", "Pain", b1 =>
+                        {
+                            b1.Property<int>("RoutineId")
+                                .HasColumnType("integer");
+
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            b1.Property<DateOnly>("Day")
+                                .HasColumnType("date");
+
+                            b1.Property<int>("Level")
+                                .HasColumnType("integer");
+
+                            b1.HasKey("RoutineId", "Id");
+
+                            b1.ToTable("Routines");
+
+                            b1.ToJson("Pain");
+
+                            b1.WithOwner()
+                                .HasForeignKey("RoutineId");
+                        });
+
                     b.OwnsMany("SprintLog.Api.Models.RoutineStep", "Steps", b1 =>
                         {
                             b1.Property<int>("RoutineId")
@@ -3850,6 +3881,8 @@ namespace SprintLog.Api.Migrations
                             b1.WithOwner()
                                 .HasForeignKey("RoutineId");
                         });
+
+                    b.Navigation("Pain");
 
                     b.Navigation("Steps");
                 });
