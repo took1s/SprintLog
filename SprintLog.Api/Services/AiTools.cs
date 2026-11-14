@@ -24,6 +24,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
     public const string ForgetMemory = "forget_memory";
     public const string ProposeWorkoutChange = "propose_workout_change";
     public const string ProposeRoutine = "propose_routine";
+    public const string ProposeSession = "propose_session";
     public const int MaxWorkoutOps = 10;
 
     /// <summary>Gedächtnis-Änderungen dieser Anfrage (Hinweise im Chat). AiTools lebt pro Request.</summary>
@@ -166,6 +167,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
           "title":{"type":"string","description":"max 40 characters, in the athlete's language"},
           "kind":{"type":"string","enum":["mobility","rehab","prevention","activation","recovery","other"]},
           "days":{"type":"array","items":{"type":"integer","minimum":0,"maximum":6},"description":"Weekdays 0 = Monday ... 6 = Sunday; all 7 = daily"},
+          "timesPerDay":{"type":"integer","minimum":1,"maximum":6,"description":"How often per scheduled day, e.g. 3 for 'stretch 3x daily' (default 1)"},
           "startDate":{"type":"string","description":"yyyy-MM-dd, default today"},
           "endDate":{"type":"string","description":"yyyy-MM-dd until when (inclusive); omit only for permanent habits"},
           "reason":{"type":"string","description":"Why, max 200 characters (e.g. injury, what the physio said)"},
@@ -175,8 +177,29 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
           "replacesId":{"type":"string","description":"id of an existing routine to change or end"}}}
         """));
 
+    public static readonly AiTool ProposeSessionTool = new(ProposeSession,
+        "Schedule a single extra session on a date next to the plan (e.g. a speed session on a free Saturday, a recovery or rehab session, a make-up session). " +
+        "The athlete sees a card and adds it with one tap; on that day the app offers to start it with your targets. " +
+        "RULE: never on a training or match day of the active plan (see <calendar>) - one session per day. If the athlete needs it on a plan day, " +
+        "first move the plan with propose_schedule (or change the plan day with propose_program_update) in the same answer, then propose the session. " +
+        "Avoid hard sessions the day before a match. To move, change or cancel an existing session send its id as replacesId (status 'skipped' cancels it).",
+        Schema("""
+        {"type":"object","required":["date","title","category","exercises","reason"],"properties":{
+          "date":{"type":"string","description":"yyyy-MM-dd"},
+          "title":{"type":"string","description":"max 40 characters, in the athlete's language"},
+          "category":{"type":"string","enum":["Gym","Football"]},
+          "notes":{"type":"string","description":"Optional coaching notes, max 200 characters"},
+          "reason":{"type":"string","description":"Why this session, max 200 characters"},
+          "status":{"type":"string","enum":["planned","skipped"],"description":"skipped = cancel an existing session"},
+          "replacesId":{"type":"string","description":"id of an existing planned session (see <calendar>)"},
+          "exercises":{"type":"array","minItems":1,"maxItems":12,"items":{"type":"object","required":["exerciseId","sets"],"properties":{
+            "exerciseId":{"type":"integer"},"sets":{"type":"integer"},"repsMin":{"type":"integer"},"repsMax":{"type":"integer"},
+            "weight":{"type":"number","description":"kg"},"distance":{"type":"number","description":"meters"},"time":{"type":"number","description":"seconds"},
+            "targetRpe":{"type":"number"},"note":{"type":"string","description":"max 80 characters"}}}}}}
+        """));
+
     public static readonly IReadOnlyList<AiTool> DataTools = new[] { Programs, ExerciseHistory, PersonalRecords, TrainingSummary, LoadMetrics, WellnessTrend, MatchStats, SearchExercises };
-    public static readonly IReadOnlyList<AiTool> ChatTools = DataTools.Concat(new[] { ProposeProgramTool, ProposeProgramUpdateTool, ProposeGoalTool, ProposeScheduleTool, ProposeRoutineTool, RememberTool, ForgetMemoryTool }).ToList();
+    public static readonly IReadOnlyList<AiTool> ChatTools = DataTools.Concat(new[] { ProposeProgramTool, ProposeProgramUpdateTool, ProposeGoalTool, ProposeScheduleTool, ProposeRoutineTool, ProposeSessionTool, RememberTool, ForgetMemoryTool }).ToList();
 
     /// <summary>Im Training: zusätzlich die laufende Einheit ändern.</summary>
     public static readonly IReadOnlyList<AiTool> LiveWorkoutTools = ChatTools.Append(ProposeWorkoutChangeTool).ToList();
@@ -204,6 +227,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
                 ProposeSchedule => ScheduleAction(use.Input, actions),
                 ProposeWorkoutChange => await WorkoutChangeActionAsync(userId, use.Input, actions, ct),
                 ProposeRoutine => await RoutineActionAsync(userId, use.Input, actions, ct),
+                ProposeSession => await SessionActionAsync(userId, use.Input, actions, ct),
                 Remember => await RememberAsync(userId, use.Input, ct),
                 ForgetMemory => await ForgetAsync(userId, Int(use.Input, "id"), ct),
                 _ => new { error = $"Unknown tool {use.Name}" },
@@ -226,6 +250,10 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
 
     private static string DaysText(int mask) => mask == 127 ? "daily" : string.Join(",", Enumerable.Range(0, 7).Where(i => (mask & (1 << i)) != 0).Select(i => DayCodes[i]));
 
+    /// <summary>Routinen und Kalender für den Prompt (immer zusammen gebraucht).</summary>
+    public async Task<(string Routines, string Calendar)> PlanningPromptAsync(int userId, CancellationToken ct) =>
+        (await RoutinesPromptAsync(userId, ct), await CalendarPromptAsync(userId, ct));
+
     /// <summary>Laufende und kürzlich beendete Routinen mit Erfüllung der letzten 14 Tage - Block im Prompt.</summary>
     public async Task<string> RoutinesPromptAsync(int userId, CancellationToken ct)
     {
@@ -240,13 +268,16 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
             var to = r.EndDate is { } e && e < today ? e : today;
             var due = 0;
             for (var d = from; d <= to; d = d.AddDays(1)) if ((r.Days & DayBit(d)) != 0) due++;
-            var done = r.DoneDates.Count(d => d >= from && d <= to && (r.Days & DayBit(d)) != 0);
+            // Ein Tag zählt als erledigt, wenn alle Durchgänge abgehakt sind (z. B. 3 von 3)
+            var perDay = r.DoneDates.GroupBy(d => d).ToDictionary(g => g.Key, g => g.Count());
+            var done = perDay.Count(kv => kv.Key >= from && kv.Key <= to && (r.Days & DayBit(kv.Key)) != 0 && kv.Value >= r.TimesPerDay);
+            var todayCount = perDay.GetValueOrDefault(today);
             var state = r.StartDate > today ? "upcoming" : r.EndDate is { } end && end < today ? "ended" : "active";
             sb.Append("- id ").Append(r.ClientId).Append(" | ").Append(r.Title).Append(" | ").Append(r.Kind).Append(" | ").Append(state)
               .Append(" | ").Append(DaysText(r.Days)).Append(" | ").Append(r.StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
               .Append(" -> ").Append(r.EndDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "open")
               .Append(" | done ").Append(done).Append('/').Append(due).Append(" scheduled days in the last 14")
-              .Append(r.DoneDates.Contains(today) ? " | done today" : string.Empty)
+              .Append(r.TimesPerDay > 1 ? $" | {r.TimesPerDay}x per day, today {todayCount}/{r.TimesPerDay}" : todayCount > 0 ? " | done today" : string.Empty)
               .Append(" | by ").Append(r.Source);
             if (r.Reason is { } why) sb.Append(" | reason: ").Append(why);
             sb.Append(" | steps: ").Append(string.Join("; ", r.Steps.Select(s => s.Dose is null ? s.Name : $"{s.Name} ({s.Dose})"))).Append('\n');
@@ -307,7 +338,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
             ["replacesId"] = existing?.ClientId,
             ["routine"] = new JsonObject
             {
-                ["title"] = title, ["kind"] = kind, ["days"] = days,
+                ["title"] = title, ["kind"] = kind, ["days"] = days, ["timesPerDay"] = Math.Clamp(Int(input, "timesPerDay") ?? existing?.TimesPerDay ?? 1, 1, Routine.MaxTimesPerDay),
                 ["startDate"] = start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 ["endDate"] = end?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 ["reason"] = Clip(Str(input, "reason"), 200) is { Length: > 0 } why ? why : null,
@@ -315,6 +346,109 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
             },
         });
         return new { shown = true, note = existing is null ? "The athlete adds it with one tap. Say in one sentence why and until when." : "The athlete confirms the change with one tap." };
+    }
+
+    // ---------- Geplante Einheiten und Kalender ----------
+
+    /// <summary>
+    /// Die nächsten 3 Wochen für den Prompt: Trainings-/Spieltage des Plans, geplante Einzel-Einheiten, fällige Routinen;
+    /// dazu Einheiten der letzten 14 Tage, die geplant waren (erledigt, ausgelassen oder verpasst).
+    /// </summary>
+    public async Task<string> CalendarPromptAsync(int userId, CancellationToken ct)
+    {
+        var today = DateOnly.FromDateTime(Now);
+        var active = await db.Programs.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive, ct);
+        var planned = await db.PlannedWorkouts.AsNoTracking().Where(p => p.UserId == userId && p.Date >= today.AddDays(-14) && p.Date <= today.AddDays(21))
+            .OrderBy(p => p.Date).ToListAsync(ct);
+        var routines = await db.Routines.AsNoTracking().Where(r => r.UserId == userId && r.StartDate <= today.AddDays(21) && (r.EndDate == null || r.EndDate >= today))
+            .ToListAsync(ct);
+        var sb = new System.Text.StringBuilder();
+        sb.Append("Today: ").Append(today.ToString("yyyy-MM-dd ddd", CultureInfo.InvariantCulture)).Append('\n');
+        sb.Append(active is null ? "No active plan.\n" : $"Plan '{active.Name}': training {DaysText(active.TrainingDays)}{(active.TrainingDays == 0 ? " (no fixed days)" : "")}, match {(active.MatchDays == 0 ? "none" : DaysText(active.MatchDays))}\n");
+        foreach (var p in planned.Where(p => p.Date < today))
+            sb.Append("- past ").Append(p.Date.ToString("yyyy-MM-dd ddd", CultureInfo.InvariantCulture)).Append(" | id ").Append(p.ClientId).Append(" | ").Append(p.Title)
+              .Append(" | ").Append(p.Status == "planned" ? "missed" : p.Status).Append('\n');
+        for (var d = today; d <= today.AddDays(20); d = d.AddDays(1))
+        {
+            var parts = new List<string>();
+            if (PlannedWorkoutRules.ConflictOn(d, active) is { } kind) parts.Add(kind == "match" ? "MATCH" : "plan training");
+            foreach (var p in planned.Where(p => p.Date == d && p.Status != "skipped"))
+                parts.Add($"session id {p.ClientId} '{p.Title}' ({p.Category}, {p.Status}, by {p.Source}): {string.Join(", ", p.Exercises.Select(x => $"#{x.ExerciseId} {x.Sets}x"))}");
+            var due = routines.Where(r => r.StartDate <= d && (r.EndDate == null || r.EndDate >= d) && (r.Days & DayBit(d)) != 0).Select(r => r.Title).ToList();
+            if (due.Count > 0) parts.Add("routines: " + string.Join(", ", due));
+            sb.Append(d.ToString("yyyy-MM-dd ddd", CultureInfo.InvariantCulture)).Append(": ").Append(parts.Count == 0 ? "free" : string.Join(" | ", parts)).Append('\n');
+        }
+        return sb.ToString().TrimEnd();
+    }
+
+    /// <summary>Einzel-Einheit vorschlagen/verschieben/absagen: Karte im Client, gespeichert erst nach Bestätigung (PUT /api/planned/{id}).</summary>
+    private async Task<object> SessionActionAsync(int userId, JsonElement input, List<JsonObject> actions, CancellationToken ct)
+    {
+        var today = DateOnly.FromDateTime(Now);
+        if (!DateOnly.TryParseExact(Str(input, "date") ?? string.Empty, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+            return new { error = "date must be yyyy-MM-dd." };
+        if (date < today || date > today.AddDays(120)) return new { error = "date must be between today and 120 days ahead." };
+        var title = Clip(Str(input, "title"), 40);
+        if (title.Length == 0) return new { error = "title is required." };
+        var category = Str(input, "category") == "Football" ? "Football" : "Gym";
+        var status = Str(input, "status") == "skipped" ? "skipped" : "planned";
+
+        var replaces = Str(input, "replacesId");
+        PlannedWorkout? existing = null;
+        if (replaces is not null)
+        {
+            existing = await db.PlannedWorkouts.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId && p.ClientId == replaces, ct);
+            if (existing is null) return new { error = $"Session {replaces} not found. Use an id from <calendar>." };
+        }
+
+        // Kein Termin auf einem Plan-Tag. Ein Wochenplan-Vorschlag in derselben Antwort zählt schon (der Nutzer wendet ihn zuerst an).
+        var active = await db.Programs.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive, ct);
+        var proposed = actions.LastOrDefault(a => (string?)a["type"] == "schedule");
+        var training = proposed is not null ? (int)proposed["trainingDays"]! : active?.TrainingDays ?? 0;
+        var match = proposed is not null ? (int)proposed["matchDays"]! : active?.MatchDays ?? 0;
+        if (status == "planned" && PlannedWorkoutRules.ConflictOn(date, training, match) is { } kind)
+            return new
+            {
+                error = $"{date:yyyy-MM-dd} is a {kind} day of the plan ({DaysText(kind == "match" ? match : training)}). One session per day: pick a free day from <calendar>, " +
+                        "or first call propose_schedule to move the plan's training days, then propose the session again.",
+            };
+
+        if (!input.TryGetProperty("exercises", out var exEl) || exEl.ValueKind != JsonValueKind.Array) return new { error = "exercises are required." };
+        var ids = exEl.EnumerateArray().Select(x => Int(x, "exerciseId")).Where(x => x is not null).Select(x => x!.Value).Distinct().ToList();
+        var catalog = await db.Exercises.AsNoTracking().VisibleTo(userId).Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
+        var list = new JsonArray();
+        var unknown = new List<int>();
+        foreach (var x in exEl.EnumerateArray())
+        {
+            if (list.Count >= 12 || x.ValueKind != JsonValueKind.Object) break;
+            if (Int(x, "exerciseId") is not { } id || !catalog.TryGetValue(id, out var ex)) { if (Int(x, "exerciseId") is { } bad) unknown.Add(bad); continue; }
+            var item = new JsonObject { ["exerciseId"] = id, ["exerciseName"] = ex.Name, ["sets"] = Math.Clamp(Int(x, "sets") ?? 3, 1, 10) };
+            int? repsMin = Int(x, "repsMin") is { } rmin ? Math.Clamp(rmin, 1, 100) : null;
+            int? repsMax = Int(x, "repsMax") is { } rmax ? Math.Clamp(rmax, 1, 100) : repsMin;
+            if (repsMin is not null && repsMax < repsMin) repsMax = repsMin;
+            if (repsMin is not null) { item["repsMin"] = repsMin; item["repsMax"] = repsMax; }
+            if (Num(x, "weight") is { } w and > 0 and <= 500) item["weight"] = Math.Round(w * 4) / 4;
+            if (Num(x, "distance") is { } dist and > 0 and <= 50_000) item["distance"] = Math.Round(dist);
+            if (Num(x, "time") is { } sec and > 0 and <= 7200) item["time"] = Math.Round(sec);
+            if (Num(x, "targetRpe") is { } rpe and >= 5 and <= 10) item["targetRpe"] = Math.Round(rpe * 2) / 2;
+            if (Clip(Str(x, "note"), 80) is { Length: > 0 } note) item["note"] = note;
+            list.Add(item);
+        }
+        if (list.Count == 0) return new { error = $"No valid catalog exercise{(unknown.Count > 0 ? $" (unknown ids: {string.Join(", ", unknown)})" : "")}. Use search_exercises." };
+
+        actions.Add(new JsonObject
+        {
+            ["type"] = "session",
+            ["replacesId"] = existing?.ClientId,
+            ["session"] = new JsonObject
+            {
+                ["date"] = date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), ["title"] = title, ["category"] = category, ["status"] = status,
+                ["notes"] = Clip(Str(input, "notes"), 200) is { Length: > 0 } n ? n : null,
+                ["reason"] = Clip(Str(input, "reason"), 200) is { Length: > 0 } why ? why : null,
+                ["exercises"] = list,
+            },
+        });
+        return new { shown = true, note = status == "skipped" ? "The athlete confirms the cancellation." : "The athlete adds it with one tap. Mention the day and the focus in one sentence." };
     }
 
     // ---------- Gedächtnis ----------

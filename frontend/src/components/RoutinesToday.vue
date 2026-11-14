@@ -1,11 +1,14 @@
 <script setup lang="ts">
-// Heute fällige Routinen als Checkliste auf dem Start-Bildschirm: abhaken mit einem Tipp, Schritte aufklappen,
-// verknüpfte Übungen zeigen per Tipp ihre Animation. Ohne fällige Routine erscheint nichts.
+// Heute fällige Routinen als Checkliste auf dem Start-Bildschirm: abhaken mit einem Tipp (bei mehrmals täglich zählt
+// jeder Tipp einen Durchgang), aufklappen für Schritte, Durchgänge einzeln, Nachtragen eines verpassten Tages und Verlauf.
+// Ohne fällige Routine erscheint nichts.
 import { computed, ref } from 'vue';
 import { storeToRefs } from 'pinia';
-import { t } from '@/i18n';
+import { intlLocale, t } from '@/i18n';
 import { useAppStore } from '@/stores/app';
 import { useRoutinesStore } from '@/stores/routines';
+import { parseDay, type Routine } from '@/lib/routines';
+import { tap as haptic } from '@/lib/native';
 import RoutineMeta from './RoutineMeta.vue';
 
 const app = useAppStore();
@@ -19,10 +22,26 @@ const toggleOpen = (id: string) => { open.value = open.value === id ? null : id;
 /** Gerade abgehakt: kurze Bestätigungs-Animation. */
 const justDone = ref<string | null>(null);
 
-function toggle(id: string, done: boolean) {
-  routines.setDone(id, !done);
-  justDone.value = done ? null : id;
-  if (!done) window.setTimeout(() => { if (justDone.value === id) justDone.value = null; }, 700);
+const p = (r: Routine) => routines.progressOf(r);
+const date = (day: string) => parseDay(day).toLocaleDateString(intlLocale(), { weekday: 'short', day: 'numeric', month: 'short' });
+
+/** Großer Haken: nächster Durchgang - ist alles erledigt, wird der letzte wieder gelöst. */
+function main(r: Routine) {
+  const before = p(r);
+  routines.tap(r.clientId, Math.min(before.countToday + 1, r.timesPerDay));
+  haptic();
+  const nowDone = p(r).doneToday;
+  justDone.value = nowDone && !before.doneToday ? r.clientId : null;
+  if (justDone.value) window.setTimeout(() => { if (justDone.value === r.clientId) justDone.value = null; }, 700);
+}
+
+/** Ring um den Haken: Anteil der heutigen Durchgänge (Kreisumfang 2π·19). */
+const RING = 2 * Math.PI * 19;
+const ringOffset = (r: Routine) => RING * (1 - Math.min(1, p(r).countToday / r.timesPerDay));
+
+function mainLabel(r: Routine) {
+  if (r.timesPerDay === 1) return p(r).doneToday ? t('routines.markOpen', { title: r.title }) : t('routines.markDone', { title: r.title });
+  return t('routines.tickLabel', { title: r.title, done: p(r).countToday, total: r.timesPerDay });
 }
 </script>
 
@@ -35,30 +54,47 @@ function toggle(id: string, done: boolean) {
       <ul class="mt-2 space-y-1.5">
           <li v-for="r in forToday" :key="r.clientId" class="rounded-xl" :data-routine="r.clientId">
               <div class="flex items-center gap-2">
-                  <button type="button" class="routine-check" :class="{ 'is-done': routines.progressOf(r).doneToday, 'is-pop': justDone === r.clientId }"
-                          :aria-pressed="routines.progressOf(r).doneToday"
-                          :aria-label="routines.progressOf(r).doneToday ? t('routines.markOpen', { title: r.title }) : t('routines.markDone', { title: r.title })"
-                          data-test="routine-check" @click="toggle(r.clientId, routines.progressOf(r).doneToday)">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path class="routine-check-path" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+                  <button type="button" class="routine-check" :class="{ 'is-done': p(r).doneToday, 'is-pop': justDone === r.clientId, 'is-multi': r.timesPerDay > 1 }"
+                          :aria-pressed="p(r).doneToday" :aria-label="mainLabel(r)" data-test="routine-check" @click="main(r)">
+                      <svg v-if="r.timesPerDay > 1 && !p(r).doneToday" class="routine-ring" viewBox="0 0 44 44" aria-hidden="true">
+                          <circle cx="22" cy="22" r="19" class="routine-ring-track" />
+                          <circle cx="22" cy="22" r="19" class="routine-ring-fill" :style="{ strokeDasharray: RING, strokeDashoffset: ringOffset(r) }" />
+                      </svg>
+                      <span v-if="r.timesPerDay > 1 && !p(r).doneToday" class="routine-count" aria-hidden="true">{{ p(r).countToday }}/{{ r.timesPerDay }}</span>
+                      <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path class="routine-check-path" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></svg>
                   </button>
                   <button type="button" class="flex min-h-[2.75rem] min-w-0 flex-1 items-center gap-2 rounded-lg px-1 text-left" :aria-expanded="open === r.clientId" @click="toggleOpen(r.clientId)">
                       <span class="min-w-0 flex-1">
-                          <span class="block truncate text-sm font-bold" :class="routines.progressOf(r).doneToday ? 'text-slate-400 line-through decoration-1' : 'text-white'">{{ r.title }}</span>
+                          <span class="block truncate text-sm font-bold" :class="p(r).doneToday ? 'text-slate-400 line-through decoration-1' : 'text-white'">{{ r.title }}</span>
                           <RoutineMeta :routine="r" compact />
                       </span>
+                      <span v-if="p(r).missedRecent" class="routine-missed-dot" :title="t('routines.missedOn', { date: date(p(r).missedRecent!) })" aria-hidden="true"></span>
                       <svg class="h-3.5 w-3.5 flex-shrink-0 text-slate-400 transition-transform duration-200" :class="{ 'rotate-90': open === r.clientId }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
                   </button>
               </div>
-              <ol v-if="open === r.clientId" class="mb-1 ml-12 mt-1 space-y-1" data-test="routine-today-steps">
-                  <li v-for="(s, i) in r.steps" :key="i" class="flex items-center gap-2 text-sm">
-                      <span class="min-w-0 flex-1 break-words text-slate-200">{{ s.name }}</span>
-                      <span v-if="s.dose" class="flex-shrink-0 font-mono text-[11px] text-slate-400">{{ s.dose }}</span>
-                      <button v-if="s.exerciseId != null" type="button" class="routine-icon-btn !h-9 !w-9" :aria-label="t('routines.showHow', { name: s.name })" @click="app.openExerciseInfo(s.exerciseId, 'overlay')" data-test="routine-step-info">
-                          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+              <div v-if="open === r.clientId" class="mb-1 ml-12 mt-1" data-test="routine-today-steps">
+                  <!-- Mehrmals täglich: jeder Durchgang einzeln -->
+                  <div v-if="r.timesPerDay > 1" class="mb-2 flex flex-wrap items-center gap-1.5" role="group" :aria-label="t('routines.rounds')">
+                      <button v-for="k in r.timesPerDay" :key="k" type="button" class="routine-pip" :class="{ 'is-on': k <= p(r).countToday }"
+                              :aria-pressed="k <= p(r).countToday" :aria-label="t('routines.round', { n: k })" :data-pip="k" @click="routines.tap(r.clientId, k)">{{ k }}</button>
+                  </div>
+                  <ol class="space-y-1">
+                      <li v-for="(s, i) in r.steps" :key="i" class="flex items-center gap-2 text-sm">
+                          <span class="min-w-0 flex-1 break-words text-slate-200">{{ s.name }}</span>
+                          <span v-if="s.dose" class="flex-shrink-0 font-mono text-[11px] text-slate-400">{{ s.dose }}</span>
+                          <button v-if="s.exerciseId != null" type="button" class="routine-icon-btn !h-9 !w-9" :aria-label="t('routines.showHow', { name: s.name })" @click="app.openExerciseInfo(s.exerciseId, 'overlay')" data-test="routine-step-info">
+                              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+                          </button>
+                      </li>
+                  </ol>
+                  <p v-if="r.reason" class="pt-1 text-[11px] leading-snug text-slate-400">{{ r.reason }}</p>
+                  <div class="mt-2 flex flex-wrap items-center gap-2">
+                      <button v-if="p(r).missedRecent" type="button" class="routine-link" data-test="routine-catch-up" @click="routines.setDone(r.clientId, true, p(r).missedRecent!)">
+                          {{ t('routines.catchUp', { date: date(p(r).missedRecent!) }) }}
                       </button>
-                  </li>
-                  <li v-if="r.reason" class="pt-1 text-[11px] leading-snug text-slate-400">{{ r.reason }}</li>
-              </ol>
+                      <button type="button" class="routine-link" data-test="routine-history" @click="routines.openDetail(r.clientId)">{{ t('routines.history') }}</button>
+                  </div>
+              </div>
           </li>
       </ul>
   </section>

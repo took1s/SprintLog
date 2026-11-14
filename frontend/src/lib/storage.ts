@@ -53,6 +53,7 @@ export const userKeys = (userId: number) => ({
   wellness: `${PREFIX}:${userId}:wellness`,
   goals: `${PREFIX}:${userId}:goals`,
   routines: `${PREFIX}:${userId}:routines`,
+  planned: `${PREFIX}:${userId}:planned`,
   aiChat: `${PREFIX}:${userId}:aiChat`,
   aiAnalysis: `${PREFIX}:${userId}:aiAnalysis`,
   athlete: `${PREFIX}:${userId}:athlete`,

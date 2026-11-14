@@ -237,6 +237,19 @@
 .cal-day.is-out .cal-num { color: rgb(var(--c-subtle)); }
 .cal-day.is-out .cal-dots { opacity: 0.5; }
 .cal-day.is-today { box-shadow: inset 0 0 0 2px rgb(var(--accent-ring)); }
+/* Geplante Zusatz-Einheit: Raute oben rechts (erledigt grün, verpasst rot) */
+.cal-session { position: absolute; top: 4px; right: 4px; display: inline-block; height: 7px; width: 7px; transform: rotate(45deg); border-radius: 1.5px;
+  background: rgb(var(--c-accent)); box-shadow: 0 0 0 1.5px rgb(var(--c-accent-text) / 0.55); }
+.cal-session.is-done { background: rgb(var(--c-success)); }
+.cal-session.is-missed { background: rgb(var(--c-danger-text)); }
+/* Routinen: Strich oben links (alles erledigt / teilweise / verpasst / fällig) - unten liegen die Punkte der Einheiten */
+.cal-routine { position: absolute; top: 5px; left: 5px; display: block; width: 10px; height: 3px; border-radius: 9999px; background: rgb(var(--c-fg) / 0.25); }
+.cal-routine[data-mark='all'] { background: rgb(var(--c-success)); }
+.cal-routine[data-mark='some'] { background: linear-gradient(90deg, rgb(var(--c-success)) 50%, rgb(var(--c-fg) / 0.25) 50%); }
+.cal-routine[data-mark='missed'] { background: rgb(var(--c-danger-text) / 0.7); }
+.cal-routine[data-mark='due'] { background: transparent; box-shadow: inset 0 0 0 1px rgb(var(--c-fg) / 0.35); }
+.cal-session.\!static, .cal-routine.\!static { position: static; }
+.cal-routine.\!static { width: 12px; }
 .cal-day.is-today.is-strong { box-shadow: inset 0 0 0 2px rgb(var(--c-fg)); }
 .cal-day.is-selected { box-shadow: 0 0 0 2px rgb(var(--c-fg)), 0 8px 18px -8px rgb(var(--c-accent) / 0.7); transform: translateY(-1px); }
 /* Plan-Vorschau: gestrichelter Rand (Training) bzw. kleiner Ball (Spiel) */
@@ -427,6 +440,76 @@
   border-radius: 9999px; padding: 1px 7px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: var(--label-tracking);
   color: rgb(var(--c-accent-text)); background: rgb(var(--c-accent) / 0.12);
 }
+
+/* Mehrmals täglich: Ring mit Zähler im Haken, einzelne Durchgänge als Punkte */
+.routine-check.is-multi { position: relative; color: rgb(var(--c-fg)); }
+.routine-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.routine-ring-track { fill: none; stroke: transparent; stroke-width: 3; }
+.routine-ring-fill { fill: none; stroke: rgb(var(--c-success)); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 0.35s ease; }
+.routine-count { position: relative; font-family: var(--font-num, ui-monospace, monospace); font-size: 11px; font-weight: 800; letter-spacing: -0.02em; }
+@media (prefers-reduced-motion: reduce) { .routine-ring-fill { transition: none; } }
+.routine-pip {
+  display: flex; height: 2.75rem; min-width: 2.75rem; align-items: center; justify-content: center; border-radius: 9999px; padding: 0 10px;
+  font-family: var(--font-num, ui-monospace, monospace); font-size: 12px; font-weight: 800;
+  color: rgb(var(--c-subtle)); background: rgb(var(--c-fg) / 0.04); box-shadow: inset 0 0 0 2px rgb(var(--c-fg) / 0.16);
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.routine-pip.is-on { color: rgb(var(--c-bg)); background: rgb(var(--c-success)); box-shadow: inset 0 0 0 2px rgb(var(--c-success)); }
+.routine-pip:focus-visible, .routine-link:focus-visible, .routine-cell:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: 2px; }
+.routine-link {
+  min-height: 2.25rem; border-radius: 9999px; padding: 4px 12px; font-size: 11px; font-weight: 700;
+  color: rgb(var(--c-accent-text)); background: rgb(var(--c-accent) / 0.1); border: var(--border-w) solid rgb(var(--accent-ring) / 0.35);
+}
+.routine-link:hover { background: rgb(var(--c-accent) / 0.18); }
+.routine-missed-dot { height: 8px; width: 8px; flex-shrink: 0; border-radius: 9999px; background: rgb(var(--c-warn-text)); }
+
+/* Detailansicht: Kennzahlen und Verlauf */
+.routine-stat { border-radius: 16px; padding: 8px 12px; background: rgb(var(--c-fg) / 0.03); border: var(--border-w) solid rgb(var(--c-fg) / 0.06); }
+.routine-stat dt { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking); color: rgb(var(--c-subtle)); }
+.routine-stat dd { margin-top: 2px; font-family: var(--font-num, ui-monospace, monospace); font-size: 18px; font-weight: 900; line-height: 1.1; color: rgb(var(--c-fg)); }
+.routine-cell {
+  position: relative; display: flex; aspect-ratio: 1; min-height: 2.5rem; align-items: center; justify-content: center; border-radius: 12px;
+  font-family: var(--font-num, ui-monospace, monospace); font-size: 12px; font-weight: 800; color: rgb(var(--c-subtle));
+  background: rgb(var(--c-fg) / 0.03); border: var(--border-w) solid rgb(var(--c-fg) / 0.08);
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.routine-cell:not(:disabled):active { transform: scale(0.94); }
+.routine-cell.is-done { color: rgb(var(--c-bg)); background: rgb(var(--c-success)); border-color: rgb(var(--c-success)); }
+.routine-cell.is-partial { color: rgb(var(--c-fg)); background: rgb(var(--c-success) / 0.28); border-color: rgb(var(--c-success) / 0.6); }
+.routine-cell.is-missed { color: rgb(var(--c-danger-text)); background: rgb(var(--c-danger-text) / 0.08); border-color: rgb(var(--c-danger-text) / 0.35); }
+.routine-cell.is-open { color: rgb(var(--c-accent-text)); border-style: dashed; border-color: rgb(var(--accent-ring) / 0.7); }
+.routine-cell.is-off { opacity: 0.45; }
+.routine-cell.is-future { border-style: dashed; opacity: 0.6; }
+.routine-cell.is-outside { opacity: 0.15; }
+.routine-cell.is-today { box-shadow: 0 0 0 2px rgb(var(--accent-ring)); }
+.routine-cell-count { position: absolute; right: 3px; bottom: 1px; font-size: 9px; }
+.routine-legend { display: inline-block; height: 10px; width: 10px; border-radius: 3px; border: var(--border-w) solid rgb(var(--c-fg) / 0.15); }
+.routine-legend.is-done { background: rgb(var(--c-success)); border-color: rgb(var(--c-success)); }
+.routine-legend.is-partial { background: rgb(var(--c-success) / 0.28); }
+.routine-legend.is-missed { background: rgb(var(--c-danger-text) / 0.2); border-color: rgb(var(--c-danger-text) / 0.5); }
+.routine-legend.is-off { opacity: 0.5; }
+
+/* ---------- Zusatz-Einheiten ---------- */
+.planned-today { border-color: rgb(var(--accent-ring) / 0.45); background: linear-gradient(135deg, rgb(var(--c-accent) / 0.12), rgb(var(--c-accent) / 0.03)); }
+.planned-row { display: flex; align-items: center; gap: 12px; }
+.planned-date {
+  display: flex; height: 3rem; width: 3rem; flex-shrink: 0; flex-direction: column; align-items: center; justify-content: center; border-radius: 14px;
+  background: rgb(var(--c-fg) / 0.05); border: var(--border-w) solid rgb(var(--c-fg) / 0.1);
+}
+.planned-date.is-today { background: rgb(var(--c-accent) / 0.16); border-color: rgb(var(--accent-ring) / 0.6); }
+.planned-date-wd { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: var(--label-tracking); color: rgb(var(--c-subtle)); }
+.planned-date-d { font-family: var(--font-num, ui-monospace, monospace); font-size: 17px; font-weight: 900; line-height: 1; color: rgb(var(--c-fg)); }
+.planned-status { border-radius: 9999px; padding: 2px 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: var(--label-tracking); color: rgb(var(--c-subtle)); background: rgb(var(--c-fg) / 0.06); }
+.planned-status[data-status='done'] { color: rgb(var(--c-success-text)); background: rgb(var(--c-success) / 0.14); }
+.planned-status[data-status='missed'] { color: rgb(var(--c-danger-text)); background: rgb(var(--c-danger-text) / 0.1); }
+.planned-day-chip {
+  display: flex; min-height: 2.75rem; flex-shrink: 0; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 12px; padding: 4px 12px;
+  font-size: 12px; font-weight: 700; color: rgb(var(--c-fg) / 0.85); background: rgb(var(--c-fg) / 0.04); border: var(--border-w) solid rgb(var(--c-fg) / 0.12);
+}
+.planned-day-chip.is-on { color: rgb(var(--c-on-accent)); background: rgb(var(--c-accent)); border-color: rgb(var(--accent-ring)); }
+.planned-day-chip:focus-visible { outline: 2px solid rgb(var(--accent-ring)); outline-offset: 2px; }
+.planned-md1 { font-style: normal; font-size: 8px; font-weight: 800; color: rgb(var(--c-warn-text)); }
+.planned-day-chip.is-on .planned-md1 { color: inherit; }
 
 /* ---------- Fortschritt ---------- */
 .prog-title { border-radius: var(--r-lg, 12px); }

@@ -40,6 +40,10 @@ public sealed record AiResponse(JsonArray Content, string? StopReason, int Input
     public static AiResponse FromText(string text, string stopReason = "end_turn") =>
         new(new JsonArray(new JsonObject { ["type"] = "text", ["text"] = text }), stopReason, 0, 0);
 
+    /// <summary>Mehrere Werkzeug-Aufrufe in einer Antwort (Name, Eingabe).</summary>
+    public static AiResponse FromTools(params (string Name, object Input)[] tools) =>
+        new(new JsonArray(tools.Select((t, i) => (JsonNode)new JsonObject { ["type"] = "tool_use", ["id"] = $"toolu_m{i}", ["name"] = t.Name, ["input"] = JsonSerializer.SerializeToNode(t.Input) }).ToArray()), "tool_use", 0, 0);
+
     public static AiResponse FromTool(string name, object input, string id = "toolu_1") =>
         new(new JsonArray(new JsonObject { ["type"] = "tool_use", ["id"] = id, ["name"] = name, ["input"] = JsonSerializer.SerializeToNode(input) }), "tool_use", 0, 0);
 }

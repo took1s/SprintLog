@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, daysBetween, isScheduled, newRoutineId, routineProgress, routineState, scheduledDays, sortRoutines, todaysRoutines, toggleDone, type Routine } from '@/lib/routines';
+import { addDays, daysBetween, doneCount, historyWeeks, isDone, isScheduled, newRoutineId, routineProgress, routineState, scheduledDays, setDoneCount, sortRoutines, tapCount, todaysRoutines, type Routine } from '@/lib/routines';
 import { cleanDraft } from '@/stores/routines';
 
 // 2026-11-09 ist ein Montag
 const base = (over: Partial<Routine> = {}): Routine => ({
   clientId: 'rt-test0001', title: 'Reha', kind: 'rehab', days: 127, startDate: '2026-11-09', endDate: '2026-11-29', reason: null,
-  source: 'coach', steps: [{ name: 'Nordic Curls', dose: '2 x 5', exerciseId: 50 }], doneDates: [], createdAt: '', updatedAt: '', ...over,
+  source: 'coach', steps: [{ name: 'Nordic Curls', dose: '2 x 5', exerciseId: 50 }], timesPerDay: 1, doneDates: [], createdAt: '', updatedAt: '', ...over,
 });
 
 describe('Routinen: Datum', () => {
@@ -35,9 +35,17 @@ describe('Routinen: wann fällig', () => {
     expect(routineState(base({ endDate: null }), '2030-01-01')).toBe('active');
   });
 
-  it('Haken umschalten bleibt sortiert und ohne Duplikate', () => {
-    expect(toggleDone(['2026-11-12'], '2026-11-10')).toEqual(['2026-11-10', '2026-11-12']);
-    expect(toggleDone(['2026-11-10', '2026-11-12'], '2026-11-10')).toEqual(['2026-11-12']);
+  it('Haken: einmal täglich umschalten, mehrmals täglich bis zum k-ten Durchgang', () => {
+    const once = base({ doneDates: ['2026-11-12'] });
+    expect(setDoneCount(once, '2026-11-10', tapCount(doneCount(once, '2026-11-10'), 1))).toEqual(['2026-11-10', '2026-11-12']);
+    expect(setDoneCount(once, '2026-11-12', tapCount(1, 1))).toEqual([]);
+    const thrice = base({ timesPerDay: 3, doneDates: ['2026-11-13'] });
+    // Tipp auf den 3. Punkt -> 3 von 3; erneuter Tipp darauf -> 2 von 3; nie mehr als vorgesehen
+    expect(doneCount({ doneDates: setDoneCount(thrice, '2026-11-13', tapCount(1, 3)) }, '2026-11-13')).toBe(3);
+    expect(tapCount(3, 3)).toBe(2);
+    expect(setDoneCount(thrice, '2026-11-13', 9).filter((d) => d === '2026-11-13')).toHaveLength(3);
+    expect(isDone(thrice, '2026-11-13')).toBe(false);
+    expect(isDone({ ...thrice, doneDates: ['2026-11-13', '2026-11-13', '2026-11-13'] }, '2026-11-13')).toBe(true);
   });
 });
 
@@ -45,10 +53,25 @@ describe('Routinen: Fortschritt', () => {
   it('erledigt/fällig, Rest-Tage und Serie - heute noch offen bricht die Serie nicht', () => {
     const r = base({ doneDates: ['2026-11-09', '2026-11-11', '2026-11-12'] });
     const p = routineProgress(r, '2026-11-13');
-    expect(p).toMatchObject({ state: 'active', due: 5, done: 3, total: 21, daysLeft: 16, streak: 2, dueToday: true, doneToday: false });
+    expect(p).toMatchObject({ state: 'active', due: 5, done: 3, total: 21, daysLeft: 16, streak: 2, dueToday: true, doneToday: false, countToday: 0, missedRecent: '2026-11-10' });
     // 10.11. fehlt: 3 von 4 vergangenen fälligen Tagen (heute offen zählt nicht mit)
     expect(p.adherence).toBe(75);
     expect(routineProgress({ ...r, doneDates: [...r.doneDates, '2026-11-13'] }, '2026-11-13').streak).toBe(3);
+  });
+
+  it('mehrmals täglich: ein Tag zählt erst mit allen Durchgängen', () => {
+    const r = base({ timesPerDay: 2, doneDates: ['2026-11-09', '2026-11-09', '2026-11-10', '2026-11-13'] });
+    const p = routineProgress(r, '2026-11-13');
+    expect(p).toMatchObject({ done: 1, countToday: 1, doneToday: false, streak: 0, missedRecent: '2026-11-12' });
+  });
+
+  it('Verlauf: Wochen Mo-So mit erledigt, teilweise, verpasst, offen, Zukunft und außerhalb', () => {
+    const r = base({ timesPerDay: 2, days: 0b11111, startDate: '2026-11-09', doneDates: ['2026-11-09', '2026-11-09', '2026-11-10'] });
+    const weeks = historyWeeks(r, '2026-11-13', 2);
+    expect(weeks).toHaveLength(2);
+    expect(weeks[0].every((c) => c.state === 'outside')).toBe(true);
+    expect(weeks[1].map((c) => c.state)).toEqual(['done', 'partial', 'missed', 'missed', 'open', 'off', 'off']);
+    expect(weeks[1][1].count).toBe(1);
   });
 
   it('ohne Ende: keine Gesamtzahl, Erfüllung der letzten 14 Tage', () => {
@@ -87,9 +110,9 @@ describe('Routinen: Eingaben', () => {
   it('säubert den Entwurf wie der Server (leere Schritte raus, Ende nicht vor Beginn)', () => {
     const c = cleanDraft({
       title: '  Dehnen  ', kind: 'mobility', days: 0, startDate: '2026-11-13', endDate: '2026-11-01', reason: '   ',
-      steps: [{ name: ' Hüftbeuger ', dose: ' 2 x 45 s ' }, { name: '   ', dose: 'x' }],
+      steps: [{ name: ' Hüftbeuger ', dose: ' 2 x 45 s ' }, { name: '   ', dose: 'x' }], timesPerDay: 9,
     });
-    expect(c).toEqual({ title: 'Dehnen', kind: 'mobility', days: 127, startDate: '2026-11-13', endDate: null, reason: null, steps: [{ name: 'Hüftbeuger', dose: '2 x 45 s', exerciseId: null }] });
+    expect(c).toEqual({ title: 'Dehnen', kind: 'mobility', days: 127, startDate: '2026-11-13', endDate: null, reason: null, steps: [{ name: 'Hüftbeuger', dose: '2 x 45 s', exerciseId: null }], timesPerDay: 6 });
   });
 
   it('Client-Id passt zum Server-Format', () => {

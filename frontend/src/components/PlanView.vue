@@ -8,6 +8,7 @@ import { useAppStore, zoneClass } from '@/stores/app';
 import WellnessCard from '@/components/WellnessCard.vue';
 import GoalsPanel from '@/components/GoalsPanel.vue';
 import RoutinesPanel from '@/components/RoutinesPanel.vue';
+import PlannedPanel from '@/components/PlannedPanel.vue';
 import WeekSchedule from '@/components/WeekSchedule.vue';
 import { formatNumber } from '@/lib/format';
 import { formatRelative } from '@/lib/format';
@@ -32,6 +33,7 @@ const sessionsPerWeek = (key: string | null | undefined, days: number) => templa
 
       <template v-else>
           <WellnessCard />
+          <PlannedPanel />
           <RoutinesPanel />
           <GoalsPanel />
 

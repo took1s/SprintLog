@@ -6,10 +6,14 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { t } from '../i18n';
-import { isApiError, type Api } from '../lib/api';
+import type { Api } from '../lib/api';
+import { createClientSync } from '../lib/clientSync';
 import { readJson, userKeys, writeJson } from '../lib/storage';
 import { localDay } from '../lib/wellness';
-import { EVERY_DAY, newRoutineId, routineProgress, sortRoutines, todaysRoutines, toggleDone, type Routine, type RoutineKind, type RoutineStep } from '../lib/routines';
+import {
+  EVERY_DAY, MAX_TIMES_PER_DAY, doneCount, newRoutineId, routineProgress, setDoneCount, sortRoutines, tapCount, todaysRoutines,
+  type Routine, type RoutineKind, type RoutineStep,
+} from '../lib/routines';
 import { useUiStore } from './ui';
 
 /** Was der Routinen-Store vom App-Store braucht (Schnittstelle statt Import: kein Typ-Zirkel). */
@@ -29,6 +33,7 @@ export interface RoutineDraft {
   endDate: string | null;
   reason: string | null;
   steps: RoutineStep[];
+  timesPerDay: number;
 }
 
 export interface RoutineEditor {
@@ -38,10 +43,8 @@ export interface RoutineEditor {
   draft: RoutineDraft;
 }
 
-const isNetwork = (e: unknown) => isApiError(e) && e.isNetwork;
-
 export const emptyRoutine = (today: string): RoutineDraft => ({
-  title: '', kind: 'mobility', days: EVERY_DAY, startDate: today, endDate: null, reason: null, steps: [{ name: '', dose: '' }],
+  title: '', kind: 'mobility', days: EVERY_DAY, startDate: today, endDate: null, reason: null, steps: [{ name: '', dose: '' }], timesPerDay: 1,
 });
 
 /** Eingaben säubern: leere Schritte raus, Längen wie auf dem Server. */
@@ -55,8 +58,14 @@ export function cleanDraft(d: RoutineDraft): RoutineDraft {
     endDate: d.endDate && d.endDate >= d.startDate ? d.endDate : null,
     reason: clip(d.reason, 300) || null,
     steps: d.steps.map((s) => ({ name: clip(s.name, 80), dose: clip(s.dose, 60) || null, exerciseId: s.exerciseId ?? null })).filter((s) => s.name).slice(0, 12),
+    timesPerDay: Math.max(1, Math.min(MAX_TIMES_PER_DAY, Math.round(d.timesPerDay || 1))),
   };
 }
+
+const capPerDay = (dates: readonly string[], max: number): string[] => {
+  const seen = new Map<string, number>();
+  return dates.filter((d) => { const n = (seen.get(d) ?? 0) + 1; seen.set(d, n); return n <= max; });
+};
 
 export const useRoutinesStore = defineStore('routines', () => {
   const routines = ref<Routine[]>([]);
@@ -77,60 +86,27 @@ export const useRoutinesStore = defineStore('routines', () => {
   const progressOf = (r: Routine) => routineProgress(r, today.value);
   const byId = (id: string) => routines.value.find((r) => r.clientId === id && r.pending !== 'delete') ?? null;
 
+  const sync = createClientSync<Routine>({
+    path: '/api/routines',
+    items: () => routines.value,
+    setItems: (list) => { routines.value = list; },
+    persist,
+    api: () => app().api(),
+    body: ({ title, kind, days, startDate, endDate, reason, steps, doneDates, source: by, timesPerDay }) =>
+      ({ title, kind, days, startDate, endDate, reason, steps, doneDates, source: by, timesPerDay }),
+    onRejected: (r, e) => {
+      console.warn('[routines] rejected', e);
+      useUiStore().toast(t('routines.toast.rejected', { title: r.title }), 'error');
+    },
+  });
+  const pushPending = () => sync.push();
+
   async function load() {
     const k = key();
     if (!k) return;
-    routines.value = readJson<Routine[]>(k, []);
-    if (!app().online) return;
-    try {
-      await pushPending();
-      const fresh = await app().api().get<Routine[]>('/api/routines');
-      const pending = routines.value.filter((r) => r.pending);
-      routines.value = [...pending, ...fresh.filter((f) => !pending.some((p) => p.clientId === f.clientId))];
-      persist();
-    } catch (e) {
-      if (!isNetwork(e)) console.warn('[routines] load failed', e);
-    }
-  }
-
-  let pushing: Promise<void> | null = null;
-  let current: object | null = null;
-  /** Ausstehende Änderungen senden - nie parallel (schnelles Abhaken soll nicht doppelt senden). */
-  function pushPending(): Promise<void> {
-    if (pushing) return pushing;
-    const token = {};
-    current = token;
-    const run = (async () => {
-      await Promise.resolve(); // erst nach der Zuweisung unten starten (sonst setzt finally "pushing" zu früh zurück)
-      try {
-        for (const r of routines.value.filter((x) => x.pending)) {
-          const sent = r.updatedAt;
-          try {
-            if (r.pending === 'delete') {
-              await app().api().del(`/api/routines/${r.clientId}`);
-              routines.value = routines.value.filter((x) => x.clientId !== r.clientId || x.pending !== 'delete');
-            } else {
-              const { title, kind, days, startDate, endDate, reason, steps, doneDates, source: by } = r;
-              await app().api().put(`/api/routines/${r.clientId}`, { title, kind, days, startDate, endDate, reason, steps, doneDates, source: by });
-              // Inzwischen erneut geändert (Haken während des Sendens)? Dann bleibt sie ausstehend
-              const now = routines.value.find((x) => x.clientId === r.clientId);
-              if (now && now.updatedAt === sent) now.pending = undefined;
-            }
-          } catch (e) {
-            if (isNetwork(e)) break;
-            // Vom Server abgelehnt: lokal behalten wäre ewiges Wiederholen - verwerfen und melden
-            console.warn('[routines] rejected', e);
-            routines.value = routines.value.filter((x) => x.clientId !== r.clientId);
-            useUiStore().toast(t('routines.toast.rejected', { title: r.title }), 'error');
-          }
-        }
-        persist();
-      } finally {
-        if (current === token) pushing = null;
-      }
-    })();
-    pushing = run;
-    return run;
+    // Ältere lokale Stände ohne timesPerDay: einmal täglich
+    routines.value = readJson<Routine[]>(k, []).map((r) => ({ ...r, timesPerDay: r.timesPerDay || 1 }));
+    if (app().online) await sync.pull();
   }
 
   function upsert(clientId: string, draft: RoutineDraft, by: Routine['source'], keepDone = true): Routine {
@@ -141,7 +117,8 @@ export const useRoutinesStore = defineStore('routines', () => {
       ...clean,
       clientId,
       source: existing?.source ?? by,
-      doneDates: keepDone ? existing?.doneDates ?? [] : [],
+      // Weniger Durchgänge pro Tag als vorher: überzählige Haken je Tag kürzen
+      doneDates: keepDone ? capPerDay(existing?.doneDates ?? [], clean.timesPerDay) : [],
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
       pending: 'put',
@@ -160,15 +137,33 @@ export const useRoutinesStore = defineStore('routines', () => {
     return r;
   }
 
-  function setDone(clientId: string, done: boolean, day = today.value) {
+  /** Durchgänge eines Tages setzen (0 ... timesPerDay) - für den Haken, das Nachtragen und den Verlauf. */
+  function setCount(clientId: string, n: number, day = today.value) {
     const r = routines.value.find((x) => x.clientId === clientId);
-    if (!r || r.doneDates.includes(day) === done) return;
-    r.doneDates = toggleDone(r.doneDates, day);
-    r.updatedAt = new Date().toISOString();
-    r.pending = 'put';
+    if (!r || day > today.value || doneCount(r, day) === n) return;
+    const doneDates = setDoneCount(r, day, n);
+    routines.value = routines.value.map((x) => (x.clientId === clientId ? { ...x, doneDates, updatedAt: new Date().toISOString(), pending: 'put' as const } : x));
     persist();
     void pushPending();
   }
+
+  /** Tipp auf den k-ten Durchgang eines Tages (1-basiert); bei einmal täglich = Haken umschalten. */
+  function tap(clientId: string, k = 1, day = today.value) {
+    const r = byId(clientId);
+    if (r) setCount(clientId, tapCount(doneCount(r, day), k), day);
+  }
+
+  /** Haken setzen/entfernen (ganzer Tag). */
+  function setDone(clientId: string, done: boolean, day = today.value) {
+    const r = byId(clientId);
+    if (r) setCount(clientId, done ? r.timesPerDay : 0, day);
+  }
+
+  // ---------- Detailansicht (Verlauf, Nachtragen) ----------
+
+  const detailId = ref<string | null>(null);
+  const openDetail = (clientId: string) => { detailId.value = clientId; };
+  const closeDetail = () => { detailId.value = null; };
 
   // ---------- Editor ----------
 
@@ -180,7 +175,7 @@ export const useRoutinesStore = defineStore('routines', () => {
     if (!r) return;
     editor.value = {
       open: true, clientId,
-      draft: { title: r.title, kind: r.kind, days: r.days, startDate: r.startDate, endDate: r.endDate, reason: r.reason, steps: r.steps.map((s) => ({ ...s })) },
+      draft: { title: r.title, kind: r.kind, days: r.days, startDate: r.startDate, endDate: r.endDate, reason: r.reason, steps: r.steps.map((s) => ({ ...s })), timesPerDay: r.timesPerDay },
     };
   }
   function close() { editor.value = { ...editor.value, open: false }; }
@@ -215,10 +210,14 @@ export const useRoutinesStore = defineStore('routines', () => {
     routines.value = routines.value.map((x) => (x.clientId === clientId ? { ...x, pending: 'delete' as const } : x));
     persist();
     close();
+    closeDetail();
     await pushPending();
   }
 
-  function clear() { routines.value = []; editor.value = { open: false, clientId: null, draft: emptyRoutine(localDay()) }; }
+  function clear() { routines.value = []; detailId.value = null; editor.value = { open: false, clientId: null, draft: emptyRoutine(localDay()) }; }
 
-  return { connect, routines, editor, today, visible, forToday, progressOf, byId, load, pushPending, applyFromCoach, setDone, openNew, openEdit, close, save, finish, remove, clear };
+  return {
+    connect, routines, editor, today, visible, forToday, progressOf, byId, load, pushPending, applyFromCoach, setCount, tap, setDone,
+    detailId, openDetail, closeDetail, openNew, openEdit, close, save, finish, remove, clear,
+  };
 });

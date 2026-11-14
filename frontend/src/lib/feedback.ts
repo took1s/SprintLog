@@ -1,4 +1,4 @@
-// Akustisches und haptisches Feedback (Pausentimer).
+// Akustisches und haptisches Feedback (Pausentimer, Zeit-Sätze). Vorlauf und Musik-Ducking: lib/signals.ts.
 // iOS/Safari erlauben Audio nur nach einer Nutzerinteraktion -> unlockAudio() beim ersten Klick aufrufen.
 
 let audioContext: AudioContext | null = null;
@@ -27,14 +27,44 @@ function beep(ctx: AudioContext, frequency: number, start: number, duration: num
   osc.stop(start + duration + 0.05);
 }
 
+/** Kontext bereit machen (nach suspendAudio() oder iOS-Unterbrechung wieder starten). */
+async function ready(): Promise<AudioContext | null> {
+  if (!audioContext) return null;
+  try {
+    if (audioContext.state !== 'running') await audioContext.resume();
+  } catch { /* ignore */ }
+  return audioContext.state === 'running' ? audioContext : null;
+}
+
+export const audioContextRunning = (): boolean => audioContext?.state === 'running';
+
+/** Audio-Ausgabe anhalten (iOS gibt "geduckte" Musik erst frei, wenn unsere Ausgabe ruht). */
+export async function suspendAudio(): Promise<void> {
+  try {
+    if (audioContext?.state === 'running') await audioContext.suspend();
+  } catch { /* ignore */ }
+}
+
 export function playRestAlarm({ sound = true, vibration = true } = {}): void {
   if (vibration && navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
   if (!sound || !audioContext) return;
+  void ready().then((ctx) => {
+    if (!ctx) return;
+    try {
+      const t = ctx.currentTime + 0.02;
+      beep(ctx, 880, t, 0.25);
+      beep(ctx, 880, t + 0.35, 0.25);
+      beep(ctx, 1320, t + 0.7, 0.45);
+    } catch { /* ignore */ }
+  });
+}
+
+/** Kurzer, leiser Tick für 3-2-1 (letzter etwas höher); silent = nur Audio-Sitzung aktivieren. */
+export async function countdownTick(secondsLeft: number, silent = false): Promise<void> {
+  const ctx = await ready();
+  if (!ctx) return;
   try {
-    const t = audioContext.currentTime;
-    beep(audioContext, 880, t, 0.25);
-    beep(audioContext, 880, t + 0.35, 0.25);
-    beep(audioContext, 1320, t + 0.7, 0.45);
+    beep(ctx, secondsLeft === 1 ? 740 : 620, ctx.currentTime + 0.01, 0.09, silent ? 0.0002 : 0.06);
   } catch { /* ignore */ }
 }
 

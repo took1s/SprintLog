@@ -9,6 +9,10 @@ import { useAppStore, workoutStats } from '@/stores/app';
 import { formatDate, formatNumber, formatTime } from '@/lib/format';
 import { groupSetsByExercise, workoutKey, dateKey } from '@/lib/analytics';
 import { tap } from '@/lib/native';
+import { usePlannedStore } from '@/stores/planned';
+import { useRoutinesStore } from '@/stores/routines';
+import { displayStatus, planConflict, prescriptionText } from '@/lib/planned';
+import { routinesOnDay, doneCount } from '@/lib/routines';
 import {
   indexByDay, levelOf, maxScoreOf, monthGrid, monthStats, plannedKind, sessionsPerMonth, yearStats, yearsWithData,
   type CalendarDay, type CalendarKind, type GridCell, type PeriodStats,
@@ -42,6 +46,23 @@ const mStats = computed(() => monthStats(index.value, cursor.value.year, cursor.
 const schedule = computed(() => activeProgram.value ?? null);
 
 const dayOf = (cell: GridCell): CalendarDay | undefined => index.value.get(cell.key);
+
+// ---------- Zusatz-Einheiten und Routinen ----------
+const plannedStore = usePlannedStore();
+const routinesStore = useRoutinesStore();
+const { perDay } = storeToRefs(plannedStore);
+const { routines } = storeToRefs(routinesStore);
+/** Geplante Einheiten eines Tages (ausgelassene nur in der Tagesansicht). */
+const sessionsOn = (key: string) => (perDay.value.get(key) ?? []).filter((p) => p.status !== 'skipped');
+/** Routinen-Stand eines Tages: all (alles erledigt), some (teilweise), missed (vergangen, nichts), due (heute/Zukunft fällig). */
+function routineMark(key: string): 'all' | 'some' | 'missed' | 'due' | null {
+  const r = routinesOnDay(routines.value, key);
+  if (!r.due.length) return null;
+  if (key > todayKey.value) return 'due';
+  if (r.done === r.due.length) return 'all';
+  if (r.done || r.partial) return 'some';
+  return key === todayKey.value ? 'due' : 'missed';
+}
 const planned = (cell: GridCell) => (cell.key > todayKey.value && cell.inMonth ? plannedKind(schedule.value, cell.date) : 'rest');
 
 // Ausgeschriebene Klassennamen: Tailwind behält nur, was wörtlich im Code steht (heat-${n} würde entfernt)
@@ -55,7 +76,8 @@ function cellLabel(cell: GridCell) {
   const date = formatDate(cell.date, { weekday: 'long', day: 'numeric', month: 'long' });
   if (d) return t('calendar.dayTitle', { date, summary: t('calendar.daySummary', { workouts: tn('units.workouts', d.sessions), sets: tn('units.sets', d.sets) }) });
   const p = planned(cell);
-  return p === 'rest' ? date : `${date}: ${t(`calendar.planned.${p}`)}`;
+  const extra = sessionsOn(cell.key).map((x) => `${t('calendar.day.session')}: ${x.title}`);
+  return [p === 'rest' ? date : `${date}: ${t(`calendar.planned.${p}`)}`, ...extra].join(', ');
 }
 
 function pick(cell: GridCell) {
@@ -68,8 +90,19 @@ function pick(cell: GridCell) {
 
 const selected = computed(() => (selectedDay.value ? index.value.get(selectedDay.value) ?? null : null));
 const selectedDate = computed(() => (selectedDay.value ? new Date(`${selectedDay.value}T12:00:00`) : null));
+const selectedSessions = computed(() => (selectedDay.value ? perDay.value.get(selectedDay.value) ?? [] : []));
+const selectedRoutines = computed(() => (selectedDay.value ? routinesOnDay(routines.value, selectedDay.value) : null));
+/** Am gewählten Tag lässt sich eine Zusatz-Einheit planen (ab heute, kein Plan-Tag, noch keine offene). */
+const canPlan = computed(() => !!selectedDay.value && selectedDay.value >= todayKey.value
+  && !planConflict(schedule.value, selectedDay.value) && !selectedSessions.value.some((p) => p.status === 'planned'));
+const selectedBusy = computed(() => !!selectedDay.value && selectedDay.value >= todayKey.value && !!planConflict(schedule.value, selectedDay.value));
+const sessionText = (x: { exerciseId: number } & Parameters<typeof prescriptionText>[0]) => {
+  const ex = app.exerciseFor(x.exerciseId);
+  return `${exerciseName(ex ?? x.exerciseId)} ${prescriptionText(x, ex?.trackingType)}`;
+};
+
 const selectedPlan = computed(() => {
-  if (!selectedDate.value || selectedDay.value! <= todayKey.value) return 'rest';
+  if (!selectedDate.value || selectedDay.value! < todayKey.value) return 'rest';
   return plannedKind(schedule.value, selectedDate.value);
 });
 
@@ -202,6 +235,8 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
                               <i v-for="k in dayOf(cell)!.kinds" :key="k" :class="KIND_DOT[k]"></i>
                           </span>
                           <svg v-else-if="planned(cell) === 'match'" class="cal-ball" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8l3 2-1 4h-4l-1-4z" fill="currentColor"/></svg>
+                          <i v-if="cell.inMonth && sessionsOn(cell.key).length" class="cal-session" :class="{ 'is-done': sessionsOn(cell.key).every((x) => x.status === 'done'), 'is-missed': sessionsOn(cell.key).some((x) => displayStatus(x, todayKey) === 'missed') }" aria-hidden="true"></i>
+                          <i v-if="cell.inMonth && routineMark(cell.key)" class="cal-routine" :data-mark="routineMark(cell.key)" aria-hidden="true"></i>
                       </button>
                   </div>
               </transition>
@@ -216,6 +251,8 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
               <span class="flex items-center gap-1"><i class="h-1.5 w-1.5 rounded-full bg-emerald-400"></i>{{ t('calendar.legend.field') }}</span>
               <span class="flex items-center gap-1"><i class="h-1.5 w-1.5 rounded-full bg-yellow-400"></i>{{ t('calendar.legend.match') }}</span>
               <span v-if="schedule?.trainingDays || schedule?.matchDays" class="flex items-center gap-1"><i class="h-2.5 w-2.5 rounded-[3px] border border-dashed border-accent/70"></i>{{ t('calendar.legend.planned') }}</span>
+              <span v-if="perDay.size" class="flex items-center gap-1"><i class="cal-session !static"></i>{{ t('calendar.legend.session') }}</span>
+              <span v-if="routines.length" class="flex items-center gap-1"><i class="cal-routine !static" data-mark="all"></i>{{ t('calendar.legend.routines') }}</span>
           </div>
 
           <!-- Tag -->
@@ -234,8 +271,50 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
                           <p v-if="w.sets.length" class="mt-1 truncate font-mono text-[10px] text-slate-400">{{ groupSetsByExercise(w.sets).map((g) => exerciseName(g.exerciseId, g.name)).join(', ') }}</p>
                       </li>
                   </ul>
-                  <p v-else-if="selectedPlan !== 'rest'" class="mt-2 text-sm text-slate-300">{{ t(`calendar.planned.${selectedPlan}`) }}</p>
-                  <p v-else class="mt-2 text-sm text-slate-400">{{ t('calendar.noWorkouts') }}</p>
+                  <p v-if="selectedPlan !== 'rest'" class="mt-2 flex items-center gap-2 text-sm text-slate-300" data-test="calendar-plan-day">
+                      <i class="h-2.5 w-2.5 rounded-[3px] border border-dashed border-accent/70" aria-hidden="true"></i>{{ t(`calendar.planned.${selectedPlan}`) }}
+                  </p>
+                  <p v-else-if="!selected && !selectedSessions.length" class="mt-2 text-sm text-slate-400">{{ t('calendar.noWorkouts') }}</p>
+
+                  <!-- Zusatz-Einheiten des Tages -->
+                  <ul v-if="selectedSessions.length" class="mt-2 space-y-2">
+                      <li v-for="p in selectedSessions" :key="p.clientId" class="rounded-2xl border border-accent/30 bg-accent/5 p-3" data-test="calendar-session">
+                          <div class="flex items-start justify-between gap-2">
+                              <span class="min-w-0">
+                                  <span class="block text-[10px] font-bold uppercase text-accent tracking-label">{{ t('calendar.day.session') }}<template v-if="p.source === 'coach'"> · {{ t('planned.byCoach') }}</template></span>
+                                  <span class="block break-words text-sm font-bold text-white">{{ p.title }}</span>
+                              </span>
+                              <span class="planned-status flex-shrink-0" :data-status="displayStatus(p, todayKey)">{{ t(`planned.status.${displayStatus(p, todayKey)}`) }}</span>
+                          </div>
+                          <p class="mt-1 text-[11px] leading-snug text-slate-400">{{ p.exercises.map(sessionText).join(' · ') }}</p>
+                          <div v-if="p.status === 'planned'" class="mt-2 flex flex-wrap gap-2">
+                              <button v-if="p.date === todayKey" type="button" class="btn-primary rounded-xl px-4 py-2 text-xs" @click="plannedStore.start(p.clientId)">{{ t('planned.start') }}</button>
+                              <button v-if="p.date >= todayKey" type="button" class="routine-link" @click="plannedStore.openEdit(p.clientId)">{{ t('common.edit') }}</button>
+                              <button type="button" class="routine-link" @click="plannedStore.move(p.clientId)">{{ t('planned.move') }}</button>
+                              <button type="button" class="routine-link" @click="plannedStore.skip(p.clientId)">{{ t('planned.skip') }}</button>
+                          </div>
+                      </li>
+                  </ul>
+                  <button v-if="canPlan" type="button" class="routine-link mt-2" data-test="calendar-add-session" @click="plannedStore.openNew(selectedDay!)">+ {{ t('calendar.day.addSession') }}</button>
+                  <p v-else-if="selectedBusy && !selectedSessions.length" class="mt-1 text-[11px] text-slate-500">{{ t('calendar.day.planDayBusy') }}</p>
+
+                  <!-- Routinen des Tages: abhaken/nachtragen bis heute -->
+                  <div v-if="selectedRoutines?.due.length" class="mt-3" data-test="calendar-routines">
+                      <p class="flex items-baseline justify-between text-[10px] font-bold uppercase text-slate-400 tracking-label">
+                          <span>{{ t('calendar.day.routines') }}</span>
+                          <span class="font-mono normal-case tracking-normal">{{ t('calendar.day.routinesDone', { done: selectedRoutines.done, total: selectedRoutines.due.length }) }}</span>
+                      </p>
+                      <ul class="mt-1.5 space-y-1">
+                          <li v-for="r in selectedRoutines.due" :key="r.clientId" class="flex items-center gap-2">
+                              <button type="button" class="routine-pip !min-w-[2.75rem]" :class="{ 'is-on': doneCount(r, selectedDay!) >= r.timesPerDay }" :disabled="selectedDay! > todayKey"
+                                      :aria-pressed="doneCount(r, selectedDay!) >= r.timesPerDay" :aria-label="t('routines.markDone', { title: r.title })"
+                                      @click="routinesStore.setCount(r.clientId, doneCount(r, selectedDay!) >= r.timesPerDay ? 0 : doneCount(r, selectedDay!) + 1, selectedDay!)">
+                                  {{ r.timesPerDay > 1 ? `${doneCount(r, selectedDay!)}/${r.timesPerDay}` : (doneCount(r, selectedDay!) ? '✓' : '') }}
+                              </button>
+                              <button type="button" class="min-w-0 flex-1 truncate text-left text-sm text-slate-200 hover:text-white" @click="routinesStore.openDetail(r.clientId)">{{ r.title }}</button>
+                          </li>
+                      </ul>
+                  </div>
               </template>
               <p v-else-if="!mStats.sessions" class="text-center text-xs text-slate-400">{{ t('calendar.emptyMonth') }} {{ t('calendar.swipeHint') }}.</p>
               <p v-else class="text-center text-xs text-slate-400">{{ t('calendar.tapDay') }}</p>

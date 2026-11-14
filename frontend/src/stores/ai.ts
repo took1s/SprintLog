@@ -22,6 +22,8 @@ import type { TrainingProgram } from '../types';
 import { useAppStore } from './app';
 import { useGoalsStore } from './goals';
 import { useRoutinesStore, type RoutineDraft } from './routines';
+import { usePlannedStore, type PlannedDraft } from './planned';
+import type { PlannedStatus } from '../lib/planned';
 import { useUiStore } from './ui';
 
 export type AiMode = 'quick' | 'deep';
@@ -45,7 +47,9 @@ export type AiAction =
   /** Änderung an der laufenden Einheit (nur im Training) - wird lokal angewendet, nichts geht an den Server. */
   | { type: 'workout'; operations: WorkoutOp[]; changes: string[] }
   /** Routine neben dem Plan (Dehnen, Reha ...); replacesId = Änderung einer bestehenden. */
-  | { type: 'routine'; routine: RoutineDraft; replacesId: string | null };
+  | { type: 'routine'; routine: RoutineDraft; replacesId: string | null }
+  /** Einzel-Einheit an einem Datum; status 'skipped' = absagen. */
+  | { type: 'session'; session: PlannedDraft & { status?: PlannedStatus; reason?: string | null; exercises: (PlannedDraft['exercises'][number] & { exerciseName?: string })[] }; replacesId: string | null };
 export type MemoryCategory = 'injury' | 'health' | 'goal' | 'schedule' | 'preference' | 'equipment' | 'insight' | 'other';
 export const MEMORY_CATEGORIES: readonly MemoryCategory[] = ['injury', 'health', 'goal', 'schedule', 'preference', 'equipment', 'insight', 'other'];
 export interface CoachMemory {
@@ -374,6 +378,15 @@ export const useAiStore = defineStore('ai', () => {
       } else if (action.type === 'routine') {
         useRoutinesStore().applyFromCoach(action.routine, action.replacesId);
         ok = true;
+      } else if (action.type === 'session') {
+        // Hat der Coach dafür den Wochenplan verschoben (Karte in derselben Antwort), zuerst den anwenden
+        const scheduleIndex = msg.actions!.findIndex((a, i) => a.type === 'schedule' && !msg.applied?.includes(i));
+        if (scheduleIndex >= 0) {
+          applying.value = null;
+          await applyAction(messageIndex, scheduleIndex);
+          applying.value = key;
+        }
+        ok = usePlannedStore().applyFromCoach(action.session, action.replacesId);
       } else if (action.type === 'goal') {
         const goals = useGoalsStore();
         goals.draft = {

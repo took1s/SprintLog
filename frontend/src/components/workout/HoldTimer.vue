@@ -8,6 +8,7 @@ import { t } from '@/i18n';
 import { exerciseName } from '@/i18n/content';
 import { useAppStore } from '@/stores/app';
 import { playRestAlarm, unlockAudio } from '@/lib/feedback';
+import { createSignalScheduler } from '@/lib/signals';
 import { alarmHaptic, setKeepAwake, tap } from '@/lib/native';
 
 const app = useAppStore();
@@ -56,6 +57,14 @@ function loop() {
   if (remaining.value <= 0) finish(true);
 }
 
+// Vorlauf vor dem Ende des Halte-Satzes (Musik leiser, 3-2-1) - gilt nur, solange der Timer läuft
+const signal = createSignalScheduler();
+watch(() => [holdTimer.value, settings.value.sound, settings.value.duckMusic, settings.value.countdown] as const, ([h]) => {
+  const endAt = h && !h.pausedAt ? h.startedAt + h.pausedMs + (h.lead + h.target) * 1000 : null;
+  signal.plan(endAt, { sound: settings.value.sound, duck: settings.value.duckMusic, countdown: settings.value.countdown });
+}, { immediate: true });
+onBeforeUnmount(() => signal.dispose());
+
 watch(holdTimer, (h, old) => {
   clearInterval(tick);
   if (h && !h.pausedAt) {
@@ -83,12 +92,14 @@ function finish(complete: boolean) {
     if (seconds < 1) { closeHoldTimer(); return; }
     if (settings.value.vibration) alarmHaptic();
     playRestAlarm({ sound: settings.value.sound, vibration: false });
+    signal.signalled();
     lastCount = -1;
     switchHoldSide(seconds);
     return;
   }
   if (complete) {
     playRestAlarm({ sound: settings.value.sound, vibration: settings.value.vibration });
+    signal.signalled();
     if (settings.value.vibration) alarmHaptic();
   }
   // Pro Seite zählt, was beide Seiten geschafft haben
