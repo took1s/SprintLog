@@ -13,6 +13,7 @@ import { programDiff, type DayDiff, type DiffItem } from '@/lib/programDiff';
 import { useAppStore } from '@/stores/app';
 import type { AiAction } from '@/stores/ai';
 import type { WorkoutOp } from '@/lib/liveWorkout';
+import RoutineStepRow from './RoutineStepRow.vue';
 
 const props = defineProps<{ action: AiAction; applied: boolean; busy: boolean }>();
 const emit = defineEmits<{ apply: [] }>();
@@ -191,14 +192,7 @@ const apply = () => { if (!locked.value) emit('apply'); };
           <p class="mt-1 break-words text-lg font-bold leading-tight text-white">{{ action.session.title }}</p>
           <p class="mt-1 font-mono text-[11px] text-slate-400">{{ sessionDate }} · {{ categoryName(action.session.category) }}</p>
           <ol v-if="action.session.status !== 'skipped'" class="mt-2 space-y-1.5" data-test="ai-session-exercises">
-              <li v-for="(x, i) in action.session.exercises" :key="i" class="flex items-center gap-2 rounded-xl border border-white/5 bg-black/20 px-3 py-2">
-                  <span class="routine-step-no" aria-hidden="true">{{ i + 1 }}</span>
-                  <span class="min-w-0 flex-1 break-words text-sm text-slate-200">{{ sessionLine(x).name }}</span>
-                  <span class="flex-shrink-0 font-mono text-[11px] text-slate-400">{{ sessionLine(x).text }}</span>
-                  <button type="button" class="routine-icon-btn !h-9 !w-9" :aria-label="t('routines.showHow', { name: sessionLine(x).name })" @click="openInfo(x.exerciseId)">
-                      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
-                  </button>
-              </li>
+              <RoutineStepRow v-for="(x, i) in action.session.exercises" :key="i" :index="i" boxed :name="sessionLine(x).name" :dose="sessionLine(x).text" :exercise-id="x.exerciseId" @info="openInfo" />
           </ol>
           <p v-if="action.session.notes" class="mt-2 text-xs leading-relaxed text-slate-400">{{ action.session.notes }}</p>
           <p v-if="action.session.reason" class="mt-2 text-sm leading-relaxed text-slate-300">{{ action.session.reason }}</p>
@@ -210,14 +204,7 @@ const apply = () => { if (!locked.value) emit('apply'); };
               <span class="routine-kind" :data-kind="action.routine.kind">{{ t(`routines.kinds.${action.routine.kind}`) }}</span> · {{ routineDays }}<template v-if="(action.routine.timesPerDay ?? 1) > 1"> · {{ tn('routines.timesPerDay', action.routine.timesPerDay) }}</template> · {{ routinePeriod }}
           </p>
           <ol class="mt-2 space-y-1.5" data-test="ai-routine-steps">
-              <li v-for="(s, i) in action.routine.steps" :key="i" class="flex items-center gap-2 rounded-xl border border-white/5 bg-black/20 px-3 py-2">
-                  <span class="routine-step-no" aria-hidden="true">{{ i + 1 }}</span>
-                  <span class="min-w-0 flex-1 break-words text-sm text-slate-200">{{ s.name }}</span>
-                  <span v-if="s.dose" class="flex-shrink-0 font-mono text-[11px] text-slate-400">{{ s.dose }}</span>
-                  <button v-if="s.exerciseId != null" type="button" class="routine-icon-btn !h-9 !w-9" :aria-label="t('routines.showHow', { name: s.name })" @click="openInfo(s.exerciseId)">
-                      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
-                  </button>
-              </li>
+              <RoutineStepRow v-for="(s, i) in action.routine.steps" :key="i" :index="i" boxed :name="s.name" :dose="s.dose" :exercise-id="s.exerciseId" @info="openInfo" />
           </ol>
           <p v-if="action.routine.reason" class="mt-2 text-sm leading-relaxed text-slate-300">{{ action.routine.reason }}</p>
       </template>

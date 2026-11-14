@@ -1878,6 +1878,27 @@ test('extra sessions: never on a plan day, start from the start screen, done aft
   assert.deepEqual(errors, []);
 });
 
+test('long coach texts stay readable on a narrow phone (no squeezed step names, no sideways scroll)', async () => {
+  const { page, errors } = await newPage();
+  await page.setViewportSize({ width: 320, height: 720 });
+  const token = await register(page, `narrow_${Date.now()}`);
+  const day = (n) => { const d = new Date(Date.now() + n * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  await api('PUT', '/api/routines/rt-e2enarrow', token, {
+    title: 'Растяжка бедра 3 раза в день после травмы задней поверхности', kind: 'rehab', days: 127, timesPerDay: 3, startDate: day(-2), endDate: day(8), source: 'coach',
+    steps: [{ name: 'Утро: растяжка задней поверхности бедра стоя у стены, носок на себя', dose: '3 × 30 с на ногу, боль до 3/10' }], doneDates: [],
+  });
+  await api('PUT', '/api/planned/pl-e2enarrow', token, { date: day(0), title: 'Дополнительная скоростная тренировка', category: 'Football', exercises: [{ exerciseId: 12, sets: 6, distance: 30 }] });
+  await page.reload();
+  await page.locator('[data-routine=rt-e2enarrow] button:has-text("Растяжка")').click();
+  const name = page.locator('[data-routine=rt-e2enarrow] .routine-step-name');
+  const box = await name.boundingBox();
+  assert.ok(box.width > 150, `step name has room (${box.width}px)`);
+  assert.ok(box.height < 120, `step name wraps normally (${box.height}px)`);
+  await page.waitForSelector('[data-test=planned-today] [data-test=planned-skip]');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'no sideways scroll');
+  assert.deepEqual(errors, []);
+});
+
 /** Wiederholt fn bis ein Ergebnis kommt (Sync läuft im Hintergrund). */
 async function waitFor(fn, timeout = 5000) {
   const deadline = Date.now() + timeout;

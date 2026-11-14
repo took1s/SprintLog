@@ -2545,7 +2545,7 @@ export const useAppStore = defineStore('app', () => {
   const restSignal = createSignalScheduler();
   watch(() => [timer.value.endAt, settings.value.sound, settings.value.duckMusic, settings.value.countdown] as const, ([endAt]) => {
     restSignal.plan(endAt, { sound: settings.value.sound, duck: settings.value.duckMusic, countdown: settings.value.countdown });
-  });
+  }, { immediate: true }); // auch nach dem Neuladen mit laufendem Timer
 
   function checkTimer() {
     if (!timer.value.endAt || Date.now() < timer.value.endAt) return;
@@ -2597,9 +2597,11 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function exportData(format: 'csv' | 'json') {
-    if (!allWorkouts.value.length) { toast(t('settings.nothingToExport'), 'error'); return; }
+    const extras = { routines: routinesStore.routines, plannedWorkouts: plannedStore.items };
+    const hasExtras = extras.routines.length > 0 || extras.plannedWorkouts.length > 0;
+    if (!allWorkouts.value.length && (format === 'csv' || !hasExtras)) { toast(t('settings.nothingToExport'), 'error'); return; }
     if (format === 'csv') exportCsv(user.value!.username, allWorkouts.value);
-    else exportJson(user.value!.username, allWorkouts.value);
+    else exportJson(user.value!.username, allWorkouts.value, extras);
   }
 
   async function confirmDeleteAccount() {

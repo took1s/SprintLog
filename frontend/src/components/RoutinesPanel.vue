@@ -53,7 +53,7 @@ function bar(clientId: string) {
                       <span v-if="routines.progressOf(r).adherence != null">{{ t('routines.adherence', { pct: routines.progressOf(r).adherence ?? 0 }) }}</span>
                       <span v-if="routines.progressOf(r).streak >= 2" class="routine-streak">{{ tn('routines.streak', routines.progressOf(r).streak) }}</span>
                   </p>
-                  <p class="mt-2 truncate text-xs text-slate-300">{{ r.steps.map((s) => s.dose ? `${s.name} (${s.dose})` : s.name).join(' · ') }}</p>
+                  <p class="mt-2 line-clamp-2 break-words text-xs leading-snug text-slate-300">{{ r.steps.map((s) => s.dose ? `${s.name} (${s.dose})` : s.name).join(' · ') }}</p>
                   <p v-if="r.pending" class="mt-1 font-mono text-[10px] text-slate-500">{{ t('routines.pendingSync') }}</p>
               </button>
           </li>

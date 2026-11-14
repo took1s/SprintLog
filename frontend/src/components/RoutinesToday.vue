@@ -10,6 +10,7 @@ import { useRoutinesStore } from '@/stores/routines';
 import { parseDay, type Routine } from '@/lib/routines';
 import { tap as haptic } from '@/lib/native';
 import RoutineMeta from './RoutineMeta.vue';
+import RoutineStepRow from './RoutineStepRow.vue';
 
 const app = useAppStore();
 const routines = useRoutinesStore();
@@ -30,7 +31,9 @@ function main(r: Routine) {
   const before = p(r);
   routines.tap(r.clientId, Math.min(before.countToday + 1, r.timesPerDay));
   haptic();
-  const nowDone = p(r).doneToday;
+  // Der Store ersetzt das Objekt beim Abhaken -> aktuellen Stand neu holen (sonst bleibt die Animation aus)
+  const fresh = routines.byId(r.clientId);
+  const nowDone = !!fresh && p(fresh).doneToday;
   justDone.value = nowDone && !before.doneToday ? r.clientId : null;
   if (justDone.value) window.setTimeout(() => { if (justDone.value === r.clientId) justDone.value = null; }, 700);
 }
@@ -65,7 +68,7 @@ function mainLabel(r: Routine) {
                   </button>
                   <button type="button" class="flex min-h-[2.75rem] min-w-0 flex-1 items-center gap-2 rounded-lg px-1 text-left" :aria-expanded="open === r.clientId" @click="toggleOpen(r.clientId)">
                       <span class="min-w-0 flex-1">
-                          <span class="block truncate text-sm font-bold" :class="p(r).doneToday ? 'text-slate-400 line-through decoration-1' : 'text-white'">{{ r.title }}</span>
+                          <span class="line-clamp-2 break-words text-sm font-bold leading-snug" :class="p(r).doneToday ? 'text-slate-400 line-through decoration-1' : 'text-white'">{{ r.title }}</span>
                           <RoutineMeta :routine="r" compact />
                       </span>
                       <span v-if="p(r).missedRecent" class="routine-missed-dot" :title="t('routines.missedOn', { date: date(p(r).missedRecent!) })" aria-hidden="true"></span>
@@ -78,14 +81,8 @@ function mainLabel(r: Routine) {
                       <button v-for="k in r.timesPerDay" :key="k" type="button" class="routine-pip" :class="{ 'is-on': k <= p(r).countToday }"
                               :aria-pressed="k <= p(r).countToday" :aria-label="t('routines.round', { n: k })" :data-pip="k" @click="routines.tap(r.clientId, k)">{{ k }}</button>
                   </div>
-                  <ol class="space-y-1">
-                      <li v-for="(s, i) in r.steps" :key="i" class="flex items-center gap-2 text-sm">
-                          <span class="min-w-0 flex-1 break-words text-slate-200">{{ s.name }}</span>
-                          <span v-if="s.dose" class="flex-shrink-0 font-mono text-[11px] text-slate-400">{{ s.dose }}</span>
-                          <button v-if="s.exerciseId != null" type="button" class="routine-icon-btn !h-9 !w-9" :aria-label="t('routines.showHow', { name: s.name })" @click="app.openExerciseInfo(s.exerciseId, 'overlay')" data-test="routine-step-info">
-                              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
-                          </button>
-                      </li>
+                  <ol class="space-y-1.5">
+                      <RoutineStepRow v-for="(s, i) in r.steps" :key="i" :name="s.name" :dose="s.dose" :exercise-id="s.exerciseId" @info="(id) => app.openExerciseInfo(id, 'overlay')" />
                   </ol>
                   <p v-if="r.reason" class="pt-1 text-[11px] leading-snug text-slate-400">{{ r.reason }}</p>
                   <div class="mt-2 flex flex-wrap items-center gap-2">

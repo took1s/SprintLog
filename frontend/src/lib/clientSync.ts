@@ -27,7 +27,15 @@ export const isNetworkError = (e: unknown): boolean => isApiError(e) && e.isNetw
 export function createClientSync<T extends ClientSynced>(o: ClientSyncOptions<T>) {
   let running: Promise<void> | null = null;
 
+  /** Server-Stand holen; lokal Ausstehendes gewinnt. */
+  async function merge(): Promise<void> {
+    const fresh = await o.api().get<T[]>(o.path);
+    const pending = o.items().filter((x) => x.pending);
+    o.setItems([...pending, ...fresh.filter((f) => !pending.some((p) => p.clientId === f.clientId))]);
+  }
+
   async function run(): Promise<void> {
+    let rejected = false;
     for (const item of o.items().filter((x) => x.pending)) {
       const sent = item.updatedAt;
       try {
@@ -41,11 +49,14 @@ export function createClientSync<T extends ClientSynced>(o: ClientSyncOptions<T>
         }
       } catch (e) {
         if (isNetworkError(e)) break;
-        // Dauerhaft abgelehnt: lokal behalten wäre ewiges Wiederholen
+        // Dauerhaft abgelehnt: lokal behalten wäre ewiges Wiederholen. Danach den Server-Stand holen -
+        // eine schon gespeicherte Version (z. B. vor dem Verschieben) kommt so zurück statt zu verschwinden.
         o.setItems(o.items().filter((x) => x.clientId !== item.clientId));
         o.onRejected(item, e);
+        rejected = true;
       }
     }
+    if (rejected) await merge().catch((e) => console.warn(`[sync ${o.path}] refetch`, e));
     o.persist();
   }
 
@@ -64,9 +75,7 @@ export function createClientSync<T extends ClientSynced>(o: ClientSyncOptions<T>
   async function pull(): Promise<boolean> {
     try {
       await push();
-      const fresh = await o.api().get<T[]>(o.path);
-      const pending = o.items().filter((x) => x.pending);
-      o.setItems([...pending, ...fresh.filter((f) => !pending.some((p) => p.clientId === f.clientId))]);
+      await merge();
       o.persist();
       return true;
     } catch (e) {

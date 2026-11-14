@@ -16,8 +16,17 @@ function download(filename: string, content: string, mime: string): void {
 
 const stamp = () => new Date().toISOString().slice(0, 10);
 
-export function exportJson(username: string, workouts: readonly Workout[]): void {
-  const data = { app: 'SprintLog', version: 3, exportedAt: new Date().toISOString(), user: username, workouts };
+/** Weitere eigene Daten neben den Einheiten (ohne lokale Sync-Felder). */
+export interface ExportExtras { routines?: readonly object[]; plannedWorkouts?: readonly object[] }
+
+const withoutLocal = (list: readonly object[] | undefined) =>
+  (list ?? []).filter((x) => (x as { pending?: string }).pending !== 'delete').map(({ pending: _p, ...rest }: { pending?: unknown }) => rest);
+
+export function exportJson(username: string, workouts: readonly Workout[], extras: ExportExtras = {}): void {
+  const data = {
+    app: 'SprintLog', version: 4, exportedAt: new Date().toISOString(), user: username, workouts,
+    routines: withoutLocal(extras.routines), plannedWorkouts: withoutLocal(extras.plannedWorkouts),
+  };
   download(`sprintlog-${username}-${stamp()}.json`, JSON.stringify(data, null, 2), 'application/json');
 }
 

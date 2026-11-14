@@ -10,6 +10,7 @@ import { daysBetween, historyWeeks, parseDay, type HistoryCell } from '@/lib/rou
 import { vSheetDrag } from '@/lib/gestures';
 import { tap as haptic } from '@/lib/native';
 import RoutineMeta from './RoutineMeta.vue';
+import RoutineStepRow from './RoutineStepRow.vue';
 
 const app = useAppStore();
 const routines = useRoutinesStore();
@@ -108,14 +109,7 @@ function edit() {
                   <!-- Schritte -->
                   <p class="label-xs mb-2 mt-5">{{ t('routines.sheet.steps') }}<template v-if="r.timesPerDay > 1"> · {{ tn('routines.timesPerDay', r.timesPerDay) }}</template></p>
                   <ol class="space-y-1.5">
-                      <li v-for="(s, i) in r.steps" :key="i" class="flex items-center gap-2 rounded-xl border border-white/5 bg-black/20 px-3 py-2">
-                          <span class="routine-step-no" aria-hidden="true">{{ i + 1 }}</span>
-                          <span class="min-w-0 flex-1 break-words text-sm text-slate-200">{{ s.name }}</span>
-                          <span v-if="s.dose" class="flex-shrink-0 font-mono text-[11px] text-slate-400">{{ s.dose }}</span>
-                          <button v-if="s.exerciseId != null" type="button" class="routine-icon-btn !h-9 !w-9" :aria-label="t('routines.showHow', { name: s.name })" @click="app.openExerciseInfo(s.exerciseId, 'overlay')">
-                              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
-                          </button>
-                      </li>
+                      <RoutineStepRow v-for="(s, i) in r.steps" :key="i" :index="i" boxed :name="s.name" :dose="s.dose" :exercise-id="s.exerciseId" @info="(id) => app.openExerciseInfo(id, 'overlay')" />
                   </ol>
                   <p v-if="r.reason" class="mt-3 text-sm leading-relaxed text-slate-300">{{ r.reason }}</p>
               </div>
