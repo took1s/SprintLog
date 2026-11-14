@@ -2950,6 +2950,72 @@ namespace SprintLog.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SprintLog.Api.Models.PlannedWorkout", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("WorkoutClientId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "Date");
+
+                    b.ToTable("PlannedWorkouts", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PlannedWorkouts_Status", "\"Status\" IN ('planned', 'done', 'skipped')");
+                        });
+                });
+
             modelBuilder.Entity("SprintLog.Api.Models.ProgramDay", b =>
                 {
                     b.Property<int>("Id")
@@ -3151,6 +3217,11 @@ namespace SprintLog.Api.Migrations
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("date");
 
+                    b.Property<int>("TimesPerDay")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(60)
@@ -3172,6 +3243,8 @@ namespace SprintLog.Api.Migrations
                             t.HasCheckConstraint("CK_Routines_Days", "\"Days\" BETWEEN 1 AND 127");
 
                             t.HasCheckConstraint("CK_Routines_Period", "\"EndDate\" IS NULL OR \"EndDate\" >= \"StartDate\"");
+
+                            t.HasCheckConstraint("CK_Routines_TimesPerDay", "\"TimesPerDay\" BETWEEN 1 AND 6");
                         });
                 });
 
@@ -3585,6 +3658,63 @@ namespace SprintLog.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Exercise");
+                });
+
+            modelBuilder.Entity("SprintLog.Api.Models.PlannedWorkout", b =>
+                {
+                    b.HasOne("SprintLog.Api.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsMany("SprintLog.Api.Models.PlannedExercise", "Exercises", b1 =>
+                        {
+                            b1.Property<int>("PlannedWorkoutId")
+                                .HasColumnType("integer");
+
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            b1.Property<double?>("Distance")
+                                .HasColumnType("double precision");
+
+                            b1.Property<int>("ExerciseId")
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("Note")
+                                .HasColumnType("text");
+
+                            b1.Property<int?>("RepsMax")
+                                .HasColumnType("integer");
+
+                            b1.Property<int?>("RepsMin")
+                                .HasColumnType("integer");
+
+                            b1.Property<int>("Sets")
+                                .HasColumnType("integer");
+
+                            b1.Property<double?>("TargetRpe")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double?>("Time")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double?>("Weight")
+                                .HasColumnType("double precision");
+
+                            b1.HasKey("PlannedWorkoutId", "Id");
+
+                            b1.ToTable("PlannedWorkouts");
+
+                            b1.ToJson("Exercises");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PlannedWorkoutId");
+                        });
+
+                    b.Navigation("Exercises");
                 });
 
             modelBuilder.Entity("SprintLog.Api.Models.ProgramDay", b =>

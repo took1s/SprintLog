@@ -16,6 +16,7 @@ import {
 } from '../lib/analytics';
 import { formatNumber, formatClock, formatDate, formatRelative, formatSeconds, describeSet, toLocalInput } from '../lib/format';
 import { unlockAudio, playRestAlarm, createWakeLock } from '../lib/feedback';
+import { createSignalScheduler } from '../lib/signals';
 import { alarmHaptic, isNative, loadNativeSession, nativeSession, scheduleRestNotification, setKeepAwake, tap } from '../lib/native';
 import { exportCsv, exportJson } from '../lib/export';
 import { BODYWEIGHT_EXERCISES } from '../lib/bodyweight';
@@ -36,6 +37,8 @@ import { applyWorkoutOps, gymKey, isGymDependent, liveSessionText, type WorkoutO
 import { useUiStore } from './ui';
 import { useGoalsStore, type GoalView } from './goals';
 import { useRoutinesStore } from './routines';
+import { usePlannedStore } from './planned';
+import type { PlannedWorkout } from '../lib/planned';
 import { alternativesFor, type Alternative } from '../lib/alternatives';
 import { hasSchedule, kindOf, nextDayOf, weekdayOf, type Schedule } from '../lib/schedule';
 import { estimateRecovery, recoveryStatus, type RecoveryEstimate } from '../lib/recovery';
@@ -55,6 +58,10 @@ export const DEFAULT_SETTINGS = Object.freeze({
   restField: 120,
   autoTimer: true,
   sound: true,
+  /** Musik anderer Apps kurz vor dem Signal leiser stellen. */
+  duckMusic: true,
+  /** Leise 3-2-1-Ticks vor dem Ende von Pause und Zeit-Satz. */
+  countdown: true,
   vibration: true,
   wakeLock: true,
   showTechnique: true,
@@ -105,9 +112,12 @@ export interface PlanTarget extends ProgramExercise {
 export interface SessionPlan {
   programId?: number;
   programName?: string;
-  dayId: number;
+  /** Plan-Tag; null bei einer geplanten Einzel-Einheit. */
+  dayId: number | null;
   dayName: string;
   targets: PlanTarget[];
+  /** Geplante Einzel-Einheit (lib/planned.ts), wird beim Speichern als erledigt markiert. */
+  plannedId?: string | null;
 }
 
 type Editing = { kind: 'server'; id: number; clientId?: string | null } | { kind: 'pending'; clientId: string };
@@ -219,6 +229,7 @@ export const useAppStore = defineStore('app', () => {
   const { toast, confirm } = ui;
   const goalsStore = useGoalsStore();
   const routinesStore = useRoutinesStore();
+  const plannedStore = usePlannedStore();
 
   // =====================================================================
   // Zustand
@@ -401,6 +412,11 @@ export const useAppStore = defineStore('app', () => {
     exercisesById: exercisesById.value, clockDate: clockDate.value, api: () => client,
   }));
   routinesStore.connect(() => ({ userId: user.value?.userId ?? null, online: online.value, clockDate: clockDate.value, api: () => client }));
+  plannedStore.connect(() => ({
+    userId: user.value?.userId ?? null, online: online.value, clockDate: clockDate.value, api: () => client,
+    schedule: activeProgram.value ? { trainingDays: activeProgram.value.trainingDays ?? 0, matchDays: activeProgram.value.matchDays ?? 0 } : null,
+    start: startPlannedSession,
+  }));
 
   // ---------- Trainingspläne ----------
   // Übersetzte Plan-Texte (KI) für programName/dayName/noteText bereitstellen
@@ -877,6 +893,7 @@ export const useAppStore = defineStore('app', () => {
       remove(k.wellness);
       remove(k.goals);
       remove(k.routines);
+      remove(k.planned);
       remove(k.aiChat); // Gespräche mit dem KI-Coach sind privat (geteilte Geräte)
       remove(k.aiAnalysis);
       remove(k.athlete);
@@ -884,6 +901,7 @@ export const useAppStore = defineStore('app', () => {
     }
     goalsStore.clear();
     routinesStore.clear();
+    plannedStore.clear();
     removeLegacyToken();
     void nativeSession.clear();
     remove(Keys.user);
@@ -948,7 +966,7 @@ export const useAppStore = defineStore('app', () => {
     // Offline angelegte Übungen zuerst zum Server - Favoriten und Ziele können sonst noch auf lokale IDs zeigen
     const exercisesReady = (async () => { await loadExercises(); await pushLocalExercises(); })();
     await Promise.allSettled([exercisesReady, loadPrograms(), loadTemplates(), loadWellness()]);
-    await Promise.allSettled([loadFavorites(), goalsStore.load(), routinesStore.load()]);
+    await Promise.allSettled([loadFavorites(), goalsStore.load(), routinesStore.load(), plannedStore.load()]);
     await syncNow({ reload: false });
     await loadHistory();
   }
@@ -1959,6 +1977,8 @@ export const useAppStore = defineStore('app', () => {
       queue.value = [...queue.value, saved];
     }
     persistQueue();
+    // Geplante Einzel-Einheit: als erledigt markieren und mit der Einheit verknüpfen
+    if (s.plan?.plannedId && !editing) plannedStore.markDone(s.plan.plannedId, saved.clientId!);
 
     // Zusammenfassung (nur für neue Einheiten): Erholung aus den Sätzen, bevor die Session geleert wird
     if (!editing) {
@@ -2270,6 +2290,37 @@ export const useAppStore = defineStore('app', () => {
     toast(t('plan.toast.dayStarted', { name: trDayName(activeProgram.value, day) }), 'success');
   }
 
+  /** Geplante Einzel-Einheit starten: Vorgaben wie ein Plan-Tag (ohne Progression), danach als erledigt markiert. */
+  async function startPlannedSession(p: PlannedWorkout): Promise<boolean> {
+    if (sessionActive.value) {
+      const ok = await confirm({ title: t('plan.confirm.replaceTitle'), message: t('plan.confirm.replaceDay'), confirmText: t('plan.confirm.startDay') });
+      if (!ok) return false;
+    }
+    const targets: PlanTarget[] = p.exercises.map((x, i) => {
+      const ex = exercisesById.value.get(x.exerciseId);
+      const px: ProgramExercise = {
+        id: -(i + 1), position: i, exerciseId: x.exerciseId, exerciseName: ex?.name, trackingType: ex?.trackingType, muscleGroup: ex?.muscleGroup ?? null,
+        sets: x.sets, repsMin: x.repsMin ?? null, repsMax: x.repsMax ?? null, distance: x.distance ?? null, time: x.time ?? null,
+        targetRpe: x.targetRpe ?? null, note: x.note ?? null,
+      };
+      const base = suggestTarget(px, allWorkouts.value, clockDate.value);
+      // Vom Coach/Nutzer festgelegtes Gewicht gilt vor dem Vorschlag aus dem Verlauf
+      const suggestion: TargetSuggestion = x.weight ? { ...base, kind: 'reference', weight: x.weight, note: '', noteKey: 'none', noteParams: undefined } : base;
+      return { ...px, name: ex?.name, category: ex?.category ?? p.category, suggestion };
+    });
+    stopTimer();
+    session.value = {
+      ...EMPTY_SESSION(),
+      startedAt: new Date().toISOString(),
+      plan: { dayId: null, dayName: p.title, targets, plannedId: p.clientId },
+    };
+    persistSession();
+    tab.value = p.category === 'Football' ? 'Football' : 'Gym';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    toast(t('plan.toast.dayStarted', { name: p.title }), 'success');
+    return true;
+  }
+
   function openPlanTarget(target: PlanTarget) {
     const ex: Exercise = exercisesById.value.get(target.exerciseId) ?? {
       id: target.exerciseId, name: target.exerciseName ?? '?', category: target.category,
@@ -2490,6 +2541,12 @@ export const useAppStore = defineStore('app', () => {
     timer.value = { endAt: null, duration: 0 };
     persistTimer();
   }
+  // Vorlauf vor dem Pausen-Ende: Musik leiser, leise 3-2-1 (lib/signals.ts)
+  const restSignal = createSignalScheduler();
+  watch(() => [timer.value.endAt, settings.value.sound, settings.value.duckMusic, settings.value.countdown] as const, ([endAt]) => {
+    restSignal.plan(endAt, { sound: settings.value.sound, duck: settings.value.duckMusic, countdown: settings.value.countdown });
+  });
+
   function checkTimer() {
     if (!timer.value.endAt || Date.now() < timer.value.endAt) return;
     const lateBy = Date.now() - timer.value.endAt;
@@ -2497,6 +2554,7 @@ export const useAppStore = defineStore('app', () => {
     // Alarm nur, wenn das Ende "live" erlebt wurde (nicht nach Stunden im Hintergrund).
     if (lateBy < 60_000) {
       playRestAlarm({ sound: settings.value.sound, vibration: settings.value.vibration });
+      restSignal.signalled();
       if (settings.value.vibration) alarmHaptic();
       toast(t('timer.over'), 'success');
     }
@@ -2601,6 +2659,8 @@ export const useAppStore = defineStore('app', () => {
     if (closeTopSheet()) return;
     if (goalsStore.draft.open) return goalsStore.closeGoal();
     if (routinesStore.editor.open) return routinesStore.close();
+    if (routinesStore.detailId) return routinesStore.closeDetail();
+    if (plannedStore.editor.open) return plannedStore.close();
     if (exerciseInfo.value) { exerciseInfo.value = null; return; }
     if (finishModal.value.open) { finishModal.value.open = false; return; }
     if (programEditor.value.open) { programEditor.value.open = false; return; }
@@ -2616,6 +2676,8 @@ export const useAppStore = defineStore('app', () => {
     if (ui.dialog.open) ui.resolveDialog(false);
     goalsStore.closeGoal();
     routinesStore.close();
+    routinesStore.closeDetail();
+    plannedStore.close();
     exerciseInfo.value = null;
     setModal.value.open = false;
     customModal.value.open = false;

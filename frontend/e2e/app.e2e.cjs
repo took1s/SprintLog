@@ -1741,6 +1741,9 @@ test('routines: create in the plan tab, tick off on the start screen, coach prop
   // Bearbeiten und vorzeitig beenden: verschwindet aus "heute", bleibt unter "Beendet"
   await page.click('nav >> text=PLAN');
   await page.click('[data-test=routines-panel] >> text=Ankle prevention');
+  // Detailansicht: Verlauf zeigt heute als erledigt, dann bearbeiten
+  await page.waitForSelector('[data-test=routine-detail] [data-state="done"]');
+  await page.click('[data-test=routine-edit]');
   await page.click('[data-test=routine-finish]');
   await page.waitForSelector('[data-test=routines-panel] summary >> text=Finished · 1');
   await waitFor(async () => { const list = await api('GET', '/api/routines', token); const r = list.find((x) => x.title === 'Ankle prevention'); return r.endDate < r.startDate || r.endDate === r.startDate ? list : null; });
@@ -1758,6 +1761,120 @@ test('AI plan written in another language can be translated from the plan tab', 
   await page.waitForSelector('[data-test=plan-translate]', { state: 'detached' });
   const [program] = await api('GET', '/api/programs', token);
   assert.equal(program.translations['Ноги'].de, 'Ноги (DE)');
+  assert.deepEqual(errors, []);
+});
+
+test('routines several times a day: tick rounds, catch up a missed day and fix history', async () => {
+  const { page, errors } = await newPage();
+  const token = await register(page, `rounds_${Date.now()}`);
+  const day = (n) => { const d = new Date(Date.now() + n * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  await api('PUT', '/api/routines/rt-e2erounds', token, {
+    title: 'Stretch 3x', kind: 'mobility', days: 127, timesPerDay: 3, startDate: day(-3), endDate: day(10), reason: null,
+    steps: [{ name: 'Hip flexor', dose: '2 x 45 s' }], doneDates: [day(-3), day(-3), day(-3)], source: 'user',
+  });
+  await page.reload();
+  await page.waitForSelector('[data-test=routines-today] >> text=0 of 1 done');
+
+  // Großer Haken zählt Durchgänge: 1/3, 2/3, 3/3 -> erledigt
+  const row = page.locator('[data-routine=rt-e2erounds]');
+  await row.locator('[data-test=routine-check]').click();
+  await row.locator('[data-test=routine-check] >> text=1/3').waitFor();
+  await row.locator('[data-test=routine-check]').click();
+  await row.locator('button:has-text("Stretch 3x")').click();
+  // Einzelner Durchgang: Punkt 3 setzt 3/3
+  await row.locator('[data-pip="3"]').click();
+  await page.waitForSelector('[data-test=routines-today] >> text=All done for today');
+
+  // Gestern nicht abgehakt -> nachtragen (alle Durchgänge)
+  await row.locator('[data-test=routine-catch-up]').click();
+  let r = await waitFor(async () => { const [x] = await api('GET', '/api/routines', token); return x.doneDates.length === 9 ? x : null; });
+  assert.equal(r.doneDates.filter((d) => d === day(0)).length, 3);
+  assert.equal(r.doneDates.filter((d) => d === day(-1)).length, 3);
+
+  // Verlauf: vorgestern fehlt -> antippen zählt einen Durchgang
+  await row.locator('[data-test=routine-history]').click();
+  await page.waitForSelector(`[data-test=routine-detail] [data-cell="${day(-2)}"][data-state="missed"]`);
+  await page.click(`[data-test=routine-detail] [data-cell="${day(-2)}"]`);
+  await page.waitForSelector(`[data-test=routine-detail] [data-cell="${day(-2)}"][data-state="partial"]`);
+  r = await waitFor(async () => { const [x] = await api('GET', '/api/routines', token); return x.doneDates.length === 10 ? x : null; });
+  assert.deepEqual(errors, []);
+});
+
+test('extra sessions: never on a plan day, start from the start screen, done after saving; coach card moves the plan first', async () => {
+  const { page, errors } = await newPage();
+  const token = await register(page, `planned_${Date.now()}`);
+  const day = (n) => { const d = new Date(Date.now() + n * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const bit = (iso) => 1 << ((new Date(`${iso}T12:00:00`).getDay() + 6) % 7);
+  const plan = await api('POST', '/api/programs', token, { name: 'Plan', goal: 'Strength', weeks: 6, days: [{ name: 'A', exercises: [{ exerciseId: 1, sets: 3, repsMin: 5, repsMax: 5 }] }] });
+  await api('PUT', `/api/programs/${plan.id}/schedule`, token, { trainingDays: bit(day(1)), matchDays: bit(day(3)) });
+  await page.reload();
+
+  // Plan-Tab: neue Einheit - Plan-Tag morgen ist gesperrt, freie Tage als Chips
+  await page.click('nav >> text=PLAN');
+  await page.click('[data-test=planned-new]');
+  await page.waitForSelector('[data-test=planned-sheet]');
+  await page.fill('[data-test=planned-date]', day(1));
+  await page.waitForSelector('[data-test=planned-conflict]');
+  assert.equal(await page.locator(`[data-free="${day(1)}"]`).count(), 0);
+  await page.click(`[data-free="${day(0)}"]`);
+  assert.equal(await page.locator('[data-test=planned-conflict]').count(), 0);
+  await page.fill('[data-test=planned-title]', 'Speed extra');
+  await page.click('[data-test=planned-sheet] [data-category=Football]');
+  await page.click('[data-test=planned-add-exercise]');
+  await page.fill('[data-test=planned-search]', 'bench press');
+  await page.click('[data-test=planned-sheet] [data-pick="1"]');
+  await page.click('[data-test=planned-save]');
+  await page.waitForSelector('[data-test=planned-sheet]', { state: 'detached' });
+  await page.waitForSelector('[data-test=planned-panel] >> text=Speed extra');
+  let [pl] = await waitFor(async () => { const list = await api('GET', '/api/planned', token); return list.length === 1 && list[0].date === day(0) ? list : null; });
+  assert.equal(pl.status, 'planned');
+
+  // Server lehnt einen Plan-Tag ab
+  const res = await fetch(`${BASE}/api/planned/pl-e2econflict`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ date: day(1), title: 'X', category: 'Gym', exercises: [{ exerciseId: 1, sets: 3 }] }) });
+  assert.equal(res.status, 409);
+
+  // Start-Bildschirm: heute geplant -> starten, Satz loggen, speichern -> Termin erledigt
+  await page.click('nav >> text=GYM');
+  await page.click('[data-test=planned-today] [data-test=planned-start]');
+  await page.waitForSelector('[data-test=finish-workout]');
+  const block = page.locator('[data-block="1"]');
+  await block.locator('[data-test=ghost-weight]').fill('60');
+  await block.locator('[data-test=ghost-reps]').fill('5');
+  await block.locator('[data-test=log-ghost]').click();
+  await page.click('button[aria-label="Stop timer"]');
+  await page.click('[data-test=finish-workout]');
+  await saveWorkout(page);
+  pl = (await waitFor(async () => { const list = await api('GET', '/api/planned', token); return list[0]?.status === 'done' ? list : null; }))[0];
+  assert.ok(pl.workoutClientId, 'linked to the logged workout');
+  await page.waitForSelector('[data-test=planned-today]', { state: 'detached' });
+
+  // Kalender: Raute am Tag, Tagesansicht mit Status
+  await page.click('[role=tab] >> nth=3');
+  await page.click('[data-subtab=calendar]');
+  await page.click(`[data-test=calendar-grid] [data-day="${day(0)}"]`);
+  await page.waitForSelector('[data-test=calendar-session] >> text=Speed extra');
+  // Plan-Tag morgen: keine Zusatz-Einheit möglich; übermorgen frei
+  await page.click(`[data-test=calendar-grid] [data-day="${day(1)}"]`);
+  await page.waitForSelector('[data-test=calendar-plan-day]');
+  assert.equal(await page.locator('[data-test=calendar-add-session]').count(), 0);
+
+  // Coach: Einheit planen -> Karte, Übernehmen legt sie an einem freien Tag an
+  await page.click('nav >> text=GYM');
+  await page.click('[data-test=coach-ask]');
+  await page.waitForSelector('[data-test=ai-chat]');
+  await page.fill('[data-test=ai-input]', 'Plan me an extra session this week');
+  // Der Coach verschiebt dabei auch den Wochenplan (Karte in derselben Antwort) - die Einheit wendet ihn zuerst an
+  await page.click('[data-test=ai-send]');
+  await page.waitForSelector('[data-action=session] >> text=Speed & agility');
+  await page.click('[data-action=session] [data-test=ai-action-apply]');
+  await page.waitForSelector('[data-action=session] >> text=Saved');
+  const all = await waitFor(async () => { const list = await api('GET', '/api/planned', token); return list.length === 2 ? list : null; });
+  const coach = all.find((x) => x.source === 'coach');
+  const [program] = await api('GET', '/api/programs', token);
+  assert.equal(program.trainingDays, 1 | 4 | 16, 'schedule card was applied first');
+  assert.equal(program.trainingDays & bit(coach.date), 0, 'not on a plan day');
+  assert.equal(program.matchDays & bit(coach.date), 0, 'not on a match day');
   assert.deepEqual(errors, []);
 });
 

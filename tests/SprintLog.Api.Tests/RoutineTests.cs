@@ -48,6 +48,25 @@ public class RoutineTests
     }
 
     [Fact]
+    public async Task Several_times_per_day_keeps_at_most_that_many_ticks_per_day()
+    {
+        var user = await _factory.CreateUserAsync();
+        var yesterday = InDays(-1);
+        var r = await HttpAssert.JsonAsync<RoutineResponse>(HttpStatusCode.OK, await user.Client.PutAsJsonAsync("/api/routines/rt-times0001", new
+        {
+            title = "Dehnen", kind = "mobility", days = 127, timesPerDay = 3, startDate = InDays(-3), endDate = InDays(10),
+            steps = new[] { new { name = "Hüftbeuger", dose = "2 x 45 s" } },
+            doneDates = new[] { Today, Today, Today, Today, yesterday },
+        }));
+        Assert.Equal(3, r.TimesPerDay);
+        Assert.Equal(3, r.DoneDates.Count(d => d == DateOnly.Parse(Today)));
+        Assert.Single(r.DoneDates, DateOnly.Parse(yesterday));
+
+        var bad = await user.Client.PutAsJsonAsync("/api/routines/rt-times0001", new { title = "Dehnen", kind = "mobility", days = 127, timesPerDay = 9, startDate = Today, steps = new[] { new { name = "a" } } });
+        Assert.Contains("timesPerDay", await HttpAssert.ValidationFieldsAsync(bad));
+    }
+
+    [Fact]
     public async Task Invalid_values_are_rejected_with_field_errors()
     {
         var user = await _factory.CreateUserAsync();

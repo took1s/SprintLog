@@ -3,12 +3,14 @@
 // Datumswerte sind lokale Tage als yyyy-MM-dd (wie beim Befinden): "heute" ist der Tag des Nutzers, nicht UTC.
 import { bit, weekdayOf } from './schedule';
 import { localDay } from './wellness';
+import { newClientId } from './clientSync';
 
 export const ROUTINE_KINDS = ['mobility', 'rehab', 'prevention', 'activation', 'recovery', 'other'] as const;
 export type RoutineKind = (typeof ROUTINE_KINDS)[number];
 
 export const EVERY_DAY = 127;
 export const MAX_ROUTINE_STEPS = 12;
+export const MAX_TIMES_PER_DAY = 6;
 
 export interface RoutineStep { name: string; dose?: string | null; exerciseId?: number | null }
 
@@ -24,6 +26,9 @@ export interface Routine {
   reason: string | null;
   source: 'user' | 'coach';
   steps: RoutineStep[];
+  /** Wie oft pro fälligem Tag (1 = einmal). Ein Tag ist erledigt, wenn so oft abgehakt. */
+  timesPerDay: number;
+  /** Ein Eintrag pro erledigtem Durchgang: bei 3x täglich bis zu 3x dasselbe Datum. */
   doneDates: string[];
   createdAt: string;
   updatedAt: string;
@@ -52,11 +57,26 @@ export function routineState(r: Pick<Routine, 'startDate' | 'endDate'>, today: s
 export const isScheduled = (r: Pick<Routine, 'days' | 'startDate' | 'endDate'>, day: string): boolean =>
   day >= r.startDate && (!r.endDate || day <= r.endDate) && (r.days & bit(weekdayOf(parseDay(day)))) !== 0;
 
-export const isDone = (r: Pick<Routine, 'doneDates'>, day: string): boolean => r.doneDates.includes(day);
+const times = (r: Pick<Routine, 'timesPerDay'>) => Math.max(1, Math.min(MAX_TIMES_PER_DAY, r.timesPerDay || 1));
 
-/** Erledigt-Haken umschalten (sortiert, ohne Duplikate). */
-export function toggleDone(doneDates: readonly string[], day: string): string[] {
-  return doneDates.includes(day) ? doneDates.filter((d) => d !== day) : [...doneDates, day].sort();
+/** Wie oft an diesem Tag abgehakt (0 ... timesPerDay). */
+export const doneCount = (r: Pick<Routine, 'doneDates'>, day: string): number => r.doneDates.reduce((n, d) => n + (d === day ? 1 : 0), 0);
+
+/** Tag komplett erledigt (alle Durchgänge). */
+export const isDone = (r: Pick<Routine, 'doneDates' | 'timesPerDay'>, day: string): boolean => doneCount(r, day) >= times(r);
+
+/** Durchgänge eines Tages auf n setzen (0 ... timesPerDay); Ergebnis sortiert. */
+export function setDoneCount(r: Pick<Routine, 'doneDates' | 'timesPerDay'>, day: string, n: number): string[] {
+  const count = Math.max(0, Math.min(times(r), Math.round(n)));
+  return [...r.doneDates.filter((d) => d !== day), ...Array.from({ length: count }, () => day)].sort();
+}
+
+/**
+ * Tipp auf den k-ten Durchgang (1-basiert): bis k abhaken - oder, wenn genau k schon steht, den k-ten wieder lösen.
+ * Bei einmal täglich ist das ein normaler Haken.
+ */
+export function tapCount(current: number, k: number): number {
+  return current === k ? k - 1 : k;
 }
 
 /** Fällige Tage zwischen from und to (einschließlich). */
@@ -81,9 +101,12 @@ export interface RoutineProgress {
   streak: number;
   /** 0-100: Anteil erledigter fälliger Tage der letzten 14 Tage. */
   adherence: number | null;
-  /** Heute fällig, heute erledigt. */
+  /** Heute fällig, heute erledigt, heutige Durchgänge (bei mehrmals täglich). */
   dueToday: boolean;
   doneToday: boolean;
+  countToday: number;
+  /** Fälliger Tag vor heute (bis 6 Tage zurück) ohne vollständigen Haken - zum Nachtragen. */
+  missedRecent: string | null;
 }
 
 export function routineProgress(r: Routine, today: string): RoutineProgress {
@@ -107,6 +130,8 @@ export function routineProgress(r: Routine, today: string): RoutineProgress {
     adherence: recent.length ? Math.round((recent.filter((d) => isDone(r, d)).length / recent.length) * 100) : null,
     dueToday: isScheduled(r, today),
     doneToday: isDone(r, today),
+    countToday: doneCount(r, today),
+    missedRecent: [...scheduledDays(r, addDays(today, -6), addDays(today, -1))].reverse().find((d) => !isDone(r, d)) ?? null,
   };
 }
 
@@ -126,8 +151,44 @@ export function sortRoutines<T extends Routine>(list: readonly T[], today: strin
 }
 
 /** Client-Id wie vom Server erwartet: ^[A-Za-z0-9_-]{8,64}$. */
-export function newRoutineId(): string {
-  const raw = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
-  return `rt-${raw.replace(/[^A-Za-z0-9]/g, '').slice(0, 24)}`;
+export const newRoutineId = (): string => newClientId('rt');
+
+export type HistoryCellState = 'done' | 'partial' | 'missed' | 'open' | 'off' | 'future' | 'outside';
+
+export interface HistoryCell { day: string; state: HistoryCellState; count: number }
+
+/**
+ * Verlauf als Wochen (Mo-So) für die Detailansicht: erledigt, teilweise, verpasst, heute offen, nicht fällig,
+ * Zukunft oder außerhalb des Zeitraums. Neueste Woche zuletzt.
+ */
+export function historyWeeks(r: Routine, today: string, weeks = 5): HistoryCell[][] {
+  const monday = addDays(today, -weekdayOf(parseDay(today)));
+  const out: HistoryCell[][] = [];
+  for (let w = weeks - 1; w >= 0; w--) {
+    const start = addDays(monday, -7 * w);
+    out.push(Array.from({ length: 7 }, (_, i) => {
+      const day = addDays(start, i);
+      const count = doneCount(r, day);
+      let state: HistoryCellState;
+      if (day < r.startDate || (r.endDate && day > r.endDate)) state = 'outside';
+      else if (day > today) state = isScheduled(r, day) ? 'future' : 'off';
+      else if (!isScheduled(r, day)) state = count > 0 ? 'done' : 'off';
+      else if (isDone(r, day)) state = 'done';
+      else if (count > 0) state = 'partial';
+      else state = day === today ? 'open' : 'missed';
+      return { day, state, count };
+    }));
+  }
+  return out;
 }
 
+
+export interface DayRoutines { due: Routine[]; done: number; partial: number }
+
+/** Fällige Routinen eines Tages und wie viele davon (teilweise) erledigt sind - für den Kalender. */
+export function routinesOnDay<T extends Routine>(list: readonly T[], day: string): DayRoutines & { due: T[] } {
+  const due = list.filter((r) => r.pending !== 'delete' && isScheduled(r, day));
+  const done = due.filter((r) => isDone(r, day)).length;
+  const partial = due.filter((r) => !isDone(r, day) && doneCount(r, day) > 0).length;
+  return { due, done, partial };
+}

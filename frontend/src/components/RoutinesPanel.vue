@@ -35,7 +35,7 @@ function bar(clientId: string) {
 
       <ul v-if="current.length" class="space-y-3">
           <li v-for="r in current" :key="r.clientId">
-              <button type="button" @click="routines.openEdit(r.clientId)" class="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition-colors hover:bg-white/5" :data-routine-row="r.clientId">
+              <button type="button" @click="routines.openDetail(r.clientId)" class="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition-colors hover:bg-white/5" :data-routine-row="r.clientId">
                   <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                           <p class="break-words font-bold leading-snug text-white">{{ r.title }}</p>
@@ -66,7 +66,7 @@ function bar(clientId: string) {
           </summary>
           <ul class="space-y-2">
               <li v-for="r in ended" :key="r.clientId">
-                  <button type="button" @click="routines.openEdit(r.clientId)" class="w-full rounded-xl border border-white/5 bg-black/20 px-4 py-3 text-left hover:bg-white/5" :data-routine-row="r.clientId">
+                  <button type="button" @click="routines.openDetail(r.clientId)" class="w-full rounded-xl border border-white/5 bg-black/20 px-4 py-3 text-left hover:bg-white/5" :data-routine-row="r.clientId">
                       <span class="block truncate text-sm font-bold text-slate-300">{{ r.title }}</span>
                       <RoutineMeta :routine="r" compact />
                   </button>

@@ -9,7 +9,7 @@ namespace SprintLog.Api.Endpoints;
 
 /// <summary>
 /// Routinen (Dehnen, Reha, Prävention): GET alle, PUT pro Client-Id (anlegen oder überschreiben, idempotent für die
-/// Offline-Queue), DELETE. Erledigt-Tage kommen mit der Routine - das letzte Schreiben gewinnt (ein Nutzer, wenige Geräte).
+/// Offline-Queue), DELETE. Erledigte Durchgänge kommen mit der Routine - das letzte Schreiben gewinnt (ein Nutzer, wenige Geräte).
 /// </summary>
 public static class RoutineEndpoints
 {
@@ -64,7 +64,11 @@ public static class RoutineEndpoints
             Dose = string.IsNullOrWhiteSpace(s.Dose) ? null : s.Dose.Trim(),
             ExerciseId = s.ExerciseId is { } id && known.Contains(id) ? id : null,
         }).ToList();
-        routine.DoneDates = (input.DoneDates ?? routine.DoneDates).Distinct().OrderByDescending(d => d).Take(Routine.MaxDoneDays).OrderBy(d => d).ToList();
+        routine.TimesPerDay = input.TimesPerDay;
+        // Pro Tag höchstens so viele Durchgänge wie vorgesehen (ältere Einträge fallen bei Überlänge weg)
+        routine.DoneDates = (input.DoneDates ?? routine.DoneDates)
+            .GroupBy(d => d).SelectMany(g => g.Take(routine.TimesPerDay))
+            .OrderByDescending(d => d).Take(Routine.MaxDoneEntries).OrderBy(d => d).ToList();
         routine.UpdatedAt = now;
 
         try

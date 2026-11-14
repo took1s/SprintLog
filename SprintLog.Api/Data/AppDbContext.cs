@@ -26,6 +26,7 @@ public class AppDbContext : DbContext
     public DbSet<AthleteProfile> AthleteProfiles => Set<AthleteProfile>();
     public DbSet<CoachMemory> CoachMemories => Set<CoachMemory>();
     public DbSet<Routine> Routines => Set<Routine>();
+    public DbSet<PlannedWorkout> PlannedWorkouts => Set<PlannedWorkout>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -153,11 +154,29 @@ public class AppDbContext : DbContext
             e.HasOne(g => g.Exercise).WithMany().HasForeignKey(g => g.ExerciseId).OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<PlannedWorkout>(e =>
+        {
+            e.ToTable("PlannedWorkouts", t => t.HasCheckConstraint("CK_PlannedWorkouts_Status", "\"Status\" IN ('planned', 'done', 'skipped')"));
+            e.HasIndex(p => new { p.UserId, p.ClientId }).IsUnique();
+            e.HasIndex(p => new { p.UserId, p.Date });
+            e.Property(p => p.ClientId).HasMaxLength(64);
+            e.Property(p => p.Title).HasMaxLength(60);
+            e.Property(p => p.Category).HasMaxLength(16);
+            e.Property(p => p.Notes).HasMaxLength(300);
+            e.Property(p => p.Source).HasMaxLength(8);
+            e.Property(p => p.Status).HasMaxLength(8);
+            e.Property(p => p.WorkoutClientId).HasMaxLength(64);
+            // Vorgaben als jsonb: gehören fest zum Termin
+            e.OwnsMany(p => p.Exercises, b => b.ToJson());
+            e.HasOne<User>().WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<Routine>(e =>
         {
             e.ToTable("Routines", t =>
             {
                 t.HasCheckConstraint("CK_Routines_Days", "\"Days\" BETWEEN 1 AND 127");
+                t.HasCheckConstraint("CK_Routines_TimesPerDay", "\"TimesPerDay\" BETWEEN 1 AND 6");
                 t.HasCheckConstraint("CK_Routines_Period", "\"EndDate\" IS NULL OR \"EndDate\" >= \"StartDate\"");
             });
             e.HasIndex(r => new { r.UserId, r.ClientId }).IsUnique();
@@ -166,6 +185,7 @@ public class AppDbContext : DbContext
             e.Property(r => r.Kind).HasMaxLength(16);
             e.Property(r => r.Source).HasMaxLength(8);
             e.Property(r => r.Reason).HasMaxLength(300);
+            e.Property(r => r.TimesPerDay).HasDefaultValue(1);
             // Schritte als jsonb: gehören fest zur Routine, werden nie einzeln abgefragt
             e.OwnsMany(r => r.Steps, b =>
             {

@@ -38,7 +38,16 @@ const templates = JSON.parse(readFileSync(join(root, 'SprintLog.Api', 'Data', 'p
 // Gleiche Content-Security-Policy wie die echte API -> E2E-Tests finden CSP-Verstöße (Konsolenfehler).
 const CSP = JSON.parse(readFileSync(join(root, 'SprintLog.Api', 'appsettings.json'), 'utf8')).Security.ContentSecurityPolicy;
 
-const db = { users: [], wellness: [], goals: [], routines: [], exercises: [...seed], workouts: [], deleted: [], favorites: [], programs: [], refresh: [], codes: [], links: [], outbox: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
+const db = { users: [], wellness: [], goals: [], routines: [], planned: [], exercises: [...seed], workouts: [], deleted: [], favorites: [], programs: [], refresh: [], codes: [], links: [], outbox: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
+
+/** Höchstens max Einträge pro Datum (Routinen mit mehreren Durchgängen am Tag). */
+function capPerDay(dates, max) {
+  const seen = new Map();
+  return dates.filter((d) => { const n = (seen.get(d) ?? 0) + 1; seen.set(d, n); return n <= max; });
+}
+
+/** Wochentag-Bit wie im Backend (Montag = 1). */
+const dayBit = (iso) => 1 << ((new Date(`${iso}T12:00:00`).getDay() + 6) % 7);
 
 function programResponse(p) {
   return {
@@ -538,6 +547,17 @@ async function handleApi(req, res, url) {
         const r = db.routines.find((x) => x.userId === user.id && x.kind === 'rehab');
         if (r) actions.push({ type: 'routine', replacesId: r.clientId, routine: { title: r.title, kind: r.kind, days: r.days, startDate: r.startDate, endDate: r.startDate, reason: 'Pain-free for a week.', steps: r.steps } });
       }
+      // Einheit planen wie propose_session: "session"/"тренировк"/"einheit" -> nächster freier Tag (kein Plan-Tag)
+      if (/session|тренировк|einheit/.test(lower)) {
+        // Schlägt der Mock in derselben Antwort einen Wochenplan vor (Frage enthält "week"), gilt dieser - wie auf dem Server
+        const proposesWeek = lower.includes('week') || lower.includes('недел') || lower.includes('woche');
+        const active = proposesWeek ? { trainingDays: 1 | 4 | 16, matchDays: 64 } : db.programs.find((p) => p.userId === user.id && p.isActive);
+        const iso = (n) => { const d = new Date(Date.now() + n * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+        let n = 1;
+        while (active && n < 14 && ((active.trainingDays | active.matchDays) & dayBit(iso(n)))) n++;
+        actions.push({ type: 'session', replacesId: null, session: { date: iso(n), title: 'Speed & agility', category: 'Football', status: 'planned', notes: 'Fresh legs, full recovery between sprints.', reason: 'Extra speed work on a free day.',
+          exercises: [{ exerciseId: 12, exerciseName: 'Sprints', sets: 6, distance: 30 }, { exerciseId: 50, exerciseName: 'Nordic Hamstring Curl', sets: 2, repsMin: 5, repsMax: 5 }] } });
+      }
       if (lower.includes('week') || lower.includes('недел') || lower.includes('woche')) {
         actions.push({ type: 'schedule', trainingDays: 1 | 4 | 16, matchDays: 64, reason: 'Rest before and after the match.' });
       }
@@ -616,6 +636,41 @@ async function handleApi(req, res, url) {
     return problem(res, 404, 'Not Found');
   }
 
+  if (method === 'GET' && path === '/api/planned') return json(res, 200, db.planned.filter((p) => p.userId === user.id).map(({ userId, ...rest }) => rest).sort((a, b) => a.date.localeCompare(b.date)));
+  m = path.match(/^\/api\/planned\/([^/]+)$/);
+  if (m && method === 'PUT') {
+    const body = await readBody(req);
+    const errors = {};
+    if (!/^[A-Za-z0-9_-]{8,64}$/.test(m[1])) errors.clientId = ['Invalid id.'];
+    if (!String(body.title ?? '').trim() || String(body.title).trim().length > 60) errors.title = ['Title is required (max 60 characters).'];
+    if (!['Gym', 'Football'].includes(body.category)) errors.category = ['Unknown category.'];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(body.date ?? ''))) errors.date = ['Date is out of range.'];
+    if (body.status && !['planned', 'done', 'skipped'].includes(body.status)) errors.status = ['Unknown status.'];
+    if (!Array.isArray(body.exercises) || !body.exercises.length || body.exercises.some((x) => !db.exercises.some((e) => e.id === x.exerciseId) || !(x.sets >= 1 && x.sets <= 20))) errors.exercises = ['Add 1 to 15 exercises.'];
+    if (Object.keys(errors).length) return problem(res, 400, 'One or more validation errors occurred.', errors);
+    const old = db.planned.find((p) => p.userId === user.id && p.clientId === m[1]);
+    const status = body.status ?? old?.status ?? 'planned';
+    if (status === 'planned' && (!old || old.date !== body.date)) {
+      const active = db.programs.find((p) => p.userId === user.id && p.isActive);
+      const b = dayBit(body.date);
+      if (active && ((active.trainingDays & b) || (active.matchDays & b))) return json(res, 409, { title: 'plan_conflict', code: 'plan_conflict', kind: active.matchDays & b ? 'match' : 'training' });
+    }
+    const now = new Date().toISOString();
+    const planned = {
+      userId: user.id, clientId: m[1], date: body.date, title: body.title.trim(), category: body.category, notes: body.notes?.trim() || null,
+      source: old?.source ?? body.source ?? 'user', status, workoutClientId: status === 'done' ? body.workoutClientId ?? old?.workoutClientId ?? null : null,
+      exercises: body.exercises.map((x) => ({ exerciseId: x.exerciseId, sets: x.sets, repsMin: x.repsMin ?? null, repsMax: x.repsMax ?? null, weight: x.weight ?? null, distance: x.distance ?? null, time: x.time ?? null, targetRpe: x.targetRpe ?? null, note: x.note ?? null })),
+      createdAt: old?.createdAt ?? now, updatedAt: now,
+    };
+    db.planned = [...db.planned.filter((p) => p !== old), planned];
+    const { userId, ...rest } = planned;
+    return json(res, 200, rest);
+  }
+  if (m && method === 'DELETE') {
+    db.planned = db.planned.filter((p) => !(p.userId === user.id && p.clientId === m[1]));
+    return noContent(res);
+  }
+
   if (method === 'GET' && path === '/api/routines') return json(res, 200, db.routines.filter((r) => r.userId === user.id).map(({ userId, ...rest }) => rest));
   m = path.match(/^\/api\/routines\/([^/]+)$/);
   if (m && method === 'PUT') {
@@ -634,7 +689,8 @@ async function handleApi(req, res, url) {
       userId: user.id, clientId: m[1], title: body.title.trim(), kind: body.kind, days: body.days, startDate: body.startDate, endDate: body.endDate ?? null,
       reason: body.reason?.trim() || null, source: old?.source ?? body.source ?? 'user',
       steps: body.steps.map((x) => ({ name: x.name.trim(), dose: x.dose?.trim() || null, exerciseId: db.exercises.some((e) => e.id === x.exerciseId) ? x.exerciseId : null })),
-      doneDates: [...new Set(body.doneDates ?? old?.doneDates ?? [])].sort(), createdAt: old?.createdAt ?? now, updatedAt: now,
+      timesPerDay: Math.max(1, Math.min(6, body.timesPerDay ?? 1)),
+      doneDates: capPerDay(body.doneDates ?? old?.doneDates ?? [], Math.max(1, Math.min(6, body.timesPerDay ?? 1))).sort(), createdAt: old?.createdAt ?? now, updatedAt: now,
     };
     db.routines = [...db.routines.filter((r) => r !== old), routine];
     const { userId, ...rest } = routine;
@@ -843,12 +899,19 @@ function seedDemo() {
   // Routinen für Screenshots: Reha seit 10 Tagen (fast immer erledigt) und Dehnen an Trainingstagen
   const dayKey = (n) => { const d = new Date(Date.now() + n * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   db.routines.push(
-    { userId: user.id, clientId: 'rt-demo-rehab', title: 'Hamstring rehab (left)', kind: 'rehab', days: 127, startDate: dayKey(-10), endDate: dayKey(11), reason: 'Mild strain, physio cleared progressive loading.', source: 'coach',
+    { userId: user.id, clientId: 'rt-demo-rehab', title: 'Hamstring rehab (left)', kind: 'rehab', days: 127, timesPerDay: 1, startDate: dayKey(-10), endDate: dayKey(11), reason: 'Mild strain, physio cleared progressive loading.', source: 'coach',
       steps: [{ name: 'Glute bridge hold', dose: '3 x 30 s', exerciseId: null }, { name: 'Nordic Hamstring Curl', dose: '2 x 5, slow', exerciseId: 50 }, { name: 'Tempo runs', dose: '6 x 60 m @ 70 %', exerciseId: null }],
       doneDates: [-10, -9, -8, -7, -5, -4, -3, -2, -1].map(dayKey), createdAt: created, updatedAt: created },
-    { userId: user.id, clientId: 'rt-demo-stretch', title: 'Stretching after training', kind: 'mobility', days: 127, startDate: dayKey(-3), endDate: dayKey(25), reason: null, source: 'user',
+    { userId: user.id, clientId: 'rt-demo-stretch', title: 'Stretching after training', kind: 'mobility', days: 127, timesPerDay: 2, startDate: dayKey(-3), endDate: dayKey(25), reason: null, source: 'user',
       steps: [{ name: 'Hip flexor stretch', dose: '2 x 45 s per side', exerciseId: null }, { name: 'Plank', dose: '3 x 30 s', exerciseId: 47 }],
-      doneDates: [-3, -1].map(dayKey), createdAt: created, updatedAt: created },
+      doneDates: [-3, -3, -2, -1, -1, 0].map(dayKey), createdAt: created, updatedAt: created },
+  );
+  // Zusatz-Einheiten: eine vom Coach in 2 Tagen, eine erledigte letzte Woche
+  db.planned.push(
+    { userId: user.id, clientId: 'pl-demo-speed', date: dayKey(2), title: 'Speed & agility', category: 'Football', notes: 'Fresh legs, full recovery between sprints.', source: 'coach', status: 'planned', workoutClientId: null,
+      exercises: [{ exerciseId: 12, sets: 6, distance: 30 }, { exerciseId: 50, sets: 2, repsMin: 5, repsMax: 5 }], createdAt: created, updatedAt: created },
+    { userId: user.id, clientId: 'pl-demo-done', date: dayKey(-5), title: 'Upper body extra', category: 'Gym', notes: null, source: 'user', status: 'done', workoutClientId: null,
+      exercises: [{ exerciseId: 1, sets: 3, repsMin: 6, repsMax: 8, weight: 60 }], createdAt: created, updatedAt: created },
   );
   console.log(`demo: user "demo" / "demo-password" with ${db.workouts.length} workouts`);
 }

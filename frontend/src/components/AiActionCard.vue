@@ -4,10 +4,11 @@
 import { computed, shallowRef, useId, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { intlLocale, t, tn } from '@/i18n';
-import { exerciseName, goalName } from '@/i18n/content';
+import { categoryName, exerciseName, goalName } from '@/i18n/content';
 import { formatDate, formatNumber } from '@/lib/format';
 import { WEEKDAYS, bit } from '@/lib/schedule';
 import { EVERY_DAY, daysBetween, parseDay } from '@/lib/routines';
+import { prescriptionText, type PlannedExercise } from '@/lib/planned';
 import { programDiff, type DayDiff, type DiffItem } from '@/lib/programDiff';
 import { useAppStore } from '@/stores/app';
 import type { AiAction } from '@/stores/ai';
@@ -42,11 +43,18 @@ const diff = computed(() => frozenDiff.value ?? liveDiff.value);
 // Nach Neuladen eines schon übernommenen Vorschlags gibt es keinen Vorher-Stand mehr: dann nur die Änderungsliste
 const showDiff = computed(() => !props.applied || frozenDiff.value !== null);
 
-const title = computed(() => (props.action.type === 'routine' && props.action.replacesId ? t('ai.actions.routineUpdate') : t(`ai.actions.${props.action.type}`)));
+const title = computed(() => {
+  const a = props.action;
+  if (a.type === 'routine' && a.replacesId) return t('ai.actions.routineUpdate');
+  if (a.type === 'session') return a.session.status === 'skipped' ? t('ai.actions.sessionCancel') : a.replacesId ? t('ai.actions.sessionUpdate') : t('ai.actions.session');
+  return t(`ai.actions.${a.type}`);
+});
 const button = computed(() => ({
   program: t('ai.actions.saveProgram'), programUpdate: t('ai.actions.applyUpdate'), goal: t('ai.actions.saveGoal'), schedule: t('ai.actions.applySchedule'),
   workout: t('ai.actions.applyWorkout'),
   routine: props.action.type === 'routine' && props.action.replacesId ? t('ai.actions.applyRoutine') : t('ai.actions.addRoutine'),
+  session: props.action.type === 'session' && props.action.session.status === 'skipped' ? t('ai.actions.cancelSession')
+    : props.action.type === 'session' && props.action.replacesId ? t('ai.actions.applySession') : t('ai.actions.addSession'),
 })[props.action.type]);
 
 // Routine: Tage, Zeitraum, Schritte
@@ -63,6 +71,13 @@ const routinePeriod = computed(() => {
   const weeks = Math.round((daysBetween(r.startDate, r.endDate) + 1) / 7);
   return `${d(r.startDate)} – ${d(r.endDate)}${weeks >= 1 && (daysBetween(r.startDate, r.endDate) + 1) % 7 === 0 ? ` · ${tn('routines.sheet.durationWeeks', weeks)}` : ''}`;
 });
+// Geplante Einheit: Tag, Plan-Konflikt (falls der Wochenplan in derselben Antwort nicht verschoben wird)
+const sessionDate = computed(() => (props.action.type === 'session'
+  ? parseDay(props.action.session.date).toLocaleDateString(intlLocale(), { weekday: 'long', day: 'numeric', month: 'long' }) : ''));
+const sessionLine = (x: { exerciseId: number; exerciseName?: string } & PlannedExercise) => {
+  const ex = useAppStore().exerciseFor(x.exerciseId);
+  return { name: exerciseName(ex ?? x.exerciseId, x.exerciseName), text: prescriptionText(x, ex?.trackingType) };
+};
 const openInfo = (id: number) => useAppStore().openExerciseInfo(id, 'overlay');
 
 // Änderung am laufenden Training: was genau, mit welchen Vorgaben
@@ -172,10 +187,27 @@ const apply = () => { if (!locked.value) emit('apply'); };
           </ol>
       </template>
 
+      <template v-else-if="action.type === 'session'">
+          <p class="mt-1 break-words text-lg font-bold leading-tight text-white">{{ action.session.title }}</p>
+          <p class="mt-1 font-mono text-[11px] text-slate-400">{{ sessionDate }} · {{ categoryName(action.session.category) }}</p>
+          <ol v-if="action.session.status !== 'skipped'" class="mt-2 space-y-1.5" data-test="ai-session-exercises">
+              <li v-for="(x, i) in action.session.exercises" :key="i" class="flex items-center gap-2 rounded-xl border border-white/5 bg-black/20 px-3 py-2">
+                  <span class="routine-step-no" aria-hidden="true">{{ i + 1 }}</span>
+                  <span class="min-w-0 flex-1 break-words text-sm text-slate-200">{{ sessionLine(x).name }}</span>
+                  <span class="flex-shrink-0 font-mono text-[11px] text-slate-400">{{ sessionLine(x).text }}</span>
+                  <button type="button" class="routine-icon-btn !h-9 !w-9" :aria-label="t('routines.showHow', { name: sessionLine(x).name })" @click="openInfo(x.exerciseId)">
+                      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+                  </button>
+              </li>
+          </ol>
+          <p v-if="action.session.notes" class="mt-2 text-xs leading-relaxed text-slate-400">{{ action.session.notes }}</p>
+          <p v-if="action.session.reason" class="mt-2 text-sm leading-relaxed text-slate-300">{{ action.session.reason }}</p>
+      </template>
+
       <template v-else-if="action.type === 'routine'">
           <p class="mt-1 break-words text-lg font-bold leading-tight text-white">{{ action.routine.title }}</p>
           <p class="mt-1 font-mono text-[11px] text-slate-400">
-              <span class="routine-kind" :data-kind="action.routine.kind">{{ t(`routines.kinds.${action.routine.kind}`) }}</span> · {{ routineDays }} · {{ routinePeriod }}
+              <span class="routine-kind" :data-kind="action.routine.kind">{{ t(`routines.kinds.${action.routine.kind}`) }}</span> · {{ routineDays }}<template v-if="(action.routine.timesPerDay ?? 1) > 1"> · {{ tn('routines.timesPerDay', action.routine.timesPerDay) }}</template> · {{ routinePeriod }}
           </p>
           <ol class="mt-2 space-y-1.5" data-test="ai-routine-steps">
               <li v-for="(s, i) in action.routine.steps" :key="i" class="flex items-center gap-2 rounded-xl border border-white/5 bg-black/20 px-3 py-2">

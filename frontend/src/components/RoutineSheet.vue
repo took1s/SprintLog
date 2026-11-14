@@ -7,7 +7,7 @@ import { intlLocale, t, tn } from '@/i18n';
 import { exerciseName, muscleName } from '@/i18n/content';
 import { useAppStore } from '@/stores/app';
 import { cleanDraft, useRoutinesStore } from '@/stores/routines';
-import { EVERY_DAY, MAX_ROUTINE_STEPS, ROUTINE_KINDS, addDays, daysBetween } from '@/lib/routines';
+import { EVERY_DAY, MAX_ROUTINE_STEPS, MAX_TIMES_PER_DAY, ROUTINE_KINDS, addDays, daysBetween } from '@/lib/routines';
 import { WEEKDAYS, bit } from '@/lib/schedule';
 import { vSheetDrag } from '@/lib/gestures';
 
@@ -128,6 +128,18 @@ function save() {
                               :aria-pressed="(d.days & bit(i)) !== 0" :aria-label="dayLong(i)" :data-day="i" @click="toggleDay(i)">{{ dayShort(i) }}</button>
                   </div>
                   <button type="button" class="mt-2 text-xs font-bold" :class="daily ? 'text-accent' : 'text-slate-400 hover:text-white'" :aria-pressed="daily" @click="setDaily">{{ t('routines.sheet.daily') }}</button>
+
+                  <div class="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                      <span class="min-w-0">
+                          <span class="block text-sm font-bold text-white" id="routine-times">{{ t('routines.sheet.timesPerDay') }}</span>
+                          <span class="block text-[11px] leading-snug text-slate-400">{{ t('routines.sheet.timesHint') }}</span>
+                      </span>
+                      <span class="flex flex-shrink-0 items-center gap-1" role="group" aria-labelledby="routine-times">
+                          <button type="button" class="routine-icon-btn" :disabled="d.timesPerDay <= 1" :aria-label="t('routines.sheet.timesLess')" @click="d.timesPerDay = Math.max(1, d.timesPerDay - 1)">−</button>
+                          <output class="w-10 text-center font-mono text-lg font-black text-white" aria-live="polite" data-test="routine-times">{{ d.timesPerDay }}×</output>
+                          <button type="button" class="routine-icon-btn" :disabled="d.timesPerDay >= MAX_TIMES_PER_DAY" :aria-label="t('routines.sheet.timesMore')" data-test="routine-times-more" @click="d.timesPerDay = Math.min(MAX_TIMES_PER_DAY, d.timesPerDay + 1)">+</button>
+                      </span>
+                  </div>
 
                   <div class="mt-5 grid grid-cols-2 gap-3">
                       <div>
