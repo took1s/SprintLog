@@ -10,6 +10,7 @@ public class Routine
     public const int MaxSteps = 12;
     public const int MaxDoneEntries = 1500;
     public const int MaxTimesPerDay = 6;
+    public const int MaxPainEntries = 400;
 
     public int Id { get; set; }
     public int UserId { get; set; }
@@ -44,6 +45,15 @@ public class Routine
     /// <summary>Erledigte Durchgänge: ein Eintrag pro Durchgang (Datum des Nutzers) - bei 3x täglich bis zu 3x dasselbe Datum.</summary>
     public List<DateOnly> DoneDates { get; set; } = new();
 
+    /// <summary>
+    /// Uhrzeit je Durchgang ("HH:mm", aufsteigend), z. B. 08:00 / 13:00 / 20:00 bei 3x täglich - für Erinnerungen und die
+    /// Anzeige "Morgen / Mittag / Abend". Leer oder kürzer als TimesPerDay = Durchgänge ohne feste Zeit.
+    /// </summary>
+    public List<string> Times { get; set; } = new();
+
+    /// <summary>Schmerz 0-10 pro Tag (Reha): ein Wert je Tag, der letzte gilt. Coach sieht den Verlauf.</summary>
+    public List<RoutinePain> Pain { get; set; } = new();
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
@@ -54,4 +64,11 @@ public class RoutineStep
     public string Name { get; set; } = string.Empty;
     public string? Dose { get; set; }
     public int? ExerciseId { get; set; }
+}
+
+/// <summary>Schmerz an einem Tag (0 = keiner, 10 = maximal), beim Abhaken einer Reha-Routine angegeben.</summary>
+public class RoutinePain
+{
+    public DateOnly Day { get; set; }
+    public int Level { get; set; }
 }

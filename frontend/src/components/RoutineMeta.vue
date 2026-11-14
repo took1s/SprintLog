@@ -31,6 +31,7 @@ const period = computed(() => {
       <span class="routine-kind" :data-kind="routine.kind">{{ t(`routines.kinds.${routine.kind}`) }}</span>
       <template v-if="!compact"> · {{ days }}</template>
       <template v-if="!compact && routine.timesPerDay > 1"> · {{ tn('routines.timesPerDay', routine.timesPerDay) }}</template>
+      <template v-if="!compact && routine.times?.length"> · {{ routine.times.join(', ') }}</template>
       · {{ period }}
       <template v-if="compact && p.streak >= 2"> · <span class="routine-streak">{{ tn('routines.streak', p.streak) }}</span></template>
   </span>

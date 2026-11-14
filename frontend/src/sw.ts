@@ -26,6 +26,20 @@ self.addEventListener('message', (event) => {
   if ((event.data as { type?: string } | null)?.type === 'SKIP_WAITING') void self.skipWaiting();
 });
 
+// Erinnerung angetippt: offenes Fenster nach vorn holen (oder die App öffnen) und das Ziel melden
+self.addEventListener('notificationclick', (event) => {
+  const data = event.notification.data as { sl?: string; kind?: string; target?: string | null } | null;
+  event.notification.close();
+  if (data?.sl !== 'reminder') return;
+  event.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const client = all[0] ?? await self.clients.openWindow('/');
+    if (!client) return;
+    if ('focus' in client) await (client as WindowClient).focus().catch(() => undefined);
+    client.postMessage({ type: 'reminder', kind: data.kind, target: data.target ?? null });
+  })());
+});
+
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()

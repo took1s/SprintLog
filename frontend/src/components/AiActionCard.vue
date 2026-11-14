@@ -201,7 +201,7 @@ const apply = () => { if (!locked.value) emit('apply'); };
       <template v-else-if="action.type === 'routine'">
           <p class="mt-1 break-words text-lg font-bold leading-tight text-white">{{ action.routine.title }}</p>
           <p class="mt-1 font-mono text-[11px] text-slate-400">
-              <span class="routine-kind" :data-kind="action.routine.kind">{{ t(`routines.kinds.${action.routine.kind}`) }}</span> · {{ routineDays }}<template v-if="(action.routine.timesPerDay ?? 1) > 1"> · {{ tn('routines.timesPerDay', action.routine.timesPerDay) }}</template> · {{ routinePeriod }}
+              <span class="routine-kind" :data-kind="action.routine.kind">{{ t(`routines.kinds.${action.routine.kind}`) }}</span> · {{ routineDays }}<template v-if="(action.routine.timesPerDay ?? 1) > 1"> · {{ tn('routines.timesPerDay', action.routine.timesPerDay) }}</template><template v-if="action.routine.times?.length"> · {{ action.routine.times.join(', ') }}</template> · {{ routinePeriod }}
           </p>
           <ol class="mt-2 space-y-1.5" data-test="ai-routine-steps">
               <RoutineStepRow v-for="(s, i) in action.routine.steps" :key="i" :index="i" boxed :name="s.name" :dose="s.dose" :exercise-id="s.exerciseId" @info="openInfo" />

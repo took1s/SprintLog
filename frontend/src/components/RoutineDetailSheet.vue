@@ -1,16 +1,17 @@
 <script setup lang="ts">
 // Routine im Detail: Fortschritt, Verlauf der letzten Wochen (Tage nachtragen oder korrigieren), Schritte, Bearbeiten.
 // Ein Tipp auf einen Tag zählt einen Durchgang weiter (bei einmal täglich: erledigt <-> offen).
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { intlLocale, t, tn } from '@/i18n';
 import { useAppStore } from '@/stores/app';
 import { useRoutinesStore } from '@/stores/routines';
-import { daysBetween, historyWeeks, parseDay, type HistoryCell } from '@/lib/routines';
+import { PAIN_MAX, daysBetween, historyWeeks, painOn, painSummary, painTone, parseDay, tracksPain, type HistoryCell } from '@/lib/routines';
 import { vSheetDrag } from '@/lib/gestures';
 import { tap as haptic } from '@/lib/native';
 import RoutineMeta from './RoutineMeta.vue';
 import RoutineStepRow from './RoutineStepRow.vue';
+import PainScale from './PainScale.vue';
 
 const app = useAppStore();
 const routines = useRoutinesStore();
@@ -40,6 +41,28 @@ function cycle(c: HistoryCell) {
   if (!r.value || !editable(c)) return;
   const next = c.count >= r.value.timesPerDay ? 0 : c.count + 1;
   routines.setCount(r.value.clientId, next, c.day);
+  haptic();
+}
+
+// ---------- Schmerz (Reha) ----------
+const pain = computed(() => (r.value && tracksPain(r.value) ? painSummary(r.value, today.value) : null));
+const painToday = computed(() => (r.value ? painOn(r.value, today.value) : null));
+const painOpen = ref(false);
+watch(detailId, () => { painOpen.value = false; });
+const shortDate = (day: string) => parseDay(day).toLocaleDateString(intlLocale(), { day: 'numeric', month: 'short' });
+/** Diagramm 280 x 84: 0 unten, 10 oben; Bänder 0-2 / 3-5 / 6-10. */
+const W = 280, TOP = 6, H = 72;
+const y = (level: number) => TOP + ((PAIN_MAX - level) / PAIN_MAX) * H;
+const x = (i: number, n: number) => 6 + (i * (W - 12)) / Math.max(1, n - 1);
+const chart = computed(() => {
+  const pts = pain.value?.points ?? [];
+  const dots = pts.map((v, i) => (v == null ? null : { x: x(i, pts.length), y: y(v), v, i })).filter((d): d is { x: number; y: number; v: number; i: number } => !!d);
+  return { dots, line: dots.map((d) => `${d.x.toFixed(1)},${d.y.toFixed(1)}`).join(' ') };
+});
+function pickPain(n: number) {
+  if (!r.value) return;
+  routines.setPain(r.value.clientId, n);
+  painOpen.value = false;
   haptic();
 }
 
@@ -81,6 +104,38 @@ function edit() {
                           <dd>{{ p.streak }}</dd>
                       </div>
                   </dl>
+
+                  <!-- Schmerz (Reha): Verlauf 14 Tage, Tendenz, Hinweis; heutigen Wert setzen -->
+                  <section v-if="pain" class="mt-5" data-test="routine-pain">
+                      <div class="flex items-baseline justify-between gap-2">
+                          <p class="label-xs">{{ t('routines.pain.title') }}</p>
+                          <p v-if="pain.latest" class="font-mono text-[11px] text-slate-400">
+                              {{ t('routines.pain.latest', { n: pain.latest.level, date: shortDate(pain.latest.day) }) }}<template v-if="pain.avg != null"> · {{ t('routines.pain.avg', { n: pain.avg }) }}</template>
+                          </p>
+                      </div>
+                      <div v-if="pain.latest" class="mt-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                          <svg :viewBox="`0 0 ${W} ${TOP * 2 + H}`" class="h-auto w-full" role="img" :aria-label="t('routines.pain.chart')">
+                              <rect x="0" :y="y(10)" :width="W" :height="y(5.5) - y(10)" class="pain-chart-band is-bad" />
+                              <rect x="0" :y="y(5.5)" :width="W" :height="y(2.5) - y(5.5)" class="pain-chart-band is-warn" />
+                              <rect x="0" :y="y(2.5)" :width="W" :height="y(0) - y(2.5)" class="pain-chart-band is-ok" />
+                              <line v-for="g in [0, 5, 10]" :key="g" x1="0" :x2="W" :y1="y(g)" :y2="y(g)" class="pain-chart-grid" />
+                              <polyline v-if="chart.dots.length > 1" :key="chart.line" :points="chart.line" pathLength="1" class="pain-chart-line" />
+                              <circle v-for="d in chart.dots" :key="d.i" :cx="d.x" :cy="d.y" r="4.5" class="pain-chart-dot" :class="`is-${painTone(d.v)}`" />
+                          </svg>
+                          <div class="mt-2 flex flex-wrap items-center gap-2">
+                              <span class="pain-badge" :class="`is-${painTone(pain.latest.level)}`">{{ t('routines.pain.badge', { n: pain.latest.level }) }}</span>
+                              <span v-if="pain.trend" class="text-[11px] font-bold" :class="pain.trend === 'falling' ? 'text-emerald-300' : pain.trend === 'rising' ? 'text-red-300' : 'text-slate-400'" data-test="pain-trend">{{ t(`report.trend.${pain.trend}`) }}</span>
+                          </div>
+                          <p class="mt-1.5 text-xs leading-snug text-slate-300">{{ t(`routines.pain.hint.${painTone(pain.latest.level)}`) }}</p>
+                      </div>
+                      <p v-else class="mt-1 text-xs leading-snug text-slate-400">{{ t('routines.pain.empty') }}</p>
+                      <button v-if="!painOpen" type="button" class="routine-link mt-2" data-test="pain-today" @click="painOpen = true">
+                          {{ painToday != null ? t('routines.pain.change', { n: painToday }) : t('routines.pain.question') }}
+                      </button>
+                      <transition name="expand">
+                          <div v-if="painOpen" class="expand-wrap"><div class="pt-2"><PainScale :model-value="painToday" @pick="pickPain" /></div></div>
+                      </transition>
+                  </section>
 
                   <!-- Verlauf -->
                   <div class="mt-5 flex items-baseline justify-between gap-2">

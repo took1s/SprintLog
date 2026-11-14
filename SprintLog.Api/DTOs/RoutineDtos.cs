@@ -5,9 +5,20 @@ namespace SprintLog.Api.DTOs;
 
 public record RoutineStepDto(string? Name, string? Dose = null, int? ExerciseId = null);
 
+public record RoutinePainDto(DateOnly Day, int Level);
+
 public record RoutineInput(string? Title, string? Kind, int Days, DateOnly StartDate, DateOnly? EndDate, string? Reason, List<RoutineStepDto>? Steps,
-    List<DateOnly>? DoneDates = null, string? Source = null, int TimesPerDay = 1)
+    List<DateOnly>? DoneDates = null, string? Source = null, int TimesPerDay = 1, List<string>? Times = null, List<RoutinePainDto>? Pain = null)
 {
+    /// <summary>Uhrzeit "HH:mm" (24 h).</summary>
+    public static bool IsTime(string? s) =>
+        s is { Length: 5 } && s[2] == ':' && char.IsAsciiDigit(s[0]) && char.IsAsciiDigit(s[1]) && char.IsAsciiDigit(s[3]) && char.IsAsciiDigit(s[4])
+        && (s[0] - '0') * 10 + (s[1] - '0') <= 23 && s[3] <= '5';
+
+    /// <summary>Gültige Zeiten sortiert und ohne Doppelte, höchstens eine je Durchgang.</summary>
+    public static List<string> NormalizeTimes(IEnumerable<string>? times, int timesPerDay) =>
+        (times ?? []).Where(IsTime).Distinct().Order(StringComparer.Ordinal).Take(Math.Clamp(timesPerDay, 1, Routine.MaxTimesPerDay)).ToList();
+
     public static readonly IReadOnlySet<string> Kinds = new HashSet<string> { "mobility", "rehab", "prevention", "activation", "recovery", "other" };
 
     public ValidationErrors Validate(DateOnly today)
@@ -25,13 +36,17 @@ public record RoutineInput(string? Title, string? Kind, int Days, DateOnly Start
             .AddIf(TimesPerDay is < 1 or > Routine.MaxTimesPerDay, "timesPerDay", $"1 to {Routine.MaxTimesPerDay} times per day.")
             .AddIf(DoneDates is { Count: > Routine.MaxDoneEntries }, "doneDates", "Too many entries.")
             .AddIf(DoneDates?.Any(d => d > today.AddDays(1)) == true, "doneDates", "Done dates cannot be in the future.")
-            .AddIf(Source is not (null or "user" or "coach"), "source", "Unknown source.");
+            .AddIf(Source is not (null or "user" or "coach"), "source", "Unknown source.")
+            .AddIf(Times is { Count: > Routine.MaxTimesPerDay } || Times?.Any(x => !IsTime(x)) == true, "times", "Times must be HH:mm, at most one per round.")
+            .AddIf(Pain is { Count: > Routine.MaxPainEntries }, "pain", "Too many pain entries.")
+            .AddIf(Pain?.Any(x => x.Level is < 0 or > 10 || x.Day > today.AddDays(1)) == true, "pain", "Pain is 0 to 10 and not in the future.");
     }
 }
 
 public record RoutineResponse(string ClientId, string Title, string Kind, int Days, DateOnly StartDate, DateOnly? EndDate, string? Reason, string Source,
-    List<RoutineStepDto> Steps, List<DateOnly> DoneDates, DateTime CreatedAt, DateTime UpdatedAt, int TimesPerDay)
+    List<RoutineStepDto> Steps, List<DateOnly> DoneDates, DateTime CreatedAt, DateTime UpdatedAt, int TimesPerDay, List<string> Times, List<RoutinePainDto> Pain)
 {
     public static RoutineResponse From(Routine r) => new(r.ClientId, r.Title, r.Kind, r.Days, r.StartDate, r.EndDate, r.Reason, r.Source,
-        r.Steps.Select(s => new RoutineStepDto(s.Name, s.Dose, s.ExerciseId)).ToList(), r.DoneDates.OrderBy(d => d).ToList(), r.CreatedAt, r.UpdatedAt, r.TimesPerDay);
+        r.Steps.Select(s => new RoutineStepDto(s.Name, s.Dose, s.ExerciseId)).ToList(), r.DoneDates.OrderBy(d => d).ToList(), r.CreatedAt, r.UpdatedAt, r.TimesPerDay,
+        (r.Times ?? []).ToList(), (r.Pain ?? []).OrderBy(p => p.Day).Select(p => new RoutinePainDto(p.Day, p.Level)).ToList());
 }

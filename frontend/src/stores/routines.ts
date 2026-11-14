@@ -11,8 +11,8 @@ import { createClientSync } from '../lib/clientSync';
 import { readJson, userKeys, writeJson } from '../lib/storage';
 import { localDay } from '../lib/wellness';
 import {
-  EVERY_DAY, MAX_TIMES_PER_DAY, doneCount, newRoutineId, routineProgress, setDoneCount, sortRoutines, tapCount, todaysRoutines,
-  type Routine, type RoutineKind, type RoutineStep,
+  EVERY_DAY, MAX_TIMES_PER_DAY, doneCount, newRoutineId, normalizeTimes, painOn, routineProgress, setDoneCount, setPainLevel, sortRoutines, tapCount,
+  todaysRoutines, tracksPain, type Routine, type RoutineKind, type RoutineStep,
 } from '../lib/routines';
 import { useUiStore } from './ui';
 
@@ -34,6 +34,8 @@ export interface RoutineDraft {
   reason: string | null;
   steps: RoutineStep[];
   timesPerDay: number;
+  /** Uhrzeit je Durchgang ("HH:mm"); leer = ohne feste Zeit. */
+  times: string[];
 }
 
 export interface RoutineEditor {
@@ -44,7 +46,7 @@ export interface RoutineEditor {
 }
 
 export const emptyRoutine = (today: string): RoutineDraft => ({
-  title: '', kind: 'mobility', days: EVERY_DAY, startDate: today, endDate: null, reason: null, steps: [{ name: '', dose: '' }], timesPerDay: 1,
+  title: '', kind: 'mobility', days: EVERY_DAY, startDate: today, endDate: null, reason: null, steps: [{ name: '', dose: '' }], timesPerDay: 1, times: [],
 });
 
 /** Eingaben säubern: leere Schritte raus, Längen wie auf dem Server. */
@@ -59,8 +61,12 @@ export function cleanDraft(d: RoutineDraft): RoutineDraft {
     reason: clip(d.reason, 300) || null,
     steps: d.steps.map((s) => ({ name: clip(s.name, 80), dose: clip(s.dose, 60) || null, exerciseId: s.exerciseId ?? null })).filter((s) => s.name).slice(0, 12),
     timesPerDay: Math.max(1, Math.min(MAX_TIMES_PER_DAY, Math.round(d.timesPerDay || 1))),
+    times: normalizeTimes(d.times, Math.round(d.timesPerDay || 1)),
   };
 }
+
+/** Felder älterer Stände ergänzen (lokaler Speicher, ältere Server-Antworten). */
+const normalize = (r: Routine): Routine => ({ ...r, timesPerDay: r.timesPerDay || 1, times: r.times ?? [], pain: r.pain ?? [] });
 
 const capPerDay = (dates: readonly string[], max: number): string[] => {
   const seen = new Map<string, number>();
@@ -89,11 +95,12 @@ export const useRoutinesStore = defineStore('routines', () => {
   const sync = createClientSync<Routine>({
     path: '/api/routines',
     items: () => routines.value,
-    setItems: (list) => { routines.value = list; },
+    // Server älterer Version liefert times/pain evtl. nicht
+    setItems: (list) => { routines.value = list.map(normalize); },
     persist,
     api: () => app().api(),
-    body: ({ title, kind, days, startDate, endDate, reason, steps, doneDates, source: by, timesPerDay }) =>
-      ({ title, kind, days, startDate, endDate, reason, steps, doneDates, source: by, timesPerDay }),
+    body: ({ title, kind, days, startDate, endDate, reason, steps, doneDates, source: by, timesPerDay, times, pain }) =>
+      ({ title, kind, days, startDate, endDate, reason, steps, doneDates, source: by, timesPerDay, times, pain }),
     onRejected: (r, e) => {
       console.warn('[routines] rejected', e);
       useUiStore().toast(t('routines.toast.rejected', { title: r.title }), 'error');
@@ -104,8 +111,8 @@ export const useRoutinesStore = defineStore('routines', () => {
   async function load() {
     const k = key();
     if (!k) return;
-    // Ältere lokale Stände ohne timesPerDay: einmal täglich
-    routines.value = readJson<Routine[]>(k, []).map((r) => ({ ...r, timesPerDay: r.timesPerDay || 1 }));
+    // Ältere lokale Stände ohne timesPerDay/times/pain: einmal täglich, ohne Zeiten
+    routines.value = readJson<Routine[]>(k, []).map(normalize);
     if (app().online) await sync.pull();
   }
 
@@ -119,6 +126,7 @@ export const useRoutinesStore = defineStore('routines', () => {
       source: existing?.source ?? by,
       // Weniger Durchgänge pro Tag als vorher: überzählige Haken je Tag kürzen
       doneDates: keepDone ? capPerDay(existing?.doneDates ?? [], clean.timesPerDay) : [],
+      pain: keepDone ? existing?.pain ?? [] : [],
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
       pending: 'put',
@@ -141,11 +149,32 @@ export const useRoutinesStore = defineStore('routines', () => {
   function setCount(clientId: string, n: number, day = today.value) {
     const r = routines.value.find((x) => x.clientId === clientId);
     if (!r || day > today.value || doneCount(r, day) === n) return;
+    const before = doneCount(r, day);
     const doneDates = setDoneCount(r, day, n);
     routines.value = routines.value.map((x) => (x.clientId === clientId ? { ...x, doneDates, updatedAt: new Date().toISOString(), pending: 'put' as const } : x));
     persist();
     void pushPending();
+    // Reha: beim ersten Haken des Tages nach dem Schmerz fragen (einmal pro Tag, überspringbar)
+    if (tracksPain(r) && before === 0 && n > 0 && painOn(r, day) == null) painAsk.value = { clientId, day };
+    else if (painAsk.value?.clientId === clientId && n === 0) painAsk.value = null;
   }
+
+  // ---------- Schmerz (Reha) ----------
+
+  /** Offene Schmerz-Abfrage nach dem Abhaken (Zeile unter der Routine). */
+  const painAsk = ref<{ clientId: string; day: string } | null>(null);
+
+  /** Schmerz 0-10 eines Tages speichern (null = entfernen). */
+  function setPain(clientId: string, level: number | null, day = today.value) {
+    const r = routines.value.find((x) => x.clientId === clientId);
+    if (!r || day > today.value) return;
+    const pain = setPainLevel(r.pain ?? [], day, level);
+    routines.value = routines.value.map((x) => (x.clientId === clientId ? { ...x, pain, updatedAt: new Date().toISOString(), pending: 'put' as const } : x));
+    if (painAsk.value?.clientId === clientId) painAsk.value = null;
+    persist();
+    void pushPending();
+  }
+  const skipPain = () => { painAsk.value = null; };
 
   /** Tipp auf den k-ten Durchgang eines Tages (1-basiert); bei einmal täglich = Haken umschalten. */
   function tap(clientId: string, k = 1, day = today.value) {
@@ -165,6 +194,17 @@ export const useRoutinesStore = defineStore('routines', () => {
   const openDetail = (clientId: string) => { detailId.value = clientId; };
   const closeDetail = () => { detailId.value = null; };
 
+  // ---------- Bibliothek ----------
+
+  const libraryOpen = ref(false);
+  const openLibrary = () => { libraryOpen.value = true; };
+  const closeLibrary = () => { libraryOpen.value = false; };
+  /** Vorlage übernehmen: Bibliothek zu, Editor mit Vorlage auf (Tage und Zeitraum noch anpassbar). */
+  function useTemplate(draft: RoutineDraft) {
+    libraryOpen.value = false;
+    openNew(draft);
+  }
+
   // ---------- Editor ----------
 
   function openNew(preset?: Partial<RoutineDraft>) {
@@ -175,7 +215,7 @@ export const useRoutinesStore = defineStore('routines', () => {
     if (!r) return;
     editor.value = {
       open: true, clientId,
-      draft: { title: r.title, kind: r.kind, days: r.days, startDate: r.startDate, endDate: r.endDate, reason: r.reason, steps: r.steps.map((s) => ({ ...s })), timesPerDay: r.timesPerDay },
+      draft: { title: r.title, kind: r.kind, days: r.days, startDate: r.startDate, endDate: r.endDate, reason: r.reason, steps: r.steps.map((s) => ({ ...s })), timesPerDay: r.timesPerDay, times: [...r.times] },
     };
   }
   function close() { editor.value = { ...editor.value, open: false }; }
@@ -214,10 +254,10 @@ export const useRoutinesStore = defineStore('routines', () => {
     await pushPending();
   }
 
-  function clear() { routines.value = []; detailId.value = null; editor.value = { open: false, clientId: null, draft: emptyRoutine(localDay()) }; }
+  function clear() { painAsk.value = null; libraryOpen.value = false; routines.value = []; detailId.value = null; editor.value = { open: false, clientId: null, draft: emptyRoutine(localDay()) }; }
 
   return {
-    connect, routines, editor, today, visible, forToday, progressOf, byId, load, pushPending, applyFromCoach, setCount, tap, setDone,
-    detailId, openDetail, closeDetail, openNew, openEdit, close, save, finish, remove, clear,
+    connect, routines, editor, today, visible, forToday, progressOf, byId, load, pushPending, applyFromCoach, setCount, tap, setDone, painAsk, setPain, skipPain,
+    detailId, openDetail, closeDetail, libraryOpen, openLibrary, closeLibrary, useTemplate, openNew, openEdit, close, save, finish, remove, clear,
   };
 });

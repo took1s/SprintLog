@@ -24,14 +24,25 @@ function bar(clientId: string) {
 <template>
   <section class="glass-panel rounded-3xl p-5" data-test="routines-panel">
       <div class="mb-4 flex items-center justify-between gap-3">
-          <div>
+          <div class="min-w-0">
               <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('routines.kicker') }}</p>
               <h2 class="display text-2xl text-white">{{ t('routines.title') }}</h2>
           </div>
-          <button type="button" @click="routines.openNew()" class="btn-secondary flex-shrink-0 rounded-xl px-4 py-2.5 text-xs" data-test="routine-new">+ {{ t('routines.add') }}</button>
+          <div class="flex flex-shrink-0 gap-2">
+              <!-- Schmale Displays: nur Symbol (Name als aria-label) -->
+              <button type="button" @click="routines.openLibrary()" class="btn-ghost flex min-h-[2.5rem] min-w-[2.5rem] items-center justify-center gap-1.5 rounded-xl px-2.5 py-2.5 text-xs min-[400px]:px-3"
+                      :aria-label="t('routineLibrary.title')" data-test="routine-library-open">
+                  <svg class="h-4 w-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 19.5V5a2 2 0 012-2h12v16H6a2 2 0 00-2 2zm0 0A2 2 0 006 21.5h12M8 7h6"/></svg>
+                  <span class="hidden min-[400px]:inline" aria-hidden="true">{{ t('routineLibrary.open') }}</span>
+              </button>
+              <button type="button" @click="routines.openNew()" class="btn-secondary rounded-xl px-4 py-2.5 text-xs" data-test="routine-new">+ {{ t('routines.add') }}</button>
+          </div>
       </div>
 
-      <p v-if="!visible.length" class="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-center text-sm leading-relaxed text-slate-400">{{ t('routines.empty') }}</p>
+      <div v-if="!visible.length" class="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-center">
+          <p class="text-sm leading-relaxed text-slate-400">{{ t('routines.empty') }}</p>
+          <button type="button" class="routine-link mt-3" @click="routines.openLibrary()">{{ t('routineLibrary.title') }} →</button>
+      </div>
 
       <ul v-if="current.length" class="space-y-3">
           <li v-for="r in current" :key="r.clientId">

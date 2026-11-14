@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineAsyncComponent, onMounted, reactive, watchEffect } from 'vue';
+import { defineAsyncComponent, onMounted, reactive, watch, watchEffect } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useAppStore } from '@/stores/app';
 import ToastStack from '@/components/ToastStack.vue';
@@ -19,6 +19,7 @@ import { useGoalsStore } from '@/stores/goals';
 import { useRoutinesStore } from '@/stores/routines';
 import { usePlannedStore } from '@/stores/planned';
 import { useAiStore } from '@/stores/ai';
+import { useRemindersStore } from '@/stores/reminders';
 import { appearance } from '@/lib/theme';
 
 // Seltener gebrauchte Teile als eigene Chunks (kleineres Start-Bundle; offline per Service-Worker-Cache verfügbar):
@@ -37,6 +38,7 @@ const ExerciseInfoSheet = defineAsyncComponent(() => import('@/components/Exerci
 const GoalSheet = defineAsyncComponent(() => import('@/components/GoalSheet.vue'));
 const RoutineSheet = defineAsyncComponent(() => import('@/components/RoutineSheet.vue'));
 const RoutineDetailSheet = defineAsyncComponent(() => import('@/components/RoutineDetailSheet.vue'));
+const RoutineLibrarySheet = defineAsyncComponent(() => import('@/components/RoutineLibrarySheet.vue'));
 const PlannedSheet = defineAsyncComponent(() => import('@/components/PlannedSheet.vue'));
 const HoldTimer = defineAsyncComponent(() => import('@/components/workout/HoldTimer.vue'));
 const PlanBuilderSheet = defineAsyncComponent(() => import('@/components/PlanBuilderSheet.vue'));
@@ -56,7 +58,7 @@ const aiStore = useAiStore();
 const { booting, isAuthenticated, tab, authMode, sessionActive } = storeToRefs(app);
 
 /** Dialog-Chunks erst beim ersten Öffnen laden - danach bleiben sie gemountet (Schließen-Animation bleibt erhalten). */
-const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, routine: false, routineDetail: false, planned: false, hold: false, builder: false, summary: false, ai: false, profile: false, memory: false });
+const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, routine: false, routineDetail: false, library: false, planned: false, hold: false, builder: false, summary: false, ai: false, profile: false, memory: false });
 watchEffect(() => {
   if (app.setModal.open) used.set = true;
   if (app.customModal.open) used.custom = true;
@@ -68,6 +70,7 @@ watchEffect(() => {
   if (goals.draft.open) used.goal = true;
   if (routines.editor.open) used.routine = true;
   if (routines.detailId) used.routineDetail = true;
+  if (routines.libraryOpen) used.library = true;
   if (planned.editor.open) used.planned = true;
   if (app.holdTimer) used.hold = true;
   if (app.planBuilder.open) used.builder = true;
@@ -78,6 +81,15 @@ watchEffect(() => {
 });
 
 onMounted(() => { void app.init(); });
+
+// Erinnerungen: nach der Anmeldung planen, beim Abmelden löschen (enthalten Namen der Routinen)
+const reminders = useRemindersStore();
+watch(isAuthenticated, (signedIn) => { if (signedIn) void reminders.start(); else void reminders.clear(); }, { immediate: true });
+// Mitteilung angetippt: Startbildschirm zeigen (Routinen, Einheit des Tages, Wochenbericht liegen dort)
+watch(() => reminders.focus, (f) => {
+  if (!f || sessionActive.value) return;
+  if (tab.value !== 'Gym' && tab.value !== 'Football') tab.value = 'Gym';
+});
 
 </script>
 
@@ -128,6 +140,7 @@ onMounted(() => { void app.init(); });
       <ExerciseInfoSheet v-if="used.info" />
       <GoalSheet v-if="used.goal" />
       <RoutineDetailSheet v-if="used.routineDetail" />
+      <RoutineLibrarySheet v-if="used.library" />
       <PlannedSheet v-if="used.planned" />
       <RoutineSheet v-if="used.routine" />
       <HoldTimer v-if="used.hold" />
