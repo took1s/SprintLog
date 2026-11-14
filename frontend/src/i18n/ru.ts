@@ -889,6 +889,7 @@ export const ru: Messages = {
     extra: 'Доп.: {title}',
     today: 'Сегодня',
   },
+  widget: { none: 'Сегодня без рутин', next: 'Дальше' },
   goals: {
     kicker: 'Прогрессия',
     title: 'Силовые цели',
