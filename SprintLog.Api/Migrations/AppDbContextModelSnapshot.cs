@@ -164,6 +164,49 @@ namespace SprintLog.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SprintLog.Api.Models.DailyLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("Hrv")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ProteinG")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("RestingHr")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SleepMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Steps")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("WeightKg")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Day")
+                        .IsUnique();
+
+                    b.ToTable("DailyLogs", (string)null);
+                });
+
             modelBuilder.Entity("SprintLog.Api.Models.DeletedWorkout", b =>
                 {
                     b.Property<long>("Id")
@@ -2897,6 +2940,53 @@ namespace SprintLog.Api.Migrations
                     b.ToTable("Favorites");
                 });
 
+            modelBuilder.Entity("SprintLog.Api.Models.FitnessTest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Test")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("Value")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "Day");
+
+                    b.ToTable("FitnessTests", (string)null);
+                });
+
             modelBuilder.Entity("SprintLog.Api.Models.LiftGoal", b =>
                 {
                     b.Property<int>("Id")
@@ -3423,11 +3513,17 @@ namespace SprintLog.Api.Migrations
                     b.Property<int?>("Assists")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("AvgHr")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("ClientId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DistanceM")
+                        .HasColumnType("integer");
 
                     b.Property<int?>("DurationSeconds")
                         .HasColumnType("integer");
@@ -3439,6 +3535,12 @@ namespace SprintLog.Api.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
 
+                    b.Property<int?>("MaxHr")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("MaxSpeedKmh")
+                        .HasColumnType("double precision");
+
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -3446,6 +3548,13 @@ namespace SprintLog.Api.Migrations
                     b.Property<string>("Opponent")
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)");
+
+                    b.Property<int?>("OpponentGoals")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Position")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<int?>("ProgramDayId")
                         .HasColumnType("integer");
@@ -3456,6 +3565,16 @@ namespace SprintLog.Api.Migrations
                     b.Property<int?>("SessionRpe")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("Sprints")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("TeamGoals")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ToImprove")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -3463,6 +3582,10 @@ namespace SprintLog.Api.Migrations
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("WentWell")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
 
                     b.Property<string>("WorkoutType")
                         .IsRequired()
@@ -3611,6 +3734,15 @@ namespace SprintLog.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SprintLog.Api.Models.DailyLog", b =>
+                {
+                    b.HasOne("SprintLog.Api.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SprintLog.Api.Models.DeletedWorkout", b =>
                 {
                     b.HasOne("SprintLog.Api.Models.User", null)
@@ -3647,6 +3779,15 @@ namespace SprintLog.Api.Migrations
                     b.Navigation("Exercise");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SprintLog.Api.Models.FitnessTest", b =>
+                {
+                    b.HasOne("SprintLog.Api.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SprintLog.Api.Models.LiftGoal", b =>
