@@ -940,6 +940,8 @@ export const de: Messages = {
     intro: 'Wie bei Profis: immer gleiches Aufwärmen, Tests von frisch zu ermüdend, 3-4 Versuche mit voller Pause, der beste zählt.',
     minimize: 'Minimieren - später fortsetzen',
     progress: 'Ablauf des Testtags',
+    stopRunTitle: 'Ausdauertest abbrechen?',
+    stopRunText: 'Die Signale hören auf - du musst neu starten oder das Ergebnis von Hand eintragen.',
     endEarly: 'Beenden',
     restOver: 'Pause vorbei - nächster Versuch',
     steps: { warmup: 'Aufwärmen' },

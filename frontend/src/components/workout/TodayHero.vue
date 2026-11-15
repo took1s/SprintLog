@@ -71,7 +71,7 @@ const mdAdjust = computed(() => (md.value && md.value.label !== 'MD' && md.value
       </p>
       <p v-if="startLine" class="mt-1 text-xs leading-snug text-slate-400" data-test="start-line">{{ startLine }}</p>
 
-      <button v-if="reasons.length" type="button" class="mt-2 text-[11px] font-bold text-slate-400 hover:text-white" :aria-expanded="showWhy" data-test="coach-why" @click="showWhy = !showWhy">
+      <button v-if="reasons.length" type="button" class="mt-1 inline-flex min-h-[2.25rem] items-center text-[11px] font-bold text-slate-400 hover:text-white" :aria-expanded="showWhy" data-test="coach-why" @click="showWhy = !showWhy">
           {{ t('coach.why') }} {{ showWhy ? '▴' : '▾' }}
       </button>
       <transition name="expand">

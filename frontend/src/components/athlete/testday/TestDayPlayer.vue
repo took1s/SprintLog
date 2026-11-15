@@ -7,6 +7,7 @@ import { storeToRefs } from 'pinia';
 import { t } from '@/i18n';
 import { useAppStore } from '@/stores/app';
 import { useAthleteStore } from '@/stores/athlete';
+import { useUiStore } from '@/stores/ui';
 import { BEFORE_ENDURANCE, BETWEEN_BLOCKS, BLOCKS, sideFor, warmupFor, type Attempt, type BlockId, type Endurance, type Timing } from '@/lib/testDay';
 import { createWakeLock, playRestAlarm, unlockAudio } from '@/lib/feedback';
 import { createSignalScheduler } from '@/lib/signals';
@@ -50,18 +51,21 @@ function loop() {
   if (!cur?.restUntil) return;
   const left = Math.ceil((cur.restUntil - now.value) / 1000);
   if (left <= 0) {
-    // Pause vorbei: Signal, dann weiter (Versuch bzw. nächster Test)
+    // Pause vorbei: Signal, dann weiter (Versuch bzw. nächster Test). Lief sie schon ab, während der Testtag
+    // geschlossen war, still weitermachen - kein Alarm beim Öffnen.
+    const stale = now.value - cur.restUntil > 3000;
     athlete.patchTestDay({ restUntil: null, restKind: null });
-    playRestAlarm({ sound: settings.value.sound, vibration: settings.value.vibration });
-    signal.signalled();
+    if (!stale) { playRestAlarm({ sound: settings.value.sound, vibration: settings.value.vibration }); signal.signalled(); }
     return;
   }
 }
 
-watch(() => s.value?.restUntil ?? null, (end) => {
-  signal.plan(end && end > Date.now() ? end : null, { sound: settings.value.sound, duck: settings.value.duckMusic, countdown: settings.value.countdown });
-  // iPhone in der Tasche: Mitteilung am Ende der Pause
-  void scheduleRestNotification(end && end > Date.now() ? end : null, { title: t('testDay.title'), body: t('testDay.restOver') });
+watch(() => s.value?.restUntil ?? null, (end, before) => {
+  const future = end && end > Date.now() ? end : null;
+  signal.plan(future, { sound: settings.value.sound, duck: settings.value.duckMusic, countdown: settings.value.countdown });
+  // iPhone in der Tasche: Mitteilung am Ende der Pause. Nur bei einer echten Änderung - sonst würde das Öffnen
+  // die Mitteilung einer laufenden Satzpause im Gym löschen (gleicher Kanal).
+  if (future || before) void scheduleRestNotification(future, { title: t('testDay.title'), body: t('testDay.restOver') });
 }, { immediate: true });
 
 async function keepAwake(on: boolean) {
@@ -142,15 +146,22 @@ const restNext = computed(() => {
   return `${t('testDay.attempt', { n: n + 1, total: Math.max(BLOCKS[b].attempts, n + 1) })}${side ? ` · ${t(`testDay.side.${side}`)}` : ''}`;
 });
 
+/** Ausdauertest läuft: Schließen würde ihn abbrechen (Takt stoppt) - erst fragen. */
+const enduranceRunning = computed(() => !!s.value && Object.values(s.value.endurance).some((e) => e?.running));
+async function minimize() {
+  if (enduranceRunning.value && !(await useUiStore().confirm({ title: t('testDay.stopRunTitle'), message: t('testDay.stopRunText'), confirmText: t('testDay.endur.stop'), danger: true }))) return;
+  athlete.closeTestDay();
+}
+
 function toSummary() { athlete.patchTestDay({ stage: 'summary', restUntil: null, restKind: null }); }
 function backToTests() { if (s.value) athlete.patchTestDay({ stage: 'block', block: Math.max(0, s.value.blocks.length - 1) }); }
 </script>
 
 <template>
   <transition name="fade">
-      <div v-if="testDayOpen" class="routine-player fixed inset-0 z-[80] flex flex-col" role="dialog" aria-modal="true" :aria-label="t('testDay.title')" data-test="test-day" @keydown.esc.stop="athlete.closeTestDay()">
+      <div v-if="testDayOpen" class="routine-player fixed inset-0 z-[80] flex flex-col" role="dialog" aria-modal="true" :aria-label="t('testDay.title')" data-test="test-day" @keydown.esc.stop="minimize">
           <header class="flex items-center gap-3 px-5 pb-2" :style="{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }">
-              <button type="button" class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 hover:text-white" :aria-label="t('testDay.minimize')" data-test="test-day-close" @click="athlete.closeTestDay()">
+              <button type="button" class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 hover:text-white" :aria-label="t('testDay.minimize')" data-test="test-day-close" @click="minimize">
                   <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
               </button>
               <div class="min-w-0 flex-1">
@@ -159,7 +170,7 @@ function backToTests() { if (s.value) athlete.patchTestDay({ stage: 'block', blo
                       <li v-for="st in steps" :key="st.id" class="td-step" :class="`is-${st.state}`" :title="st.label"><span class="sr-only">{{ st.label }}</span></li>
                   </ol>
               </div>
-              <button v-if="s && s.stage !== 'summary'" type="button" class="flex-shrink-0 rounded-xl px-3 py-2 text-xs font-bold text-slate-400 hover:text-white" data-test="test-day-end" @click="toSummary">{{ t('testDay.endEarly') }}</button>
+              <button v-if="s && s.stage !== 'summary' && !enduranceRunning" type="button" class="flex-shrink-0 rounded-xl px-3 py-2 text-xs font-bold text-slate-400 hover:text-white" data-test="test-day-end" @click="toSummary">{{ t('testDay.endEarly') }}</button>
           </header>
 
           <TestDaySetup v-if="!s" @start="start" />

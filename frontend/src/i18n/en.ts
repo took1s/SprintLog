@@ -939,6 +939,8 @@ export const en = {
     intro: 'Like the pros: the same warm-up every time, tests from fresh to fatiguing, 3-4 attempts with full rest, the best one counts.',
     minimize: 'Minimise - continue later',
     progress: 'Test day progress',
+    stopRunTitle: 'Stop the endurance test?',
+    stopRunText: 'The beeps will stop - you\'ll need to start again or enter the result manually.',
     endEarly: 'Finish',
     restOver: 'Rest is over - next attempt',
     steps: { warmup: 'Warm-up' },

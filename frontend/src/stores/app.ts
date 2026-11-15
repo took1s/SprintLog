@@ -2740,7 +2740,8 @@ export const useAppStore = defineStore('app', () => {
     if (routinesStore.detailId) return routinesStore.closeDetail();
     if (routinesStore.libraryOpen) return routinesStore.closeLibrary();
     if (routinesStore.playerId) return routinesStore.closePlayer();
-    if (athleteStore.testDayOpen) return athleteStore.closeTestDay();
+    // Testtag: während eines Ausdauertests nicht per Escape schließen (der Spieler fragt selbst nach)
+    if (athleteStore.testDayOpen) return Object.values(athleteStore.testDay?.endurance ?? {}).some((e) => e?.running) ? undefined : athleteStore.closeTestDay();
     if (plannedStore.editor.open) return plannedStore.close();
     if (exerciseInfo.value) { exerciseInfo.value = null; return; }
     if (finishModal.value.open) { finishModal.value.open = false; return; }

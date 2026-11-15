@@ -119,7 +119,7 @@ import BrandMark from '@/components/BrandMark.vue';
         <div v-if="authMode !== 'forgot'" class="mb-2">
           <div class="mb-1.5 flex items-baseline justify-between">
             <label class="block text-sm font-bold text-slate-200" :for="isLoginOrRegister ? 'auth-pass' : 'auth-new'">{{ isLoginOrRegister ? t('auth.password') : t('auth.newPassword') }}</label>
-            <button v-if="authMode === 'login'" type="button" data-test="forgot" @click="setAuthMode(authOptions.emailEnabled ? 'forgot' : 'recover')" class="text-xs font-bold text-accent hover:underline">{{ t('auth.forgot') }}</button>
+            <button v-if="authMode === 'login'" type="button" data-test="forgot" @click="setAuthMode(authOptions.emailEnabled ? 'forgot' : 'recover')" class="-my-2 inline-flex min-h-[2.75rem] items-center text-xs font-bold text-accent hover:underline">{{ t('auth.forgot') }}</button>
           </div>
           <div class="relative">
             <input v-if="isLoginOrRegister" id="auth-pass" v-model="authForm.password" :type="showPassword ? 'text' : 'password'" @keyup="onKey" @keydown="onKey"
