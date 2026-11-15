@@ -7,6 +7,7 @@ class MainViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(AppIconPlugin())
         bridge?.registerPluginInstance(AudioDuckPlugin())
         bridge?.registerPluginInstance(WidgetBridgePlugin())
+        bridge?.registerPluginInstance(HealthPlugin())
     }
 }
 

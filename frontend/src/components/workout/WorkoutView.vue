@@ -197,7 +197,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                   <template v-else><ElapsedClock class="font-mono" /></template>
               </div>
               <div class="font-mono text-[11px] text-slate-400">
-                  <template v-if="session.plan"><ElapsedClock /> · {{ planProgress.done }}/{{ planProgress.total }} {{ t('plan.sets') }}</template>
+                  <template v-if="session.plan"><ElapsedClock /> · {{ planProgress.done }}/{{ planProgress.total }} {{ t('plan.sets') }}<span v-if="session.plan.md" class="md-chip ml-1.5" data-test="session-md" :title="t('md.adjusted', { pct: Math.round((1 - session.plan.md.volume) * 100) })">{{ session.plan.md.label }}</span></template>
                   <template v-else>{{ tn('units.sets', session.sets.length) }}<template v-if="sessionSummary.volume"> · {{ formatCompact(sessionSummary.volume) }} {{ t('units.kg') }}</template></template>
               </div>
           </div>

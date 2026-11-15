@@ -10,6 +10,7 @@ import { usePlannedStore } from '@/stores/planned';
 import { indexByDay } from '@/lib/calendar';
 import { addDays, parseDay, routinesOnDay } from '@/lib/routines';
 import { kindOf, weekdayOf } from '@/lib/schedule';
+import { mdLabel } from '@/lib/matchDay';
 
 const app = useAppStore();
 const routines = useRoutinesStore();
@@ -34,6 +35,7 @@ const days = computed(() => Array.from({ length: 7 }, (_, i) => {
     extra,
     routinesDue: r.due.length,
     routinesDone: r.done,
+    md: mdLabel(day, activeProgram.value),
     past: day < today.value,
     isToday: day === today.value,
   };
@@ -46,6 +48,7 @@ const longName = (d: Date) => d.toLocaleDateString(intlLocale(), { weekday: 'lon
 
 function describe(d: (typeof days.value)[number]): string {
   const parts: string[] = [d.kind === 'match' ? t('week.match') : d.kind === 'training' ? t('week.training') : t('week.rest')];
+  if (d.md && d.md !== 'MD') parts.push(d.md);
   if (d.sessions) parts.push(tn('week.done', d.sessions));
   if (d.extra) parts.push(t('week.extra', { title: d.extra.title }));
   if (d.routinesDue) parts.push(t('week.routines', { done: d.routinesDone, total: d.routinesDue }));
@@ -60,6 +63,7 @@ function describe(d: (typeof days.value)[number]): string {
                   :aria-pressed="(selected ?? today) === d.day" :aria-label="`${longName(d.date)}: ${describe(d)}`" :data-day="d.day" @click="selected = d.day">
               <span class="week-day-name" aria-hidden="true">{{ name(d.date) }}</span>
               <span class="week-day-num" aria-hidden="true">{{ d.date.getDate() }}</span>
+              <span v-if="d.md && d.md !== 'MD'" class="week-md" aria-hidden="true">{{ d.md.replace('MD', '') }}</span>
               <span class="week-dots" aria-hidden="true">
                   <i v-if="d.sessions || d.match" class="week-dot" :class="d.match ? 'is-match' : 'is-done'"></i>
                   <i v-else-if="d.kind === 'match'" class="week-dot is-match"></i>

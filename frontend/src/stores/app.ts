@@ -32,12 +32,16 @@ import type { WeeklyMetric } from '../lib/charts';
 import type {
   AuthResult, AuthUser, Exercise, ExerciseNote, Profile, ProgramDay, ProgramExercise, ProgramTemplate, QueueEntry,
   TrackingType as TrackingTypeValue, TrainingProgram, Workout, WorkoutSet,
+  WorkoutHealth,
 } from '../types';
 import { applyWorkoutOps, gymKey, isGymDependent, liveSessionText, type WorkoutOp } from '../lib/liveWorkout';
 import { useUiStore } from './ui';
 import { useGoalsStore, type GoalView } from './goals';
 import { useRoutinesStore } from './routines';
 import { usePlannedStore } from './planned';
+import { adjustForMd, mdInfo, type MdLabel } from '../lib/matchDay';
+import { useAthleteStore } from './athlete';
+import { useAiStore } from './ai';
 import type { PlannedWorkout } from '../lib/planned';
 import { alternativesFor, type Alternative } from '../lib/alternatives';
 import { hasSchedule, kindOf, nextDayOf, weekdayOf, type Schedule } from '../lib/schedule';
@@ -90,7 +94,7 @@ export const SESSION_RPE = Object.freeze([
 export type Tab = 'Gym' | 'Football' | 'Plan' | 'Data';
 /** Workout-Typ eines Spiels (ohne Sätze). */
 export const MATCH = 'Match';
-export type DataTab = 'overview' | 'ai' | 'history' | 'progress' | 'records' | 'calendar';
+export type DataTab = 'overview' | 'athlete' | 'ai' | 'history' | 'progress' | 'records' | 'calendar';
 export type SortMode = 'fav' | 'freq' | 'recent' | 'az' | 'za';
 
 // ---------- Typen der laufenden Einheit ----------
@@ -118,6 +122,8 @@ export interface SessionPlan {
   targets: PlanTarget[];
   /** Geplante Einzel-Einheit (lib/planned.ts), wird beim Speichern als erledigt markiert. */
   plannedId?: string | null;
+  /** Match-Day-Phase beim Start; Sätze/RPE wurden angepasst (volume < 1). */
+  md?: { label: MdLabel; volume: number; rpeCap: number | null } | null;
 }
 
 type Editing = { kind: 'server'; id: number; clientId?: string | null } | { kind: 'pending'; clientId: string };
@@ -230,6 +236,7 @@ export const useAppStore = defineStore('app', () => {
   const goalsStore = useGoalsStore();
   const routinesStore = useRoutinesStore();
   const plannedStore = usePlannedStore();
+  const athleteStore = useAthleteStore();
 
   // =====================================================================
   // Zustand
@@ -412,6 +419,7 @@ export const useAppStore = defineStore('app', () => {
     exercisesById: exercisesById.value, clockDate: clockDate.value, api: () => client,
   }));
   routinesStore.connect(() => ({ userId: user.value?.userId ?? null, online: online.value, clockDate: clockDate.value, api: () => client }));
+  athleteStore.connect(() => ({ userId: user.value?.userId ?? null, online: online.value, clockDate: clockDate.value, api: () => client }));
   plannedStore.connect(() => ({
     userId: user.value?.userId ?? null, online: online.value, clockDate: clockDate.value, api: () => client,
     schedule: activeProgram.value ? { trainingDays: activeProgram.value.trainingDays ?? 0, matchDays: activeProgram.value.matchDays ?? 0 } : null,
@@ -902,6 +910,7 @@ export const useAppStore = defineStore('app', () => {
     goalsStore.clear();
     routinesStore.clear();
     plannedStore.clear();
+    athleteStore.clear();
     removeLegacyToken();
     void nativeSession.clear();
     remove(Keys.user);
@@ -966,7 +975,7 @@ export const useAppStore = defineStore('app', () => {
     // Offline angelegte Übungen zuerst zum Server - Favoriten und Ziele können sonst noch auf lokale IDs zeigen
     const exercisesReady = (async () => { await loadExercises(); await pushLocalExercises(); })();
     await Promise.allSettled([exercisesReady, loadPrograms(), loadTemplates(), loadWellness()]);
-    await Promise.allSettled([loadFavorites(), goalsStore.load(), routinesStore.load(), plannedStore.load()]);
+    await Promise.allSettled([loadFavorites(), goalsStore.load(), routinesStore.load(), plannedStore.load(), athleteStore.load()]);
     await syncNow({ reload: false });
     await loadHistory();
   }
@@ -2118,12 +2127,19 @@ export const useAppStore = defineStore('app', () => {
   // =====================================================================
   // Spiele (Match): ohne Sätze, Last = Minuten × Session-RPE
   // =====================================================================
+  const emptyMatchExtras = () => ({
+    position: null as string | null, teamGoals: null as number | null, opponentGoals: null as number | null, wentWell: '', toImprove: '',
+    health: null as WorkoutHealth | null,
+  });
   const matchModal = ref({
     open: false, editing: null as Editing | null, date: '', minutes: 90 as number | null, rpe: null as number | null, quality: null as number | null,
-    goals: null as number | null, assists: null as number | null, opponent: '', notes: '', error: '',
+    goals: null as number | null, assists: null as number | null, opponent: '', notes: '', error: '', ...emptyMatchExtras(),
   });
 
-  function openMatchModal(workout?: Workout) {
+  /** Spiel erfassen/bearbeiten; prefill = z. B. Werte eines Workouts der Uhr (Minuten, Zeit, Distanz, Puls). */
+  function openMatchModal(workout?: Workout, prefill?: { date?: string; minutes?: number; health?: WorkoutHealth | null }) {
+    // Position aus dem Athletenprofil vorbelegen
+    const position = (() => { try { return useAiStore().profile.position ?? null; } catch { return null; } })();
     matchModal.value = workout
       ? {
           open: true,
@@ -2131,8 +2147,13 @@ export const useAppStore = defineStore('app', () => {
           date: toLocalInput(workout.date), minutes: workout.durationSeconds ? Math.round(workout.durationSeconds / 60) : 90,
           rpe: workout.sessionRpe ?? null, quality: workout.quality ?? null, goals: workout.match?.goals ?? null, assists: workout.match?.assists ?? null,
           opponent: workout.match?.opponent ?? '', notes: workout.notes ?? '', error: '',
+          position: workout.match?.position ?? null, teamGoals: workout.match?.teamGoals ?? null, opponentGoals: workout.match?.opponentGoals ?? null,
+          wentWell: workout.match?.wentWell ?? '', toImprove: workout.match?.toImprove ?? '', health: workout.health ?? null,
         }
-      : { open: true, editing: null, date: toLocalInput(new Date()), minutes: 90, rpe: null, quality: null, goals: null, assists: null, opponent: '', notes: '', error: '' };
+      : {
+          open: true, editing: null, date: toLocalInput(prefill?.date ? new Date(prefill.date) : new Date()), minutes: prefill?.minutes ?? 90, rpe: null, quality: null,
+          goals: null, assists: null, opponent: '', notes: '', error: '', ...emptyMatchExtras(), position, health: prefill?.health ?? null,
+        };
   }
 
   async function saveMatch() {
@@ -2144,6 +2165,7 @@ export const useAppStore = defineStore('app', () => {
     if (!(minutes > 0 && minutes <= 180)) { m.error = t('match.errors.minutes'); return; }
     if (!m.rpe) { m.error = t('match.errors.rpe'); return; }
     const count = (v: unknown) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Math.max(0, Math.min(20, Math.round(Number(v)))));
+    const score = (v: unknown) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Math.max(0, Math.min(50, Math.round(Number(v)))));
     const base = {
       date: date.toISOString(),
       durationSeconds: Math.round(minutes * 60),
@@ -2153,7 +2175,12 @@ export const useAppStore = defineStore('app', () => {
       programDayId: null,
       workoutType: MATCH,
       sets: [] as WorkoutSet[],
-      match: { goals: count(m.goals), assists: count(m.assists), opponent: m.opponent.trim().slice(0, 60) || null },
+      match: {
+        goals: count(m.goals), assists: count(m.assists), opponent: m.opponent.trim().slice(0, 60) || null,
+        position: m.position || null, teamGoals: score(m.teamGoals), opponentGoals: score(m.opponentGoals),
+        wentWell: m.wentWell.trim().slice(0, 300) || null, toImprove: m.toImprove.trim().slice(0, 300) || null,
+      },
+      health: m.health,
       status: QueueStatus.Pending,
       attempts: 0,
       error: null,
@@ -2177,6 +2204,19 @@ export const useAppStore = defineStore('app', () => {
     tab.value = 'Data';
     dataTab.value = 'history';
     await syncAndAnnounce(saved.clientId, t(editing ? 'finish.toast.updated' : 'match.toast.saved'), t(editing ? 'finish.toast.updatedOffline' : 'finish.toast.savedOffline'));
+  }
+
+  /** Uhr-Werte (Apple Health) einer schon gespeicherten Einheit setzen - nur die Werte, Sätze bleiben unberührt. */
+  async function setWorkoutHealth(workoutId: number, health: WorkoutHealth): Promise<boolean> {
+    try {
+      await api().put(`/api/workouts/${workoutId}/health`, health);
+      history.value = history.value.map((w) => (w.id === workoutId ? { ...w, health } : w));
+      if (keys.value) writeJson(keys.value.history, history.value);
+      return true;
+    } catch (e) {
+      console.warn('[health] workout', e);
+      return false;
+    }
   }
 
   // =====================================================================
@@ -2269,8 +2309,11 @@ export const useAppStore = defineStore('app', () => {
       const ok = await confirm({ title: t('plan.confirm.replaceTitle'), message: t('plan.confirm.replaceDay'), confirmText: t('plan.confirm.startDay') });
       if (!ok) return;
     }
+    // Tag vor/nach dem Spiel: weniger Sätze, RPE gedeckelt (lib/matchDay.ts)
+    const md = mdInfo(localDay(clockDate.value), activeProgram.value);
+    const adjusted = !!md && (md.volume < 1 || md.rpeCap != null) && md.label !== 'MD';
     const targets: PlanTarget[] = day.exercises.map((x) => {
-      const px = currentPrescription(x);
+      const px = adjusted ? adjustForMd(currentPrescription(x), md) : currentPrescription(x);
       return {
         ...px,
         name: x.exerciseName,
@@ -2282,12 +2325,15 @@ export const useAppStore = defineStore('app', () => {
     session.value = {
       ...EMPTY_SESSION(),
       startedAt: new Date().toISOString(),
-      plan: { programId: activeProgram.value?.id, programName: activeProgram.value?.name, dayId: day.id, dayName: day.name, targets },
+      plan: { programId: activeProgram.value?.id, programName: activeProgram.value?.name, dayId: day.id, dayName: day.name, targets,
+        md: adjusted ? { label: md!.label, volume: md!.volume, rpeCap: md!.rpeCap } : null },
     };
     persistSession();
     tab.value = targets[0]?.category === 'Football' ? 'Football' : 'Gym';
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    toast(t('plan.toast.dayStarted', { name: trDayName(activeProgram.value, day) }), 'success');
+    toast(adjusted
+      ? t('md.toastAdjusted', { name: trDayName(activeProgram.value, day), label: md!.label, pct: Math.round((1 - md!.volume) * 100) })
+      : t('plan.toast.dayStarted', { name: trDayName(activeProgram.value, day) }), 'success');
   }
 
   /** Geplante Einzel-Einheit starten: Vorgaben wie ein Plan-Tag (ohne Progression), danach als erledigt markiert. */
@@ -2597,7 +2643,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function exportData(format: 'csv' | 'json') {
-    const extras = { routines: routinesStore.routines, plannedWorkouts: plannedStore.items };
+    const extras = { routines: routinesStore.routines, plannedWorkouts: plannedStore.items, fitnessTests: athleteStore.tests, daily: athleteStore.daily };
     const hasExtras = extras.routines.length > 0 || extras.plannedWorkouts.length > 0;
     if (!allWorkouts.value.length && (format === 'csv' || !hasExtras)) { toast(t('settings.nothingToExport'), 'error'); return; }
     if (format === 'csv') exportCsv(user.value!.username, allWorkouts.value);
@@ -2875,7 +2921,7 @@ export const useAppStore = defineStore('app', () => {
     isAuthenticated, keys, exercisesById, allWorkouts, records, prInfo, usage, clockDate,
     activeProgram, otherPrograms, programInfo, loadInfo, loadZone, planTargets, planProgress, exerciseGroups,
     planWeek, isDeloadNow, currentPrescription, templateFilter, filteredTemplates,
-    matchModal, openMatchModal, saveMatch, wellness, checkIn, todayWellness, readinessToday, readinessWeek, readinessDays, readinessHint,
+    matchModal, openMatchModal, saveMatch, setWorkoutHealth, wellness, checkIn, todayWellness, readinessToday, readinessWeek, readinessDays, readinessHint,
     loadWellness, openCheckIn, setWellnessValue, saveCheckIn, progressInPlan,
     pendingCount, failedCount, syncState,
     categoryExercises, availableMuscleGroups, allMuscleGroups, filteredExercises, sortLabel,

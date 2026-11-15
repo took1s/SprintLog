@@ -4,6 +4,7 @@ import { t } from '@/i18n';
 import { storeToRefs } from 'pinia';
 import { useAppStore, SESSION_RPE, sessionRpeLabel } from '@/stores/app';
 import { vSheetDrag } from '@/lib/gestures';
+import { POSITIONS } from '@/stores/ai';
 
 const app = useAppStore();
 const { matchModal } = storeToRefs(app);
@@ -63,6 +64,32 @@ const load = computed(() => (matchModal.value.rpe && Number(matchModal.value.min
                       <input id="match-opponent" v-model="matchModal.opponent" maxlength="60" class="cyber-input w-full rounded-xl p-3 text-sm" :placeholder="t('match.opponentPlaceholder')"></label>
               </div>
 
+              <!-- Position und Endstand -->
+              <span class="label-xs mb-2">{{ t('match.position') }}</span>
+              <div class="mb-4 grid grid-cols-3 gap-1.5" role="radiogroup" :aria-label="t('match.position')" data-test="match-position">
+                  <button v-for="p in POSITIONS" :key="p" type="button" role="radio" :aria-checked="matchModal.position === p" :data-position="p"
+                          class="rounded-lg border px-1 py-2 text-xs font-bold transition-all"
+                          :class="matchModal.position === p ? 'border-accent/60 bg-accent/15 text-accent' : 'border-white/5 bg-white/5 text-slate-400 hover:text-white'"
+                          @click="matchModal.position = matchModal.position === p ? null : p">{{ t(`ai.profile.positions.${p}`) }}</button>
+              </div>
+              <span class="label-xs mb-2">{{ t('match.score') }}</span>
+              <div class="mb-4 flex items-center gap-2">
+                  <input v-model.number="matchModal.teamGoals" type="number" min="0" max="50" inputmode="numeric" class="cyber-input w-full rounded-xl p-3 text-center text-sm" :aria-label="t('match.scoreUs')" :placeholder="t('match.scoreUs')" data-test="match-team-goals">
+                  <span class="font-black text-slate-500">:</span>
+                  <input v-model.number="matchModal.opponentGoals" type="number" min="0" max="50" inputmode="numeric" class="cyber-input w-full rounded-xl p-3 text-center text-sm" :aria-label="t('match.scoreThem')" :placeholder="t('match.scoreThem')" data-test="match-opp-goals">
+              </div>
+              <label class="label-xs mb-2" for="match-well">{{ t('match.wentWell') }}</label>
+              <textarea id="match-well" v-model="matchModal.wentWell" rows="2" maxlength="300" class="cyber-input mb-3 w-full resize-none rounded-xl p-3 text-sm" :placeholder="t('match.wentWellPlaceholder')" data-test="match-went-well"></textarea>
+              <label class="label-xs mb-2" for="match-improve">{{ t('match.toImprove') }}</label>
+              <textarea id="match-improve" v-model="matchModal.toImprove" rows="2" maxlength="300" class="cyber-input mb-4 w-full resize-none rounded-xl p-3 text-sm" :placeholder="t('match.toImprovePlaceholder')" data-test="match-to-improve"></textarea>
+              <!-- Werte der Uhr (aus Apple Health übernommen) -->
+              <div v-if="matchModal.health" class="mb-4 flex flex-wrap gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] text-slate-300" data-test="match-health">
+                  <span class="w-full text-[10px] font-bold uppercase tracking-label text-slate-400">{{ t('match.fromWatch') }}</span>
+                  <span v-if="matchModal.health.distanceM" class="lib-chip">{{ (matchModal.health.distanceM / 1000).toFixed(1) }} km</span>
+                  <span v-if="matchModal.health.avgHr" class="lib-chip">Ø {{ matchModal.health.avgHr }} bpm</span>
+                  <span v-if="matchModal.health.maxSpeedKmh" class="lib-chip">{{ matchModal.health.maxSpeedKmh }} km/h</span>
+                  <span v-if="matchModal.health.sprints != null" class="lib-chip">{{ t('match.sprints', { n: matchModal.health.sprints }) }}</span>
+              </div>
               <label class="label-xs mb-2" for="match-notes">{{ t('finish.notes') }}</label>
               <textarea id="match-notes" v-model="matchModal.notes" rows="2" maxlength="500" class="cyber-input mb-5 w-full resize-none rounded-xl p-3 text-sm" :placeholder="t('match.notesPlaceholder')"></textarea>
 

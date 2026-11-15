@@ -1292,8 +1292,9 @@ test('Halloween theme: decorations are behind the content and never block taps',
   // Deko fängt nichts ab: weder in der Netz-Ecke noch an der Spinne landet ein Tipp auf ihr
   assert.equal(await page.evaluate(() => !!document.elementFromPoint(6, 6)?.closest('.hw-decor')), false);
   const spider = await page.locator('.hw-spider').boundingBox();
-  const hit = await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('[data-test]')?.getAttribute('data-test'), [spider.x + spider.width / 2, spider.y + spider.height * 0.7]);
-  assert.equal(hit, 'start-panel');
+  // Unter der Spinne liegt Inhalt des Startbereichs - getroffen wird der Inhalt, nie die Deko
+  const hit = await page.evaluate(([x, y]) => { const el = document.elementFromPoint(x, y); return { decor: !!el?.closest('.hw-decor'), inStart: !!el?.closest('[data-test=start-panel]') }; }, [spider.x + spider.width / 2, spider.y + spider.height * 0.7]);
+  assert.deepEqual(hit, { decor: false, inStart: true });
   assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.hw-decor')).pointerEvents), 'none');
   // Anderes Theme -> Deko verschwindet
   await page.evaluate(() => { localStorage.setItem('sprintlog:appearance', JSON.stringify({ theme: 'pitch', scheme: 'dark' })); });
@@ -1987,6 +1988,110 @@ test('start screen: week strip and the weekly report send the numbers to the coa
   await page.reload();
   await page.waitForSelector('[data-test=week-strip]');
   assert.equal(await page.locator('[data-test=week-report]').count(), 0);
+  assert.deepEqual(errors, []);
+});
+
+test('routine player: timer phases, remaining rounds and a finished round ticked on the server', async () => {
+  const { page, errors } = await newPage();
+  const token = await register(page, `player_${Date.now()}`);
+  const day = (n) => { const d = new Date(Date.now() + n * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  await api('PUT', '/api/routines/rt-e2eplay1', token, {
+    title: 'Hip mobility', kind: 'mobility', days: 127, timesPerDay: 3, times: ['23:57'], startDate: day(-1), endDate: day(10),
+    steps: [{ name: 'Hip flexor stretch', dose: '2 x 30 s per side' }, { name: 'Glute bridge', dose: '2 x 10' }],
+  });
+  await page.reload();
+  // Zeiten werden auf 3 Durchgänge aufgefüllt, die Zeile zeigt die offenen Durchgänge
+  await page.waitForSelector('[data-routine=rt-e2eplay1] [data-test=routine-next]');
+  assert.match(await page.textContent('[data-routine=rt-e2eplay1] [data-test=routine-next]'), /3 more times/);
+  await page.click('[data-routine=rt-e2eplay1] button >> nth=1');
+  await page.click('[data-routine=rt-e2eplay1] [data-test=routine-play]');
+  await page.waitForSelector('[data-test=routine-player]');
+  assert.match(await page.textContent('[data-test=player-kind]'), /Set 1 of 2 · left side/);
+  assert.match(await page.textContent('[data-test=player-time]'), /^(30|29)$/);
+  // Pause hält die Zeit an
+  await page.click('[data-test=player-pause]');
+  const paused = await page.textContent('[data-test=player-time]');
+  await page.waitForTimeout(1300);
+  assert.equal(await page.textContent('[data-test=player-time]'), paused);
+  await page.click('[data-test=player-pause]');
+  // Durch alle Phasen: Halten wird übersprungen, Wiederholungen mit "Done"
+  for (let i = 0; i < 20 && !(await page.locator('[data-test=player-finished]').count()); i++) {
+    await page.click((await page.locator('[data-test=player-done-step]').count()) ? '[data-test=player-done-step]' : '[data-test=player-skip]');
+  }
+  await page.waitForSelector('[data-test=player-finished]');
+  assert.match(await page.textContent('[data-test=player-finished]'), /Ticked: 1 of 3 today/);
+  await page.click('[data-test=player-done]');
+  const saved = await waitFor(async () => {
+    const r = (await api('GET', '/api/routines', token)).find((x) => x.clientId === 'rt-e2eplay1');
+    return r?.doneDates.filter((d) => d === day(0)).length === 1 ? r : null;
+  });
+  assert.equal(saved.times.length, 3);
+  assert.match(await page.textContent('[data-routine=rt-e2eplay1] [data-test=routine-next]'), /2 more times/);
+  // Alles erledigt: der große Haken löst nicht still einen Durchgang, sondern klappt die Durchgänge auf
+  await page.click('[data-routine=rt-e2eplay1] [data-test=routine-check]');
+  await page.click('[data-routine=rt-e2eplay1] [data-test=routine-check]');
+  await page.click('[data-routine=rt-e2eplay1] button >> nth=1'); // zuklappen
+  await page.click('[data-routine=rt-e2eplay1] [data-test=routine-check]');
+  await page.waitForSelector('[data-routine=rt-e2eplay1] [data-test=routine-today-steps]');
+  assert.equal(await page.getAttribute('[data-routine=rt-e2eplay1] [data-test=routine-check]', 'aria-pressed'), 'true');
+  assert.deepEqual(errors, []);
+});
+
+test('athlete data: fitness tests with levels, protein, weight and match details reach the server', async () => {
+  const { page, errors } = await newPage();
+  const token = await register(page, `athlete_${Date.now()}`);
+  await page.click('nav >> text=DATA');
+  await page.click('[role=tab] >> text=Athlete');
+  await page.waitForSelector('[data-test=tests-card]');
+  await page.click('[data-test=tests-new]');
+  await page.fill('[data-test-input=sprint30] input', '4.2');
+  await page.fill('[data-test-input=cmj] input', '41');
+  await page.click('[data-test=test-save]');
+  await page.waitForSelector('[data-test-id=cmj] .level-chip');
+  assert.equal((await page.textContent('[data-test-id=cmj] .level-chip')).trim(), 'Pro');
+  assert.equal((await page.textContent('[data-test-id=sprint30] .level-chip')).trim(), 'Semi-pro');
+  const tests = await waitFor(async () => { const l = await api('GET', '/api/fitness-tests', token); return l.length === 2 ? l : null; });
+  assert.deepEqual(tests.map((x) => `${x.test}:${x.value}`).sort(), ['cmj:41', 'sprint30:4.2']);
+
+  await page.click('[data-test=protein] [data-protein="30"]');
+  await page.click('[data-test=protein] [data-protein="40"]');
+  await page.fill('[data-test=weight-input]', '75.4');
+  await page.click('[data-test=weight-save]');
+  const daily = await waitFor(async () => { const l = await api('GET', '/api/daily', token); return l[0]?.proteinG === 70 && l[0]?.weightKg === 75.4 ? l : null; });
+  assert.equal(daily.length, 1);
+
+  // Spiel mit Position, Endstand und Selbsteinschätzung
+  await page.click('nav >> text=FIELD');
+  await page.click('[data-test=log-match]');
+  await page.fill('#match-minutes', '75');
+  await page.click('[data-match-rpe="7"]');
+  await page.click('[data-test=match-position] [data-position=winger]');
+  await page.fill('[data-test=match-team-goals]', '3');
+  await page.fill('[data-test=match-opp-goals]', '1');
+  await page.fill('[data-test=match-went-well]', 'Won my 1v1s');
+  await page.fill('[data-test=match-to-improve]', 'Pressing');
+  await page.click('form[role=dialog] button[type=submit]');
+  const match = await waitFor(async () => (await api('GET', '/api/workouts/history', token)).find((w) => w.workoutType === 'Match'));
+  assert.deepEqual({ ...match.match }, { goals: null, assists: null, opponent: null, position: 'winger', teamGoals: 3, opponentGoals: 1, wentWell: 'Won my 1v1s', toImprove: 'Pressing' });
+  assert.deepEqual(errors, []);
+});
+
+test('match-day periodization: MD phase on the start screen and lighter plan day before the match', async () => {
+  const { page, errors } = await newPage();
+  const token = await register(page, `md_${Date.now()}`);
+  const wd = (n) => (new Date(Date.now() + n * 86400_000).getDay() + 6) % 7;
+  const plan = await api('POST', '/api/programs', token, { name: 'Plan', goal: 'Speed', weeks: 6, days: [{ name: 'Power', exercises: [{ exerciseId: 35, sets: 4, repsMin: 5, repsMax: 5, targetRpe: 8 }] }] });
+  await api('POST', `/api/programs/${plan.id}/activate`, token);
+  await api('PUT', `/api/programs/${plan.id}/schedule`, token, { trainingDays: 1 << wd(0), matchDays: 1 << wd(1) });
+  await page.reload();
+  await page.waitForSelector('[data-test=today-md]');
+  assert.match(await page.textContent('[data-test=today-md]'), /^MD-1/);
+  assert.match(await page.textContent('[data-test=start-plan]'), /MD-1: −40% sets/);
+  await page.click('[data-test=start-plan]');
+  await page.waitForSelector('[data-test=session-md]');
+  assert.equal((await page.textContent('[data-test=session-md]')).trim(), 'MD-1');
+  // 4 Sätze -> 2 (60 %, gerundet)
+  await page.waitForFunction(() => /0\/2 sets/.test(document.body.textContent ?? ''));
   assert.deepEqual(errors, []);
 });
 

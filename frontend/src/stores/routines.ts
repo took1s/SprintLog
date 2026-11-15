@@ -66,7 +66,8 @@ export function cleanDraft(d: RoutineDraft): RoutineDraft {
 }
 
 /** Felder älterer Stände ergänzen (lokaler Speicher, ältere Server-Antworten). */
-const normalize = (r: Routine): Routine => ({ ...r, timesPerDay: r.timesPerDay || 1, times: r.times ?? [], pain: r.pain ?? [] });
+// Uhrzeiten auf die Anzahl Durchgänge auffüllen (ältere bzw. vom Coach unvollständig angelegte Routinen) - geht beim nächsten Senden mit
+const normalize = (r: Routine): Routine => ({ ...r, timesPerDay: r.timesPerDay || 1, times: fillTimes(r.times ?? [], r.timesPerDay || 1), pain: r.pain ?? [] });
 
 const capPerDay = (dates: readonly string[], max: number): string[] => {
   const seen = new Map<string, number>();

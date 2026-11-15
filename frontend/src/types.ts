@@ -81,6 +81,8 @@ export interface Workout {
   sets: WorkoutSet[];
   /** Nur bei Spielen (workoutType "Match"). */
   match?: MatchDetails | null;
+  /** Werte der Uhr (Apple Health). */
+  health?: WorkoutHealth | null;
   // Nur lokal (noch nicht synchronisiert)
   pending?: boolean;
   op?: 'create' | 'update';
@@ -89,7 +91,20 @@ export interface Workout {
 }
 
 /** Eintrag der Offline-Warteschlange. */
-export interface MatchDetails { goals?: number | null; assists?: number | null; opponent?: string | null }
+export interface MatchDetails {
+  goals?: number | null;
+  assists?: number | null;
+  opponent?: string | null;
+  /** goalkeeper, defender, fullback, midfielder, winger, striker */
+  position?: string | null;
+  teamGoals?: number | null;
+  opponentGoals?: number | null;
+  wentWell?: string | null;
+  toImprove?: string | null;
+}
+
+/** Werte der Uhr (Apple Health) zu einer Einheit. */
+export interface WorkoutHealth { distanceM?: number | null; avgHr?: number | null; maxHr?: number | null; maxSpeedKmh?: number | null; sprints?: number | null }
 
 export interface QueueEntry {
   clientId: string;
@@ -107,6 +122,7 @@ export interface QueueEntry {
   exerciseNotes?: ExerciseNote[] | null;
   sets: WorkoutSet[];
   match?: MatchDetails | null;
+  health?: WorkoutHealth | null;
   status: QueueStatusValue;
   attempts: number;
   error: string | null;

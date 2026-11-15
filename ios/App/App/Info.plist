@@ -67,5 +67,9 @@
 	<string>UIStatusBarStyleLightContent</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>SprintLog reads sleep, resting heart rate, HRV, steps and your Apple Watch workouts (distance, heart rate, speed) so you don't have to enter them by hand.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>SprintLog does not write data to Apple Health.</string>
 </dict>
 </plist>
