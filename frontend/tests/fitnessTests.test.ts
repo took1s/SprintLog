@@ -41,6 +41,8 @@ describe('Match-Day-Phasen', () => {
     expect(mdLabel('2026-11-15', null)).toBeNull();
     // Mi + Sa: Donnerstag nach dem Spiel zuerst Regeneration
     expect(mdLabel('2026-11-12', { matchDays: bit(2) | bit(5) })).toBe('MD+1');
+    // Freitag: nach Mi (MD+2), vor Sa (MD-1) -> Aktivierung vor dem Spiel
+    expect(mdLabel('2026-11-13', { matchDays: bit(2) | bit(5) })).toBe('MD-1');
   });
 
   it('Plan-Tag wird an MD-1 leichter: weniger Sätze, RPE gedeckelt; MD-3 unverändert', () => {

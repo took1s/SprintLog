@@ -1,5 +1,5 @@
 // Match-Day-Periodisierung: jeder Tag relativ zum nächsten/letzten Spiel (MD-4 ... MD+2) mit Schwerpunkt und Belastung.
-// Gleiche Regeln wie der Server (SprintLog.Api/Services/MatchDay.cs): kurz nach einem Spiel hat Regeneration Vorrang.
+// Gleiche Regeln wie der Server (SprintLog.Api/Services/MatchDay.cs): bei zwei Spielen pro Woche MD+1 vor MD-1 vor MD+2.
 // Plan-Tage werden an MD-1/MD+1/MD+2 automatisch leichter (weniger Sätze, RPE gedeckelt).
 import { addDays, parseDay } from './routines';
 import { bit, weekdayOf, type Schedule } from './schedule';
@@ -35,8 +35,11 @@ export function mdLabel(day: string, schedule: Partial<Schedule> | null | undefi
   const m = schedule?.matchDays ?? 0;
   if (!m) return null;
   if (isMatch(day, m)) return 'MD';
-  for (let k = 1; k <= 2; k++) if (isMatch(addDays(day, -k), m)) return `MD+${k}` as MdLabel;
-  for (let k = 1; k <= 4; k++) if (isMatch(addDays(day, k), m)) return `MD-${k}` as MdLabel;
+  // Reihenfolge bei zwei Spielen pro Woche: MD+1 (Regeneration) > MD-1 (Aktivierung) > MD+2 > MD-2 ... MD-4
+  if (isMatch(addDays(day, -1), m)) return 'MD+1';
+  if (isMatch(addDays(day, 1), m)) return 'MD-1';
+  if (isMatch(addDays(day, -2), m)) return 'MD+2';
+  for (let k = 2; k <= 4; k++) if (isMatch(addDays(day, k), m)) return `MD-${k}` as MdLabel;
   return null;
 }
 

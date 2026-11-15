@@ -2,7 +2,7 @@ namespace SprintLog.Api.Services;
 
 /// <summary>
 /// Tag relativ zum Spiel (Match-Day-Periodisierung): MD = Spieltag, MD+1/MD+2 danach (Regeneration), MD-4 ... MD-1 davor
-/// (Kraft, Umfang, Schnelligkeit, Aktivierung). Kurz nach einem Spiel hat die Regeneration Vorrang vor dem nächsten.
+/// (Kraft, Umfang, Schnelligkeit, Aktivierung). Bei zwei Spielen pro Woche: MD+1 vor MD-1 vor MD+2.
 /// Gleiche Regeln wie im Client (frontend/src/lib/matchDay.ts).
 /// </summary>
 public static class MatchDay
@@ -14,8 +14,11 @@ public static class MatchDay
     {
         if (matchDays == 0) return null;
         if ((matchDays & Bit(day)) != 0) return "MD";
-        for (var k = 1; k <= 2; k++) if ((matchDays & Bit(day.AddDays(-k))) != 0) return $"MD+{k}";
-        for (var k = 1; k <= 4; k++) if ((matchDays & Bit(day.AddDays(k))) != 0) return $"MD-{k}";
+        // Reihenfolge bei zwei Spielen pro Woche: MD+1 (Regeneration) > MD-1 (Aktivierung) > MD+2 > MD-2 ... MD-4
+        if ((matchDays & Bit(day.AddDays(-1))) != 0) return "MD+1";
+        if ((matchDays & Bit(day.AddDays(1))) != 0) return "MD-1";
+        if ((matchDays & Bit(day.AddDays(-2))) != 0) return "MD+2";
+        for (var k = 2; k <= 4; k++) if ((matchDays & Bit(day.AddDays(k))) != 0) return $"MD-{k}";
         return null;
     }
 

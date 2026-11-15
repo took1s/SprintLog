@@ -444,8 +444,8 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
         for (var d = today; d <= today.AddDays(20); d = d.AddDays(1))
         {
             var parts = new List<string>();
-            if (MatchDay.Label(d, active?.MatchDays ?? 0) is { } md && md != "MD") parts.Add($"{md} ({MatchDay.Focus(md)})");
             if (PlannedWorkoutRules.ConflictOn(d, active) is { } kind) parts.Add(kind == "match" ? "MATCH" : "plan training");
+            if (MatchDay.Label(d, active?.MatchDays ?? 0) is { } md && md != "MD") parts.Add($"{md} ({MatchDay.Focus(md)})");
             foreach (var p in planned.Where(p => p.Date == d && p.Status != "skipped"))
                 parts.Add($"session id {p.ClientId} '{p.Title}' ({p.Category}, {p.Status}, by {p.Source}): {string.Join(", ", p.Exercises.Select(x => $"#{x.ExerciseId} {x.Sets}x"))}");
             var due = routines.Where(r => r.StartDate <= d && (r.EndDate == null || r.EndDate >= d) && (r.Days & DayBit(d)) != 0).Select(r => r.Title).ToList();
