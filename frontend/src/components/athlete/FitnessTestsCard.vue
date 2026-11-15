@@ -79,7 +79,7 @@ function spark(id: TestId) {
                       <span class="level-marker" :style="{ left: `${r.rating.score}%` }"></span>
                   </div>
                   <div class="mt-1 grid grid-cols-4 font-mono text-[10px] text-slate-500">
-                      <span v-for="(l, i) in LEVELS" :key="l" class="truncate">{{ fmt(r.id, r.th[i]!) }}</span>
+                      <span v-for="(l, i) in LEVELS" :key="l" class="truncate pr-0.5 text-right">{{ fmt(r.id, r.th[i]!) }}</span>
                   </div>
                   <p v-if="r.rating.next" class="mt-1.5 text-[11px] text-slate-300">{{ t('tests.toNext', { level: t(`tests.levels.${r.rating.next}`), gap: fmt(r.id, r.rating.gap!), unit: unit(r.id) }) }}</p>
               </div>
