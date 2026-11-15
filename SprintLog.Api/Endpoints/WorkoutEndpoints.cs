@@ -19,6 +19,7 @@ public static class WorkoutEndpoints
         group.MapGet("/history", History); // komplette Historie in einer Antwort - für ältere App-Versionen
         group.MapGet("/{id:int}", GetById);
         group.MapPut("/{id:int}", Update);
+        group.MapPut("/{id:int}/health", SetHealth);
         group.MapDelete("/{id:int}", Delete);
     }
 
@@ -354,8 +355,27 @@ public static class WorkoutEndpoints
             w.Quality,
             w.Gym,
             w.ExerciseNotes.OrderBy(n => n.Id).Select(n => new ExerciseNoteDto(n.ExerciseId, n.Note, n.Skipped, n.Reason)).ToList(),
-            w.DistanceM is null && w.AvgHr is null && w.MaxHr is null && w.MaxSpeedKmh is null && w.Sprints is null
+            w.DistanceM == null && w.AvgHr == null && w.MaxHr == null && w.MaxSpeedKmh == null && w.Sprints == null
                 ? null : new WorkoutHealth(w.DistanceM, w.AvgHr, w.MaxHr, w.MaxSpeedKmh, w.Sprints)));
+
+    /// <summary>Nur die Uhr-Werte einer Einheit setzen (Import aus Apple Health), ohne die Sätze anzufassen.</summary>
+    private static async Task<IResult> SetHealth(int id, WorkoutHealth health, HttpContext http, AppDbContext db, TimeProvider time, CancellationToken ct)
+    {
+        var userId = http.User.GetUserId();
+        if (userId is null) return Results.Unauthorized();
+        var check = new CreateWorkoutRequest("Hybrid", null, Health: health).Validate(time.GetUtcNow());
+        if (check.Errors.ContainsKey("health")) return new ValidationErrors().Add("health", "Health values are out of range.").ToResult();
+        var workout = await db.Workouts.FirstOrDefaultAsync(w => w.Id == id && w.UserId == userId, ct);
+        if (workout is null) return Results.NotFound();
+        workout.DistanceM = health.DistanceM;
+        workout.AvgHr = health.AvgHr;
+        workout.MaxHr = health.MaxHr;
+        workout.MaxSpeedKmh = health.MaxSpeedKmh is { } v ? Math.Round(v, 1) : null;
+        workout.Sprints = health.Sprints;
+        workout.UpdatedAt = time.GetUtcNow().UtcDateTime;
+        await db.SaveChangesAsync(ct);
+        return Results.NoContent();
+    }
 
     /// <summary>Spiel-Extras und Uhr-Werte übernehmen. Beim Ändern bleiben Uhr-Werte erhalten, wenn der Client keine schickt (ältere App).</summary>
     private static void ApplyExtras(Workout w, CreateWorkoutRequest req, bool keepHealth)

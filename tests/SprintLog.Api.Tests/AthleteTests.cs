@@ -99,6 +99,14 @@ public class AthleteTests
         Assert.Equal("striker", updated.Match?.Position);
         Assert.Null(updated.Match?.TeamGoals);
 
+        // Nur Uhr-Werte setzen (Import aus Apple Health), Sätze/Spiel bleiben
+        await HttpAssert.StatusAsync(HttpStatusCode.NoContent, await user.Client.PutAsJsonAsync($"/api/workouts/{created.Id}/health", new { distanceM = 9100, sprints = 21 }));
+        var after = Assert.Single(await HttpAssert.JsonAsync<List<WorkoutResponse>>(HttpStatusCode.OK, await user.Client.GetAsync("/api/workouts/history")));
+        Assert.Equal(new WorkoutHealth(9100, null, null, null, 21), after.Health);
+        Assert.Equal(2, after.Match?.Goals);
+        Assert.Contains("health", await HttpAssert.ValidationFieldsAsync(await user.Client.PutAsJsonAsync($"/api/workouts/{created.Id}/health", new { avgHr = 400 })));
+        Assert.Equal(HttpStatusCode.NotFound, (await (await _factory.CreateUserAsync()).Client.PutAsJsonAsync($"/api/workouts/{created.Id}/health", new { sprints = 1 })).StatusCode);
+
         var bad = await user.Client.PostAsJsonAsync("/api/workouts", new
         {
             workoutType = "Match", durationSeconds = 3600, sessionRpe = 7, match = new { position = "libero" }, health = new { maxSpeedKmh = 80.0 },
