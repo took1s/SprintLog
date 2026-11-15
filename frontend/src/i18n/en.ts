@@ -882,6 +882,7 @@ export const en = {
     extra: 'Extra: {title}',
     today: 'Today',
   },
+  widget: { none: 'No routines today', next: 'Next' },
   goals: {
     kicker: 'Progression',
     title: 'Strength goals',
