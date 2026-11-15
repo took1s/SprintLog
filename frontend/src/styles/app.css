@@ -441,6 +441,13 @@
   color: rgb(var(--c-accent-text)); background: rgb(var(--c-accent) / 0.12);
 }
 
+/* Schritt: Name und Dosis untereinander, beide umbrechend; Info-Knopf rechts */
+.routine-step { display: flex; align-items: flex-start; gap: 8px; }
+.routine-step.is-boxed { border-radius: 12px; padding: 8px 12px; background: rgb(var(--c-bg) / 0.35); border: var(--border-w) solid rgb(var(--c-fg) / 0.06); }
+.routine-step-text { display: flex; min-width: 0; flex: 1 1 auto; flex-direction: column; gap: 1px; padding-top: 2px; overflow-wrap: anywhere; }
+.routine-step-name { font-size: 14px; line-height: 1.35; color: rgb(var(--c-fg) / 0.9); }
+.routine-step-dose { font-family: var(--font-num, ui-monospace, monospace); font-size: 11px; line-height: 1.35; color: rgb(var(--c-subtle)); }
+.routine-step .routine-icon-btn { flex-shrink: 0; }
 /* Mehrmals täglich: Ring mit Zähler im Haken, einzelne Durchgänge als Punkte */
 .routine-check.is-multi { position: relative; color: rgb(var(--c-fg)); }
 .routine-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }

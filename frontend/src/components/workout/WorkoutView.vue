@@ -187,6 +187,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
           <div class="min-w-0">
               <div class="truncate text-[10px] font-bold uppercase text-accent tracking-label">
                   <template v-if="isEditing">{{ t('workout.editingKicker') }}</template>
+                  <template v-else-if="session.plan?.plannedId">{{ t('planned.title') }}</template>
                   <template v-else-if="session.plan">{{ planProgram ? programName(planProgram) : session.plan.programName }}</template>
                   <template v-else>{{ t('workout.title') }}</template>
               </div>

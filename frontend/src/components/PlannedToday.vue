@@ -31,18 +31,21 @@ const summary = (p: PlannedWorkout) => p.exercises.slice(0, 4).map((x) => {
           <h3 class="display mt-1 break-words text-xl leading-tight text-white">{{ p.title }}</h3>
           <p class="mt-1 text-xs leading-relaxed text-slate-300">{{ summary(p) }}</p>
           <p v-if="p.notes" class="mt-1 text-[11px] leading-snug text-slate-400">{{ p.notes }}</p>
-          <div class="mt-3 flex gap-2">
-              <button type="button" class="btn-primary flex-1 rounded-xl py-3 text-sm" data-test="planned-start" @click="planned.start(p.clientId)">{{ t('planned.start') }}</button>
-              <button type="button" class="btn-ghost rounded-xl px-4 py-3 text-xs" :title="t('planned.moveHint')" data-test="planned-move" @click="planned.move(p.clientId)">{{ t('planned.move') }}</button>
-              <button type="button" class="btn-ghost rounded-xl px-4 py-3 text-xs" data-test="planned-skip" @click="planned.skip(p.clientId)">{{ t('planned.skip') }}</button>
+          <!-- Starten volle Breite, darunter Verschieben/Auslassen nebeneinander - passt auch bei 320 px und langen Wörtern -->
+          <div class="mt-3 grid grid-cols-2 gap-2">
+              <button type="button" class="btn-primary col-span-2 rounded-xl py-3.5 text-sm" data-test="planned-start" @click="planned.start(p.clientId)">{{ t('planned.start') }}</button>
+              <button type="button" class="btn-ghost min-w-0 rounded-xl px-2 py-3 text-xs" :title="t('planned.moveHint')" data-test="planned-move" @click="planned.move(p.clientId)">{{ t('planned.move') }}</button>
+              <button type="button" class="btn-ghost min-w-0 rounded-xl px-2 py-3 text-xs" data-test="planned-skip" @click="planned.skip(p.clientId)">{{ t('planned.skip') }}</button>
           </div>
       </section>
 
       <div v-if="missed" class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3" data-test="planned-missed">
           <span class="routine-missed-dot" aria-hidden="true"></span>
-          <p class="min-w-0 flex-1 text-xs text-slate-300"><span class="font-bold text-white">{{ missed.title }}</span> · {{ t('planned.status.missed') }}</p>
-          <button type="button" class="routine-link flex-shrink-0" @click="planned.move(missed.clientId)">{{ t('planned.move') }}</button>
-          <button type="button" class="routine-link flex-shrink-0" @click="planned.skip(missed.clientId)">{{ t('planned.skip') }}</button>
+          <p class="min-w-0 flex-1 break-words text-xs text-slate-300"><span class="font-bold text-white">{{ missed.title }}</span> · {{ t('planned.status.missed') }}</p>
+          <span class="flex flex-shrink-0 flex-col gap-1.5 min-[400px]:flex-row">
+              <button type="button" class="routine-link" @click="planned.move(missed.clientId)">{{ t('planned.move') }}</button>
+              <button type="button" class="routine-link" @click="planned.skip(missed.clientId)">{{ t('planned.skip') }}</button>
+          </span>
       </div>
 
       <button v-if="soon" type="button" class="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left hover:bg-white/5" data-test="planned-next" @click="planned.openEdit(soon.clientId)">

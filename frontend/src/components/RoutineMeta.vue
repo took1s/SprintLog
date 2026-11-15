@@ -30,7 +30,7 @@ const period = computed(() => {
   <span class="routine-meta block font-mono text-[11px] leading-snug text-slate-400" :class="compact ? 'truncate' : 'break-words'">
       <span class="routine-kind" :data-kind="routine.kind">{{ t(`routines.kinds.${routine.kind}`) }}</span>
       <template v-if="!compact"> · {{ days }}</template>
-      <template v-if="routine.timesPerDay > 1"> · {{ tn('routines.timesPerDay', routine.timesPerDay) }}</template>
+      <template v-if="!compact && routine.timesPerDay > 1"> · {{ tn('routines.timesPerDay', routine.timesPerDay) }}</template>
       · {{ period }}
       <template v-if="compact && p.streak >= 2"> · <span class="routine-streak">{{ tn('routines.streak', p.streak) }}</span></template>
   </span>
