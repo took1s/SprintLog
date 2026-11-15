@@ -20,6 +20,7 @@ import { useRoutinesStore } from '@/stores/routines';
 import { usePlannedStore } from '@/stores/planned';
 import { useAiStore } from '@/stores/ai';
 import { useRemindersStore } from '@/stores/reminders';
+import { clearWidget, startWidgetSync } from '@/stores/widget';
 import { appearance } from '@/lib/theme';
 
 // Seltener gebrauchte Teile als eigene Chunks (kleineres Start-Bundle; offline per Service-Worker-Cache verfügbar):
@@ -84,7 +85,10 @@ onMounted(() => { void app.init(); });
 
 // Erinnerungen: nach der Anmeldung planen, beim Abmelden löschen (enthalten Namen der Routinen)
 const reminders = useRemindersStore();
-watch(isAuthenticated, (signedIn) => { if (signedIn) void reminders.start(); else void reminders.clear(); }, { immediate: true });
+// iPhone-Widget: Schnappschuss der nächsten Tage aktuell halten bzw. leeren
+watch(isAuthenticated, (signedIn) => {
+  if (signedIn) { void reminders.start(); startWidgetSync(); } else { void reminders.clear(); void clearWidget(); }
+}, { immediate: true });
 // Mitteilung angetippt: Startbildschirm zeigen (Routinen, Einheit des Tages, Wochenbericht liegen dort)
 watch(() => reminders.focus, (f) => {
   if (!f || sessionActive.value) return;

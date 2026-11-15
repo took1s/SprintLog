@@ -883,6 +883,7 @@ export const de: Messages = {
     extra: 'Zusatz: {title}',
     today: 'Heute',
   },
+  widget: { none: 'Heute keine Routinen', next: 'Als Nächstes' },
   goals: {
     kicker: 'Progression',
     title: 'Kraft-Ziele',
