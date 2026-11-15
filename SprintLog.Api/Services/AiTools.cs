@@ -161,13 +161,15 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
         "Propose a routine next to the training plan: a short recurring task with a period, e.g. daily hamstring rehab for 3 weeks, " +
         "stretching after every session until the end of the month, ankle prevention on training days. The athlete sees a card and adds it with one tap; " +
         "the app shows it as a checklist on the scheduled days until endDate. To change or end an existing routine (see <routines>), send its id as replacesId " +
-        "with the complete new version (to end it, set endDate to today). Steps are concrete: name + dose; link catalog exercises via exerciseId when one fits (the app shows its animation).",
+        "with the complete new version (to end it, set endDate to today). Steps are concrete: name + dose; link catalog exercises via exerciseId when one fits (the app shows its animation). " +
+        "For rehab routines the athlete logs pain 0-10 when ticking (see <routines>): progress the load only while pain stays low (<= 3/10) and is not rising.",
         Schema("""
         {"type":"object","required":["title","kind","days","steps","reason"],"properties":{
           "title":{"type":"string","description":"max 40 characters, in the athlete's language"},
           "kind":{"type":"string","enum":["mobility","rehab","prevention","activation","recovery","other"]},
           "days":{"type":"array","items":{"type":"integer","minimum":0,"maximum":6},"description":"Weekdays 0 = Monday ... 6 = Sunday; all 7 = daily"},
           "timesPerDay":{"type":"integer","minimum":1,"maximum":6,"description":"How often per scheduled day, e.g. 3 for 'stretch 3x daily' (default 1)"},
+          "times":{"type":"array","items":{"type":"string"},"maxItems":6,"description":"Optional clock time per round, 'HH:mm' 24h, e.g. ['08:00','13:00','20:00'] for 3x daily; the app reminds the athlete at these times"},
           "startDate":{"type":"string","description":"yyyy-MM-dd, default today"},
           "endDate":{"type":"string","description":"yyyy-MM-dd until when (inclusive); omit only for permanent habits"},
           "reason":{"type":"string","description":"Why, max 200 characters (e.g. injury, what the physio said)"},
@@ -278,11 +280,28 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
               .Append(" -> ").Append(r.EndDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "open")
               .Append(" | done ").Append(done).Append('/').Append(due).Append(" scheduled days in the last 14")
               .Append(r.TimesPerDay > 1 ? $" | {r.TimesPerDay}x per day, today {todayCount}/{r.TimesPerDay}" : todayCount > 0 ? " | done today" : string.Empty)
+              .Append(r.Times is { Count: > 0 } ? $" | at {string.Join(", ", r.Times)}" : string.Empty)
+              .Append(PainText(r.Pain, today))
               .Append(" | by ").Append(r.Source);
             if (r.Reason is { } why) sb.Append(" | reason: ").Append(why);
             sb.Append(" | steps: ").Append(string.Join("; ", r.Steps.Select(s => s.Dose is null ? s.Name : $"{s.Name} ({s.Dose})"))).Append('\n');
         }
         return sb.ToString().TrimEnd();
+    }
+
+    /// <summary>Schmerz der letzten 14 Tage für den Prompt: Werte alt -> neu, letzter Wert und Tendenz (Wochenmittel).</summary>
+    public static string PainText(IReadOnlyList<RoutinePain>? pain, DateOnly today)
+    {
+        var recent = (pain ?? []).Where(p => p.Day > today.AddDays(-14) && p.Day <= today).OrderBy(p => p.Day).ToList();
+        if (recent.Count == 0) return string.Empty;
+        var last = recent[^1];
+        var thisWeek = recent.Where(p => p.Day > today.AddDays(-7)).Select(p => (double)p.Level).ToList();
+        var lastWeek = recent.Where(p => p.Day <= today.AddDays(-7)).Select(p => (double)p.Level).ToList();
+        var trend = thisWeek.Count > 0 && lastWeek.Count > 0
+            ? (thisWeek.Average() - lastWeek.Average()) switch { <= -1 => "falling", >= 1 => "rising", _ => "stable" }
+            : "n/a";
+        var days = (today.DayNumber - last.Day.DayNumber) switch { 0 => "today", 1 => "yesterday", var n => $"{n} days ago" };
+        return $" | pain 0-10 last 14 days (old->new): {string.Join(",", recent.Select(p => p.Level))}; latest {last.Level}/10 {days}; trend {trend}";
     }
 
     /// <summary>Routine vorschlagen oder ändern: Karte im Client, gespeichert erst nach Bestätigung (PUT /api/routines/{id}).</summary>
@@ -332,13 +351,20 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
         }
         if (steps.Count == 0) return new { error = "At least one step with a name is required." };
 
+        var timesPerDay = Math.Clamp(Int(input, "timesPerDay") ?? existing?.TimesPerDay ?? 1, 1, Routine.MaxTimesPerDay);
+        // Uhrzeiten je Durchgang; ohne Angabe bleiben bei einer Änderung die bisherigen
+        var times = input.TryGetProperty("times", out var tEl) && tEl.ValueKind == JsonValueKind.Array
+            ? RoutineInput.NormalizeTimes(tEl.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!), timesPerDay)
+            : RoutineInput.NormalizeTimes(existing?.Times, timesPerDay);
+
         actions.Add(new JsonObject
         {
             ["type"] = "routine",
             ["replacesId"] = existing?.ClientId,
             ["routine"] = new JsonObject
             {
-                ["title"] = title, ["kind"] = kind, ["days"] = days, ["timesPerDay"] = Math.Clamp(Int(input, "timesPerDay") ?? existing?.TimesPerDay ?? 1, 1, Routine.MaxTimesPerDay),
+                ["title"] = title, ["kind"] = kind, ["days"] = days, ["timesPerDay"] = timesPerDay,
+                ["times"] = new JsonArray(times.Select(x => (JsonNode?)JsonValue.Create(x)).ToArray()),
                 ["startDate"] = start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 ["endDate"] = end?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 ["reason"] = Clip(Str(input, "reason"), 200) is { Length: > 0 } why ? why : null,

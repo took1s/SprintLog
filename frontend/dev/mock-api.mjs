@@ -541,7 +541,7 @@ async function handleApi(req, res, url) {
       // Routinen wie propose_routine: "stretch"/"растяж"/"dehn" -> neue Dehnroutine; "rehab"/"реаб" -> bestehende Reha beenden/ändern
       if (/stretch|растяж|dehn|routine|рутин/.test(lower)) {
         const day = (n) => { const d = new Date(Date.now() + n * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-        actions.push({ type: 'routine', replacesId: null, routine: { title: 'Stretching after training', kind: 'mobility', days: 1 | 4 | 16, startDate: day(0), endDate: day(20), reason: 'Tight hips after sprints.',
+        actions.push({ type: 'routine', replacesId: null, routine: { title: 'Stretching after training', kind: 'mobility', days: 1 | 4 | 16, timesPerDay: 2, times: ['08:00', '20:00'], startDate: day(0), endDate: day(20), reason: 'Tight hips after sprints.',
           steps: [{ name: 'Hip flexor stretch', dose: '2 x 45 s per side' }, { name: 'Plank', dose: '3 x 30 s', exerciseId: 47 }, { name: 'Nordic Hamstring Curl', dose: '2 x 5', exerciseId: 50 }] } });
       } else if (/rehab|реаб/.test(lower)) {
         const r = db.routines.find((x) => x.userId === user.id && x.kind === 'rehab');
@@ -682,14 +682,22 @@ async function handleApi(req, res, url) {
     if (!(body.days >= 1 && body.days <= 127)) errors.days = ['Pick at least one weekday.'];
     if (body.endDate && body.endDate < body.startDate) errors.endDate = ['End date must be after the start.'];
     if (!Array.isArray(body.steps) || !body.steps.length || body.steps.some((x) => !String(x?.name ?? '').trim())) errors.steps = ['Add 1 to 12 steps.'];
+    const isTime = (x) => typeof x === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(x);
+    if (Array.isArray(body.times) && (body.times.length > 6 || body.times.some((x) => !isTime(x)))) errors.times = ['Times must be HH:mm, at most one per round.'];
+    if (Array.isArray(body.pain) && body.pain.some((x) => !(x?.level >= 0 && x.level <= 10))) errors.pain = ['Pain is 0 to 10 and not in the future.'];
     if (Object.keys(errors).length) return problem(res, 400, 'One or more validation errors occurred.', errors);
     const now = new Date().toISOString();
     const old = db.routines.find((r) => r.userId === user.id && r.clientId === m[1]);
+    const perDay = Math.max(1, Math.min(6, body.timesPerDay ?? 1));
+    // Wie der Server: Zeiten sortiert/eindeutig/gekürzt; fehlen times/pain (ältere App), bleibt das Gespeicherte
+    const times = [...new Set((body.times ?? old?.times ?? []).filter(isTime))].sort().slice(0, perDay);
+    const painMap = new Map((body.pain ?? old?.pain ?? []).map((x) => [x.day, x.level]));
+    const pain = [...painMap].map(([day, level]) => ({ day, level })).sort((a, b) => a.day.localeCompare(b.day));
     const routine = {
       userId: user.id, clientId: m[1], title: body.title.trim(), kind: body.kind, days: body.days, startDate: body.startDate, endDate: body.endDate ?? null,
       reason: body.reason?.trim() || null, source: old?.source ?? body.source ?? 'user',
       steps: body.steps.map((x) => ({ name: x.name.trim(), dose: x.dose?.trim() || null, exerciseId: db.exercises.some((e) => e.id === x.exerciseId) ? x.exerciseId : null })),
-      timesPerDay: Math.max(1, Math.min(6, body.timesPerDay ?? 1)),
+      timesPerDay: perDay, times, pain,
       doneDates: capPerDay(body.doneDates ?? old?.doneDates ?? [], Math.max(1, Math.min(6, body.timesPerDay ?? 1))).sort(), createdAt: old?.createdAt ?? now, updatedAt: now,
     };
     db.routines = [...db.routines.filter((r) => r !== old), routine];
@@ -901,10 +909,11 @@ function seedDemo() {
   db.routines.push(
     { userId: user.id, clientId: 'rt-demo-rehab', title: 'Hamstring rehab (left)', kind: 'rehab', days: 127, timesPerDay: 1, startDate: dayKey(-10), endDate: dayKey(11), reason: 'Mild strain, physio cleared progressive loading.', source: 'coach',
       steps: [{ name: 'Glute bridge hold', dose: '3 x 30 s', exerciseId: null }, { name: 'Nordic Hamstring Curl', dose: '2 x 5, slow', exerciseId: 50 }, { name: 'Tempo runs', dose: '6 x 60 m @ 70 %', exerciseId: null }],
-      doneDates: [-10, -9, -8, -7, -5, -4, -3, -2, -1].map(dayKey), createdAt: created, updatedAt: created },
+      doneDates: [-10, -9, -8, -7, -5, -4, -3, -2, -1].map(dayKey), times: ['18:00'],
+      pain: [[-10, 6], [-9, 5], [-7, 5], [-5, 4], [-4, 4], [-2, 3], [-1, 2]].map(([d, level]) => ({ day: dayKey(d), level })), createdAt: created, updatedAt: created },
     { userId: user.id, clientId: 'rt-demo-stretch', title: 'Stretching after training', kind: 'mobility', days: 127, timesPerDay: 2, startDate: dayKey(-3), endDate: dayKey(25), reason: null, source: 'user',
       steps: [{ name: 'Hip flexor stretch', dose: '2 x 45 s per side', exerciseId: null }, { name: 'Plank', dose: '3 x 30 s', exerciseId: 47 }],
-      doneDates: [-3, -3, -2, -1, -1, 0].map(dayKey), createdAt: created, updatedAt: created },
+      doneDates: [-3, -3, -2, -1, -1, 0].map(dayKey), times: ['08:00', '20:00'], pain: [], createdAt: created, updatedAt: created },
   );
   // Zusatz-Einheiten: eine vom Coach in 2 Tagen, eine erledigte letzte Woche
   db.planned.push(

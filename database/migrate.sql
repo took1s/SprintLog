@@ -4620,3 +4620,29 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261114232624_V21RoutineTimesPain') THEN
+    ALTER TABLE "Routines" ADD "Pain" jsonb;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261114232624_V21RoutineTimesPain') THEN
+    ALTER TABLE "Routines" ADD "Times" text[] NOT NULL DEFAULT ('{}'::text[]);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261114232624_V21RoutineTimesPain') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261114232624_V21RoutineTimesPain', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

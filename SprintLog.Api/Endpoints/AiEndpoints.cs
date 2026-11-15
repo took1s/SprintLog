@@ -354,7 +354,7 @@ public static class AiEndpoints
         <coach_memory description="Your long-term memory about this athlete from earlier conversations (id, category, importance, date). Facts the athlete or you saved - use them, keep them up to date.">
         {memory}
         </coach_memory>
-        <routines description="Routines next to the plan (stretching, rehab, prevention): id, title, kind, state, weekdays, period, how often they were done on scheduled days in the last 14 days, steps. Change or end one with propose_routine and replacesId.">
+        <routines description="Routines next to the plan (stretching, rehab, prevention): id, title, kind, state, weekdays, period, how often they were done on scheduled days in the last 14 days, clock times per round, pain 0-10 the athlete logged (rehab), steps. Change or end one with propose_routine and replacesId.">
         {planning.Routines}
         </routines>
         <calendar description="Next 3 weeks day by day: plan training/match days, planned single sessions (id, title, status), routines due; plus planned sessions of the last 14 days and whether they were done, skipped or missed. One session per day: never put a session on a plan day.">
@@ -385,6 +385,7 @@ public static class AiEndpoints
         - Answer in {Language(locale)}.
         - Look before you advise: for anything about the plan, progress, load, readiness or injuries, first call the relevant tools (get_programs for the plan and its exercises per day, get_load_metrics for load/risk, get_exercise_history / get_personal_records for progress, get_wellness_trend for recovery). Quote the concrete numbers you used.
         - Plan changes: when the athlete wants the current plan adjusted (exercises, sets, days, deload, injury adaptation), call get_programs, then propose_program_update with the complete new version of each day (keep dayId for days that stay). A completely new program -> propose_program. Goals -> propose_goal. Training/match days -> propose_schedule. Recurring extras next to the plan with a period (stretching, injury rehab, prevention, activation) -> propose_routine with concrete steps, timesPerDay when it is several times a day, and an endDate; look at <routines> first and change an existing one (replacesId) instead of duplicating it. A single extra session on a date (make-up, speed, recovery) -> propose_session on a free day from <calendar>; if no suitable free day exists, first propose_schedule to move the plan days, then propose_session. These show cards the athlete confirms; never claim you already changed something.
+        - Rehab pain (<routines>, 0-10): latest > 3/10 or rising -> suggest a lighter dose (propose_routine with replacesId); > 5/10 or not improving after a week -> advise seeing the physio/doctor; 0-2/10 stable for about a week -> progress the load or shorten the routine. You are not a doctor - never diagnose.
         - Look up exercise ids with search_exercises or get_programs; only use ids from the catalog.
         - Long-term memory (coach_memory): use it like a coach who knows the athlete for years - refer to it naturally, don't recite it.
           When the athlete tells you something durable and important (goal, injury or pain status, fixed schedule, constraint, preference, how a training method worked), call remember right away - no need to ask, the app shows a small note with undo.
@@ -457,7 +458,7 @@ public static class AiEndpoints
         - nextWeekFocus: one or two sentences.
         - If there is little data, say so in the summary and focus on what to log next.
         - Take coach_memory into account (injuries, goals, schedule, what worked) and say when a finding relates to it.
-        - Routines (<routines>): mention adherence of rehab/prevention routines when relevant (done x/y scheduled days).
+        - Routines (<routines>): mention adherence of rehab/prevention routines when relevant (done x/y scheduled days) and the pain trend of rehab routines (logged 0-10).
         - Planned sessions (<calendar>): note missed or skipped sessions and whether the extra sessions fit the week's load.
 
         {AthleteBlock(profile, memory, planning, context, time)}

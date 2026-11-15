@@ -154,4 +154,74 @@ public class RoutineTests
         Assert.Equal(Today, (string?)card["routine"]!["startDate"]); // Beginn der bestehenden Routine
         Assert.Equal(Today, (string?)card["routine"]!["endDate"]);
     }
+
+    [Fact]
+    public async Task Times_per_round_and_pain_are_normalized_and_kept()
+    {
+        var user = await _factory.CreateUserAsync();
+        var body = new
+        {
+            title = "Dehnen 3x", kind = "rehab", days = 127, timesPerDay = 2, startDate = InDays(-5), endDate = InDays(10),
+            steps = new[] { new { name = "Hüftbeuger", dose = "2 x 45 s" } },
+            // unsortiert, doppelt, mehr als Durchgänge -> sortiert, eindeutig, gekürzt
+            times = new[] { "20:00", "08:00", "08:00", "13:00" },
+            pain = new[] { new { day = InDays(-2), level = 5 }, new { day = InDays(-1), level = 4 }, new { day = InDays(-1), level = 3 } },
+        };
+        var r = await HttpAssert.JsonAsync<RoutineResponse>(HttpStatusCode.OK, await user.Client.PutAsJsonAsync("/api/routines/rt-pain0001", body));
+        Assert.Equal(new[] { "08:00", "13:00" }, r.Times);
+        Assert.Equal(new[] { 5, 3 }, r.Pain.Select(p => p.Level)); // ein Wert je Tag, der letzte gilt
+
+        // Ältere App ohne times/pain im Request: Gespeichertes bleibt
+        await HttpAssert.StatusAsync(HttpStatusCode.OK, await user.Client.PutAsJsonAsync("/api/routines/rt-pain0001", new
+        {
+            title = "Dehnen 3x", kind = "rehab", days = 127, timesPerDay = 2, startDate = InDays(-5), endDate = InDays(10), steps = new[] { new { name = "Hüftbeuger" } },
+        }));
+        var again = Assert.Single(await AllAsync(user));
+        Assert.Equal(new[] { "08:00", "13:00" }, again.Times);
+        Assert.Equal(2, again.Pain.Count);
+
+        var bad = await user.Client.PutAsJsonAsync("/api/routines/rt-pain0001", new
+        {
+            title = "x", kind = "rehab", days = 127, startDate = Today, steps = new[] { new { name = "a" } },
+            times = new[] { "25:00", "8:00" }, pain = new[] { new { day = Today, level = 11 } },
+        });
+        var fields = await HttpAssert.ValidationFieldsAsync(bad);
+        Assert.Contains("times", fields);
+        Assert.Contains("pain", fields);
+    }
+
+    [Fact]
+    public async Task Coach_sees_pain_trend_and_times_and_can_set_times()
+    {
+        var user = await _factory.CreateUserAsync();
+        await HttpAssert.StatusAsync(HttpStatusCode.OK, await user.Client.PutAsJsonAsync("/api/routines/rt-pain0002", new
+        {
+            title = "Reha Wade", kind = "rehab", days = 127, timesPerDay = 1, startDate = InDays(-12), endDate = InDays(10),
+            steps = new[] { new { name = "Wadenheben", dose = "3 x 15" } }, times = new[] { "18:30" },
+            pain = new[] { new { day = InDays(-10), level = 6 }, new { day = InDays(-8), level = 5 }, new { day = InDays(-2), level = 3 }, new { day = Today, level = 2 } },
+        }));
+        _factory.Ai.Reply = (req, n) =>
+        {
+            if (n > 0) return AiResponse.FromText("Ok.");
+            Assert.Contains("at 18:30", req.System);
+            Assert.Contains("pain 0-10 last 14 days (old->new): 6,5,3,2; latest 2/10 today; trend falling", req.System);
+            return AiResponse.FromTool(AiTools.ProposeRoutine, new
+            {
+                title = "Dehnen", kind = "mobility", days = new[] { 0, 1, 2, 3, 4, 5, 6 }, timesPerDay = 3, endDate = InDays(14), reason = "Steif",
+                times = new[] { "20:00", "8:00", "07:30", "12:00", "x" }, steps = new[] { new { name = "Hüftbeuger" } },
+            });
+        };
+        var res = await HttpAssert.JsonAsync<AiAskResponse>(HttpStatusCode.OK, await user.Client.PostAsJsonAsync("/api/ai/ask", new { question = "Dehnen 3x täglich" }));
+        var times = Assert.Single(res.Actions)["routine"]!["times"]!.AsArray().Select(x => (string?)x).ToList();
+        Assert.Equal(new[] { "07:30", "12:00", "20:00" }, times);
+    }
+
+    [Fact]
+    public void Pain_text_is_empty_without_recent_values()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        Assert.Equal(string.Empty, AiTools.PainText(null, today));
+        Assert.Equal(string.Empty, AiTools.PainText([new SprintLog.Api.Models.RoutinePain { Day = today.AddDays(-30), Level = 4 }], today));
+        Assert.Contains("trend n/a", AiTools.PainText([new SprintLog.Api.Models.RoutinePain { Day = today, Level = 4 }], today));
+    }
 }

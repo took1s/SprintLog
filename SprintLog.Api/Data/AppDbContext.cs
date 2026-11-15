@@ -191,6 +191,12 @@ public class AppDbContext : DbContext
             {
                 b.ToJson();
             });
+            // Uhrzeiten als text[] (bestehende Zeilen: leer); Schmerzwerte als jsonb wie die Schritte
+            e.Property(r => r.Times).HasDefaultValueSql("'{}'::text[]");
+            e.OwnsMany(r => r.Pain, b =>
+            {
+                b.ToJson();
+            });
             e.HasOne<User>().WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 

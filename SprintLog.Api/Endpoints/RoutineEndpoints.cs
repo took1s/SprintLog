@@ -69,6 +69,13 @@ public static class RoutineEndpoints
         routine.DoneDates = (input.DoneDates ?? routine.DoneDates)
             .GroupBy(d => d).SelectMany(g => g.Take(routine.TimesPerDay))
             .OrderByDescending(d => d).Take(Routine.MaxDoneEntries).OrderBy(d => d).ToList();
+        // Uhrzeiten: fehlen sie im Request (ältere App), bleiben die gespeicherten
+        routine.Times = RoutineInput.NormalizeTimes(input.Times ?? routine.Times, routine.TimesPerDay);
+        // Schmerz: ein Wert je Tag (der letzte gilt), neueste behalten
+        if (input.Pain is not null)
+            routine.Pain = input.Pain.GroupBy(p => p.Day).Select(g => new RoutinePain { Day = g.Key, Level = g.Last().Level })
+                .OrderByDescending(p => p.Day).Take(Routine.MaxPainEntries).OrderBy(p => p.Day).ToList();
+        routine.Pain ??= new();
         routine.UpdatedAt = now;
 
         try

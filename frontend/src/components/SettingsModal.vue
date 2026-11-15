@@ -11,6 +11,8 @@ import { appearance, activeScheme, inSeason, setScheme, setTheme, SCHEMES, THEME
 import { APP_ICON_CHOICES, appIconChoice, appIconNative, resolveAppIcon, setAppIcon, type AppIconChoice } from '@/lib/appIcon';
 import { isNative } from '@/lib/native';
 import { useAiStore, type POSITIONS } from '@/stores/ai';
+import { useRemindersStore } from '@/stores/reminders';
+import type { ReminderPrefs } from '@/lib/reminders';
 import { vSheetDrag } from '@/lib/gestures';
 type Position = (typeof POSITIONS)[number];
 const ai = useAiStore();
@@ -27,6 +29,17 @@ const iconHint = computed(() => {
   return t('appearance.icon.webHint');
 });
 const pickIcon = (c: AppIconChoice) => { void setAppIcon(c); };
+
+// ---------- Erinnerungen ----------
+const reminders = useRemindersStore();
+const REMINDER_ROWS = [
+  { key: 'routines', time: 'routineTime', hint: 'reminders.routinesHint' },
+  { key: 'today', time: 'todayTime', hint: 'reminders.todayHint' },
+  { key: 'report', time: 'reportTime', hint: 'reminders.reportHint' },
+] as const;
+type ReminderRow = (typeof REMINDER_ROWS)[number];
+const toggleRow = (row: ReminderRow, on: boolean) => reminders.update({ [row.key]: on } as Partial<ReminderPrefs>);
+const setRowTime = (row: ReminderRow, value: string) => { if (value) reminders.update({ [row.time]: value } as Partial<ReminderPrefs>); };
 </script>
 
 <template>
@@ -106,6 +119,41 @@ const pickIcon = (c: AppIconChoice) => { void setAppIcon(c); };
                       <span class="text-sm text-slate-200">{{ t(`settings.toggles.${key}`) }}</span>
                       <input v-model="settings[key]" type="checkbox" class="h-5 w-5">
                   </label>
+              </div>
+
+              <h4 class="label-xs mb-3 text-accent">{{ t('reminders.title') }}</h4>
+              <div class="mb-6 space-y-2" data-test="settings-reminders">
+                  <label class="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-white/5 bg-black/20 p-3">
+                      <span class="min-w-0">
+                          <span class="block text-sm text-slate-200">{{ t('reminders.enable') }}</span>
+                          <span class="block text-[11px] leading-snug text-slate-400">{{ reminders.webOnly ? t('reminders.hintWeb') : t('reminders.hintNative') }}</span>
+                      </span>
+                      <input type="checkbox" class="h-5 w-5 flex-shrink-0" :checked="reminders.prefs.enabled" :disabled="reminders.permission === 'unsupported'" data-test="reminders-enable"
+                             @change="(e) => reminders.setEnabled((e.target as HTMLInputElement).checked)">
+                  </label>
+                  <p v-if="reminders.permission === 'denied'" class="rounded-xl bg-red-500/10 px-3 py-2 text-[11px] font-bold text-red-300" role="alert">{{ t('reminders.denied') }}</p>
+                  <p v-else-if="reminders.permission === 'unsupported'" class="px-1 text-[11px] text-slate-400">{{ t('reminders.unsupported') }}</p>
+                  <transition name="expand">
+                      <div v-if="reminders.prefs.enabled" class="expand-wrap">
+                          <div class="space-y-2">
+                              <div v-for="row in REMINDER_ROWS" :key="row.key" class="rounded-xl border border-white/5 bg-black/20 p-3" :data-reminder="row.key">
+                                  <label class="flex cursor-pointer items-center justify-between gap-3">
+                                      <span class="text-sm text-slate-200">{{ t(`reminders.${row.key}`) }}</span>
+                                      <input type="checkbox" class="h-5 w-5 flex-shrink-0" :checked="reminders.prefs[row.key]" @change="(e) => toggleRow(row, (e.target as HTMLInputElement).checked)">
+                                  </label>
+                                  <div class="mt-2 flex items-center justify-between gap-3" :class="{ 'opacity-50': !reminders.prefs[row.key] }">
+                                      <span class="min-w-0 text-[11px] leading-snug text-slate-400">{{ t(row.hint) }}</span>
+                                      <input type="time" step="300" class="field h-10 w-[7rem] flex-shrink-0 rounded-lg px-2 text-center font-mono text-sm" :value="reminders.prefs[row.time]"
+                                             :disabled="!reminders.prefs[row.key]" :aria-label="t('reminders.timeLabel', { what: t(`reminders.${row.key}`) })" @change="(e) => setRowTime(row, (e.target as HTMLInputElement).value)">
+                                  </div>
+                              </div>
+                              <div class="flex items-center justify-between gap-3 px-1">
+                                  <p class="text-[11px] text-slate-400" data-test="reminders-count">{{ tn('reminders.scheduled', reminders.scheduled.length) }}</p>
+                                  <button type="button" class="flex-shrink-0 text-[11px] font-bold text-accent hover:underline" @click="reminders.test()">{{ t('reminders.test') }}</button>
+                              </div>
+                          </div>
+                      </div>
+                  </transition>
               </div>
 
               <h4 class="label-xs mb-3 text-accent">{{ t('settings.data') }}</h4>

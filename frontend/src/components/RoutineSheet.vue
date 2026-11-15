@@ -7,7 +7,7 @@ import { intlLocale, t, tn } from '@/i18n';
 import { exerciseName, muscleName } from '@/i18n/content';
 import { useAppStore } from '@/stores/app';
 import { cleanDraft, useRoutinesStore } from '@/stores/routines';
-import { EVERY_DAY, MAX_ROUTINE_STEPS, MAX_TIMES_PER_DAY, ROUTINE_KINDS, addDays, daysBetween } from '@/lib/routines';
+import { EVERY_DAY, MAX_ROUTINE_STEPS, MAX_TIMES_PER_DAY, ROUTINE_KINDS, addDays, daysBetween, suggestedTimes } from '@/lib/routines';
 import { WEEKDAYS, bit } from '@/lib/schedule';
 import { vSheetDrag } from '@/lib/gestures';
 
@@ -35,6 +35,20 @@ function toggleDay(i: number) {
   d.value.days = next === 0 ? d.value.days : next; // mindestens ein Tag
 }
 const setDaily = () => { d.value.days = EVERY_DAY; };
+
+// ---------- Uhrzeiten je Durchgang ----------
+function setTime(i: number, value: string) {
+  const next = Array.from({ length: d.value.timesPerDay }, (_, k) => d.value.times[k] ?? '');
+  next[i] = value;
+  // Leere Einträge am Ende weglassen; Lücken bleiben bis zum Speichern (dann sortiert und gesäubert)
+  while (next.length && !next[next.length - 1]) next.pop();
+  d.value.times = next;
+}
+const suggest = () => { d.value.times = suggestedTimes(d.value.timesPerDay); };
+const clearTimes = () => { d.value.times = []; };
+const hasTimes = computed(() => d.value.times.some(Boolean));
+// Weniger Durchgänge: überzählige Zeiten weg
+watch(() => d.value.timesPerDay, (n) => { if (d.value.times.length > n) d.value.times = d.value.times.slice(0, n); });
 
 // ---------- Zeitraum ----------
 /** Gewählte Dauer in Wochen, wenn das Ende genau passt (sonst eigenes Datum). */
@@ -139,6 +153,22 @@ function save() {
                           <output class="w-10 text-center font-mono text-lg font-black text-white" aria-live="polite" data-test="routine-times">{{ d.timesPerDay }}×</output>
                           <button type="button" class="routine-icon-btn" :disabled="d.timesPerDay >= MAX_TIMES_PER_DAY" :aria-label="t('routines.sheet.timesMore')" data-test="routine-times-more" @click="d.timesPerDay = Math.min(MAX_TIMES_PER_DAY, d.timesPerDay + 1)">+</button>
                       </span>
+                  </div>
+
+                  <div class="mt-2 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3" data-test="routine-times-editor">
+                      <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                          <span class="text-sm font-bold text-white" id="routine-clock">{{ t('routines.sheet.times') }}</span>
+                          <span class="flex gap-3">
+                              <button type="button" class="text-xs font-bold text-accent hover:underline" data-test="routine-times-suggest" @click="suggest">{{ t('routines.sheet.suggestTimes') }}</button>
+                              <button v-if="hasTimes" type="button" class="text-xs font-bold text-slate-400 hover:text-white" @click="clearTimes">{{ t('routines.sheet.noTimes') }}</button>
+                          </span>
+                      </div>
+                      <p class="mt-0.5 text-[11px] leading-snug text-slate-400">{{ t('routines.sheet.clockHint') }}</p>
+                      <div class="mt-2 grid gap-2" :class="d.timesPerDay === 1 ? 'grid-cols-2' : 'grid-cols-2 min-[400px]:grid-cols-3'" role="group" aria-labelledby="routine-clock">
+                          <input v-for="k in d.timesPerDay" :key="k" type="time" step="300" class="field h-11 w-full min-w-0 rounded-xl px-2 text-center font-mono text-sm"
+                                 :value="d.times[k - 1] ?? ''" :aria-label="t('routines.sheet.timeOf', { n: k })" :data-time="k" data-test="routine-time"
+                                 @change="(e) => setTime(k - 1, (e.target as HTMLInputElement).value)">
+                      </div>
                   </div>
 
                   <div class="mt-5 grid grid-cols-2 gap-3">

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, daysBetween, doneCount, historyWeeks, isDone, isScheduled, newRoutineId, routineProgress, routineState, scheduledDays, setDoneCount, sortRoutines, tapCount, todaysRoutines, type Routine } from '@/lib/routines';
+import { addDays, daysBetween, doneCount, nextRound, normalizeTimes, painSummary, painTone, setPainLevel, slotOf, suggestedTimes, historyWeeks, isDone, isScheduled, newRoutineId, routineProgress, routineState, scheduledDays, setDoneCount, sortRoutines, tapCount, todaysRoutines, type Routine } from '@/lib/routines';
 import { cleanDraft } from '@/stores/routines';
 
 // 2026-11-09 ist ein Montag
 const base = (over: Partial<Routine> = {}): Routine => ({
   clientId: 'rt-test0001', title: 'Reha', kind: 'rehab', days: 127, startDate: '2026-11-09', endDate: '2026-11-29', reason: null,
-  source: 'coach', steps: [{ name: 'Nordic Curls', dose: '2 x 5', exerciseId: 50 }], timesPerDay: 1, doneDates: [], createdAt: '', updatedAt: '', ...over,
+  source: 'coach', steps: [{ name: 'Nordic Curls', dose: '2 x 5', exerciseId: 50 }], timesPerDay: 1, doneDates: [], times: [], pain: [], createdAt: '', updatedAt: '', ...over,
 });
 
 describe('Routinen: Datum', () => {
@@ -110,14 +110,60 @@ describe('Routinen: Eingaben', () => {
   it('säubert den Entwurf wie der Server (leere Schritte raus, Ende nicht vor Beginn)', () => {
     const c = cleanDraft({
       title: '  Dehnen  ', kind: 'mobility', days: 0, startDate: '2026-11-13', endDate: '2026-11-01', reason: '   ',
-      steps: [{ name: ' Hüftbeuger ', dose: ' 2 x 45 s ' }, { name: '   ', dose: 'x' }], timesPerDay: 9,
+      steps: [{ name: ' Hüftbeuger ', dose: ' 2 x 45 s ' }, { name: '   ', dose: 'x' }], timesPerDay: 9, times: ['20:00', 'bad', '08:00', '08:00'],
     });
-    expect(c).toEqual({ title: 'Dehnen', kind: 'mobility', days: 127, startDate: '2026-11-13', endDate: null, reason: null, steps: [{ name: 'Hüftbeuger', dose: '2 x 45 s', exerciseId: null }], timesPerDay: 6 });
+    expect(c).toEqual({ title: 'Dehnen', kind: 'mobility', days: 127, startDate: '2026-11-13', endDate: null, reason: null, steps: [{ name: 'Hüftbeuger', dose: '2 x 45 s', exerciseId: null }], timesPerDay: 6, times: ['08:00', '20:00'] });
   });
 
   it('Client-Id passt zum Server-Format', () => {
     const id = newRoutineId();
     expect(id).toMatch(/^[A-Za-z0-9_-]{8,64}$/);
     expect(newRoutineId()).not.toBe(id);
+  });
+});
+
+describe('Routinen: Uhrzeiten je Durchgang', () => {
+  it('normalisiert wie der Server und schlägt Zeiten über den Tag verteilt vor', () => {
+    expect(normalizeTimes(['20:00', '8:00', '24:00', '13:00', '13:00', '07:30'], 2)).toEqual(['07:30', '13:00']);
+    expect(normalizeTimes(undefined, 3)).toEqual([]);
+    expect(suggestedTimes(1)).toEqual(['19:00']);
+    expect(suggestedTimes(2)).toEqual(['08:00', '20:00']);
+    expect(suggestedTimes(3)).toEqual(['08:00', '14:00', '20:00']);
+    expect(suggestedTimes(6)).toHaveLength(6);
+    expect(slotOf('07:59')).toBe('morning');
+    expect(slotOf('11:00')).toBe('midday');
+    expect(slotOf('17:00')).toBe('evening');
+  });
+
+  it('nächster Durchgang: Zeit des offenen Durchgangs, fällig sobald die Uhrzeit erreicht ist', () => {
+    const r = base({ timesPerDay: 3, times: ['08:00', '14:00', '20:00'], doneDates: ['2026-11-12'] });
+    expect(nextRound(r, '2026-11-12', '12:00')).toEqual({ k: 2, time: '14:00', due: false });
+    expect(nextRound(r, '2026-11-12', '14:00')).toEqual({ k: 2, time: '14:00', due: true });
+    expect(nextRound({ ...r, doneDates: Array(3).fill('2026-11-12') }, '2026-11-12', '21:00')).toBeNull();
+    // Ohne Zeit: immer fällig
+    expect(nextRound(base(), '2026-11-12', '06:00')).toEqual({ k: 1, time: null, due: true });
+  });
+});
+
+describe('Routinen: Schmerz', () => {
+  it('ein Wert je Tag, begrenzt auf 0-10, null entfernt', () => {
+    let list = setPainLevel([], '2026-11-10', 4);
+    list = setPainLevel(list, '2026-11-09', 12);
+    list = setPainLevel(list, '2026-11-10', 3);
+    expect(list).toEqual([{ day: '2026-11-09', level: 10 }, { day: '2026-11-10', level: 3 }]);
+    expect(setPainLevel(list, '2026-11-09', null)).toEqual([{ day: '2026-11-10', level: 3 }]);
+  });
+
+  it('Verlauf und Tendenz: Mittel der letzten 7 Tage gegen die 7 davor', () => {
+    const today = '2026-11-20';
+    const r = base({ pain: [{ day: '2026-11-08', level: 7 }, { day: '2026-11-10', level: 6 }, { day: '2026-11-12', level: 5 }, { day: '2026-11-17', level: 3 }, { day: '2026-11-19', level: 2 }] });
+    const s = painSummary(r, today);
+    expect(s.points).toHaveLength(14);
+    expect(s.points.slice(0, 2)).toEqual([null, 7]); // 07.11. leer, 08.11. = 7
+    expect(s.latest).toEqual({ day: '2026-11-19', level: 2 });
+    expect(s.trend).toBe('falling');
+    expect(painSummary(base({ pain: [{ day: today, level: 3 }] }), today).trend).toBeNull();
+    expect(painSummary(base({ pain: [{ day: '2026-11-10', level: 2 }, { day: '2026-11-18', level: 5 }] }), today).trend).toBe('rising');
+    expect([painTone(2), painTone(3), painTone(6)]).toEqual(['ok', 'warn', 'bad']);
   });
 });

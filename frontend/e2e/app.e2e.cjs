@@ -1899,6 +1899,97 @@ test('long coach texts stay readable on a narrow phone (no squeezed step names, 
   assert.deepEqual(errors, []);
 });
 
+test('rehab pain, round times, routine library and reminders: logged, synced and planned', async () => {
+  const { page, errors } = await newPage();
+  await page.context().grantPermissions(['notifications']);
+  const token = await register(page, `pain_${Date.now()}`);
+  const day = (n) => { const d = new Date(Date.now() + n * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  await api('PUT', '/api/routines/rt-e2epain1', token, {
+    title: 'Calf rehab', kind: 'rehab', days: 127, timesPerDay: 2, times: ['23:58', '23:59'], startDate: day(-3), endDate: day(10),
+    steps: [{ name: 'Calf raise', dose: '3 x 15' }], pain: [{ day: day(-2), level: 5 }, { day: day(-1), level: 4 }],
+  });
+  await page.reload();
+
+  // Uhrzeit des nächsten Durchgangs steht in der Zeile
+  await page.waitForSelector('[data-routine=rt-e2epain1] [data-test=routine-next]');
+  // Erster Haken des Tages -> Schmerz-Frage; 3 wählen -> Abzeichen, Server hat den Wert
+  await page.click('[data-routine=rt-e2epain1] [data-test=routine-check]');
+  await page.click('[data-test=pain-ask] [data-pain="3"]');
+  await page.waitForSelector('[data-routine=rt-e2epain1] [data-test=pain-badge]');
+  const saved = await waitFor(async () => {
+    const list = await api('GET', '/api/routines', token);
+    const r = list.find((x) => x.clientId === 'rt-e2epain1');
+    return r?.pain?.some((p) => p.day === day(0) && p.level === 3) ? r : null;
+  });
+  assert.deepEqual(saved.times, ['23:58', '23:59']);
+  assert.equal(saved.doneDates.filter((d) => d === day(0)).length, 1);
+  // Zweiter Haken fragt nicht noch einmal
+  await page.click('[data-routine=rt-e2epain1] [data-test=routine-check]');
+  await page.waitForTimeout(500); // Zuklapp-Animation der Frage
+  assert.equal(await page.locator('[data-test=pain-ask]').count(), 0);
+
+  // Detail: Verlauf mit Tendenz
+  await page.click('[data-routine=rt-e2epain1] button >> nth=1');
+  await page.click('[data-routine=rt-e2epain1] [data-test=routine-history]');
+  await page.waitForSelector('[data-test=routine-pain] svg circle');
+  assert.equal(await page.locator('[data-test=routine-pain] svg circle').count(), 3);
+  await page.keyboard.press('Escape');
+
+  // Bibliothek: Nordic übernehmen -> Editor mit Vorlage, 3x täglich mit vorgeschlagenen Zeiten speichern
+  await page.click('[role=tab] >> nth=2');
+  await page.click('[data-test=routine-library-open]');
+  await page.click('[data-template=nordic] button >> nth=0');
+  await page.click('[data-template=nordic] [data-test=library-use]');
+  await page.waitForSelector('[data-test=routine-sheet]');
+  assert.equal(await page.inputValue('[data-test=routine-title]'), 'Nordic hamstring program');
+  await page.click('[data-test=routine-times-more]');
+  await page.click('[data-test=routine-times-suggest]');
+  await page.click('[data-test=routine-save]');
+  const nordic = await waitFor(async () => (await api('GET', '/api/routines', token)).find((x) => x.title === 'Nordic hamstring program'));
+  assert.equal(nordic.kind, 'prevention');
+  assert.deepEqual(nordic.times, ['08:00', '20:00']);
+  assert.equal(nordic.steps[1].exerciseId, 50);
+  assert.equal(nordic.endDate, day(69));
+
+  // Erinnerungen einschalten -> für die nächsten 7 Tage geplant
+  await page.click('button[aria-label=Settings]');
+  await page.click('[data-test=reminders-enable]');
+  await page.waitForFunction(() => /\b([1-9]\d*) reminders? planned/.test(document.querySelector('[data-test=reminders-count]')?.textContent ?? ''));
+  assert.deepEqual(errors, []);
+});
+
+test('start screen: week strip and the weekly report send the numbers to the coach', async () => {
+  const { page, errors } = await newPage();
+  // Sonntag 12:00 (Bericht der laufenden Woche)
+  await page.clock.setFixedTime(new Date(2026, 10, 15, 12, 0));
+  const token = await register(page, `week_${Date.now()}`);
+  await api('POST', '/api/workouts', token, { clientId: 'wk-e2e-1', date: new Date(2026, 10, 12, 18).toISOString(), workoutType: 'Gym', durationSeconds: 3600, sessionRpe: 7,
+    sets: [{ exerciseId: 1, weight: 60, reps: 8, clientId: crypto.randomUUID() }] });
+  await page.reload();
+  await page.waitForSelector('[data-test=week-strip]');
+  assert.equal(await page.locator('[data-test=week-strip] .week-day').count(), 7);
+  await page.click('[data-test=week-strip] [data-day="2026-11-12"]');
+  await page.waitForFunction(() => /1 session logged/.test(document.querySelector('[data-test=week-detail]')?.textContent ?? ''));
+  await page.waitForSelector('[data-test=week-report]');
+  assert.equal((await page.textContent('[data-test=report-sessions]')).trim().split(/\s/)[0], '1');
+  // Mit dem Coach auswerten: die Zahlen der Woche gehen mit der Frage raus
+  const ask = page.waitForRequest((r) => r.url().endsWith('/api/ai/ask') && r.method() === 'POST');
+  await page.click('[data-test=week-report-ask]');
+  const question = JSON.parse((await ask).postData()).question;
+  assert.match(question, /Weekly review/);
+  assert.match(question, /Sessions: 1 \(previous week 0\)/);
+  await page.waitForSelector('[data-test=ai-chat] [data-test=ai-text]');
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('[data-test=ai-chat]', { state: 'detached' });
+  // Ausblenden merkt sich die Woche
+  await page.click('[data-test=week-report-hide]');
+  assert.equal(await page.locator('[data-test=week-report]').count(), 0);
+  await page.reload();
+  await page.waitForSelector('[data-test=week-strip]');
+  assert.equal(await page.locator('[data-test=week-report]').count(), 0);
+  assert.deepEqual(errors, []);
+});
+
 /** Wiederholt fn bis ein Ergebnis kommt (Sync läuft im Hintergrund). */
 async function waitFor(fn, timeout = 5000) {
   const deadline = Date.now() + timeout;
