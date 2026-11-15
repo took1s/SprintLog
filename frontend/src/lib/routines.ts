@@ -224,6 +224,25 @@ export function suggestedTimes(n: number): string[] {
   });
 }
 
+const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+
+/**
+ * Zeiten auf n Durchgänge auffüllen (bestehende bleiben, fehlende aus dem Vorschlag - jeweils die mit dem größten Abstand
+ * zu den vorhandenen); ohne Zeiten bleibt es leer. Verhindert "3x täglich, aber nur 2 Uhrzeiten".
+ */
+export function fillTimes(list: readonly (string | null | undefined)[] | null | undefined, n: number): string[] {
+  const have = normalizeTimes(list, n);
+  if (!have.length) return [];
+  const count = Math.max(1, Math.min(MAX_TIMES_PER_DAY, n));
+  const pool = suggestedTimes(count).filter((x) => !have.includes(x));
+  while (have.length < count && pool.length) {
+    let best = 0, bestGap = -1;
+    pool.forEach((c, i) => { const gap = Math.min(...have.map((h) => Math.abs(toMin(h) - toMin(c)))); if (gap > bestGap) { best = i; bestGap = gap; } });
+    have.push(pool.splice(best, 1)[0]!);
+  }
+  return have.sort();
+}
+
 /** Uhrzeit des k-ten Durchgangs (1-basiert) oder null. */
 export const roundTime = (r: Pick<Routine, 'times'>, k: number): string | null => r.times?.[k - 1] ?? null;
 

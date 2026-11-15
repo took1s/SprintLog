@@ -63,6 +63,7 @@ public static class WorkoutEndpoints
             Sets = MapSets(req),
             ExerciseNotes = MapExerciseNotes(req)
         };
+        ApplyExtras(workout, req, keepHealth: false);
 
         db.Workouts.Add(workout);
         try
@@ -131,6 +132,7 @@ public static class WorkoutEndpoints
         workout.Goals = req.Match?.Goals;
         workout.Assists = req.Match?.Assists;
         workout.Opponent = string.IsNullOrWhiteSpace(req.Match?.Opponent) ? null : req.Match.Opponent.Trim();
+        ApplyExtras(workout, req, keepHealth: true);
         workout.Notes = NormalizeNotes(req.Notes);
         workout.Gym = NormalizeNotes(req.Gym);
         workout.UpdatedAt = now.UtcDateTime;
@@ -348,8 +350,27 @@ public static class WorkoutEndpoints
                     s.Exercise.PerSide))
                 .ToList(),
             w.UpdatedAt,
-            w.WorkoutType == CreateWorkoutRequest.MatchType ? new MatchDetails(w.Goals, w.Assists, w.Opponent) : null,
+            w.WorkoutType == CreateWorkoutRequest.MatchType ? new MatchDetails(w.Goals, w.Assists, w.Opponent, w.Position, w.TeamGoals, w.OpponentGoals, w.WentWell, w.ToImprove) : null,
             w.Quality,
             w.Gym,
-            w.ExerciseNotes.OrderBy(n => n.Id).Select(n => new ExerciseNoteDto(n.ExerciseId, n.Note, n.Skipped, n.Reason)).ToList()));
+            w.ExerciseNotes.OrderBy(n => n.Id).Select(n => new ExerciseNoteDto(n.ExerciseId, n.Note, n.Skipped, n.Reason)).ToList(),
+            w.DistanceM is null && w.AvgHr is null && w.MaxHr is null && w.MaxSpeedKmh is null && w.Sprints is null
+                ? null : new WorkoutHealth(w.DistanceM, w.AvgHr, w.MaxHr, w.MaxSpeedKmh, w.Sprints)));
+
+    /// <summary>Spiel-Extras und Uhr-Werte übernehmen. Beim Ändern bleiben Uhr-Werte erhalten, wenn der Client keine schickt (ältere App).</summary>
+    private static void ApplyExtras(Workout w, CreateWorkoutRequest req, bool keepHealth)
+    {
+        static string? Clean(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+        w.Position = req.Match?.Position;
+        w.TeamGoals = req.Match?.TeamGoals;
+        w.OpponentGoals = req.Match?.OpponentGoals;
+        w.WentWell = Clean(req.Match?.WentWell);
+        w.ToImprove = Clean(req.Match?.ToImprove);
+        if (req.Health is null && keepHealth) return;
+        w.DistanceM = req.Health?.DistanceM;
+        w.AvgHr = req.Health?.AvgHr;
+        w.MaxHr = req.Health?.MaxHr;
+        w.MaxSpeedKmh = req.Health?.MaxSpeedKmh is { } v ? Math.Round(v, 1) : null;
+        w.Sprints = req.Health?.Sprints;
+    }
 }

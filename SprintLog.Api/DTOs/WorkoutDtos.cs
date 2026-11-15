@@ -25,9 +25,11 @@ public record CreateWorkoutRequest(
     MatchDetails? Match = null,
     int? Quality = null,
     string? Gym = null,
-    List<ExerciseNoteDto>? ExerciseNotes = null)
+    List<ExerciseNoteDto>? ExerciseNotes = null,
+    WorkoutHealth? Health = null)
 {
     public const string MatchType = "Match";
+    public static readonly string[] Positions = { "goalkeeper", "defender", "fullback", "midfielder", "winger", "striker" };
     public const int MaxGymLength = 40;
     public const int MaxExerciseNotes = 50;
     public bool IsMatch => WorkoutType == MatchType;
@@ -57,6 +59,11 @@ public record CreateWorkoutRequest(
             .AddIf(IsMatch && SessionRpe is null, "sessionRpe", "Rate how hard the match was (1-10).")
             .AddIf(Match is { Goals: < 0 or > 20 } || Match is { Assists: < 0 or > 20 }, "match", "Goals and assists must be between 0 and 20.")
             .AddIf(Match is { Opponent.Length: > 60 }, "match", "Opponent must not exceed 60 characters.")
+            .AddIf(Match?.Position is { } pos && !Positions.Contains(pos), "match", "Unknown position.")
+            .AddIf(Match is { TeamGoals: < 0 or > 50 } || Match is { OpponentGoals: < 0 or > 50 }, "match", "Score must be between 0 and 50.")
+            .AddIf(Match is { WentWell.Length: > 300 } || Match is { ToImprove.Length: > 300 }, "match", "Notes must not exceed 300 characters.")
+            .AddIf(Health is { DistanceM: < 0 or > 60_000 } || Health is { AvgHr: < 30 or > 230 } || Health is { MaxHr: < 30 or > 240 }
+                || Health is { MaxSpeedKmh: < 0 or > 45 } || Health is { Sprints: < 0 or > 300 }, "health", "Health values are out of range.")
             .AddIf(!IsMatch && Match is not null, "match", "Match details are only allowed for matches.")
             .AddIf(Sets is { Count: > MaxSets }, "sets", $"A workout cannot contain more than {MaxSets} sets.")
             .AddIf(Date is { } d && d > now.AddDays(1), "date", "Workout date cannot be in the future.")
@@ -140,10 +147,18 @@ public record WorkoutResponse(
     MatchDetails? Match = null,
     int? Quality = null,
     string? Gym = null,
-    List<ExerciseNoteDto>? ExerciseNotes = null);
+    List<ExerciseNoteDto>? ExerciseNotes = null,
+    WorkoutHealth? Health = null);
 
-/// <summary>Spiel-Details (nur bei WorkoutType "Match").</summary>
-public record MatchDetails(int? Goals, int? Assists, string? Opponent);
+/// <summary>Spiel-Details (nur bei WorkoutType "Match"): Tore, Vorlagen, Gegner, Position, Endstand, Selbsteinschätzung als Text.</summary>
+public record MatchDetails(int? Goals, int? Assists, string? Opponent, string? Position = null, int? TeamGoals = null, int? OpponentGoals = null,
+    string? WentWell = null, string? ToImprove = null);
+
+/// <summary>Werte der Uhr (Apple Health): Distanz, Puls, Höchstgeschwindigkeit, Sprints.</summary>
+public record WorkoutHealth(int? DistanceM = null, int? AvgHr = null, int? MaxHr = null, double? MaxSpeedKmh = null, int? Sprints = null)
+{
+    public bool IsEmpty => DistanceM is null && AvgHr is null && MaxHr is null && MaxSpeedKmh is null && Sprints is null;
+}
 
 /// <summary>Eine Seite der Historie (neueste zuerst). <c>NextCursor</c> = null -> keine weiteren Seiten.</summary>
 public record WorkoutPageResponse(List<WorkoutResponse> Items, string? NextCursor);

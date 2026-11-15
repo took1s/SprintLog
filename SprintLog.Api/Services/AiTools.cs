@@ -253,8 +253,55 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
     private static string DaysText(int mask) => mask == 127 ? "daily" : string.Join(",", Enumerable.Range(0, 7).Where(i => (mask & (1 << i)) != 0).Select(i => DayCodes[i]));
 
     /// <summary>Routinen und Kalender für den Prompt (immer zusammen gebraucht).</summary>
-    public async Task<(string Routines, string Calendar)> PlanningPromptAsync(int userId, CancellationToken ct) =>
-        (await RoutinesPromptAsync(userId, ct), await CalendarPromptAsync(userId, ct));
+    public async Task<PlanningPrompt> PlanningPromptAsync(int userId, CancellationToken ct) =>
+        new(await RoutinesPromptAsync(userId, ct), await CalendarPromptAsync(userId, ct), await PerformancePromptAsync(userId, ct));
+
+    /// <summary>
+    /// Leistungstests (letzter Wert je Test mit Vorwert) und Körper (Gewicht, Eiweiß, Schlaf/Ruhepuls/HRV aus Apple Health)
+    /// - Block im Prompt.
+    /// </summary>
+    public async Task<string> PerformancePromptAsync(int userId, CancellationToken ct)
+    {
+        var today = DateOnly.FromDateTime(Now);
+        var tests = await db.FitnessTests.AsNoTracking().Where(t => t.UserId == userId).OrderBy(t => t.Day).ToListAsync(ct);
+        var days = await db.DailyLogs.AsNoTracking().Where(d => d.UserId == userId && d.Day >= today.AddDays(-28)).OrderBy(d => d.Day).ToListAsync(ct);
+        var sb = new System.Text.StringBuilder();
+        if (tests.Count == 0) sb.Append("Fitness tests: none yet (suggest a test day: 10/30 m sprint, CMJ, 5-10-5, Yo-Yo IR1 or 30-15 IFT).\n");
+        else
+        {
+            var last = tests.Max(t => t.Day);
+            sb.Append("Fitness tests (last test day ").Append(last.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Append(", ").Append(today.DayNumber - last.DayNumber).Append(" days ago; retest every 6-8 weeks):\n");
+            foreach (var g in tests.GroupBy(t => t.Test))
+            {
+                var list = g.OrderBy(t => t.Day).ToList();
+                var cur = list[^1];
+                sb.Append("- ").Append(TestName(g.Key)).Append(": ").Append(cur.Value.ToString(CultureInfo.InvariantCulture)).Append(' ').Append(TestUnit(g.Key))
+                  .Append(" (").Append(cur.Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Append(')');
+                if (list.Count > 1) sb.Append(", previous ").Append(list[^2].Value.ToString(CultureInfo.InvariantCulture)).Append(" (").Append(list[^2].Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Append(')');
+                sb.Append('\n');
+            }
+        }
+        var weights = days.Where(d => d.WeightKg != null).ToList();
+        if (weights.Count > 0) sb.Append("Body weight: latest ").Append(weights[^1].WeightKg!.Value.ToString(CultureInfo.InvariantCulture)).Append(" kg (")
+            .Append(weights[^1].Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Append(')').Append(weights.Count > 1 ? $", 28 days ago {weights[0].WeightKg!.Value.ToString(CultureInfo.InvariantCulture)} kg" : "").Append('\n');
+        var week = days.Where(d => d.Day > today.AddDays(-7)).ToList();
+        string Avg(Func<DailyLog, double?> f, string unit, int decimals = 0)
+        {
+            var v = week.Select(f).Where(x => x != null).Select(x => x!.Value).ToList();
+            return v.Count == 0 ? "n/a" : $"{Math.Round(v.Average(), decimals).ToString(CultureInfo.InvariantCulture)} {unit} ({v.Count} days)";
+        }
+        if (week.Count > 0)
+            sb.Append("Last 7 days avg: protein ").Append(Avg(d => d.ProteinG, "g")).Append(", sleep ").Append(Avg(d => d.SleepMinutes / 60.0, "h", 1))
+              .Append(", resting HR ").Append(Avg(d => d.RestingHr, "bpm")).Append(", HRV ").Append(Avg(d => d.Hrv, "ms")).Append('\n');
+        return sb.Length == 0 ? "(none)" : sb.ToString().TrimEnd();
+    }
+
+    private static string TestName(string id) => id switch
+    {
+        "sprint10" => "10 m sprint", "sprint30" => "30 m sprint", "cmj" => "Countermovement jump", "agility" => "5-10-5 agility",
+        "yoyo" => "Yo-Yo IR1", "ift" => "30-15 IFT", _ => id,
+    };
+    private static string TestUnit(string id) => id switch { "cmj" => "cm", "yoyo" => "m", "ift" => "km/h", _ => "s" };
 
     /// <summary>Laufende und kürzlich beendete Routinen mit Erfüllung der letzten 14 Tage - Block im Prompt.</summary>
     public async Task<string> RoutinesPromptAsync(int userId, CancellationToken ct)
@@ -397,6 +444,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
         for (var d = today; d <= today.AddDays(20); d = d.AddDays(1))
         {
             var parts = new List<string>();
+            if (MatchDay.Label(d, active?.MatchDays ?? 0) is { } md && md != "MD") parts.Add($"{md} ({MatchDay.Focus(md)})");
             if (PlannedWorkoutRules.ConflictOn(d, active) is { } kind) parts.Add(kind == "match" ? "MATCH" : "plan training");
             foreach (var p in planned.Where(p => p.Date == d && p.Status != "skipped"))
                 parts.Add($"session id {p.ClientId} '{p.Title}' ({p.Category}, {p.Status}, by {p.Source}): {string.Join(", ", p.Exercises.Select(x => $"#{x.ExerciseId} {x.Sets}x"))}");
@@ -700,13 +748,18 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
         var since = Now.AddDays(-7 * weeks);
         var matches = await db.Workouts.AsNoTracking().Where(w => w.UserId == userId && w.WorkoutType == "Match" && w.Date >= since)
             .OrderByDescending(w => w.Date).Take(40)
-            .Select(w => new { w.Date, w.DurationSeconds, w.Goals, w.Assists, w.Opponent, w.SessionRpe, w.Notes })
+            .Select(w => new { w.Date, w.DurationSeconds, w.Goals, w.Assists, w.Opponent, w.SessionRpe, w.Notes, w.Quality, w.Position, w.TeamGoals, w.OpponentGoals, w.WentWell, w.ToImprove, w.DistanceM, w.Sprints, w.MaxSpeedKmh })
             .ToListAsync(ct);
         return new
         {
             weeks, count = matches.Count,
             goals = matches.Sum(m => m.Goals ?? 0), assists = matches.Sum(m => m.Assists ?? 0),
-            matches = matches.Select(m => new { date = Day(m.Date), minutes = m.DurationSeconds / 60, m.Goals, m.Assists, m.Opponent, m.SessionRpe, notes = m.Notes is { Length: > 100 } n ? n[..100] : m.Notes }),
+            matches = matches.Select(m => new
+            {
+                date = Day(m.Date), minutes = m.DurationSeconds / 60, m.Goals, m.Assists, m.Opponent, m.SessionRpe, selfRating = m.Quality, m.Position,
+                score = m.TeamGoals is null || m.OpponentGoals is null ? null : $"{m.TeamGoals}:{m.OpponentGoals}",
+                m.WentWell, m.ToImprove, distanceM = m.DistanceM, m.Sprints, m.MaxSpeedKmh, notes = m.Notes is { Length: > 100 } n ? n[..100] : m.Notes,
+            }),
         };
     }
 
@@ -1018,3 +1071,6 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
     public static string? Str(JsonElement o, string name) => o.ValueKind == JsonValueKind.Object && o.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
     private static int Clamp(int? v, int min, int max, int fallback) => Math.Clamp(v ?? fallback, min, max);
 }
+
+/// <summary>Daten-Blöcke für den Prompt: Routinen, Kalender (mit MD-Tagen), Leistungstests und Körper.</summary>
+public record PlanningPrompt(string Routines, string Calendar, string Performance);

@@ -2663,6 +2663,7 @@ export const useAppStore = defineStore('app', () => {
     if (routinesStore.editor.open) return routinesStore.close();
     if (routinesStore.detailId) return routinesStore.closeDetail();
     if (routinesStore.libraryOpen) return routinesStore.closeLibrary();
+    if (routinesStore.playerId) return routinesStore.closePlayer();
     if (plannedStore.editor.open) return plannedStore.close();
     if (exerciseInfo.value) { exerciseInfo.value = null; return; }
     if (finishModal.value.open) { finishModal.value.open = false; return; }

@@ -5,7 +5,7 @@
 // Ohne fällige Routine erscheint nichts.
 import { computed, nextTick, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import { intlLocale, t } from '@/i18n';
+import { intlLocale, t, tn } from '@/i18n';
 import { useAppStore } from '@/stores/app';
 import { useRoutinesStore } from '@/stores/routines';
 import { useRemindersStore } from '@/stores/reminders';
@@ -35,9 +35,13 @@ const p = (r: Routine) => routines.progressOf(r);
 const date = (day: string) => parseDay(day).toLocaleDateString(intlLocale(), { weekday: 'short', day: 'numeric', month: 'short' });
 const now = computed(() => clockTime(app.clockDate));
 
-/** Großer Haken: nächster Durchgang - ist alles erledigt, wird der letzte wieder gelöst. */
+/**
+ * Großer Haken: nächster Durchgang. Einmal täglich: normaler Haken (nochmal tippen löst ihn).
+ * Mehrmals täglich und schon alles erledigt: nicht still einen Durchgang lösen, sondern die Durchgänge aufklappen.
+ */
 function main(r: Routine) {
   const before = p(r);
+  if (r.timesPerDay > 1 && before.doneToday) { open.value = r.clientId; haptic(); return; }
   routines.tap(r.clientId, Math.min(before.countToday + 1, r.timesPerDay));
   haptic();
   // Der Store ersetzt das Objekt beim Abhaken -> aktuellen Stand neu holen (sonst bleibt die Animation aus)
@@ -63,16 +67,25 @@ const headOffset = computed(() => HEAD * (1 - (forToday.value.length ? doneCount
 
 function mainLabel(r: Routine) {
   if (r.timesPerDay === 1) return p(r).doneToday ? t('routines.markOpen', { title: r.title }) : t('routines.markDone', { title: r.title });
+  if (p(r).doneToday) return t('routines.allRoundsDone', { title: r.title, total: r.timesPerDay });
   return t('routines.tickLabel', { title: r.title, done: p(r).countToday, total: r.timesPerDay });
 }
 
-/** Nächster Durchgang mit Uhrzeit ("Abends 20:00") bzw. "Jetzt: Abends", wenn die Zeit erreicht ist. */
+/**
+ * Was heute noch offen ist: "Ещё 2 раза · Вечер 20:00" (mehrmals täglich) bzw. "Вечер 18:00" (einmal mit Uhrzeit);
+ * ist die Uhrzeit erreicht: "Jetzt" hervorgehoben.
+ */
 function nextLabel(r: Routine): { text: string; due: boolean } | null {
-  if (!r.times.length) return null;
   const n = nextRound(r, today.value, now.value);
-  if (!n?.time) return null;
-  const slot = t(`routines.slots.${slotOf(n.time)}`);
-  return n.due ? { text: t('routines.dueNow', { slot }), due: true } : { text: t('routines.nextAt', { slot, time: n.time }), due: false };
+  if (!n) return null;
+  const left = r.timesPerDay - (n.k - 1);
+  const parts: string[] = [];
+  if (r.timesPerDay > 1) parts.push(tn('routines.remaining', left));
+  if (n.time) {
+    const slot = t(`routines.slots.${slotOf(n.time)}`);
+    parts.push(n.due ? t('routines.dueNow', { slot }) : `${slot} ${n.time}`);
+  }
+  return parts.length ? { text: parts.join(' · '), due: !!n.time && n.due } : null;
 }
 
 function pipLabel(r: Routine, k: number) {
@@ -173,6 +186,10 @@ watch(() => reminders.focus, async (f) => {
                           </ol>
                           <p v-if="r.reason" class="pt-1 text-[11px] leading-snug text-slate-400">{{ r.reason }}</p>
                           <div class="mt-2 flex flex-wrap items-center gap-2">
+                              <button type="button" class="routine-start" data-test="routine-play" @click="routines.openPlayer(r.clientId)">
+                                  <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 001.5.86l10.5-6.5a1 1 0 000-1.72L9.5 4.64A1 1 0 008 5.5z"/></svg>
+                                  {{ t('routines.player.start') }}
+                              </button>
                               <button v-if="p(r).missedRecent" type="button" class="routine-link" data-test="routine-catch-up" @click="routines.setDone(r.clientId, true, p(r).missedRecent!)">
                                   {{ t('routines.catchUp', { date: date(p(r).missedRecent!) }) }}
                               </button>

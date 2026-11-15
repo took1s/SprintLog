@@ -40,6 +40,7 @@ const GoalSheet = defineAsyncComponent(() => import('@/components/GoalSheet.vue'
 const RoutineSheet = defineAsyncComponent(() => import('@/components/RoutineSheet.vue'));
 const RoutineDetailSheet = defineAsyncComponent(() => import('@/components/RoutineDetailSheet.vue'));
 const RoutineLibrarySheet = defineAsyncComponent(() => import('@/components/RoutineLibrarySheet.vue'));
+const RoutinePlayer = defineAsyncComponent(() => import('@/components/RoutinePlayer.vue'));
 const PlannedSheet = defineAsyncComponent(() => import('@/components/PlannedSheet.vue'));
 const HoldTimer = defineAsyncComponent(() => import('@/components/workout/HoldTimer.vue'));
 const PlanBuilderSheet = defineAsyncComponent(() => import('@/components/PlanBuilderSheet.vue'));
@@ -59,7 +60,7 @@ const aiStore = useAiStore();
 const { booting, isAuthenticated, tab, authMode, sessionActive } = storeToRefs(app);
 
 /** Dialog-Chunks erst beim ersten Öffnen laden - danach bleiben sie gemountet (Schließen-Animation bleibt erhalten). */
-const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, routine: false, routineDetail: false, library: false, planned: false, hold: false, builder: false, summary: false, ai: false, profile: false, memory: false });
+const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, routine: false, routineDetail: false, library: false, player: false, planned: false, hold: false, builder: false, summary: false, ai: false, profile: false, memory: false });
 watchEffect(() => {
   if (app.setModal.open) used.set = true;
   if (app.customModal.open) used.custom = true;
@@ -72,6 +73,7 @@ watchEffect(() => {
   if (routines.editor.open) used.routine = true;
   if (routines.detailId) used.routineDetail = true;
   if (routines.libraryOpen) used.library = true;
+  if (routines.playerId) used.player = true;
   if (planned.editor.open) used.planned = true;
   if (app.holdTimer) used.hold = true;
   if (app.planBuilder.open) used.builder = true;
@@ -145,6 +147,7 @@ watch(() => reminders.focus, (f) => {
       <GoalSheet v-if="used.goal" />
       <RoutineDetailSheet v-if="used.routineDetail" />
       <RoutineLibrarySheet v-if="used.library" />
+      <RoutinePlayer v-if="used.player" />
       <PlannedSheet v-if="used.planned" />
       <RoutineSheet v-if="used.routine" />
       <HoldTimer v-if="used.hold" />

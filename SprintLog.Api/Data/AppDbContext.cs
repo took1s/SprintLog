@@ -26,6 +26,8 @@ public class AppDbContext : DbContext
     public DbSet<AthleteProfile> AthleteProfiles => Set<AthleteProfile>();
     public DbSet<CoachMemory> CoachMemories => Set<CoachMemory>();
     public DbSet<Routine> Routines => Set<Routine>();
+    public DbSet<FitnessTest> FitnessTests => Set<FitnessTest>();
+    public DbSet<DailyLog> DailyLogs => Set<DailyLog>();
     public DbSet<PlannedWorkout> PlannedWorkouts => Set<PlannedWorkout>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -69,6 +71,9 @@ public class AppDbContext : DbContext
             e.Property(w => w.WorkoutType).HasMaxLength(20);
             e.Property(w => w.Notes).HasMaxLength(CreateWorkoutRequest.MaxNotesLength);
             e.Property(w => w.Opponent).HasMaxLength(60);
+            e.Property(w => w.Position).HasMaxLength(16);
+            e.Property(w => w.WentWell).HasMaxLength(300);
+            e.Property(w => w.ToImprove).HasMaxLength(300);
             e.Property(w => w.Gym).HasMaxLength(CreateWorkoutRequest.MaxGymLength);
             e.ToTable(t => t.HasCheckConstraint("CK_Workouts_Quality", "\"Quality\" IS NULL OR \"Quality\" BETWEEN 1 AND 10"));
             e.HasOne(w => w.User).WithMany(u => u.Workouts).HasForeignKey(w => w.UserId).OnDelete(DeleteBehavior.Cascade);
@@ -169,6 +174,24 @@ public class AppDbContext : DbContext
             // Vorgaben als jsonb: gehören fest zum Termin
             e.OwnsMany(p => p.Exercises, b => b.ToJson());
             e.HasOne<User>().WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FitnessTest>(e =>
+        {
+            e.ToTable("FitnessTests");
+            e.HasIndex(t => new { t.UserId, t.ClientId }).IsUnique();
+            e.HasIndex(t => new { t.UserId, t.Day });
+            e.Property(t => t.ClientId).HasMaxLength(64);
+            e.Property(t => t.Test).HasMaxLength(16);
+            e.Property(t => t.Notes).HasMaxLength(200);
+            e.HasOne<User>().WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DailyLog>(e =>
+        {
+            e.ToTable("DailyLogs");
+            e.HasIndex(d => new { d.UserId, d.Day }).IsUnique();
+            e.HasOne<User>().WithMany().HasForeignKey(d => d.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Routine>(e =>
