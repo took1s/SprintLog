@@ -120,7 +120,22 @@ const synced = computed(() => (health.lastSync ? new Date(health.lastSync).toLoc
               </dl>
               <p class="mt-2 text-[10px] text-slate-500">{{ t('body.healthWeekAvg') }}<template v-if="synced"> · {{ t('body.healthSynced', { time: synced }) }}</template></p>
               <p v-if="health.error" class="mt-1 text-[11px] text-red-300">{{ health.error }}</p>
+              <!-- Was die Uhr wirklich liefert (hilft bei Xiaomi & Co.: fehlt etwas, steht hier warum) -->
+              <details v-if="health.report" class="mt-3 rounded-xl bg-white/[0.04] px-3 py-2" data-test="health-report">
+                  <summary class="cursor-pointer text-[11px] font-bold text-slate-300">{{ t('body.report.title') }}</summary>
+                  <ul class="mt-2 space-y-1 text-[11px] text-slate-400">
+                      <li>{{ t('body.report.sleep') }}: <span class="text-slate-200">{{ t('body.report.days', { n: health.report.nights }) }}</span><template v-if="health.report.sleepInBed"> · {{ t('body.report.inBed') }}</template></li>
+                      <li>{{ t('body.report.rhr') }}: <span class="text-slate-200">{{ t('body.report.days', { n: health.report.rhrDays }) }}</span><template v-if="health.report.rhrEstimated"> · {{ t('body.report.estimated') }}</template></li>
+                      <li>{{ t('body.report.hrv') }}: <span class="text-slate-200">{{ t('body.report.days', { n: health.report.hrvDays }) }}</span> · {{ t('body.report.steps') }}: <span class="text-slate-200">{{ t('body.report.days', { n: health.report.stepsDays }) }}</span></li>
+                      <li>{{ t('body.report.workouts') }}: <span class="text-slate-200">{{ health.report.workouts }}</span><template v-if="health.report.workouts"> · {{ t('body.report.withHr', { n: health.report.withHr }) }} · {{ t('body.report.withSpeed', { n: health.report.withSpeed }) }}</template></li>
+                      <li v-if="health.report.sources.length">{{ t('body.report.sources', { list: health.report.sources.join(', ') }) }}</li>
+                  </ul>
+                  <p v-if="!health.report.nights && !health.report.rhrDays && !health.report.workouts" class="mt-2 text-[11px] text-amber-300">{{ t('body.report.empty') }}</p>
+                  <p v-if="health.report.workouts && !health.report.withSpeed" class="mt-2 text-[11px] leading-snug text-slate-400">{{ t('body.report.noSpeed') }}</p>
+                  <p v-if="health.report.rhrDays && !health.report.hrvDays" class="mt-1 text-[11px] leading-snug text-slate-400">{{ t('body.report.noHrv') }}</p>
+              </details>
           </template>
+          <p class="mt-2 text-[11px] leading-snug text-slate-500">{{ t('body.xiaomi') }}</p>
       </div>
   </section>
 </template>

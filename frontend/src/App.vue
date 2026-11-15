@@ -45,6 +45,7 @@ const RoutineDetailSheet = defineAsyncComponent(() => import('@/components/Routi
 const RoutineLibrarySheet = defineAsyncComponent(() => import('@/components/RoutineLibrarySheet.vue'));
 const RoutinePlayer = defineAsyncComponent(() => import('@/components/RoutinePlayer.vue'));
 const FitnessTestSheet = defineAsyncComponent(() => import('@/components/athlete/FitnessTestSheet.vue'));
+const TestDayPlayer = defineAsyncComponent(() => import('@/components/athlete/testday/TestDayPlayer.vue'));
 const PlannedSheet = defineAsyncComponent(() => import('@/components/PlannedSheet.vue'));
 const HoldTimer = defineAsyncComponent(() => import('@/components/workout/HoldTimer.vue'));
 const PlanBuilderSheet = defineAsyncComponent(() => import('@/components/PlanBuilderSheet.vue'));
@@ -64,7 +65,7 @@ const aiStore = useAiStore();
 const { booting, isAuthenticated, tab, authMode, sessionActive } = storeToRefs(app);
 
 /** Dialog-Chunks erst beim ersten Öffnen laden - danach bleiben sie gemountet (Schließen-Animation bleibt erhalten). */
-const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, routine: false, routineDetail: false, library: false, player: false, tests: false, planned: false, hold: false, builder: false, summary: false, ai: false, profile: false, memory: false });
+const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, routine: false, routineDetail: false, library: false, player: false, tests: false, testDay: false, planned: false, hold: false, builder: false, summary: false, ai: false, profile: false, memory: false });
 watchEffect(() => {
   if (app.setModal.open) used.set = true;
   if (app.customModal.open) used.custom = true;
@@ -79,6 +80,7 @@ watchEffect(() => {
   if (routines.libraryOpen) used.library = true;
   if (routines.playerId) used.player = true;
   if (athlete.testSheet.open) used.tests = true;
+  if (athlete.testDayOpen) used.testDay = true;
   if (planned.editor.open) used.planned = true;
   if (app.holdTimer) used.hold = true;
   if (app.planBuilder.open) used.builder = true;
@@ -154,6 +156,7 @@ watch(() => reminders.focus, (f) => {
       <RoutineLibrarySheet v-if="used.library" />
       <RoutinePlayer v-if="used.player" />
       <FitnessTestSheet v-if="used.tests" />
+      <TestDayPlayer v-if="used.testDay" />
       <PlannedSheet v-if="used.planned" />
       <RoutineSheet v-if="used.routine" />
       <HoldTimer v-if="used.hold" />

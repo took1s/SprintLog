@@ -2076,6 +2076,95 @@ test('athlete data: fitness tests with levels, protein, weight and match details
   assert.deepEqual(errors, []);
 });
 
+test('guided test day: warm-up, attempts with rest, resume after reload, 30-15 with beeps, best values saved', async () => {
+  const { page, errors } = await newPage();
+  const token = await register(page, `testday_${Date.now()}`);
+  await page.clock.install();
+  await page.click('nav >> text=DATA');
+  await page.click('[role=tab] >> text=Athlete');
+  await page.click('[data-test=tests-day]');
+  await page.waitForSelector('[data-test=test-day-setup]');
+  await page.click('[data-pick=agility]'); // abwählen
+  await page.click('[data-endurance=ift]');
+  assert.match(await page.textContent('[data-test=test-day-plan]'), /Jump \(CMJ\) → Sprint 10\/30 m → 30-15 IFT/);
+  await page.click('[data-test=test-day-start]');
+  // Aufwärmen: Zeit-Schritt läuft von selbst weiter
+  await page.waitForSelector('[data-test=test-day-warmup]');
+  assert.equal(await page.textContent('[data-test=warmup-step]'), 'Easy jog');
+  await page.clock.runFor(181_000);
+  await waitFor(async () => (await page.textContent('[data-test=warmup-step]')) === 'Dynamic mobility');
+  await page.click('[data-test=warmup-skip]');
+  // Sprung: drei Versuche, Pause nach jedem außer dem letzten; Flugzeit wird in cm umgerechnet
+  await page.fill('[data-attempt-input=cmj]', '38.5');
+  await page.click('[data-test=attempt-save]');
+  await page.waitForSelector('[data-test=test-day-rest]');
+  assert.equal(await page.textContent('[data-test=rest-next]'), 'Attempt 2 of 3');
+  await page.clock.runFor(61_000);
+  await page.waitForSelector('[data-test=test-block-cmj]');
+  await page.click('[data-test=test-block-cmj] [role=radio] >> nth=1');
+  await page.fill('#td-flight', '580');
+  await page.click('[data-test=attempt-save]');
+  await page.click('[data-test=rest-skip]');
+  await page.fill('[data-attempt-input=cmj]', '120');
+  await page.click('[data-test=attempt-save]');
+  assert.match(await page.textContent('[role=alert]'), /out of range/);
+  await page.fill('[data-attempt-input=cmj]', '40');
+  await page.click('[data-test=attempt-save]');
+  await page.waitForSelector('[data-test=block-done]');
+  assert.match(await page.textContent('[data-test=block-done]'), /41\.3/); // 580 ms -> 41,3 cm ist der beste
+  await page.click('[data-test=block-next]');
+  await page.click('[data-test=rest-skip]');
+  await page.fill('[data-attempt-input=sprint10]', '1.84');
+  await page.fill('[data-attempt-input=sprint30]', '4.30');
+  await page.click('[data-test=attempt-save]');
+  // Neu laden mitten in der Pause: alles noch da, Pause läuft weiter
+  await page.reload();
+  await page.waitForSelector('[data-test=today-todo]');
+  assert.match(await page.textContent('[data-test=todo-tests]'), /Continue test day/);
+  await page.click('[data-test=todo-tests]');
+  await page.waitForSelector('[data-test=test-day-rest]');
+  await page.click('[data-test=rest-skip]');
+  await page.fill('[data-attempt-input=sprint10]', '1.80');
+  await page.fill('[data-attempt-input=sprint30]', '4.33');
+  await page.click('[data-test=attempt-save]');
+  await page.click('[data-test=rest-skip]');
+  await page.click('[data-test=block-next]');
+  // 30-15 IFT: 5 s Countdown, Stufe 1 (8 km/h), dann 8,5 km/h; Stopp in Stufe 3 -> 8,5 km/h geschafft
+  await page.waitForSelector('[data-test=test-day-rest]');
+  await page.click('[data-test=rest-skip]');
+  await page.click('[data-test=endurance-start]');
+  await page.clock.runFor(5_500);
+  assert.equal((await page.textContent('[data-test=endurance-level]')).trim(), '8.0');
+  await page.clock.runFor(31_000);
+  assert.equal((await page.textContent('[data-test=endurance-phase]')).trim(), 'Rest');
+  await page.clock.runFor(60_000);
+  assert.equal((await page.textContent('[data-test=endurance-level]')).trim(), '9.0');
+  await page.click('[data-test=endurance-miss]');
+  await page.click('[data-test=endurance-miss]');
+  await page.click('[data-test=endurance-miss]');
+  await page.waitForSelector('[data-test=endurance-result]');
+  assert.match(await page.textContent('[data-test=endurance-result]'), /8\.5/);
+  await page.click('[data-test=endurance-save]');
+  await page.click('[data-test=block-next]');
+  await page.waitForSelector('[data-test=test-day-summary]');
+  assert.equal(await page.locator('[data-summary]').count(), 4);
+  await page.click('[data-test=summary-save]');
+  const saved = await waitFor(async () => { const l = await api('GET', '/api/fitness-tests', token); return l.length === 4 ? l : null; });
+  const byTest = Object.fromEntries(saved.map((x) => [x.test, x]));
+  assert.equal(byTest.cmj.value, 41.3);
+  assert.equal(byTest.sprint10.value, 1.8);
+  assert.equal(byTest.sprint30.value, 4.3);
+  assert.equal(byTest.ift.value, 8.5);
+  assert.equal(byTest.cmj.notes, '3x: 38.5 / 41.3 / 40.0');
+  await page.clock.runFor(1000); // Ausblenden
+  assert.equal(await page.locator('[data-test=test-day]').count(), 0);
+  await page.click('nav >> text=DATA');
+  await page.click('[role=tab] >> text=Athlete');
+  assert.match(await page.textContent('[data-test-id=cmj] [data-test=test-value]'), /41\.3/);
+  assert.match(await page.textContent('[data-test=tests-day]'), /Test day/);
+  assert.deepEqual(errors, []);
+});
+
 test('match-day periodization: MD phase on the start screen and lighter plan day before the match', async () => {
   const { page, errors } = await newPage();
   const token = await register(page, `md_${Date.now()}`);

@@ -2206,6 +2206,36 @@ export const useAppStore = defineStore('app', () => {
     await syncAndAnnounce(saved.clientId, t(editing ? 'finish.toast.updated' : 'match.toast.saved'), t(editing ? 'finish.toast.updatedOffline' : 'finish.toast.savedOffline'));
   }
 
+  /**
+   * Workout der Uhr (Apple Health, z. B. Xiaomi über Mi Fitness) als Feld-Einheit erfassen: ein Satz "Running / Sprints"
+   * mit Dauer und Distanz, Session-RPE für die Trainingslast, Uhr-Werte (Puls, Tempo, Sprints) dazu.
+   */
+  async function logWatchSession(w: { start: string; durationSeconds: number; distanceM?: number | null }, rpe: number, health: WorkoutHealth | null) {
+    const RUN = 12;
+    const ex = exerciseFor(RUN);
+    const entry: QueueEntry = {
+      clientId: newClientId(),
+      date: new Date(w.start).toISOString(),
+      workoutType: 'Football',
+      durationSeconds: Math.round(w.durationSeconds),
+      sessionRpe: Math.max(1, Math.min(10, Math.round(rpe))),
+      quality: null,
+      notes: null,
+      programDayId: null,
+      sets: [{
+        exerciseId: RUN, exerciseName: ex?.name ?? 'Running / Sprints', trackingType: 'DistanceTime', category: 'Football', setNumber: 1,
+        distance: w.distanceM && w.distanceM > 0 ? Math.round(w.distanceM) : null, time: Math.round(w.durationSeconds), isWarmup: false,
+      }],
+      health,
+      status: QueueStatus.Pending,
+      attempts: 0,
+      error: null,
+    };
+    queue.value = [...queue.value, entry];
+    persistQueue();
+    await syncAndAnnounce(entry.clientId, t('body.toast.sessionLogged'), t('finish.toast.savedOffline'));
+  }
+
   /** Uhr-Werte (Apple Health) einer schon gespeicherten Einheit setzen - nur die Werte, Sätze bleiben unberührt. */
   async function setWorkoutHealth(workoutId: number, health: WorkoutHealth): Promise<boolean> {
     try {
@@ -2710,6 +2740,7 @@ export const useAppStore = defineStore('app', () => {
     if (routinesStore.detailId) return routinesStore.closeDetail();
     if (routinesStore.libraryOpen) return routinesStore.closeLibrary();
     if (routinesStore.playerId) return routinesStore.closePlayer();
+    if (athleteStore.testDayOpen) return athleteStore.closeTestDay();
     if (plannedStore.editor.open) return plannedStore.close();
     if (exerciseInfo.value) { exerciseInfo.value = null; return; }
     if (finishModal.value.open) { finishModal.value.open = false; return; }
@@ -2921,7 +2952,7 @@ export const useAppStore = defineStore('app', () => {
     isAuthenticated, keys, exercisesById, allWorkouts, records, prInfo, usage, clockDate,
     activeProgram, otherPrograms, programInfo, loadInfo, loadZone, planTargets, planProgress, exerciseGroups,
     planWeek, isDeloadNow, currentPrescription, templateFilter, filteredTemplates,
-    matchModal, openMatchModal, saveMatch, setWorkoutHealth, wellness, checkIn, todayWellness, readinessToday, readinessWeek, readinessDays, readinessHint,
+    matchModal, openMatchModal, saveMatch, setWorkoutHealth, logWatchSession, wellness, checkIn, todayWellness, readinessToday, readinessWeek, readinessDays, readinessHint,
     loadWellness, openCheckIn, setWellnessValue, saveCheckIn, progressInPlan,
     pendingCount, failedCount, syncState,
     categoryExercises, availableMuscleGroups, allMuscleGroups, filteredExercises, sortLabel,

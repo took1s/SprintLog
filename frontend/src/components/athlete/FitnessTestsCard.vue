@@ -11,7 +11,7 @@ import { parseDay } from '@/lib/routines';
 
 const athlete = useAthleteStore();
 const ai = useAiStore();
-const { tests, due } = storeToRefs(athlete);
+const { tests, due, testDay } = storeToRefs(athlete);
 
 const position = computed(() => (ai.profile.position as Position | null) ?? null);
 const open = ref<TestId | null>(null);
@@ -47,7 +47,14 @@ function spark(id: TestId) {
                   <template v-else>{{ t('tests.retest', { n: due.days! }) }}</template>
               </p>
           </div>
-          <button type="button" class="btn-primary w-full flex-shrink-0 rounded-xl px-4 py-2.5 text-xs min-[420px]:w-auto" data-test="tests-new" @click="athlete.openTests()">+ {{ t('tests.new') }}</button>
+      </div>
+      <!-- Geführter Testtag (Hauptweg) und schnelles Eintragen fertiger Werte -->
+      <div class="mt-3 grid grid-cols-[1fr_auto] gap-2">
+          <button type="button" class="btn-primary flex min-h-[3rem] items-center justify-center gap-2 rounded-xl px-4 text-sm" data-test="tests-day" @click="athlete.openTestDay()">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>
+              {{ testDay ? t('testDay.resume') : t('testDay.cta') }}
+          </button>
+          <button type="button" class="btn-secondary min-h-[3rem] rounded-xl px-4 text-xs" data-test="tests-new" @click="athlete.openTests()">+ {{ t('tests.new') }}</button>
       </div>
 
       <button v-if="!position" type="button" class="mt-3 w-full rounded-xl border border-dashed border-white/15 px-3 py-2.5 text-left text-xs text-slate-300 hover:bg-white/5" @click="ai.openProfile()">
