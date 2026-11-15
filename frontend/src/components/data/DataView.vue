@@ -4,23 +4,35 @@ import { storeToRefs } from 'pinia';
 import { useAppStore, type DataTab } from '@/stores/app';
 import Spinner from '@/components/Spinner.vue';
 import OverviewPanel from './OverviewPanel.vue';
-import HistoryPanel from './HistoryPanel.vue';
-import ProgressPanel from './ProgressPanel.vue';
-import RecordsPanel from './RecordsPanel.vue';
-import CalendarPanel from './CalendarPanel.vue';
-import AthletePanel from '@/components/athlete/AthletePanel.vue';
 import ObsidianModal from './ObsidianModal.vue';
 import DataTabs from './DataTabs.vue';
 import { computed, defineAsyncComponent, onMounted, ref, useTemplateRef } from 'vue';
 import { useSwipeNav } from '@/lib/scrub';
 import { useAiStore } from '@/stores/ai';
 const AiAnalysisPanel = defineAsyncComponent(() => import('./AiAnalysisPanel.vue'));
+// Abschnitte erst laden, wenn sie gebraucht werden (kleinerer Start); kurz nach dem Öffnen im Leerlauf vorladen,
+// damit der Wechsel trotzdem ohne Wartezeit ist.
+const loaders = {
+  history: () => import('./HistoryPanel.vue'),
+  progress: () => import('./ProgressPanel.vue'),
+  records: () => import('./RecordsPanel.vue'),
+  calendar: () => import('./CalendarPanel.vue'),
+  athlete: () => import('@/components/athlete/AthletePanel.vue'),
+};
+const HistoryPanel = defineAsyncComponent(loaders.history);
+const ProgressPanel = defineAsyncComponent(loaders.progress);
+const RecordsPanel = defineAsyncComponent(loaders.records);
+const CalendarPanel = defineAsyncComponent(loaders.calendar);
+const AthletePanel = defineAsyncComponent(loaders.athlete);
 
 const app = useAppStore();
 const { dataTab, loadingHistory, allWorkouts, tab } = storeToRefs(app);
 
 const ai = useAiStore();
-onMounted(() => { if (!ai.status) void ai.loadStatus(); });
+onMounted(() => {
+  if (!ai.status) void ai.loadStatus();
+  window.setTimeout(() => { for (const load of Object.values(loaders)) void load().catch(() => undefined); }, 1200);
+});
 // Der KI-Tab erscheint nur, wenn der Server einen API-Key hat
 const TABS = computed<DataTab[]>(() => (ai.enabled ? ['overview', 'athlete', 'ai', 'history', 'progress', 'records', 'calendar'] : ['overview', 'athlete', 'history', 'progress', 'records', 'calendar']));
 

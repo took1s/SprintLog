@@ -6,6 +6,7 @@ import type { Api } from '../lib/api';
 import { t } from '../i18n';
 import { createClientSync, isNetworkError, newClientId } from '../lib/clientSync';
 import { RETEST_DUE, testDue, type TestId, type TestResult } from '../lib/fitnessTests';
+import { attemptNote, bestOf, BLOCKS, type Attempt, type BlockId, type Endurance, type Timing } from '../lib/testDay';
 import { addDays } from '../lib/routines';
 import { readJson, userKeys, writeJson } from '../lib/storage';
 import { localDay } from '../lib/wellness';
@@ -29,6 +30,27 @@ export interface DailyLog {
   steps?: number | null;
   updatedAt?: string;
   pending?: boolean;
+}
+
+/** Laufender geführter Testtag (lokal gespeichert, damit Schließen/Neuladen nichts verliert). */
+export interface TestDaySession {
+  day: string;
+  startedAt: number;
+  blocks: BlockId[];
+  timing: Timing;
+  stage: 'warmup' | 'block' | 'summary';
+  /** Index des Aufwärm-Schritts bzw. des Tests. */
+  warmup: number;
+  block: number;
+  /** Ende des laufenden Aufwärm-Timers (ms). */
+  stepEndsAt: number | null;
+  attempts: Partial<Record<BlockId, Attempt[]>>;
+  /** Pause bis (ms) und wofür: zwischen Versuchen oder vor dem nächsten Test. */
+  restUntil: number | null;
+  restKind: 'attempt' | 'block' | null;
+  /** Ausdauertest: Ergebnis (Meter bzw. km/h) und ob er gerade läuft (Neuladen mitten im Lauf = abgebrochen). */
+  endurance: Partial<Record<Endurance, { running: boolean; result: number | null; warnings: number }>>;
+  skipped: BlockId[];
 }
 
 export const DAILY_FIELDS = ['weightKg', 'proteinG', 'sleepMinutes', 'restingHr', 'hrv', 'steps'] as const;
@@ -81,7 +103,7 @@ export const useAthleteStore = defineStore('athlete', () => {
   });
 
   /** Ergebnisse eines Testtags speichern; ein Ergebnis je Test und Tag (gleicher Tag = ersetzen). */
-  function saveResults(day: string, values: Partial<Record<TestId, number | null>>) {
+  function saveResults(day: string, values: Partial<Record<TestId, number | null>>, notes: Partial<Record<TestId, string>> = {}) {
     const now = new Date().toISOString();
     let list = [...tests.value];
     let saved = 0;
@@ -92,7 +114,7 @@ export const useAthleteStore = defineStore('athlete', () => {
         continue;
       }
       saved++;
-      const next: TestResult = { clientId: existing?.clientId ?? newClientId('ft'), day, test, value, notes: existing?.notes ?? null, updatedAt: now, pending: 'put' };
+      const next: TestResult = { clientId: existing?.clientId ?? newClientId('ft'), day, test, value, notes: notes[test] ?? existing?.notes ?? null, updatedAt: now, pending: 'put' };
       list = existing ? list.map((r) => (r === existing ? next : r)) : [...list, next];
     }
     tests.value = list;
@@ -108,6 +130,58 @@ export const useAthleteStore = defineStore('athlete', () => {
   }
 
   const openTests = (only: TestId | null = null) => { testSheet.value = { open: true, day: today.value, only }; };
+
+  // ---------- Geführter Testtag ----------
+
+  const testDay = ref<TestDaySession | null>(null);
+  const testDayOpen = ref(false);
+  const persistTestDay = () => { const k = keys(); if (k) writeJson(k.testDay, testDay.value); };
+
+  function startTestDay(blocks: BlockId[], timing: Timing, warmup: boolean) {
+    testDay.value = {
+      day: today.value, startedAt: Date.now(), blocks, timing, stage: warmup ? 'warmup' : 'block', warmup: 0, block: 0,
+      stepEndsAt: null, attempts: {}, restUntil: null, restKind: null, endurance: {}, skipped: [],
+    };
+    persistTestDay();
+  }
+
+  /** Teil-Update des laufenden Testtags (immer neu zuweisen, damit Vue und Speicher es sehen). */
+  function patchTestDay(patch: Partial<TestDaySession>) {
+    if (!testDay.value) return;
+    testDay.value = { ...testDay.value, ...patch };
+    persistTestDay();
+  }
+
+  /** Bestwerte des Testtags speichern (mit allen Versuchen als Notiz) und beenden. Liefert die Anzahl Ergebnisse. */
+  function finishTestDay(): number {
+    const s = testDay.value;
+    if (!s) return 0;
+    const values: Partial<Record<TestId, number | null>> = {};
+    const notes: Partial<Record<TestId, string>> = {};
+    for (const b of s.blocks) {
+      if (s.skipped.includes(b)) continue;
+      if (BLOCKS[b].kind === 'endurance') {
+        const r = s.endurance[b as Endurance]?.result;
+        if (r != null) { values[b as Endurance] = r; notes[b as Endurance] = s.endurance[b as Endurance]!.warnings ? `warnings ${s.endurance[b as Endurance]!.warnings}` : 'guided'; }
+        continue;
+      }
+      const list = s.attempts[b] ?? [];
+      const best = bestOf(list, BLOCKS[b].tests);
+      for (const test of BLOCKS[b].tests) if (best[test] != null) { values[test] = best[test]!; notes[test] = attemptNote(test, list, s.timing); }
+    }
+    const n = Object.keys(values).length ? saveResults(s.day, values, notes) : 0;
+    discardTestDay();
+    return n;
+  }
+
+  function discardTestDay() {
+    testDay.value = null;
+    testDayOpen.value = false;
+    persistTestDay();
+  }
+
+  const openTestDay = () => { testDayOpen.value = true; };
+  const closeTestDay = () => { testDayOpen.value = false; };
   const closeTests = () => { testSheet.value = { ...testSheet.value, open: false }; };
 
   // ---------- Tageswerte ----------
@@ -157,6 +231,7 @@ export const useAthleteStore = defineStore('athlete', () => {
     const k = keys();
     if (!k) return;
     tests.value = readJson<TestResult[]>(k.fitnessTests, []);
+    testDay.value = readJson<TestDaySession | null>(k.testDay, null);
     daily.value = readJson<DailyLog[]>(k.daily, []);
     if (!app().online) return;
     await testSync.pull();
@@ -173,11 +248,12 @@ export const useAthleteStore = defineStore('athlete', () => {
 
   async function pushPending() { await Promise.allSettled([testSync.push(), pushDaily()]); }
 
-  function clear() { tests.value = []; daily.value = []; testSheet.value = { open: false, day: localDay(), only: null }; }
+  function clear() { tests.value = []; daily.value = []; testSheet.value = { open: false, day: localDay(), only: null }; testDay.value = null; testDayOpen.value = false; }
 
   return {
     connect, tests, daily, today, due, todayLog, testSheet, latestWeight, protein,
     saveResults, removeResult, openTests, closeTests, setDaily, addProtein, load, pushPending, clear,
+    testDay, testDayOpen, startTestDay, patchTestDay, finishTestDay, discardTestDay, openTestDay, closeTestDay,
     RETEST_DUE,
   };
 });

@@ -1,6 +1,8 @@
 // Apple Health (nur iPhone-App): Tageswerte (Schlaf, Ruhepuls, HRV, Schritte) in die Tageswerte übernehmen und Workouts
 // der Uhr den erfassten Einheiten zuordnen (Distanz, Puls, Höchstgeschwindigkeit, Sprints). Uhr-Workouts ohne passende
-// Einheit (z. B. Fußball) werden angeboten - "als Spiel erfassen" füllt Minuten und Werte vor.
+// Einheit (Fußball, Lauf) werden angeboten - als Spiel oder als Training (mit RPE) erfassen.
+// Funktioniert mit jeder Uhr, die in Apple Health schreibt (Apple Watch; Xiaomi über Mi Fitness). Der Bericht zeigt,
+// was tatsächlich ankommt - z. B. ob Ruhepuls nur geschätzt ist oder Sprints fehlen, weil die Uhr keine GPS-Route liefert.
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { isNative } from '../lib/native';
@@ -12,14 +14,41 @@ import { useAthleteStore } from './athlete';
 interface HealthPlugin {
   isAvailable(): Promise<{ available: boolean }>;
   requestAuthorization(): Promise<{ granted: boolean }>;
-  dailySummaries(o: { days: number }): Promise<{ days: HealthDay[] }>;
+  dailySummaries(o: { days: number }): Promise<{ days: HealthDay[]; sources?: string[] }>;
   workouts(o: { days: number }): Promise<{ workouts: WatchWorkout[] }>;
 }
-export interface HealthDay { day: string; sleepMinutes?: number; restingHr?: number; hrv?: number; steps?: number }
+export interface HealthDay { day: string; sleepMinutes?: number; sleepInBed?: boolean; restingHr?: number; restingHrEstimated?: boolean; hrv?: number; steps?: number }
 export interface WatchWorkout {
-  start: string; end: string; durationSeconds: number; activity: 'soccer' | 'running' | 'strength' | 'hiit' | 'cycling' | 'other';
-  distanceM?: number; calories?: number; avgHr?: number; maxHr?: number; maxSpeedKmh?: number; sprints?: number;
+  start: string; end: string; durationSeconds: number; activity: 'soccer' | 'running' | 'strength' | 'hiit' | 'cycling' | 'walking' | 'other';
+  source?: string; distanceM?: number; calories?: number; avgHr?: number; maxHr?: number; maxSpeedKmh?: number; sprints?: number;
 }
+
+/** Was beim letzten Abgleich aus Apple Health kam (14 Tage) - zeigt, welche Werte die Uhr wirklich liefert. */
+export interface HealthReport {
+  nights: number; sleepInBed: number; rhrDays: number; rhrEstimated: number; hrvDays: number; stepsDays: number;
+  workouts: number; withHr: number; withSpeed: number; sources: string[];
+}
+
+export function buildReport(days: readonly HealthDay[], workouts: readonly WatchWorkout[], sources: readonly string[] = []): HealthReport {
+  const names = new Set(sources);
+  for (const w of workouts) if (w.source) names.add(w.source);
+  return {
+    nights: days.filter((d) => d.sleepMinutes != null).length,
+    sleepInBed: days.filter((d) => d.sleepInBed).length,
+    rhrDays: days.filter((d) => d.restingHr != null).length,
+    rhrEstimated: days.filter((d) => d.restingHrEstimated).length,
+    hrvDays: days.filter((d) => d.hrv != null).length,
+    stepsDays: days.filter((d) => d.steps != null).length,
+    workouts: workouts.length,
+    withHr: workouts.filter((w) => w.avgHr != null).length,
+    withSpeed: workouts.filter((w) => w.maxSpeedKmh != null).length,
+    sources: [...names].filter(Boolean).sort().slice(0, 6),
+  };
+}
+
+/** Uhr-Workouts, die als Feld-Einheit infrage kommen (Fußball, Lauf; "Sonstiges" z. B. bei Xiaomi-Fußball), ab 20 Minuten. */
+export const isFieldWorkout = (w: WatchWorkout): boolean =>
+  (w.activity === 'soccer' || w.activity === 'running' || w.activity === 'other') && w.durationSeconds >= 20 * 60;
 
 let plugin: Promise<HealthPlugin> | null = null;
 const native = () => (plugin ??= import('@capacitor/core').then((m) => m.registerPlugin<HealthPlugin>('Health')));
@@ -46,18 +75,19 @@ export function matchWorkout(w: WatchWorkout, workouts: readonly Workout[]): Wor
 }
 
 export const useHealthStore = defineStore('health', () => {
-  const stored = readJson<{ connected?: boolean; lastSync?: number }>(PREFS, {});
+  const stored = readJson<{ connected?: boolean; lastSync?: number; report?: HealthReport }>(PREFS, {});
   const available = ref(false);
   const connected = ref(!!stored.connected);
   const lastSync = ref<number | null>(stored.lastSync ?? null);
   const busy = ref(false);
   const error = ref<string | null>(null);
+  const report = ref<HealthReport | null>(stored.report ?? null);
   /** Uhr-Workouts ohne passende Einheit (Fußball, Lauf) der letzten 14 Tage. */
   const unmatched = ref<WatchWorkout[]>([]);
   const dismissed = ref<string[]>(readJson<string[]>(`${PREFS}:dismissed`, []));
-  const offers = computed(() => unmatched.value.filter((w) => !dismissed.value.includes(w.start) && (w.activity === 'soccer' || w.activity === 'running') && w.durationSeconds >= 20 * 60));
+  const offers = computed(() => unmatched.value.filter((w) => !dismissed.value.includes(w.start) && isFieldWorkout(w)));
 
-  const persist = () => writeJson(PREFS, { connected: connected.value, lastSync: lastSync.value });
+  const persist = () => writeJson(PREFS, { connected: connected.value, lastSync: lastSync.value, report: report.value });
 
   async function detect() {
     if (!isNative()) { available.value = false; return; }
@@ -81,6 +111,7 @@ export const useHealthStore = defineStore('health', () => {
   function disconnect() {
     connected.value = false;
     unmatched.value = [];
+    report.value = null;
     persist();
   }
 
@@ -91,7 +122,7 @@ export const useHealthStore = defineStore('health', () => {
     try {
       const h = await native();
       const athlete = useAthleteStore();
-      const { days } = await h.dailySummaries({ days: 14 });
+      const { days, sources } = await h.dailySummaries({ days: 14 });
       for (const d of days) {
         const cur = athlete.daily.find((x) => x.day === d.day);
         const patch = { sleepMinutes: d.sleepMinutes ?? null, restingHr: d.restingHr ?? null, hrv: d.hrv ?? null, steps: d.steps ?? null };
@@ -109,6 +140,7 @@ export const useHealthStore = defineStore('health', () => {
         if (!empty && target.id && !target.pending && JSON.stringify(target.health ?? null) !== JSON.stringify(health)) await app.setWorkoutHealth(target.id, health);
       }
       unmatched.value = left;
+      report.value = buildReport(days, workouts, sources ?? []);
       lastSync.value = Date.now();
       persist();
     } catch (e) {
@@ -119,15 +151,21 @@ export const useHealthStore = defineStore('health', () => {
   }
 
   /** Beim Start und beim Zurückkehren in die App - höchstens alle 30 Minuten. */
+  let listening = false;
   async function start() {
     await detect();
-    if (!available.value || !connected.value) return;
+    if (!available.value) return;
+    // Nur einmal lauschen (start() läuft bei jeder Anmeldung)
+    if (!listening) {
+      listening = true;
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && connected.value && (!lastSync.value || Date.now() - lastSync.value > AUTO_EVERY)) void sync();
+      });
+    }
+    if (!connected.value) return;
     // Erst die Einheiten laden lassen, sonst passt kein Uhr-Workout zu einer Einheit
     await new Promise((r) => window.setTimeout(r, 3000));
     if (!lastSync.value || Date.now() - lastSync.value > AUTO_EVERY) await sync();
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && connected.value && (!lastSync.value || Date.now() - lastSync.value > AUTO_EVERY)) void sync();
-    });
   }
 
   function dismiss(w: WatchWorkout) {
@@ -141,5 +179,11 @@ export const useHealthStore = defineStore('health', () => {
     dismiss(w);
   }
 
-  return { available, connected, lastSync, busy, error, unmatched, offers, detect, connect, disconnect, sync, start, dismiss, logAsMatch };
+  /** Lauf/Fußballtraining der Uhr als Feld-Einheit mit Session-RPE erfassen. */
+  async function logAsTraining(w: WatchWorkout, rpe: number) {
+    dismiss(w);
+    await useAppStore().logWatchSession(w, rpe, healthOf(w));
+  }
+
+  return { available, connected, lastSync, busy, error, report, unmatched, offers, detect, connect, disconnect, sync, start, dismiss, logAsMatch, logAsTraining };
 });

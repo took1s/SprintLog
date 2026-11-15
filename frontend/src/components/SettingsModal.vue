@@ -171,7 +171,7 @@ const setRowTime = (row: ReminderRow, value: string) => { if (value) reminders.u
               <button @click="logout" class="mb-3 w-full rounded-xl border border-white/10 bg-white/5 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-300 hover:text-white">{{ t('settings.logout') }}</button>
 
               <div class="rounded-2xl border border-red-500/20 p-4">
-                  <button v-if="!deleteAccount.open" @click="deleteAccount.open = true" class="w-full text-[10px] font-bold uppercase tracking-widest text-red-400">{{ t('settings.deleteAccount') }}</button>
+                  <button v-if="!deleteAccount.open" @click="deleteAccount.open = true" class="min-h-[2.75rem] w-full text-[10px] font-bold uppercase tracking-widest text-red-400">{{ t('settings.deleteAccount') }}</button>
                   <form v-else @submit.prevent="confirmDeleteAccount">
                       <p class="mb-3 text-xs text-slate-300">{{ t('settings.deleteInfo') }}</p>
                       <input v-model="deleteAccount.password" type="password" autocomplete="current-password" :placeholder="t('settings.confirmPassword')" class="cyber-input mb-2 w-full rounded-xl p-3 text-sm">

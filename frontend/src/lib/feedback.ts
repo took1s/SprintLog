@@ -14,7 +14,7 @@ export function unlockAudio(): void {
   } catch { /* Audio nicht verfügbar */ }
 }
 
-function beep(ctx: AudioContext, frequency: number, start: number, duration: number, volume = 0.12): void {
+function beep(ctx: AudioContext, frequency: number, start: number, duration: number, volume = 0.12): OscillatorNode {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.type = 'sine';
@@ -25,6 +25,17 @@ function beep(ctx: AudioContext, frequency: number, start: number, duration: num
   osc.connect(gain).connect(ctx.destination);
   osc.start(start);
   osc.stop(start + duration + 0.05);
+  return osc;
+}
+
+/** Laufender Audio-Kontext (oder null) - für genau getaktete Signale (Testtag). */
+export async function audioReady(): Promise<AudioContext | null> {
+  return ready();
+}
+
+/** Ton zu einer Kontext-Zeit planen; der Oszillator kann mit stop() wieder abgesagt werden. */
+export function scheduleTone(ctx: AudioContext, frequency: number, at: number, duration: number, volume = 0.3): OscillatorNode | null {
+  try { return beep(ctx, frequency, Math.max(ctx.currentTime, at), duration, volume); } catch { return null; }
 }
 
 /** Kontext bereit machen (nach suspendAudio() oder iOS-Unterbrechung wieder starten). */
