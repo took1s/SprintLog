@@ -7,7 +7,7 @@ import { intlLocale, t, tn } from '@/i18n';
 import { exerciseName, muscleName } from '@/i18n/content';
 import { useAppStore } from '@/stores/app';
 import { cleanDraft, useRoutinesStore } from '@/stores/routines';
-import { EVERY_DAY, MAX_ROUTINE_STEPS, MAX_TIMES_PER_DAY, ROUTINE_KINDS, addDays, daysBetween, suggestedTimes } from '@/lib/routines';
+import { EVERY_DAY, MAX_ROUTINE_STEPS, MAX_TIMES_PER_DAY, ROUTINE_KINDS, addDays, daysBetween, fillTimes, suggestedTimes } from '@/lib/routines';
 import { WEEKDAYS, bit } from '@/lib/schedule';
 import { vSheetDrag } from '@/lib/gestures';
 
@@ -47,8 +47,8 @@ function setTime(i: number, value: string) {
 const suggest = () => { d.value.times = suggestedTimes(d.value.timesPerDay); };
 const clearTimes = () => { d.value.times = []; };
 const hasTimes = computed(() => d.value.times.some(Boolean));
-// Weniger Durchgänge: überzählige Zeiten weg
-watch(() => d.value.timesPerDay, (n) => { if (d.value.times.length > n) d.value.times = d.value.times.slice(0, n); });
+// Anzahl geändert: mit Zeiten auf genau n Durchgänge bringen (fehlende ergänzen, überzählige weg)
+watch(() => d.value.timesPerDay, (n) => { if (d.value.times.some(Boolean)) d.value.times = fillTimes(d.value.times, n); });
 
 // ---------- Zeitraum ----------
 /** Gewählte Dauer in Wochen, wenn das Ende genau passt (sonst eigenes Datum). */

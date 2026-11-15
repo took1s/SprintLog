@@ -66,6 +66,13 @@ function pickPain(n: number) {
   haptic();
 }
 
+function play() {
+  if (!r.value) return;
+  const id = r.value.clientId;
+  routines.closeDetail();
+  routines.openPlayer(id);
+}
+
 function edit() {
   if (!r.value) return;
   const id = r.value.clientId;
@@ -104,6 +111,11 @@ function edit() {
                           <dd>{{ p.streak }}</dd>
                       </div>
                   </dl>
+
+                  <button type="button" class="btn-primary mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm" data-test="routine-detail-play" @click="play">
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 001.5.86l10.5-6.5a1 1 0 000-1.72L9.5 4.64A1 1 0 008 5.5z"/></svg>
+                      {{ t('routines.player.startLong') }}
+                  </button>
 
                   <!-- Schmerz (Reha): Verlauf 14 Tage, Tendenz, Hinweis; heutigen Wert setzen -->
                   <section v-if="pain" class="mt-5" data-test="routine-pain">

@@ -38,7 +38,7 @@ const templates = JSON.parse(readFileSync(join(root, 'SprintLog.Api', 'Data', 'p
 // Gleiche Content-Security-Policy wie die echte API -> E2E-Tests finden CSP-Verstöße (Konsolenfehler).
 const CSP = JSON.parse(readFileSync(join(root, 'SprintLog.Api', 'appsettings.json'), 'utf8')).Security.ContentSecurityPolicy;
 
-const db = { users: [], wellness: [], goals: [], routines: [], planned: [], exercises: [...seed], workouts: [], deleted: [], favorites: [], programs: [], refresh: [], codes: [], links: [], outbox: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
+const db = { users: [], wellness: [], goals: [], routines: [], planned: [], tests: [], daily: [], exercises: [...seed], workouts: [], deleted: [], favorites: [], programs: [], refresh: [], codes: [], links: [], outbox: [], nextExerciseId: 1000, nextWorkoutId: 1, nextUserId: 1, nextProgramId: 1, nextDayId: 1, nextPxId: 1 };
 
 /** Höchstens max Einträge pro Datum (Routinen mit mehreren Durchgängen am Tag). */
 function capPerDay(dates, max) {
@@ -147,7 +147,11 @@ function workoutResponse(w) {
     id: w.id, clientId: w.clientId, date: w.date, workoutType: w.workoutType, durationSeconds: w.durationSeconds,
     sessionRpe: w.sessionRpe ?? null, quality: w.quality ?? null, notes: w.notes ?? null, programDayId: w.programDayId ?? null, updatedAt: w.updatedAt,
     gym: w.gym ?? null, exerciseNotes: cleanNotes(w.exerciseNotes),
-    match: w.workoutType === 'Match' ? { goals: w.match?.goals ?? null, assists: w.match?.assists ?? null, opponent: w.match?.opponent?.trim() || null } : null,
+    match: w.workoutType === 'Match' ? {
+      goals: w.match?.goals ?? null, assists: w.match?.assists ?? null, opponent: w.match?.opponent?.trim() || null, position: w.match?.position ?? null,
+      teamGoals: w.match?.teamGoals ?? null, opponentGoals: w.match?.opponentGoals ?? null, wentWell: w.match?.wentWell?.trim() || null, toImprove: w.match?.toImprove?.trim() || null,
+    } : null,
+    health: w.health && Object.values(w.health).some((v) => v != null) ? w.health : null,
     sets: (w.sets ?? []).map((s, i) => {
       const ex = db.exercises.find((e) => e.id === s.exerciseId);
       return { exerciseId: s.exerciseId, exerciseName: ex?.name ?? '?', trackingType: ex?.trackingType ?? 'WeightReps', muscleGroup: ex?.muscleGroup ?? null, setNumber: i + 1, weight: s.weight ?? null, reps: s.reps ?? null, distance: s.distance ?? null, time: s.time ?? null, rpe: s.rpe ?? null, isWarmup: !!s.isWarmup, note: s.note?.trim() || null,
@@ -210,7 +214,7 @@ function saveWorkout(user, body) {
     date: body.date ? new Date(body.date).toISOString() : new Date().toISOString(),
     durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null, quality: body.quality ?? null,
     notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets ?? [], match: body.match ?? null,
-    gym: body.gym?.trim() || null, exerciseNotes: cleanNotes(body.exerciseNotes),
+    gym: body.gym?.trim() || null, exerciseNotes: cleanNotes(body.exerciseNotes), health: body.health ?? null,
     updatedAt: new Date().toISOString(),
   };
   db.workouts.push(w);
@@ -671,6 +675,43 @@ async function handleApi(req, res, url) {
     return noContent(res);
   }
 
+  // Leistungstests (wie FitnessTests auf dem Server)
+  const RANGES = { sprint10: [1.2, 4], sprint30: [3, 8], cmj: [5, 90], agility: [3.5, 8], yoyo: [40, 4000], ift: [8, 26] };
+  if (method === 'GET' && path === '/api/fitness-tests') return json(res, 200, db.tests.filter((t) => t.userId === user.id).map(({ userId, ...rest }) => rest).sort((a, b) => a.day.localeCompare(b.day)));
+  if ((m = path.match(/^\/api\/fitness-tests\/([A-Za-z0-9_-]{8,64})$/)) && method === 'PUT') {
+    const body = await readBody(req);
+    const r = RANGES[body.test];
+    if (!r) return problem(res, 400, 'Validation failed', { test: ['Unknown test.'] });
+    if (!(body.value >= r[0] && body.value <= r[1])) return problem(res, 400, 'Validation failed', { value: ['Value is out of range for this test.'] });
+    const t = { userId: user.id, clientId: m[1], day: body.day, test: body.test, value: Math.round(body.value * 100) / 100, notes: body.notes?.trim() || null, updatedAt: new Date().toISOString() };
+    db.tests = [...db.tests.filter((x) => !(x.userId === user.id && x.clientId === m[1])), t];
+    const { userId, ...rest } = t;
+    return json(res, 200, rest);
+  }
+  if ((m = path.match(/^\/api\/fitness-tests\/([A-Za-z0-9_-]{8,64})$/)) && method === 'DELETE') {
+    db.tests = db.tests.filter((x) => !(x.userId === user.id && x.clientId === m[1]));
+    res.writeHead(204); return res.end();
+  }
+  // Tageswerte (Gewicht, Eiweiß, Apple Health)
+  if (method === 'GET' && path === '/api/daily') return json(res, 200, db.daily.filter((d) => d.userId === user.id).map(({ userId, ...rest }) => rest).sort((a, b) => a.day.localeCompare(b.day)));
+  if ((m = path.match(/^\/api\/daily\/(\d{4}-\d{2}-\d{2})$/)) && method === 'PUT') {
+    const body = await readBody(req);
+    if (body.weightKg != null && (body.weightKg < 30 || body.weightKg > 250)) return problem(res, 400, 'Validation failed', { weightKg: ['Weight must be between 30 and 250 kg.'] });
+    const fields = ['weightKg', 'proteinG', 'sleepMinutes', 'restingHr', 'hrv', 'steps'];
+    db.daily = db.daily.filter((d) => !(d.userId === user.id && d.day === m[1]));
+    if (fields.every((f) => body[f] == null)) { res.writeHead(204); return res.end(); }
+    const d = { userId: user.id, day: m[1], ...Object.fromEntries(fields.map((f) => [f, body[f] ?? null])), updatedAt: new Date().toISOString() };
+    db.daily.push(d);
+    const { userId, ...rest } = d;
+    return json(res, 200, rest);
+  }
+  if ((m = path.match(/^\/api\/workouts\/(\d+)\/health$/)) && method === 'PUT') {
+    const w = db.workouts.find((x) => x.userId === user.id && x.id === Number(m[1]));
+    if (!w) return problem(res, 404, 'Not Found');
+    w.health = await readBody(req);
+    w.updatedAt = new Date().toISOString();
+    res.writeHead(204); return res.end();
+  }
   if (method === 'GET' && path === '/api/routines') return json(res, 200, db.routines.filter((r) => r.userId === user.id).map(({ userId, ...rest }) => rest));
   m = path.match(/^\/api\/routines\/([^/]+)$/);
   if (m && method === 'PUT') {
@@ -773,7 +814,7 @@ async function handleApi(req, res, url) {
       workoutType: body.workoutType, date: body.date ? new Date(body.date).toISOString() : w.date,
       durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null, quality: body.quality ?? null,
       notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets ?? [], match: body.match ?? null,
-      gym: body.gym?.trim() || null, exerciseNotes: cleanNotes(body.exerciseNotes),
+      gym: body.gym?.trim() || null, exerciseNotes: cleanNotes(body.exerciseNotes), health: body.health ?? w.health ?? null,
       updatedAt: new Date().toISOString(),
     });
     return json(res, 200, workoutResponse(w));
@@ -915,6 +956,23 @@ function seedDemo() {
       steps: [{ name: 'Hip flexor stretch', dose: '2 x 45 s per side', exerciseId: null }, { name: 'Plank', dose: '3 x 30 s', exerciseId: 47 }],
       doneDates: [-3, -3, -2, -1, -1, 0].map(dayKey), times: ['08:00', '20:00'], pain: [], createdAt: created, updatedAt: created },
   );
+  // Plan mit Wochenplan (Training Mo/Di/Do, Spiel Sa) - zeigt Match-Day-Phasen und den Plan-Start auf dem Startbildschirm
+  const prog = newProgram(user, { name: 'Speed & Strength', goal: 'Speed', weeks: 8, days: [
+    { name: 'Lower body power', exercises: [{ exerciseId: 35, sets: 4, repsMin: 5, repsMax: 5, targetRpe: 8 }, { exerciseId: 50, sets: 3, repsMin: 5, repsMax: 6 }, { exerciseId: 49, sets: 3, repsMin: 8, repsMax: 8 }] },
+    { name: 'Speed & agility', exercises: [{ exerciseId: 12, sets: 6, distance: 30 }, { exerciseId: 58, sets: 4, distance: 20 }] },
+    { name: 'Upper body', exercises: [{ exerciseId: 1, sets: 4, repsMin: 6, repsMax: 8, targetRpe: 8 }, { exerciseId: 44, sets: 3, repsMin: 10, repsMax: 10 }] },
+  ] }, null, true);
+  Object.assign(prog, { trainingDays: 1 | 2 | 8, matchDays: 32 });
+  // Leistungstests: zwei Testtage
+  [[-60, { sprint10: 1.86, sprint30: 4.38, cmj: 36, agility: 4.72, yoyo: 1720 }], [-12, { sprint10: 1.81, sprint30: 4.29, cmj: 38.5, agility: 4.61, yoyo: 1880 }]]
+    .forEach(([d, values]) => Object.entries(values).forEach(([test, value]) => db.tests.push({ userId: user.id, clientId: `ft-demo-${test}${-d}`, day: dayKey(d), test, value, notes: null, updatedAt: created })));
+  // Tageswerte: Gewicht 8 Wochen leicht fallend, Eiweiß und Apple-Health-Werte der letzten Tage
+  for (let d = -55; d <= 0; d++) {
+    const row = { userId: user.id, day: dayKey(d), weightKg: d % 2 === 0 ? Math.round((76.2 - d * 0.025 + Math.sin(d) * 0.4) * 10) / 10 : null,
+      proteinG: d > -10 && d < 0 ? 95 + ((d * 37) % 50 + 50) % 55 : null, sleepMinutes: d > -14 ? 420 + ((d * 53) % 70 + 70) % 70 : null,
+      restingHr: d > -14 ? 52 + ((d * 7) % 4 + 4) % 4 : null, hrv: d > -14 ? 62 + ((d * 11) % 14 + 14) % 14 : null, steps: d > -14 ? 7000 + ((d * 997) % 5000 + 5000) % 5000 : null, updatedAt: created };
+    if (Object.entries(row).some(([k, v]) => !['userId', 'day', 'updatedAt'].includes(k) && v != null)) db.daily.push(row);
+  }
   // Zusatz-Einheiten: eine vom Coach in 2 Tagen, eine erledigte letzte Woche
   db.planned.push(
     { userId: user.id, clientId: 'pl-demo-speed', date: dayKey(2), title: 'Speed & agility', category: 'Football', notes: 'Fresh legs, full recovery between sprints.', source: 'coach', status: 'planned', workoutClientId: null,

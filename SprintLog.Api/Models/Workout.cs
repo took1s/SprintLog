@@ -42,6 +42,20 @@ public class Workout
     public int? Goals { get; set; }
     public int? Assists { get; set; }
     public string? Opponent { get; set; }
+    /// <summary>Position im Spiel (goalkeeper, defender, fullback, midfielder, winger, striker).</summary>
+    public string? Position { get; set; }
+    /// <summary>Endstand aus Sicht des eigenen Teams.</summary>
+    public int? TeamGoals { get; set; }
+    public int? OpponentGoals { get; set; }
+    public string? WentWell { get; set; }
+    public string? ToImprove { get; set; }
+
+    // Aus Apple Health (Watch) übernommen, optional
+    public int? DistanceM { get; set; }
+    public int? AvgHr { get; set; }
+    public int? MaxHr { get; set; }
+    public double? MaxSpeedKmh { get; set; }
+    public int? Sprints { get; set; }
 
     public int UserId { get; set; }
     public User User { get; set; } = null!;

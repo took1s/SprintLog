@@ -58,6 +58,8 @@ export const userKeys = (userId: number) => ({
   aiAnalysis: `${PREFIX}:${userId}:aiAnalysis`,
   athlete: `${PREFIX}:${userId}:athlete`,
   aiMemory: `${PREFIX}:${userId}:aiMemory`,
+  fitnessTests: `${PREFIX}:${userId}:fitnessTests`,
+  daily: `${PREFIX}:${userId}:daily`,
 });
 export type UserKeys = ReturnType<typeof userKeys>;
 

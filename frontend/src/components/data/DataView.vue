@@ -8,6 +8,7 @@ import HistoryPanel from './HistoryPanel.vue';
 import ProgressPanel from './ProgressPanel.vue';
 import RecordsPanel from './RecordsPanel.vue';
 import CalendarPanel from './CalendarPanel.vue';
+import AthletePanel from '@/components/athlete/AthletePanel.vue';
 import ObsidianModal from './ObsidianModal.vue';
 import DataTabs from './DataTabs.vue';
 import { computed, defineAsyncComponent, onMounted, ref, useTemplateRef } from 'vue';
@@ -21,7 +22,7 @@ const { dataTab, loadingHistory, allWorkouts, tab } = storeToRefs(app);
 const ai = useAiStore();
 onMounted(() => { if (!ai.status) void ai.loadStatus(); });
 // Der KI-Tab erscheint nur, wenn der Server einen API-Key hat
-const TABS = computed<DataTab[]>(() => (ai.enabled ? ['overview', 'ai', 'history', 'progress', 'records', 'calendar'] : ['overview', 'history', 'progress', 'records', 'calendar']));
+const TABS = computed<DataTab[]>(() => (ai.enabled ? ['overview', 'athlete', 'ai', 'history', 'progress', 'records', 'calendar'] : ['overview', 'athlete', 'history', 'progress', 'records', 'calendar']));
 
 // Richtung des Wechsels für den kurzen Übergang (weiter = von rechts)
 const direction = ref<1 | -1>(1);
@@ -51,6 +52,8 @@ useSwipeNav(content, (dir) => {
       <Transition :name="direction > 0 ? 'dnext' : 'dprev'" mode="out-in">
         <div :key="dataTab">
           <AiAnalysisPanel v-if="dataTab === 'ai' && ai.enabled" />
+          <!-- Athlet: Tests und Körperwerte gehen auch ohne erfasste Einheiten -->
+          <AthletePanel v-else-if="dataTab === 'athlete'" />
 
           <Spinner v-else-if="loadingHistory" />
 

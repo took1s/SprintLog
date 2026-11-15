@@ -11,7 +11,7 @@ import { createClientSync } from '../lib/clientSync';
 import { readJson, userKeys, writeJson } from '../lib/storage';
 import { localDay } from '../lib/wellness';
 import {
-  EVERY_DAY, MAX_TIMES_PER_DAY, doneCount, newRoutineId, normalizeTimes, painOn, routineProgress, setDoneCount, setPainLevel, sortRoutines, tapCount,
+  EVERY_DAY, MAX_TIMES_PER_DAY, doneCount, fillTimes, newRoutineId, painOn, routineProgress, setDoneCount, setPainLevel, sortRoutines, tapCount,
   todaysRoutines, tracksPain, type Routine, type RoutineKind, type RoutineStep,
 } from '../lib/routines';
 import { useUiStore } from './ui';
@@ -61,12 +61,13 @@ export function cleanDraft(d: RoutineDraft): RoutineDraft {
     reason: clip(d.reason, 300) || null,
     steps: d.steps.map((s) => ({ name: clip(s.name, 80), dose: clip(s.dose, 60) || null, exerciseId: s.exerciseId ?? null })).filter((s) => s.name).slice(0, 12),
     timesPerDay: Math.max(1, Math.min(MAX_TIMES_PER_DAY, Math.round(d.timesPerDay || 1))),
-    times: normalizeTimes(d.times, Math.round(d.timesPerDay || 1)),
+    times: fillTimes(d.times, Math.round(d.timesPerDay || 1)),
   };
 }
 
 /** Felder älterer Stände ergänzen (lokaler Speicher, ältere Server-Antworten). */
-const normalize = (r: Routine): Routine => ({ ...r, timesPerDay: r.timesPerDay || 1, times: r.times ?? [], pain: r.pain ?? [] });
+// Uhrzeiten auf die Anzahl Durchgänge auffüllen (ältere bzw. vom Coach unvollständig angelegte Routinen) - geht beim nächsten Senden mit
+const normalize = (r: Routine): Routine => ({ ...r, timesPerDay: r.timesPerDay || 1, times: fillTimes(r.times ?? [], r.timesPerDay || 1), pain: r.pain ?? [] });
 
 const capPerDay = (dates: readonly string[], max: number): string[] => {
   const seen = new Map<string, number>();
@@ -194,6 +195,12 @@ export const useRoutinesStore = defineStore('routines', () => {
   const openDetail = (clientId: string) => { detailId.value = clientId; };
   const closeDetail = () => { detailId.value = null; };
 
+  // ---------- Durchspielen mit Timer ----------
+
+  const playerId = ref<string | null>(null);
+  const openPlayer = (clientId: string) => { playerId.value = clientId; };
+  const closePlayer = () => { playerId.value = null; };
+
   // ---------- Bibliothek ----------
 
   const libraryOpen = ref(false);
@@ -254,10 +261,10 @@ export const useRoutinesStore = defineStore('routines', () => {
     await pushPending();
   }
 
-  function clear() { painAsk.value = null; libraryOpen.value = false; routines.value = []; detailId.value = null; editor.value = { open: false, clientId: null, draft: emptyRoutine(localDay()) }; }
+  function clear() { painAsk.value = null; libraryOpen.value = false; playerId.value = null; routines.value = []; detailId.value = null; editor.value = { open: false, clientId: null, draft: emptyRoutine(localDay()) }; }
 
   return {
     connect, routines, editor, today, visible, forToday, progressOf, byId, load, pushPending, applyFromCoach, setCount, tap, setDone, painAsk, setPain, skipPain,
-    detailId, openDetail, closeDetail, libraryOpen, openLibrary, closeLibrary, useTemplate, openNew, openEdit, close, save, finish, remove, clear,
+    detailId, openDetail, closeDetail, libraryOpen, openLibrary, closeLibrary, useTemplate, playerId, openPlayer, closePlayer, openNew, openEdit, close, save, finish, remove, clear,
   };
 });

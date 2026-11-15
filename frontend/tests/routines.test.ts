@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, daysBetween, doneCount, nextRound, normalizeTimes, painSummary, painTone, setPainLevel, slotOf, suggestedTimes, historyWeeks, isDone, isScheduled, newRoutineId, routineProgress, routineState, scheduledDays, setDoneCount, sortRoutines, tapCount, todaysRoutines, type Routine } from '@/lib/routines';
+import { addDays, daysBetween, doneCount, fillTimes, nextRound, normalizeTimes, painSummary, painTone, setPainLevel, slotOf, suggestedTimes, historyWeeks, isDone, isScheduled, newRoutineId, routineProgress, routineState, scheduledDays, setDoneCount, sortRoutines, tapCount, todaysRoutines, type Routine } from '@/lib/routines';
 import { cleanDraft } from '@/stores/routines';
 
 // 2026-11-09 ist ein Montag
@@ -112,7 +112,7 @@ describe('Routinen: Eingaben', () => {
       title: '  Dehnen  ', kind: 'mobility', days: 0, startDate: '2026-11-13', endDate: '2026-11-01', reason: '   ',
       steps: [{ name: ' Hüftbeuger ', dose: ' 2 x 45 s ' }, { name: '   ', dose: 'x' }], timesPerDay: 9, times: ['20:00', 'bad', '08:00', '08:00'],
     });
-    expect(c).toEqual({ title: 'Dehnen', kind: 'mobility', days: 127, startDate: '2026-11-13', endDate: null, reason: null, steps: [{ name: 'Hüftbeuger', dose: '2 x 45 s', exerciseId: null }], timesPerDay: 6, times: ['08:00', '20:00'] });
+    expect(c).toEqual({ title: 'Dehnen', kind: 'mobility', days: 127, startDate: '2026-11-13', endDate: null, reason: null, steps: [{ name: 'Hüftbeuger', dose: '2 x 45 s', exerciseId: null }], timesPerDay: 6, times: ['08:00', '10:30', '13:00', '15:00', '17:30', '20:00'] });
   });
 
   it('Client-Id passt zum Server-Format', () => {
@@ -165,5 +165,14 @@ describe('Routinen: Schmerz', () => {
     expect(painSummary(base({ pain: [{ day: today, level: 3 }] }), today).trend).toBeNull();
     expect(painSummary(base({ pain: [{ day: '2026-11-10', level: 2 }, { day: '2026-11-18', level: 5 }] }), today).trend).toBe('rising');
     expect([painTone(2), painTone(3), painTone(6)]).toEqual(['ok', 'warn', 'bad']);
+  });
+});
+
+describe('Routinen: Zeiten auffüllen', () => {
+  it('fehlende Durchgänge bekommen eine Zeit mit größtem Abstand, bestehende bleiben', () => {
+    expect(fillTimes(['08:00', '20:00'], 3)).toEqual(['08:00', '14:00', '20:00']);
+    expect(fillTimes(['07:00', '21:30'], 3)).toEqual(['07:00', '14:00', '21:30']);
+    expect(fillTimes(['08:00', '14:00', '20:00'], 2)).toEqual(['08:00', '14:00']);
+    expect(fillTimes([], 3)).toEqual([]);
   });
 });
