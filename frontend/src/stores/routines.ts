@@ -74,6 +74,18 @@ const capPerDay = (dates: readonly string[], max: number): string[] => {
   return dates.filter((d) => { const n = (seen.get(d) ?? 0) + 1; seen.set(d, n); return n <= max; });
 };
 
+/** Stand eines angefangenen Durchgangs im Player. */
+export interface PlayerProgress {
+  clientId: string;
+  day: string;
+  /** 1-basierter Durchgang des Tages. */
+  round: number;
+  /** Phase, bei der es weitergeht, und Restzeit (ms) der Timer-Phase. */
+  index: number;
+  left: number | null;
+  phases: number;
+}
+
 export const useRoutinesStore = defineStore('routines', () => {
   const routines = ref<Routine[]>([]);
   const editor = ref<RoutineEditor>({ open: false, clientId: null, draft: emptyRoutine(localDay()) });
@@ -112,6 +124,8 @@ export const useRoutinesStore = defineStore('routines', () => {
   async function load() {
     const k = key();
     if (!k) return;
+    const pk = playerKey();
+    saved.value = pk ? readJson<PlayerProgress | null>(pk, null) : null;
     // Ältere lokale Stände ohne timesPerDay/times/pain: einmal täglich, ohne Zeiten
     routines.value = readJson<Routine[]>(k, []).map(normalize);
     if (app().online) await sync.pull();
@@ -201,6 +215,25 @@ export const useRoutinesStore = defineStore('routines', () => {
   const openPlayer = (clientId: string) => { playerId.value = clientId; };
   const closePlayer = () => { playerId.value = null; };
 
+  /**
+   * Angefangener Durchgang (Player geschlossen oder App beendet): wo es weitergeht. Gilt nur für denselben Tag und
+   * denselben Durchgang - danach verfällt er. Lokal gespeichert, damit Schließen nichts verliert.
+   */
+  const playerKey = () => { const id = source ? app().userId : null; return id ? userKeys(id).routinePlayer : null; };
+  const saved = ref<PlayerProgress | null>(null);
+  function saveProgress(p: PlayerProgress | null) {
+    saved.value = p;
+    const k = playerKey();
+    if (k) writeJson(k, p);
+  }
+  /** Gespeicherter Stand für diese Routine, falls er heute zum nächsten offenen Durchgang gehört. */
+  function progressFor(clientId: string): PlayerProgress | null {
+    const p = saved.value;
+    const r = byId(clientId);
+    if (!p || !r || p.clientId !== clientId || p.day !== today.value || p.round !== doneCount(r, today.value) + 1) return null;
+    return p;
+  }
+
   // ---------- Bibliothek ----------
 
   const libraryOpen = ref(false);
@@ -261,10 +294,10 @@ export const useRoutinesStore = defineStore('routines', () => {
     await pushPending();
   }
 
-  function clear() { painAsk.value = null; libraryOpen.value = false; playerId.value = null; routines.value = []; detailId.value = null; editor.value = { open: false, clientId: null, draft: emptyRoutine(localDay()) }; }
+  function clear() { saved.value = null; painAsk.value = null; libraryOpen.value = false; playerId.value = null; routines.value = []; detailId.value = null; editor.value = { open: false, clientId: null, draft: emptyRoutine(localDay()) }; }
 
   return {
     connect, routines, editor, today, visible, forToday, progressOf, byId, load, pushPending, applyFromCoach, setCount, tap, setDone, painAsk, setPain, skipPain,
-    detailId, openDetail, closeDetail, libraryOpen, openLibrary, closeLibrary, useTemplate, playerId, openPlayer, closePlayer, openNew, openEdit, close, save, finish, remove, clear,
+    detailId, openDetail, closeDetail, libraryOpen, openLibrary, closeLibrary, useTemplate, playerId, openPlayer, closePlayer, saved, saveProgress, progressFor, openNew, openEdit, close, save, finish, remove, clear,
   };
 });

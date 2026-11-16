@@ -7,7 +7,8 @@ import { WELLNESS_FIELDS, readinessLevel } from '@/lib/wellness';
 import { formatDate } from '@/lib/format';
 
 const app = useAppStore();
-const { checkIn, readinessDays, readinessHint, readinessToday, readinessWeek, todayWellness } = storeToRefs(app);
+const { checkIn, checkInDays, missedYesterday, readinessDays, readinessHint, readinessToday, readinessWeek, todayWellness } = storeToRefs(app);
+const dayChip = (date: string, isToday: boolean, i: number) => (isToday ? t('wellness.today') : i === 1 ? t('wellness.yesterday') : formatDate(date, { weekday: 'short', day: 'numeric' }));
 const { openCheckIn, saveCheckIn, setWellnessValue } = app;
 
 const tone = (value: number | null) => ({ good: 'text-emerald-300', ok: 'text-yellow-300', low: 'text-red-300' } as const)[readinessLevel(value) ?? 'ok'];
@@ -29,6 +30,17 @@ const bar = (value: number | null) => ({ good: 'bg-emerald-400', ok: 'bg-yellow-
 
       <!-- Formular -->
       <div v-if="checkIn.open" class="space-y-3">
+          <!-- Tag wählen: heute oder nachtragen (letzte 7 Tage); Punkt = schon eingetragen -->
+          <div class="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1" role="radiogroup" :aria-label="t('wellness.day')" data-test="check-in-days">
+              <button v-for="(d, i) in checkInDays" :key="d.date" type="button" role="radio" :aria-checked="checkIn.date === d.date" :data-day="d.date"
+                      class="relative flex-shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-colors"
+                      :class="checkIn.date === d.date ? 'border-accent/70 bg-accent/15 text-white' : 'border-white/10 bg-white/5 text-slate-400 hover:text-white'"
+                      @click="openCheckIn(d.date)">
+                  {{ dayChip(d.date, d.isToday, i) }}
+                  <span v-if="d.filled" class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true"></span>
+                  <span v-if="d.filled" class="sr-only">· {{ t('wellness.filled') }}</span>
+              </button>
+          </div>
           <div v-for="field in WELLNESS_FIELDS" :key="field">
               <div class="mb-1 flex items-baseline justify-between">
                   <span class="label-xs">{{ t(`wellness.fields.${field}`) }}</span>
@@ -55,15 +67,21 @@ const bar = (value: number | null) => ({ good: 'bg-emerald-400', ok: 'bg-yellow-
       <template v-else>
           <p class="mb-3 text-xs text-slate-300">{{ t(`wellness.advice.${readinessHint}`) }}</p>
           <!-- 14-Tage-Verlauf -->
-          <div class="mb-1 flex h-10 items-end gap-1" :aria-label="t('wellness.trend')">
-              <div v-for="d in readinessDays" :key="d.date" class="flex-1 rounded-sm" :title="`${formatDate(d.date, { day: '2-digit', month: 'short' })}${d.value != null ? `: ${d.value}%` : ''}`"
-                   :class="d.value == null ? 'bg-white/5' : bar(d.value)" :style="{ height: d.value == null ? '12%' : Math.max(12, d.value) + '%' }"></div>
+          <div class="mb-1 flex h-10 items-end gap-1" role="group" :aria-label="t('wellness.trend')">
+              <!-- Antippen: diesen Tag (nach)tragen -->
+              <button v-for="d in readinessDays" :key="d.date" type="button" class="h-full flex-1 self-end" :aria-label="`${formatDate(d.date, { day: '2-digit', month: 'short' })}${d.value != null ? `: ${d.value}%` : ` · ${t('wellness.addDay')}`}`"
+                      :data-bar="d.date" @click="openCheckIn(d.date)">
+                  <span class="block w-full rounded-sm" :class="d.value == null ? 'bg-white/5' : bar(d.value)" :style="{ height: d.value == null ? '12%' : Math.max(12, d.value) + '%' }"></span>
+              </button>
           </div>
           <div class="mb-3 flex justify-between font-mono text-[9px] text-slate-500">
               <span>{{ t('wellness.trend') }}</span>
               <span v-if="readinessWeek != null">{{ t('wellness.week') }}: {{ readinessWeek }}%</span>
           </div>
-          <button type="button" @click="openCheckIn" class="w-full rounded-xl py-2.5 text-xs font-bold" :class="todayWellness ? 'cyber-outline-btn' : 'cyber-btn'" data-test="check-in">
+          <button v-if="missedYesterday" type="button" class="mb-2 flex w-full items-center justify-between gap-2 rounded-xl border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2 text-left text-xs text-amber-200" data-test="check-in-missed" @click="openCheckIn(missedYesterday)">
+              <span>{{ t('wellness.missedYesterday') }}</span><span class="font-bold">{{ t('wellness.addNow') }} →</span>
+          </button>
+          <button type="button" @click="openCheckIn()" class="w-full rounded-xl py-2.5 text-xs font-bold" :class="todayWellness ? 'cyber-outline-btn' : 'cyber-btn'" data-test="check-in">
               {{ todayWellness ? t('wellness.update') : t('wellness.checkIn') }}
           </button>
       </template>
