@@ -67,12 +67,9 @@ const bar = (value: number | null) => ({ good: 'bg-emerald-400', ok: 'bg-yellow-
       <template v-else>
           <p class="mb-3 text-xs text-slate-300">{{ t(`wellness.advice.${readinessHint}`) }}</p>
           <!-- 14-Tage-Verlauf -->
-          <div class="mb-1 flex h-10 items-end gap-1" role="group" :aria-label="t('wellness.trend')">
-              <!-- Antippen: diesen Tag (nach)tragen -->
-              <button v-for="d in readinessDays" :key="d.date" type="button" class="h-full flex-1 self-end" :aria-label="`${formatDate(d.date, { day: '2-digit', month: 'short' })}${d.value != null ? `: ${d.value}%` : ` · ${t('wellness.addDay')}`}`"
-                      :data-bar="d.date" @click="openCheckIn(d.date)">
-                  <span class="block w-full rounded-sm" :class="d.value == null ? 'bg-white/5' : bar(d.value)" :style="{ height: d.value == null ? '12%' : Math.max(12, d.value) + '%' }"></span>
-              </button>
+          <div class="mb-1 flex h-10 items-end gap-1" role="img" :aria-label="t('wellness.trend')">
+              <div v-for="d in readinessDays" :key="d.date" class="flex-1 rounded-sm" :title="`${formatDate(d.date, { day: '2-digit', month: 'short' })}${d.value != null ? `: ${d.value}%` : ''}`"
+                   :class="d.value == null ? 'bg-white/5' : bar(d.value)" :style="{ height: d.value == null ? '12%' : Math.max(12, d.value) + '%' }"></div>
           </div>
           <div class="mb-3 flex justify-between font-mono text-[9px] text-slate-500">
               <span>{{ t('wellness.trend') }}</span>

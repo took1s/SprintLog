@@ -305,7 +305,8 @@ test('training program: start template, follow the plan day, next day rotates', 
   await page.waitForSelector('text=1/12');
 
   await finishWorkout(page);
-  await page.waitForSelector('text=📋 Full Body Beginner · Full body A');
+  // Verlauf: Plan-Tag ist der Titel der Einheit
+  await page.waitForSelector('[data-test=history-toggle] >> text=Full Body Beginner · Full body A');
   const [workout] = await api('GET', '/api/workouts/history', token);
   assert.equal(workout.programDayId, program.days[0].id);
 
