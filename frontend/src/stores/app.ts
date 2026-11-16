@@ -2291,14 +2291,33 @@ export const useAppStore = defineStore('app', () => {
     persistWellness();
   }
 
-  function openCheckIn() {
-    const today = todayWellness.value;
+  /**
+   * Befinden eintragen - für heute oder nachträglich für einen der letzten Tage (vergessen ist normal).
+   * Vorhandene Werte des Tages werden geladen; Schlafdauer aus Apple Health vorbelegt, falls vorhanden.
+   */
+  function openCheckIn(date: string = localDay(clockDate.value)) {
+    const day = date > localDay(clockDate.value) ? localDay(clockDate.value) : date;
+    const entry = wellness.value.find((w) => w.date === day) ?? null;
+    const watchSleep = athleteStore.daily.find((d) => d.day === day)?.sleepMinutes;
     checkIn.value = {
-      open: true, date: localDay(clockDate.value), busy: false,
-      sleep: today?.sleep ?? 3, energy: today?.energy ?? 3, soreness: today?.soreness ?? 3, mood: today?.mood ?? 3,
-      sleepHours: today?.sleepHours ?? null, note: today?.note ?? '',
+      open: true, date: day, busy: false,
+      sleep: entry?.sleep ?? 3, energy: entry?.energy ?? 3, soreness: entry?.soreness ?? 3, mood: entry?.mood ?? 3,
+      sleepHours: entry?.sleepHours ?? (watchSleep ? Math.round((watchSleep / 60) * 2) / 2 : null), note: entry?.note ?? '',
     };
   }
+
+  /** Letzte 7 Tage für die Auswahl im Formular (neueste zuerst) - mit Info, ob schon eingetragen. */
+  const checkInDays = computed(() => {
+    const today = localDay(clockDate.value);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(clockDate.value);
+      d.setDate(d.getDate() - i);
+      const date = localDay(d);
+      return { date, filled: wellness.value.some((w) => w.date === date), isToday: date === today };
+    });
+  });
+  /** Gestern vergessen? Dann Hinweis zum Nachtragen. */
+  const missedYesterday = computed(() => { const y = checkInDays.value[1]; return y && !y.filled ? y.date : null; });
 
   function setWellnessValue(field: WellnessField, value: number) { checkIn.value[field] = value; }
 
@@ -2312,7 +2331,7 @@ export const useAppStore = defineStore('app', () => {
     wellness.value = [entry, ...wellness.value.filter((w) => w.date !== entry.date)];
     persistWellness();
     c.open = false;
-    toast(t('wellness.toast.saved'), 'success');
+    toast(c.date === localDay(clockDate.value) ? t('wellness.toast.saved') : t('wellness.toast.savedFor', { date: formatDate(c.date, { weekday: 'short', day: 'numeric', month: 'short' }) }), 'success');
     if (online.value) {
       try { await pushPendingWellness(); } catch (e) { toast(errorMessage(e), 'error'); }
     }
@@ -2954,7 +2973,7 @@ export const useAppStore = defineStore('app', () => {
     activeProgram, otherPrograms, programInfo, loadInfo, loadZone, planTargets, planProgress, exerciseGroups,
     planWeek, isDeloadNow, currentPrescription, templateFilter, filteredTemplates,
     matchModal, openMatchModal, saveMatch, setWorkoutHealth, logWatchSession, wellness, checkIn, todayWellness, readinessToday, readinessWeek, readinessDays, readinessHint,
-    loadWellness, openCheckIn, setWellnessValue, saveCheckIn, progressInPlan,
+    loadWellness, openCheckIn, setWellnessValue, saveCheckIn, checkInDays, missedYesterday, progressInPlan,
     pendingCount, failedCount, syncState,
     categoryExercises, availableMuscleGroups, allMuscleGroups, filteredExercises, sortLabel,
     sessionActive, hasSets, isEditing, finishLoad, sessionElapsed, sessionGroups, sessionSummary,

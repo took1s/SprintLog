@@ -225,9 +225,13 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
 
       <!-- Übungs-Blöcke -->
       <TransitionGroup name="swap" tag="div" class="space-y-3">
-          <article v-for="(block, bi) in workoutBlocks" :key="block.exercise.id" class="glass-panel relative rounded-2xl p-4"
-                   :class="drag ? (drag.id === block.exercise.id ? 'z-20 shadow-2xl ring-2 ring-accent/60' : 'transition-transform duration-150 ease-out') : ''"
-                   :style="dragStyle(block.exercise.id, bi)" :data-block="block.exercise.id" :data-done="block.done || undefined">
+          <!-- Außen: Listen-Element für TransitionGroup (bewegt sich beim Ziehen NICHT, sonst greift deren Move-Animation
+               ein und setzt die Verschiebung zurück - Ziehen nach oben "klebte"). Innen: die Karte, die dem Finger folgt. -->
+          <article v-for="(block, bi) in workoutBlocks" :key="block.exercise.id" class="relative" :class="{ 'z-20': drag?.id === block.exercise.id }"
+                   :data-block="block.exercise.id" :data-done="block.done || undefined">
+          <div class="glass-panel relative rounded-2xl p-4"
+               :class="drag ? (drag.id === block.exercise.id ? 'shadow-2xl ring-2 ring-accent/60' : 'transition-transform duration-150 ease-out') : ''"
+               :style="dragStyle(block.exercise.id, bi)">
               <header class="mb-2 flex items-start justify-between gap-2">
                   <!-- Antippen = Satz-Dialog, gedrückt halten = Aktions-Menü (wie ein Kontextmenü) -->
                   <button type="button" class="min-w-0 rounded-lg text-left" @click="openSetModal(block.exercise)" v-long-press="() => (sheetFor = block.exercise.id)"
@@ -406,6 +410,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                       + {{ t('workout.addSet') }}
                   </button>
               </div>
+          </div>
           </article>
       </TransitionGroup>
 

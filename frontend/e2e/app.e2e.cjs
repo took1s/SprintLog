@@ -305,7 +305,8 @@ test('training program: start template, follow the plan day, next day rotates', 
   await page.waitForSelector('text=1/12');
 
   await finishWorkout(page);
-  await page.waitForSelector('text=📋 Full Body Beginner · Full body A');
+  // Verlauf: Plan-Tag ist der Titel der Einheit
+  await page.waitForSelector('[data-test=history-toggle] >> text=Full Body Beginner · Full body A');
   const [workout] = await api('GET', '/api/workouts/history', token);
   assert.equal(workout.programDayId, program.days[0].id);
 
@@ -764,8 +765,28 @@ test('gym extras: comma decimals, drag & drop order, hold timer for planks, repl
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
   await page.mouse.down();
   await page.mouse.move(from.x + from.width / 2, to.y + 10, { steps: 15 });
+  // Nach oben: die Karte folgt dem Finger (früher setzte die Listen-Animation die Verschiebung zurück)
+  const dy = await page.$eval('[data-block="47"] > div', (el) => new DOMMatrix(getComputedStyle(el).transform).m42);
+  assert.ok(dy < -40, `card follows the finger upwards (dy=${dy})`);
   await page.mouse.up();
   await page.waitForFunction(() => document.querySelector('[data-block]')?.getAttribute('data-block') === '47');
+  assert.deepEqual(await order(), [47, 1, 238]);
+  // Letzte Übung zwei Plätze nach oben, dann wieder nach unten
+  const last = await page.locator('[data-block="238"] [data-test=drag-handle]').boundingBox();
+  const first = await page.locator('[data-block="47"]').boundingBox();
+  await page.mouse.move(last.x + last.width / 2, last.y + last.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(last.x + last.width / 2, first.y + 5, { steps: 20 });
+  await page.mouse.up();
+  await page.waitForFunction(() => document.querySelector('[data-block]')?.getAttribute('data-block') === '238');
+  assert.deepEqual(await order(), [238, 47, 1]);
+  const top = await page.locator('[data-block="238"] [data-test=drag-handle]').boundingBox();
+  const bottom = await page.locator('[data-block="1"]').boundingBox();
+  await page.mouse.move(top.x + top.width / 2, top.y + top.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(top.x + top.width / 2, bottom.y + bottom.height - 5, { steps: 20 });
+  await page.mouse.up();
+  await page.waitForFunction(() => document.querySelector('[data-block]:last-of-type')?.getAttribute('data-block') === '238');
   assert.deepEqual(await order(), [47, 1, 238]);
 
   // Timer für Zeit-Übungen: 3-2-1, dann läuft die Uhr; "Fertig" loggt die gehaltene Zeit
@@ -1770,7 +1791,7 @@ test('routines several times a day: tick rounds, catch up a missed day and fix h
   const token = await register(page, `rounds_${Date.now()}`);
   const day = (n) => { const d = new Date(Date.now() + n * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   await api('PUT', '/api/routines/rt-e2erounds', token, {
-    title: 'Stretch 3x', kind: 'mobility', days: 127, timesPerDay: 3, startDate: day(-3), endDate: day(10), reason: null,
+    title: 'Stretch 3x', kind: 'mobility', days: 127, timesPerDay: 3, times: ['00:00', '00:01', '00:02'], startDate: day(-3), endDate: day(10), reason: null,
     steps: [{ name: 'Hip flexor', dose: '2 x 45 s' }], doneDates: [day(-3), day(-3), day(-3)], source: 'user',
   });
   await page.reload();
@@ -1906,13 +1927,13 @@ test('rehab pain, round times, routine library and reminders: logged, synced and
   const token = await register(page, `pain_${Date.now()}`);
   const day = (n) => { const d = new Date(Date.now() + n * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   await api('PUT', '/api/routines/rt-e2epain1', token, {
-    title: 'Calf rehab', kind: 'rehab', days: 127, timesPerDay: 2, times: ['23:58', '23:59'], startDate: day(-3), endDate: day(10),
+    title: 'Calf rehab', kind: 'rehab', days: 127, timesPerDay: 2, times: ['00:00', '00:01'], startDate: day(-3), endDate: day(10),
     steps: [{ name: 'Calf raise', dose: '3 x 15' }], pain: [{ day: day(-2), level: 5 }, { day: day(-1), level: 4 }],
   });
   await page.reload();
 
-  // Uhrzeit des nächsten Durchgangs steht in der Zeile
-  await page.waitForSelector('[data-routine=rt-e2epain1] [data-test=routine-next]');
+  // Durchgänge des Tages mit Uhrzeit stehen in der Zeile
+  await page.waitForSelector('[data-routine=rt-e2epain1] [data-round="2"] >> text=00:01');
   // Erster Haken des Tages -> Schmerz-Frage; 3 wählen -> Abzeichen, Server hat den Wert
   await page.click('[data-routine=rt-e2epain1] [data-test=routine-check]');
   await page.click('[data-test=pain-ask] [data-pain="3"]');
@@ -1922,7 +1943,7 @@ test('rehab pain, round times, routine library and reminders: logged, synced and
     const r = list.find((x) => x.clientId === 'rt-e2epain1');
     return r?.pain?.some((p) => p.day === day(0) && p.level === 3) ? r : null;
   });
-  assert.deepEqual(saved.times, ['23:58', '23:59']);
+  assert.deepEqual(saved.times, ['00:00', '00:01']);
   assert.equal(saved.doneDates.filter((d) => d === day(0)).length, 1);
   // Zweiter Haken fragt nicht noch einmal
   await page.click('[data-routine=rt-e2epain1] [data-test=routine-check]');
@@ -1996,16 +2017,18 @@ test('routine player: timer phases, remaining rounds and a finished round ticked
   const token = await register(page, `player_${Date.now()}`);
   const day = (n) => { const d = new Date(Date.now() + n * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   await api('PUT', '/api/routines/rt-e2eplay1', token, {
-    title: 'Hip mobility', kind: 'mobility', days: 127, timesPerDay: 3, times: ['23:57'], startDate: day(-1), endDate: day(10),
+    title: 'Hip mobility', kind: 'mobility', days: 127, timesPerDay: 3, times: ['00:00'], startDate: day(-1), endDate: day(10),
     steps: [{ name: 'Hip flexor stretch', dose: '2 x 30 s per side' }, { name: 'Glute bridge', dose: '2 x 10' }],
   });
   await page.reload();
-  // Zeiten werden auf 3 Durchgänge aufgefüllt, die Zeile zeigt die offenen Durchgänge
-  await page.waitForSelector('[data-routine=rt-e2eplay1] [data-test=routine-next]');
-  assert.match(await page.textContent('[data-routine=rt-e2eplay1] [data-test=routine-next]'), /3 more times/);
-  await page.click('[data-routine=rt-e2eplay1] button >> nth=1');
+  // Zeiten werden auf 3 Durchgänge aufgefüllt, die Zeile zeigt die Durchgänge des Tages
+  await page.waitForSelector('[data-routine=rt-e2eplay1] [data-test=routine-rounds]');
+  assert.equal(await page.locator('[data-routine=rt-e2eplay1] [data-round]').count(), 3);
+  assert.match(await page.textContent('[data-routine=rt-e2eplay1] [data-round="1"]'), /Morning/);
+  assert.match(await page.textContent('[data-routine=rt-e2eplay1] [data-test=routine-play]'), /Morning/);
   await page.click('[data-routine=rt-e2eplay1] [data-test=routine-play]');
   await page.waitForSelector('[data-test=routine-player]');
+  assert.match(await page.textContent('[data-test=player-round]'), /Morning · 1\/3/);
   assert.match(await page.textContent('[data-test=player-kind]'), /Set 1 of 2 · left side/);
   assert.match(await page.textContent('[data-test=player-time]'), /^(30|29)$/);
   // Pause hält die Zeit an
@@ -2020,20 +2043,82 @@ test('routine player: timer phases, remaining rounds and a finished round ticked
   }
   await page.waitForSelector('[data-test=player-finished]');
   assert.match(await page.textContent('[data-test=player-finished]'), /Ticked: 1 of 3 today/);
+  assert.match(await page.textContent('[data-test=player-finish-title]'), /Morning done/);
+  assert.match(await page.textContent('[data-test=player-next-round]'), /Next: /);
   await page.click('[data-test=player-done]');
   const saved = await waitFor(async () => {
     const r = (await api('GET', '/api/routines', token)).find((x) => x.clientId === 'rt-e2eplay1');
     return r?.doneDates.filter((d) => d === day(0)).length === 1 ? r : null;
   });
   assert.equal(saved.times.length, 3);
-  assert.match(await page.textContent('[data-routine=rt-e2eplay1] [data-test=routine-next]'), /2 more times/);
+  assert.match(await page.getAttribute('[data-routine=rt-e2eplay1] [data-round="1"]', 'class'), /is-done/);
   // Alles erledigt: der große Haken löst nicht still einen Durchgang, sondern klappt die Durchgänge auf
-  await page.click('[data-routine=rt-e2eplay1] [data-test=routine-check]');
-  await page.click('[data-routine=rt-e2eplay1] [data-test=routine-check]');
+  for (let i = 0; i < 2; i++) {
+    await page.click('[data-routine=rt-e2eplay1] [data-test=routine-check]');
+    // Durchgang noch nicht dran -> Rückfrage
+    if (await page.locator('[data-routine=rt-e2eplay1] [data-test=routine-early-yes]').count()) await page.click('[data-routine=rt-e2eplay1] [data-test=routine-early-yes]');
+  }
+  await waitFor(async () => (await page.getAttribute('[data-routine=rt-e2eplay1] [data-test=routine-check]', 'aria-pressed')) === 'true');
+  await page.click('[data-routine=rt-e2eplay1] button >> nth=1'); // aufklappen
   await page.click('[data-routine=rt-e2eplay1] button >> nth=1'); // zuklappen
   await page.click('[data-routine=rt-e2eplay1] [data-test=routine-check]');
   await page.waitForSelector('[data-routine=rt-e2eplay1] [data-test=routine-today-steps]');
   assert.equal(await page.getAttribute('[data-routine=rt-e2eplay1] [data-test=routine-check]', 'aria-pressed'), 'true');
+  assert.deepEqual(errors, []);
+});
+
+test('routine rounds by time of day: later rounds ask first, closing the player keeps the progress', async () => {
+  const { page, errors } = await newPage();
+  const token = await register(page, `slots_${Date.now()}`);
+  const now = new Date();
+  const ymd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  // Fester Zeitpunkt 09:00: Morgen ist dran, Mittag (13:00) und Abend (20:00) noch nicht
+  await page.clock.install({ time: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0) });
+  await api('PUT', '/api/routines/rt-e2eslots', token, {
+    title: 'Ankle rehab', kind: 'mobility', days: 127, timesPerDay: 3, times: ['08:00', '13:00', '20:00'], startDate: ymd, endDate: null,
+    steps: [{ name: 'Calf raise', dose: '2 x 12' }, { name: 'Balance', dose: '30 s' }],
+  });
+  await page.reload();
+  const row = page.locator('[data-routine=rt-e2eslots]');
+  await row.locator('[data-test=routine-rounds]').waitFor();
+  assert.match(await row.locator('[data-round="1"]').getAttribute('class'), /is-now/);
+  assert.match(await row.locator('[data-round="2"]').getAttribute('class'), /is-later/);
+
+  // Morgen im Player anfangen, nach dem ersten Schritt schließen -> Stand bleibt (auch nach Neuladen)
+  assert.match(await row.locator('[data-test=routine-play]').textContent(), /Morning/);
+  await row.locator('[data-test=routine-play]').click();
+  await page.waitForSelector('[data-test=routine-player]');
+  await page.click('[data-test=player-done-step]'); // 2 × 12: Satz 1
+  await page.click('[data-test=player-close]');
+  await page.reload();
+  await row.locator('[data-test=routine-play]').waitFor();
+  assert.match(await row.locator('[data-test=routine-play]').textContent(), /Continue/);
+  await row.locator('[data-test=routine-play]').click();
+  await page.waitForSelector('[data-test=player-resumed]');
+  for (let i = 0; i < 12 && !(await page.locator('[data-test=player-finished]').count()); i++) {
+    await page.click((await page.locator('[data-test=player-done-step]').count()) ? '[data-test=player-done-step]' : '[data-test=player-skip]');
+  }
+  assert.match(await page.textContent('[data-test=player-finish-title]'), /Morning done/);
+  assert.match(await page.textContent('[data-test=player-next-round]'), /Midday at 13:00/);
+  await page.click('[data-test=player-done]');
+
+  // Mittag ist noch nicht dran: Haken fragt nach, "Later" ändert nichts
+  await row.locator('[data-test=routine-check]').click();
+  await row.locator('[data-test=routine-early]').waitFor();
+  assert.match(await row.locator('[data-test=routine-early]').textContent(), /Midday is planned for 13:00 \(from 12:15\)/);
+  await row.locator('button:has-text("Later")').click();
+  assert.match(await row.locator('[data-test=routine-check]').textContent(), /1\/3/);
+  // Mittags (12:30) ohne Rückfrage
+  await page.clock.setSystemTime(new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 30));
+  await page.clock.runFor(61_000);
+  await row.locator('[data-test=routine-check]').click();
+  await row.locator('[data-test=routine-check] >> text=2/3').waitFor();
+  assert.equal(await row.locator('[data-test=routine-early]').count(), 0);
+  const saved = await waitFor(async () => {
+    const r = (await api('GET', '/api/routines', token)).find((x) => x.clientId === 'rt-e2eslots');
+    return r?.doneDates.filter((d) => d === ymd).length === 2 ? r : null;
+  });
+  assert.ok(saved);
   assert.deepEqual(errors, []);
 });
 
@@ -2053,8 +2138,9 @@ test('athlete data: fitness tests with levels, protein, weight and match details
   const tests = await waitFor(async () => { const l = await api('GET', '/api/fitness-tests', token); return l.length === 2 ? l : null; });
   assert.deepEqual(tests.map((x) => `${x.test}:${x.value}`).sort(), ['cmj:41', 'sprint30:4.2']);
 
-  await page.click('[data-test=protein] [data-protein="30"]');
-  await page.click('[data-test=protein] [data-protein="40"]');
+  await page.click('[data-test=protein] [data-protein="quark"]'); // Magerquark 250 g = 30 g
+  await page.fill('[data-test=protein-custom]', '40');
+  await page.click('[data-test=protein-add]');
   await page.fill('[data-test=weight-input]', '75.4');
   await page.click('[data-test=weight-save]');
   const daily = await waitFor(async () => { const l = await api('GET', '/api/daily', token); return l[0]?.proteinG === 70 && l[0]?.weightKg === 75.4 ? l : null; });
@@ -2073,6 +2159,76 @@ test('athlete data: fitness tests with levels, protein, weight and match details
   await page.click('form[role=dialog] button[type=submit]');
   const match = await waitFor(async () => (await api('GET', '/api/workouts/history', token)).find((w) => w.workoutType === 'Match'));
   assert.deepEqual({ ...match.match }, { goals: null, assists: null, opponent: null, position: 'winger', teamGoals: 3, opponentGoals: 1, wentWell: 'Won my 1v1s', toImprove: 'Pressing' });
+  assert.deepEqual(errors, []);
+});
+
+test('body, wellness and history: weigh-in with steps, catch up yesterday, undo protein, search and expand history', async () => {
+  const { page, errors } = await newPage();
+  const token = await register(page, `body_${Date.now()}`);
+  const day = (n) => { const d = new Date(Date.now() + n * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  await page.click('nav >> text=DATA');
+  await page.click('[role=tab] >> text=Athlete');
+  // Körper steht über den Tests
+  await page.waitForSelector('[data-test=athlete-panel] [data-test=health]');
+  const order = await page.$$eval('[data-test=athlete-panel] > section', (els) => els.map((e) => e.getAttribute('data-test')));
+  assert.deepEqual(order, ['body-card', 'body-trends', 'tests-card', 'health']);
+  // Heute wiegen, gestern nachtragen (±0,1 vom letzten Wert)
+  await page.fill('[data-test=weight-input]', '76.4');
+  await page.click('[data-test=weight-save]');
+  await page.waitForSelector('[data-test=weight-latest] >> text=76.4');
+  await page.click(`[data-test=body-days] [data-day="${day(-1)}"]`);
+  await page.click('button[aria-label="Plus 0.1 kg"]');
+  await page.click('button[aria-label="Plus 0.1 kg"]');
+  assert.equal(await page.inputValue('[data-test=weight-input]'), '76.6');
+  await page.click('[data-test=weight-save]');
+  // Eiweiß gestern: Quark + Shake, Shake rückgängig
+  await page.click('[data-protein="quark"]');
+  await page.click('[data-protein="shake"]');
+  assert.equal((await page.textContent('[data-test=protein-today]')).trim(), '54');
+  await page.click('[data-test=protein-undo]');
+  assert.equal((await page.textContent('[data-test=protein-today]')).trim(), '30');
+  const daily = await waitFor(async () => {
+    const l = await api('GET', '/api/daily', token);
+    const y = l.find((d) => d.day === day(-1));
+    return y?.weightKg === 76.6 && y?.proteinG === 30 && l.find((d) => d.day === day(0))?.weightKg === 76.4 ? l : null;
+  });
+  assert.ok(daily);
+  // Uhr-Anleitung je Marke
+  await page.click('[data-brand=garmin]');
+  assert.match(await page.textContent('[data-test=watch-steps]'), /Garmin Connect/);
+
+  // Befinden für gestern nachtragen
+  await page.click('nav >> text=PLAN');
+  await page.click('[data-test=check-in-missed]');
+  assert.equal(await page.getAttribute(`[data-test=check-in-days] [data-day="${day(-1)}"]`, 'aria-checked'), 'true');
+  await page.click('[data-wellness="sleep-2"]');
+  await page.click('button:has-text("Save check-in")');
+  const wellness = await waitFor(async () => (await api('GET', '/api/wellness', token)).find((w) => w.date === day(-1)));
+  assert.equal(wellness.sleep, 2);
+  assert.equal(await page.locator('[data-test=check-in-missed]').count(), 0);
+
+  // Verlauf: zwei Einheiten, neueste offen, Suche
+  await api('POST', '/api/workouts', token, { clientId: crypto.randomUUID(), date: new Date(Date.now() - 86400_000).toISOString(), workoutType: 'Gym', durationSeconds: 3600, sessionRpe: 6,
+    sets: [{ exerciseId: 1, exerciseName: 'Bench Press', trackingType: 'WeightReps', category: 'Gym', setNumber: 1, weight: 80, reps: 5 }] });
+  await api('POST', '/api/workouts', token, { clientId: crypto.randomUUID(), date: new Date().toISOString(), workoutType: 'Football', durationSeconds: 2700, sessionRpe: 5,
+    sets: [{ exerciseId: 12, exerciseName: 'Running / Sprints', trackingType: 'DistanceTime', category: 'Football', setNumber: 1, distance: 400, time: 90 }] });
+  await page.reload();
+  await page.click('nav >> text=DATA');
+  await page.click('[data-subtab=history]');
+  await page.waitForSelector('[data-test=history-week]');
+  const toggles = page.locator('[data-test=history-toggle]');
+  assert.equal(await toggles.count(), 2);
+  assert.equal(await toggles.nth(0).getAttribute('aria-expanded'), 'true');
+  assert.equal(await toggles.nth(1).getAttribute('aria-expanded'), 'false');
+  await toggles.nth(1).click();
+  await page.waitForSelector('.hist-set >> text=80 kg × 5');
+  await page.fill('[data-test=history-search]', 'bench');
+  assert.equal(await page.locator('[data-test=history-toggle]').count(), 1);
+  await page.fill('[data-test=history-search]', 'zzz');
+  await page.waitForSelector('text=Nothing found.');
+  await page.fill('[data-test=history-search]', '');
+  await page.click('[data-filter=Gym]');
+  assert.equal(await page.locator('[data-test=history-toggle]').count(), 1);
   assert.deepEqual(errors, []);
 });
 

@@ -9,7 +9,7 @@ import { intlLocale, t, tn } from '@/i18n';
 import { useAppStore } from '@/stores/app';
 import { useRoutinesStore } from '@/stores/routines';
 import { useRemindersStore } from '@/stores/reminders';
-import { clockTime, nextRound, painOn, painTone, parseDay, roundTime, slotOf, tracksPain, type Routine } from '@/lib/routines';
+import { clockTime, nextRound, painOn, painTone, parseDay, roundGate, roundTime, slotOf, tracksPain, type Routine } from '@/lib/routines';
 import { alarmHaptic, tap as haptic } from '@/lib/native';
 import RoutineMeta from './RoutineMeta.vue';
 import RoutineStepRow from './RoutineStepRow.vue';
@@ -39,9 +39,15 @@ const now = computed(() => clockTime(app.clockDate));
  * Großer Haken: nächster Durchgang. Einmal täglich: normaler Haken (nochmal tippen löst ihn).
  * Mehrmals täglich und schon alles erledigt: nicht still einen Durchgang lösen, sondern die Durchgänge aufklappen.
  */
-function main(r: Routine) {
+/** Durchgang noch nicht dran (Abend um 14 Uhr): erst nachfragen statt still abhaken/starten. */
+const early = ref<{ id: string; action: 'tick' | 'play' } | null>(null);
+const gate = (r: Routine) => roundGate(r, today.value, now.value);
+
+function main(r: Routine, force = false) {
   const before = p(r);
   if (r.timesPerDay > 1 && before.doneToday) { open.value = r.clientId; haptic(); return; }
+  if (!force && gate(r)?.open === false) { early.value = { id: r.clientId, action: 'tick' }; haptic(); return; }
+  early.value = null;
   routines.tap(r.clientId, Math.min(before.countToday + 1, r.timesPerDay));
   haptic();
   // Der Store ersetzt das Objekt beim Abhaken -> aktuellen Stand neu holen (sonst bleibt die Animation aus)
@@ -49,6 +55,30 @@ function main(r: Routine) {
   const nowDone = !!fresh && p(fresh).doneToday;
   justDone.value = nowDone && !before.doneToday ? r.clientId : null;
   if (justDone.value) window.setTimeout(() => { if (justDone.value === r.clientId) justDone.value = null; }, 700);
+}
+
+/** Player für den Durchgang, der jetzt dran ist (bzw. Fortsetzen). */
+function play(r: Routine, force = false) {
+  if (!force && !routines.progressFor(r.clientId) && !p(r).doneToday && gate(r)?.open === false) { early.value = { id: r.clientId, action: 'play' }; haptic(); return; }
+  early.value = null;
+  routines.openPlayer(r.clientId);
+}
+
+function confirmEarly(r: Routine) {
+  const action = early.value?.action;
+  early.value = null;
+  if (action === 'play') play(r, true);
+  else main(r, true);
+}
+
+/** Name eines Durchgangs: Tageszeit (mit Uhrzeit) oder Nummer. */
+const roundName = (r: Routine, k: number) => { const time = roundTime(r, k); return time ? t(`routines.slots.${slotOf(time)}`) : t('routines.round', { n: k }); };
+
+/** Beschriftung des Start-Knopfs: Fortsetzen / Tageszeit des fälligen Durchgangs / nochmal. */
+function playLabel(r: Routine): string {
+  if (routines.progressFor(r.clientId)) return t('routines.player.continue');
+  if (r.timesPerDay > 1 && !p(r).doneToday) return roundName(r, p(r).countToday + 1);
+  return t('routines.player.start');
 }
 
 watch(allDone, (done, was) => {
@@ -147,12 +177,41 @@ watch(() => reminders.focus, async (f) => {
                       <span class="min-w-0 flex-1">
                           <span class="line-clamp-2 break-words text-sm font-bold leading-snug transition-colors" :class="p(r).doneToday ? 'text-slate-400 line-through decoration-1' : 'text-white'">{{ r.title }}</span>
                           <RoutineMeta :routine="r" compact />
-                          <span v-if="nextLabel(r) && !p(r).doneToday" class="routine-next" :class="{ 'is-due': nextLabel(r)!.due }" data-test="routine-next">{{ nextLabel(r)!.text }}</span>
+                          <span v-if="r.timesPerDay === 1 && nextLabel(r) && !p(r).doneToday" class="routine-next" :class="{ 'is-due': nextLabel(r)!.due }" data-test="routine-next">{{ nextLabel(r)!.text }}</span>
                       </span>
                       <span v-if="p(r).missedRecent" class="routine-missed-dot" :title="t('routines.missedOn', { date: date(p(r).missedRecent!) })" aria-hidden="true"></span>
                       <svg class="h-3.5 w-3.5 flex-shrink-0 text-slate-400 transition-transform duration-200" :class="{ 'rotate-90': open === r.clientId }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
                   </button>
+                  <!-- Start mit Timer: immer sichtbar, beschriftet mit dem Durchgang, der jetzt dran ist -->
+                  <button v-if="!p(r).doneToday || routines.progressFor(r.clientId)" type="button" class="routine-play-btn" :class="{ 'is-later': gate(r)?.open === false && !routines.progressFor(r.clientId) }"
+                          :aria-label="`${t('routines.player.startLong')}: ${r.title} · ${playLabel(r)}`" data-test="routine-play" @click="play(r)">
+                      <svg class="h-3 w-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 001.5.86l10.5-6.5a1 1 0 000-1.72L9.5 4.64A1 1 0 008 5.5z"/></svg>
+                      <span class="truncate">{{ playLabel(r) }}</span>
+                  </button>
               </div>
+
+              <!-- Mehrmals täglich: Durchgänge des Tages auf einen Blick (erledigt / jetzt / später) -->
+              <ol v-if="r.timesPerDay > 1" class="routine-rounds ml-12 mt-1" :aria-label="t('routines.rounds')" data-test="routine-rounds">
+                  <li v-for="k in r.timesPerDay" :key="k" class="routine-round"
+                      :class="k <= p(r).countToday ? 'is-done' : k === p(r).countToday + 1 ? (gate(r)?.open ? 'is-now' : 'is-next') : 'is-later'" :data-round="k">
+                      <svg v-if="k <= p(r).countToday" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+                      <span>{{ roundName(r, k) }}</span>
+                      <span v-if="roundTime(r, k)" class="font-mono opacity-70">{{ roundTime(r, k) }}</span>
+                  </li>
+              </ol>
+
+              <!-- Noch nicht dran: nachfragen -->
+              <transition name="expand">
+                  <div v-if="early?.id === r.clientId" class="expand-wrap" data-test="routine-early">
+                      <div class="routine-pain-ask ml-12 mt-1.5">
+                          <p class="text-xs leading-snug text-slate-200">{{ t('routines.early', { slot: roundName(r, gate(r)!.k), time: gate(r)!.time ?? '', from: gate(r)!.opensAt ?? '' }) }}</p>
+                          <div class="mt-2 flex gap-2">
+                              <button type="button" class="btn-secondary flex-1 rounded-xl px-3 py-2 text-xs" @click="early = null">{{ t('routines.later') }}</button>
+                              <button type="button" class="btn-primary flex-1 rounded-xl px-3 py-2 text-xs" data-test="routine-early-yes" @click="confirmEarly(r)">{{ early.action === 'play' ? t('routines.startNow') : t('routines.markNow') }}</button>
+                          </div>
+                      </div>
+                  </div>
+              </transition>
 
               <!-- Reha: Schmerz nach dem ersten Haken des Tages (oder Abzeichen angetippt) -->
               <transition name="expand">
@@ -186,10 +245,7 @@ watch(() => reminders.focus, async (f) => {
                           </ol>
                           <p v-if="r.reason" class="pt-1 text-[11px] leading-snug text-slate-400">{{ r.reason }}</p>
                           <div class="mt-2 flex flex-wrap items-center gap-2">
-                              <button type="button" class="routine-start" data-test="routine-play" @click="routines.openPlayer(r.clientId)">
-                                  <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 001.5.86l10.5-6.5a1 1 0 000-1.72L9.5 4.64A1 1 0 008 5.5z"/></svg>
-                                  {{ t('routines.player.start') }}
-                              </button>
+                              <button v-if="p(r).doneToday" type="button" class="routine-link" data-test="routine-play-extra" @click="routines.openPlayer(r.clientId)">▶ {{ t('routines.player.again') }}</button>
                               <button v-if="p(r).missedRecent" type="button" class="routine-link" data-test="routine-catch-up" @click="routines.setDone(r.clientId, true, p(r).missedRecent!)">
                                   {{ t('routines.catchUp', { date: date(p(r).missedRecent!) }) }}
                               </button>

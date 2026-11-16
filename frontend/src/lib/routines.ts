@@ -261,6 +261,25 @@ export function nextRound(r: Routine, today: string, now: string): { k: number; 
   return { k: done + 1, time, due: time == null || time <= now };
 }
 
+/** So viele Minuten vor seiner Uhrzeit ist ein Durchgang schon "dran" (morgens 08:00 -> ab 07:15). */
+export const ROUND_EARLY_MIN = 45;
+const minutesOf = (hhmm: string): number => { const [h, m] = hhmm.split(':').map(Number); return (h ?? 0) * 60 + (m ?? 0); };
+
+/**
+ * Der Durchgang, der jetzt dran ist: der nächste offene. "open" = Uhrzeit (minus 45 min) erreicht oder ohne Uhrzeit.
+ * Ist er noch nicht offen, soll die Oberfläche nicht still abhaken, sondern fragen ("Abend erst um 20:00 - jetzt schon?").
+ * So wird Morgen morgens, Mittag mittags und Abend abends gemacht - nicht alle auf einmal.
+ */
+export function roundGate(r: Routine, today: string, now: string): { k: number; time: string | null; open: boolean; opensAt: string | null } | null {
+  const n = nextRound(r, today, now);
+  if (!n) return null;
+  if (!n.time || r.timesPerDay === 1) return { k: n.k, time: n.time, open: true, opensAt: null };
+  const opens = minutesOf(n.time) - ROUND_EARLY_MIN;
+  const open = minutesOf(now) >= opens;
+  const h = Math.max(0, Math.floor(opens / 60)), m = Math.max(0, opens % 60);
+  return { k: n.k, time: n.time, open, opensAt: open ? null : `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}` };
+}
+
 // ---------- Schmerz (Reha) ----------
 
 export const PAIN_MAX = 10;
