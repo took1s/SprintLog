@@ -107,7 +107,7 @@ const kmh = (v: number) => v.toLocaleString(intlLocale(), { maximumFractionDigit
       <!-- Wochen -->
       <section v-for="week in weeks" :key="week.key" :aria-label="weekTitle(week.start, week.end)" data-test="history-week">
           <header class="hist-week">
-              <h3 class="truncate">{{ weekTitle(week.start, week.end) }}</h3>
+              <h3>{{ weekTitle(week.start, week.end) }}</h3>
               <p class="font-mono">
                   {{ tn('history.sessions', week.workouts.length) }}<template v-if="week.minutes"> · {{ hm(week.minutes) }}</template><template v-if="week.load"> · {{ t('history.loadShort', { n: week.load }) }}</template>
               </p>
