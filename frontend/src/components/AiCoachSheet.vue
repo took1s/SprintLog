@@ -57,14 +57,22 @@ function onKey(e: KeyboardEvent) {
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); void send(); }
 }
 
-/** Eingabefeld wächst mit dem Text (bis max-h-32), statt den Platzhalter abzuschneiden. */
-function autoGrow() {
+/**
+ * Eingabefeld wächst mit dem Text (bis max-h-32), statt den Platzhalter abzuschneiden.
+ * Nur beim Kürzen kurz auf "auto" zurücksetzen - das ständige Zusammenklappen bei jedem Zeichen ließ iOS
+ * den Cursor neu "suchen" und das Feld/die Seite nach unten springen. Die Scrollposition im Feld bleibt erhalten.
+ */
+const MAX_INPUT = 128;
+function autoGrow(shrunk: boolean) {
   const el = input.value;
   if (!el) return;
-  el.style.height = 'auto';
-  el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+  const top = el.scrollTop;
+  if (shrunk) el.style.height = 'auto';
+  const next = Math.min(el.scrollHeight, MAX_INPUT);
+  if (shrunk || next > el.clientHeight) el.style.height = `${next}px`;
+  if (el.scrollTop !== top) el.scrollTop = top;
 }
-watch(draft, () => nextTick(autoGrow));
+watch(draft, (now, before) => nextTick(() => autoGrow((now?.length ?? 0) < (before?.length ?? 0))));
 
 const scrollDown = () => nextTick(() => { const el = list.value; if (el) el.scrollTop = el.scrollHeight; });
 const reduceMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;

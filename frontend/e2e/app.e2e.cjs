@@ -1150,8 +1150,8 @@ test('Motion: page stays put under sheets, pull down to close, long-press shortc
   await page.waitForTimeout(100);
   assert.equal(await dialogs(), 1, 'only the info sheet, no set dialog');
   assert.equal(await locked(), true);
-  assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).overflow), 'hidden');
-  assert.equal(await page.evaluate(() => window.scrollY), y0, 'page stays where it was (no jump to the top)');
+  // Body fixiert an der alten Stelle: optisch unverändert, iOS kann die Seite beim Tippen nicht verschieben
+  assert.deepEqual(await page.evaluate(() => [document.body.style.position, document.body.style.top]), ['fixed', `-${y0}px`], 'page stays where it was (no jump to the top)');
 
   // Nach unten ziehen schließt; danach steht die Seite wieder an derselben Stelle
   const sheet = page.locator('[data-test=exercise-info]');
