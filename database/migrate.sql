@@ -4788,3 +4788,2162 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    ALTER TABLE "Workouts" ADD "Participation" character varying(16);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    ALTER TABLE "Workouts" ADD "TeamFocus" character varying(16);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    ALTER TABLE "Programs" ADD "TeamDays" integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    ALTER TABLE "Exercises" ADD "CreatedByCoach" boolean NOT NULL DEFAULT FALSE;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    ALTER TABLE "Exercises" ADD "Description" character varying(400);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 1;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 2;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 3;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 4;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 5;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 6;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 7;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 8;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 9;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 10;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 11;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 12;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 13;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 14;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 15;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 16;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 17;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 18;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 19;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 20;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 21;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 22;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 23;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 24;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 25;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 26;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 27;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 28;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 29;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 30;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 31;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 32;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 33;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 34;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 35;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 36;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 37;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 38;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 39;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 40;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 41;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 42;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 43;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 44;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 45;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 46;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 47;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 48;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 49;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 50;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 51;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 52;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 53;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 54;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 55;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 56;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 57;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 58;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 59;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 60;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 61;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 62;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 63;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 64;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 65;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 66;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 67;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 68;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 69;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 70;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 71;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 72;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 73;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 74;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 75;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 76;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 77;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 78;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 79;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 80;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 81;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 82;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 83;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 84;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 85;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 86;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 87;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 88;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 89;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 90;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 91;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 92;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 93;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 94;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 95;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 96;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 97;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 98;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 99;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 100;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 101;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 102;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 103;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 104;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 105;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 106;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 107;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 108;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 109;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 110;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 111;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 112;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 113;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 114;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 115;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 116;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 117;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 118;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 119;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 120;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 121;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 122;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 123;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 124;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 125;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 126;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 127;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 128;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 129;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 130;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 131;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 132;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 133;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 134;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 135;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 136;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 137;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 138;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 139;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 140;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 141;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 142;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 143;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 144;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 145;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 146;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 147;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 148;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 149;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 150;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 151;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 152;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 153;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 154;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 155;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 156;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 157;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 158;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 159;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 160;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 161;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 162;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 163;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 164;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 165;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 166;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 167;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 168;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 169;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 170;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 171;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 172;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 173;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 174;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 175;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 176;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 177;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 178;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 179;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 180;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 181;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 182;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 183;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 184;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 185;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 186;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 187;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 188;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 189;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 190;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 191;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 192;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 193;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 194;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 195;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 196;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 197;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 198;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 199;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 200;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 201;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 202;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 203;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 204;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 205;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 206;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 207;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 208;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 209;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 210;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 211;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 212;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 213;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 214;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 215;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 216;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 217;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 218;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 219;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 220;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 221;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 222;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 223;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 224;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 225;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 226;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 227;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 228;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 229;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 230;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 231;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 232;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 233;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 234;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 235;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 236;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 237;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 238;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 239;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 240;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 241;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 242;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 243;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 244;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 245;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 246;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 247;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 248;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 249;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 250;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 251;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 252;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 253;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 254;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 255;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 256;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 257;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 258;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 259;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 260;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 261;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 262;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 263;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    UPDATE "Exercises" SET "CreatedByCoach" = FALSE, "Description" = NULL
+    WHERE "Id" = 264;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261119003253_TeamTrainingCoachExercises') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261119003253_TeamTrainingCoachExercises', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
