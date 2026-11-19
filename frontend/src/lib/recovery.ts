@@ -87,6 +87,15 @@ export function estimateRecovery(sets: readonly SetInfo[], opts: { kind?: string
     hours.system = Math.max(hours.system, matchHours);
   }
 
+  // Mannschaftstraining (ohne Sätze): Beine + System nach Dauer und Härte - locker ~12-18 h, hart (Spielformen, Kondition) bis 48 h
+  if (opts.kind === 'Team') {
+    const minutes = opts.durationMin ?? 90;
+    const rpe = opts.sessionRpe ?? 6;
+    const teamHours = Math.round(clamp(12 + (minutes / 90) * 12 + (rpe - 5) * 6, 12, 48));
+    hours.legs = Math.max(hours.legs, teamHours);
+    hours.system = Math.max(hours.system, teamHours);
+  }
+
   // Gesamte Anstrengung (sRPE): sehr harte, lange Einheiten belasten den ganzen Körper
   if (opts.sessionRpe != null && opts.durationMin != null) {
     const load = opts.sessionRpe * opts.durationMin;

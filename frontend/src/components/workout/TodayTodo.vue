@@ -7,11 +7,15 @@ import { t } from '@/i18n';
 import { useAppStore } from '@/stores/app';
 import { useAthleteStore } from '@/stores/athlete';
 import { useHealthStore } from '@/stores/health';
+import TeamIcon from '../TeamIcon.vue';
 
 const app = useAppStore();
 const athlete = useAthleteStore();
 const health = useHealthStore();
 const { protein, due, testDay } = storeToRefs(athlete);
+const { todayPlan, teamLoggedToday } = storeToRefs(app);
+/** Heute Mannschaftstraining laut Wochenplan und noch nicht erfasst. */
+const teamDue = computed(() => !!todayPlan.value?.team && !teamLoggedToday.value);
 
 const proteinPct = computed(() => (protein.value.target ? Math.min(100, Math.round((protein.value.today / protein.value.target.goal) * 100)) : 0));
 const testsDue = computed(() => due.value.state === 'due' || due.value.state === 'overdue' || due.value.state === 'none');
@@ -39,6 +43,15 @@ function openAthlete() { app.tab = 'Data'; app.dataTab = 'athlete'; }
           </button>
           <button type="button" class="protein-btn !min-h-[2.5rem] px-3" data-protein-quick @click="athlete.addProtein(30)">+30 g</button>
       </div>
+      <!-- Тренировка с командой: записать после тренировки (минуты × RPE идут в нагрузку) -->
+      <button v-if="teamDue" type="button" class="todo-row w-full text-left" data-test="todo-team" @click="app.openTeamModal()">
+          <span class="todo-icon" aria-hidden="true"><TeamIcon class="h-5 w-5 text-accent" /></span>
+          <span class="min-w-0 flex-1">
+              <span class="block text-sm font-bold text-white">{{ t('team.todoTitle') }}</span>
+              <span class="block truncate text-[11px] text-slate-400">{{ t('team.todoHint') }}</span>
+          </span>
+          <span class="text-slate-400" aria-hidden="true">›</span>
+      </button>
       <!-- Тесты формы -->
       <button v-if="testsDue || testDay" type="button" class="todo-row w-full text-left" data-test="todo-tests" @click="athlete.openTestDay()">
           <span class="todo-icon is-gold" aria-hidden="true">
@@ -62,6 +75,7 @@ function openAthlete() { app.tab = 'Data'; app.dataTab = 'athlete'; }
           <button type="button" class="h-9 w-9 flex-shrink-0 rounded-lg text-slate-500 hover:text-white" :aria-label="t('common.close')" @click="health.dismiss(watch)">✕</button>
           <div class="flex w-full gap-2 pl-12">
               <button v-if="watch.activity !== 'running'" type="button" class="btn-secondary flex-1 rounded-xl px-3 py-2 text-xs" data-test="watch-match" @click="health.logAsMatch(watch)">{{ t('body.logMatchShort') }}</button>
+              <button v-if="watch.activity !== 'running'" type="button" class="btn-secondary flex-1 rounded-xl px-3 py-2 text-xs" data-test="watch-team" @click="health.logAsTeam(watch)">{{ t('team.short') }}</button>
               <button type="button" class="btn-secondary flex-1 rounded-xl px-3 py-2 text-xs" :aria-expanded="askRpe" data-test="watch-training" @click="askRpe = !askRpe">{{ t('body.logTraining') }}</button>
           </div>
           <div v-if="askRpe" class="w-full pl-12" data-test="watch-rpe">

@@ -9,7 +9,7 @@ import { useRoutinesStore } from '@/stores/routines';
 import { usePlannedStore } from '@/stores/planned';
 import { indexByDay } from '@/lib/calendar';
 import { addDays, parseDay, routinesOnDay } from '@/lib/routines';
-import { kindOf, weekdayOf } from '@/lib/schedule';
+import { isTeamDay, kindOf, weekdayOf } from '@/lib/schedule';
 import { mdLabel } from '@/lib/matchDay';
 
 const app = useAppStore();
@@ -32,6 +32,7 @@ const days = computed(() => Array.from({ length: 7 }, (_, i) => {
     kind: kindOf(activeProgram.value, i),
     sessions: d?.sessions ?? 0,
     match: !!d?.kinds.includes('Match'),
+    team: isTeamDay(activeProgram.value, i) || !!d?.kinds.includes('Team'),
     extra,
     routinesDue: r.due.length,
     routinesDone: r.done,
@@ -48,6 +49,7 @@ const longName = (d: Date) => d.toLocaleDateString(intlLocale(), { weekday: 'lon
 
 function describe(d: (typeof days.value)[number]): string {
   const parts: string[] = [d.kind === 'match' ? t('week.match') : d.kind === 'training' ? t('week.training') : t('week.rest')];
+  if (d.team) parts.push(t('week.team'));
   if (d.md && d.md !== 'MD') parts.push(d.md);
   if (d.sessions) parts.push(tn('week.done', d.sessions));
   if (d.extra) parts.push(t('week.extra', { title: d.extra.title }));
@@ -68,6 +70,7 @@ function describe(d: (typeof days.value)[number]): string {
                   <i v-if="d.sessions || d.match" class="week-dot" :class="d.match ? 'is-match' : 'is-done'"></i>
                   <i v-else-if="d.kind === 'match'" class="week-dot is-match"></i>
                   <i v-else-if="d.kind === 'training'" class="week-dot is-training"></i>
+                  <i v-if="d.team" class="week-dot is-team"></i>
                   <i v-if="d.extra" class="week-dot is-extra"></i>
                   <i v-if="d.routinesDue && !d.past && !d.isToday" class="week-dot is-routines-part"></i>
                   <i v-else-if="d.routinesDue" class="week-dot" :class="d.routinesDone >= d.routinesDue ? 'is-routines' : 'is-routines-part'"></i>

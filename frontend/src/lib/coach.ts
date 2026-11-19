@@ -5,7 +5,7 @@ import type { LoadZone } from './program';
 import type { RecoveryStatus, Region } from './recovery';
 import type { DayKind } from './schedule';
 
-export type TodayKind = 'train' | 'light' | 'rest' | 'match' | 'rehab';
+export type TodayKind = 'train' | 'light' | 'rest' | 'match' | 'rehab' | 'team';
 
 export type Reason =
   | { key: 'matchToday' }
@@ -19,7 +19,8 @@ export type Reason =
   | { key: 'rehab' }
   | { key: 'rehabRest' }
   | { key: 'planNext'; day: string }
-  | { key: 'trainedToday' };
+  | { key: 'trainedToday' }
+  | { key: 'teamToday' } | { key: 'teamDouble' };
 
 export interface CoachInput {
   now: Date;
@@ -35,6 +36,8 @@ export interface CoachInput {
   nextDay: string | null;
   /** Bereiche, die der nächste Plan-Tag hauptsächlich belastet. */
   nextDayRegions: readonly Region[];
+  /** Heute Mannschaftstraining laut Wochenplan (noch nicht erfasst). */
+  teamToday?: boolean;
 }
 
 export interface CoachToday {
@@ -74,6 +77,17 @@ export function coachToday(c: CoachInput): CoachToday {
   if (c.daysSinceLast != null && c.daysSinceLast >= 4 && kind === 'rest' && !reasons.some((r) => r.key === 'loadDanger')) {
     kind = 'light';
     reasons.push({ key: 'longBreak', days: c.daysSinceLast });
+  }
+
+  // Mannschaftstraining: an einem freien Tag ist das die Einheit des Tages; an einem eigenen Trainingstag ein Doppeltag
+  if (c.teamToday) {
+    if (c.todayKind === 'rest') {
+      const i = reasons.findIndex((r) => r.key === 'restDay' || r.key === 'longBreak');
+      if (i >= 0) reasons.splice(i, 1);
+      reasons.unshift({ key: 'teamToday' });
+      return { kind: 'team', reasons, startPlan: false };
+    }
+    reasons.unshift({ key: 'teamDouble' });
   }
 
   if (kind === 'train') {

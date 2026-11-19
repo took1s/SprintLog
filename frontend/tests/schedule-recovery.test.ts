@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { bit, cycleDay, kindOf, nextDayOf, scheduleWarnings, suggestTrainingDays } from '../src/lib/schedule';
+import { bit, cycleDay, hasSchedule, isTeamDay, kindOf, nextDayOf, scheduleWarnings, suggestTrainingDays, toggleTeamDay, type Schedule } from '../src/lib/schedule';
 import { estimateRecovery, recoveryStatus } from '../src/lib/recovery';
 import type { Workout } from '../src/types';
 
@@ -29,6 +29,19 @@ describe('weekly schedule', () => {
     expect(scheduleWarnings({ trainingDays: bit(1) | bit(3), matchDays: SUN })).toEqual([]);
   });
 
+  test('team days: own layer, may double a training day, never on a match day', () => {
+    let s: Schedule = { trainingDays: bit(1), matchDays: SUN, teamDays: 0 };
+    s = toggleTeamDay(s, 1); expect(isTeamDay(s, 1)).toBe(true); expect(kindOf(s, 1)).toBe('training'); // Doppeltag
+    s = toggleTeamDay(s, 6); expect(isTeamDay(s, 6)).toBe(false);                                       // Spieltag: nicht möglich
+    s = toggleTeamDay(s, 3); expect(isTeamDay(s, 3)).toBe(true);
+    // Tag wird zum Spieltag -> Team-Tag fällt weg
+    s = cycleDay(cycleDay(s, 3), 3);
+    expect(kindOf(s, 3)).toBe('match'); expect(isTeamDay(s, 3)).toBe(false); expect(isTeamDay(s, 1)).toBe(true);
+    expect(hasSchedule({ trainingDays: 0, matchDays: 0, teamDays: bit(2) })).toBe(true);
+    // Team-Tage zählen als belegt (keine Ruhe)
+    expect(scheduleWarnings({ trainingDays: bit(0) | bit(2) | bit(4), matchDays: SUN, teamDays: bit(1) | bit(3) | bit(5) })).toContain('noRest');
+  });
+
   test('next training day from a date', () => {
     const wed = new Date(2026, 10, 4); // Mi 4.11.2026
     const next = nextDayOf({ trainingDays: bit(4), matchDays: 0 }, 'training', wed)!;
@@ -38,6 +51,15 @@ describe('weekly schedule', () => {
 
 describe('recovery estimate', () => {
   const legs = (n: number, rpe: number) => Array.from({ length: n }, () => ({ muscleGroup: 'Legs', trackingType: 'WeightReps', reps: 5, rpe }));
+
+  test('team training without sets: legs and system by duration and sRPE', () => {
+    const hard = estimateRecovery([], { kind: 'Team', sessionRpe: 8, durationMin: 100 });
+    const easy = estimateRecovery([], { kind: 'Team', sessionRpe: 3, durationMin: 60 });
+    expect(hard.hours.legs).toBeGreaterThan(easy.hours.legs);
+    expect(hard.hours.legs).toBeLessThanOrEqual(48);
+    expect(easy.hours.legs).toBeGreaterThanOrEqual(12);
+    expect(hard.main).not.toBeNull();
+  });
 
   test('more hard sets and higher RPE need more time; easy work very little', () => {
     const heavy = estimateRecovery(legs(8, 9.5)).hours.legs;

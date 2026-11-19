@@ -244,6 +244,13 @@ namespace SprintLog.Api.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<bool>("CreatedByCoach")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
                     b.Property<bool>("IsAssisted")
                         .HasColumnType("boolean");
 
@@ -278,6 +285,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 1,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Bench Press",
@@ -288,6 +296,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 2,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Leg Extensions",
@@ -298,6 +307,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 3,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Leg Curls",
@@ -308,6 +318,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 4,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Calf Raises",
@@ -318,6 +329,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 5,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Hip Abduction",
@@ -328,6 +340,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 6,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Hip Adduction",
@@ -338,6 +351,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 7,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Leg Press",
@@ -348,6 +362,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 8,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Cable Tricep Pushdown",
@@ -358,6 +373,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 9,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Barbell Bicep Curl",
@@ -368,6 +384,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 10,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Dumbbell Wrist Curl",
@@ -378,6 +395,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 11,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Reverse Wrist Curl",
@@ -388,6 +406,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 12,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Running / Sprints",
@@ -398,6 +417,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 13,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Dumbbell Bicep Curl",
@@ -408,6 +428,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 14,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Seated Cable Row",
@@ -418,6 +439,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 15,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Standing Dumbbell Curl",
@@ -428,6 +450,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 16,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Dumbbell Skull Crusher",
@@ -438,6 +461,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 17,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Pull-ups",
@@ -448,6 +472,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 18,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Chest Press Machine",
@@ -458,6 +483,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 19,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Machine Lateral Raise",
@@ -468,6 +494,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 20,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Dips",
@@ -478,6 +505,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 21,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Seated Calf Raises",
@@ -488,6 +516,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 22,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "EZ-Bar Bicep Curl",
@@ -498,6 +527,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 23,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Wide Grip Lat Pulldown",
@@ -508,6 +538,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 24,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Tricep Press Machine",
@@ -518,6 +549,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 25,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Overhead Tricep Extension",
@@ -528,6 +560,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 26,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Barbell Row",
@@ -538,6 +571,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 27,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Rear Delt Fly",
@@ -548,6 +582,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 28,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Close Grip Lat Pulldown",
@@ -558,6 +593,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 29,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs/Back",
                             Name = "Trap Bar Deadlift",
@@ -568,6 +604,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 30,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Dumbbell Bench Press",
@@ -578,6 +615,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 31,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Bent-Over Row",
@@ -588,6 +626,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 32,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Med Ball Wall Throw",
@@ -598,6 +637,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 33,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Bulgarian Split Squats",
@@ -608,6 +648,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 34,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Broad Jumps",
@@ -618,6 +659,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 35,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Barbell Squat",
@@ -628,6 +670,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 36,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Single-Arm Dumbbell Row",
@@ -638,6 +681,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 37,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Dumbbell Squat",
@@ -648,6 +692,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 38,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Dumbbell Bent-Over Row",
@@ -658,6 +703,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 39,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Glute Bridge",
@@ -668,6 +714,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 40,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Dumbbell Shoulder Press",
@@ -678,6 +725,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 41,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Static Lunges",
@@ -688,6 +736,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 42,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs/Back",
                             Name = "Dumbbell Deadlift",
@@ -698,6 +747,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 43,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Hammer Curl",
@@ -708,6 +758,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 44,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Lat Pulldown",
@@ -718,6 +769,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 45,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Chest-Supported Row",
@@ -728,6 +780,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 46,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Push-ups",
@@ -738,6 +791,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 47,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Plank",
@@ -748,6 +802,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 48,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Side Plank",
@@ -758,6 +813,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 49,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Romanian Deadlift (RDL)",
@@ -768,6 +824,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 50,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Nordic Hamstring Curls",
@@ -778,6 +835,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 51,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Box Jumps",
@@ -788,6 +846,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 52,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Depth Jumps",
@@ -798,6 +857,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 53,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Russian Twists",
@@ -808,6 +868,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 54,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Cable Woodchoppers",
@@ -818,6 +879,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 55,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Hanging Leg Raises",
@@ -828,6 +890,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 56,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Agility Ladder",
@@ -838,6 +901,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 57,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Cone Shuttle Drills",
@@ -848,6 +912,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 58,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Change of Direction (COD) Sprints",
@@ -858,6 +923,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 59,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Incline Barbell Bench Press",
@@ -868,6 +934,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 60,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Incline Dumbbell Bench Press",
@@ -878,6 +945,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 61,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Cable Crossover",
@@ -888,6 +956,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 62,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Pec Deck Fly",
@@ -898,6 +967,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 63,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back/Legs",
                             Name = "Deadlift (Conventional)",
@@ -908,6 +978,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 64,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "T-Bar Row",
@@ -918,6 +989,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 65,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Chin-ups",
@@ -928,6 +1000,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 66,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Straight-Arm Pulldown",
@@ -938,6 +1011,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 67,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Back Extension",
@@ -948,6 +1022,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 68,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Military Press",
@@ -958,6 +1033,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 69,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Dumbbell Lateral Raise",
@@ -968,6 +1044,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 70,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Dumbbell Front Raise",
@@ -978,6 +1055,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 71,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Face Pulls",
@@ -988,6 +1066,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 72,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Dumbbell Shrugs",
@@ -998,6 +1077,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 73,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Front Squat",
@@ -1008,6 +1088,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 74,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Hack Squat",
@@ -1018,6 +1099,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 75,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Barbell Hip Thrust",
@@ -1028,6 +1110,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 76,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Walking Lunges",
@@ -1038,6 +1121,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 77,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Preacher Curl",
@@ -1048,6 +1132,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 78,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Close-Grip Bench Press",
@@ -1058,6 +1143,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 79,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Cable Crunches",
@@ -1068,6 +1154,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 80,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Ab Wheel Rollout",
@@ -1078,6 +1165,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 81,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Crunches",
@@ -1088,6 +1176,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 82,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Jump Rope",
@@ -1098,6 +1187,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 83,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Rowing Machine",
@@ -1108,6 +1198,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 84,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Cycling (Stationary)",
@@ -1118,6 +1209,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 85,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Copenhagen Adduction",
@@ -1128,6 +1220,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 86,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Single-Leg Balance",
@@ -1138,6 +1231,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 87,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Interval Run",
@@ -1148,6 +1242,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 88,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Repeated Shuttle Sprints",
@@ -1158,6 +1253,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 89,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Flying Sprints",
@@ -1168,6 +1264,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 90,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Countermovement Jump",
@@ -1178,6 +1275,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 91,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Lateral Bounds",
@@ -1188,6 +1286,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 92,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "A-Skips",
@@ -1198,6 +1297,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 93,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Tempo Runs",
@@ -1208,6 +1308,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 94,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Inverted Row",
@@ -1218,6 +1319,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 95,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Hollow Body Hold",
@@ -1228,6 +1330,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 96,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Pallof Press",
@@ -1238,6 +1341,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 97,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Single-Leg Romanian Deadlift",
@@ -1248,6 +1352,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 98,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Step-ups",
@@ -1258,6 +1363,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 99,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back/Legs",
                             Name = "Kettlebell Swing",
@@ -1268,6 +1374,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 100,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Power Clean",
@@ -1278,6 +1385,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 101,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Push Press",
@@ -1288,6 +1396,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 102,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Reverse Lunges",
@@ -1298,6 +1407,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 103,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Lateral Lunge",
@@ -1308,6 +1418,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 104,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Dead Bug",
@@ -1318,6 +1429,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 105,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Bodyweight Squat",
@@ -1328,6 +1440,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 106,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Warm-up Jog",
@@ -1338,6 +1451,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 107,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Smith Machine Squat",
@@ -1348,6 +1462,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 108,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Smith Machine Bench Press",
@@ -1358,6 +1473,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 109,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Shoulder Press Machine",
@@ -1368,6 +1484,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 110,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Machine Row",
@@ -1378,6 +1495,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 111,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = true,
                             MuscleGroup = "Back",
                             Name = "Assisted Pull-up Machine",
@@ -1388,6 +1506,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 112,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = true,
                             MuscleGroup = "Arms",
                             Name = "Assisted Dip Machine",
@@ -1398,6 +1517,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 113,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Lying Leg Curl",
@@ -1408,6 +1528,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 114,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Glute Kickback Machine",
@@ -1418,6 +1539,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 115,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Hip Thrust Machine",
@@ -1428,6 +1550,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 116,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Pendulum Squat",
@@ -1438,6 +1561,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 117,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Machine Bicep Curl",
@@ -1448,6 +1572,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 118,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Ab Crunch Machine",
@@ -1458,6 +1583,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 119,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Rotary Torso Machine",
@@ -1468,6 +1594,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 120,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Incline Chest Press Machine",
@@ -1478,6 +1605,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 121,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Cable Lateral Raise",
@@ -1488,6 +1616,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 122,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Cable Bicep Curl",
@@ -1498,6 +1627,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 123,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Low-to-High Cable Fly",
@@ -1508,6 +1638,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 124,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Standing Calf Raise Machine",
@@ -1518,6 +1649,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 125,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Belt Squat",
@@ -1528,6 +1660,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 126,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Cable Glute Kickback",
@@ -1538,6 +1671,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 127,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Treadmill",
@@ -1548,6 +1682,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 128,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Stair Climber",
@@ -1558,6 +1693,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 129,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Elliptical Trainer",
@@ -1568,6 +1704,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 130,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Air Bike",
@@ -1578,6 +1715,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 131,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Decline Bench Press",
@@ -1588,6 +1726,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 132,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Decline Dumbbell Press",
@@ -1598,6 +1737,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 133,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Dumbbell Fly",
@@ -1608,6 +1748,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 134,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Incline Dumbbell Fly",
@@ -1618,6 +1759,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 135,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "High-to-Low Cable Fly",
@@ -1628,6 +1770,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 136,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Dumbbell Pullover",
@@ -1638,6 +1781,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 137,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Pullover Machine",
@@ -1648,6 +1792,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 138,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Floor Press",
@@ -1658,6 +1803,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 139,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Decline Push-ups",
@@ -1668,6 +1814,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 140,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Diamond Push-ups",
@@ -1678,6 +1825,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 141,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Hammer Strength Chest Press",
@@ -1688,6 +1836,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 142,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Hammer Strength Incline Press",
@@ -1698,6 +1847,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 143,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Landmine Press",
@@ -1708,6 +1858,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 144,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Chest",
                             Name = "Weighted Dips",
@@ -1718,6 +1869,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 145,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Hammer Strength Iso-Row",
@@ -1728,6 +1880,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 146,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Hammer Strength High Row",
@@ -1738,6 +1891,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 147,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Hammer Strength Pulldown",
@@ -1748,6 +1902,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 148,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Single-Arm Lat Pulldown",
@@ -1758,6 +1913,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 149,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Neutral-Grip Pull-ups",
@@ -1768,6 +1924,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 150,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Weighted Pull-ups",
@@ -1778,6 +1935,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 151,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Pendlay Row",
@@ -1788,6 +1946,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 152,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Seal Row",
@@ -1798,6 +1957,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 153,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Meadows Row",
@@ -1808,6 +1968,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 154,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Rack Pull",
@@ -1818,6 +1979,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 155,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs/Back",
                             Name = "Sumo Deadlift",
@@ -1828,6 +1990,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 156,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs/Back",
                             Name = "Good Morning",
@@ -1838,6 +2001,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 157,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Reverse Hyperextension",
@@ -1848,6 +2012,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 158,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Barbell Shrugs",
@@ -1858,6 +2023,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 159,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Back",
                             Name = "Superman",
@@ -1868,6 +2034,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 160,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Arnold Press",
@@ -1878,6 +2045,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 161,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Upright Row",
@@ -1888,6 +2056,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 162,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Reverse Pec Deck",
@@ -1898,6 +2067,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 163,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Cable Rear Delt Fly",
@@ -1908,6 +2078,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 164,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Cable Front Raise",
@@ -1918,6 +2089,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 165,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Plate Front Raise",
@@ -1928,6 +2100,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 166,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Y-Raise",
@@ -1938,6 +2111,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 167,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Smith Machine Shoulder Press",
@@ -1948,6 +2122,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 168,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Handstand Push-ups",
@@ -1958,6 +2133,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 169,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Concentration Curl",
@@ -1968,6 +2144,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 170,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Incline Dumbbell Curl",
@@ -1978,6 +2155,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 171,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Spider Curl",
@@ -1988,6 +2166,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 172,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Rope Hammer Curl",
@@ -1998,6 +2177,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 173,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Reverse Curl",
@@ -2008,6 +2188,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 174,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Bayesian Cable Curl",
@@ -2018,6 +2199,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 175,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Preacher Curl Machine",
@@ -2028,6 +2210,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 176,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Rope Pushdown",
@@ -2038,6 +2221,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 177,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Overhead Cable Extension",
@@ -2048,6 +2232,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 178,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Single-Arm Cable Pushdown",
@@ -2058,6 +2243,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 179,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "EZ-Bar Skull Crusher",
@@ -2068,6 +2254,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 180,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Dumbbell Kickback",
@@ -2078,6 +2265,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 181,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Bench Dips",
@@ -2088,6 +2276,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 182,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Seated Dip Machine",
@@ -2098,6 +2287,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 183,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Arms",
                             Name = "Wrist Roller",
@@ -2108,6 +2298,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 184,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Goblet Squat",
@@ -2118,6 +2309,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 185,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Box Squat",
@@ -2128,6 +2320,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 186,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Pause Squat",
@@ -2138,6 +2331,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 187,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Safety Bar Squat",
@@ -2148,6 +2342,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 188,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Sissy Squat",
@@ -2158,6 +2353,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 189,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Single-Leg Leg Press",
@@ -2168,6 +2364,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 190,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Seated Leg Curl",
@@ -2178,6 +2375,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 191,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Single-Leg Leg Extension",
@@ -2188,6 +2386,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 192,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Single-Leg Hip Thrust",
@@ -2198,6 +2397,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 193,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Cable Pull-Through",
@@ -2208,6 +2408,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 194,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs/Back",
                             Name = "Stiff-Leg Deadlift",
@@ -2218,6 +2419,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 195,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs/Back",
                             Name = "Dumbbell Romanian Deadlift",
@@ -2228,6 +2430,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 196,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Leg Press Calf Raise",
@@ -2238,6 +2441,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 197,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Tibialis Raise",
@@ -2248,6 +2452,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 198,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Reverse Nordic",
@@ -2258,6 +2463,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 199,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Spanish Squat",
@@ -2268,6 +2474,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 200,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Wall Sit",
@@ -2278,6 +2485,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 201,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Single-Leg Calf Raise",
@@ -2288,6 +2496,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 202,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Cable Hip Abduction",
@@ -2298,6 +2507,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 203,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Smith Machine Split Squat",
@@ -2308,6 +2518,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 204,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Glute Ham Raise",
@@ -2318,6 +2529,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 205,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Decline Sit-ups",
@@ -2328,6 +2540,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 206,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Bicycle Crunch",
@@ -2338,6 +2551,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 207,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "V-Ups",
@@ -2348,6 +2562,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 208,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Toes-to-Bar",
@@ -2358,6 +2573,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 209,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Captain's Chair Knee Raise",
@@ -2368,6 +2584,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 210,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Lying Leg Raise",
@@ -2378,6 +2595,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 211,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Mountain Climbers",
@@ -2388,6 +2606,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 212,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Bird Dog",
@@ -2398,6 +2617,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 213,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Landmine Rotation",
@@ -2408,6 +2628,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 214,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Core",
                             Name = "Turkish Get-up",
@@ -2418,6 +2639,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 215,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Hang Power Clean",
@@ -2428,6 +2650,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 216,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Jump Squat",
@@ -2438,6 +2661,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 217,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Trap Bar Jump",
@@ -2448,6 +2672,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 218,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Med Ball Slam",
@@ -2458,6 +2683,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 219,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Rotational Med Ball Throw",
@@ -2468,6 +2694,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 220,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Hurdle Hops",
@@ -2478,6 +2705,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 221,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Pogo Jumps",
@@ -2488,6 +2716,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 222,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Kettlebell Clean & Press",
@@ -2498,6 +2727,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 223,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Kettlebell Snatch",
@@ -2508,6 +2738,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 224,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Burpees",
@@ -2518,6 +2749,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 225,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Band Pull-Apart",
@@ -2528,6 +2760,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 226,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Shoulders",
                             Name = "Band External Rotation",
@@ -2538,6 +2771,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 227,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Banded Lateral Walk",
@@ -2548,6 +2782,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 228,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Hill Sprints",
@@ -2558,6 +2793,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 229,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Sled Push",
@@ -2568,6 +2804,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 230,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Resisted Sprints",
@@ -2578,6 +2815,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 231,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Explosive",
                             Name = "Acceleration Sprints",
@@ -2588,6 +2826,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 232,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Yo-Yo Intermittent Recovery Test",
@@ -2598,6 +2837,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 233,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Box-to-Box Runs",
@@ -2608,6 +2848,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 234,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Fartlek",
@@ -2618,6 +2859,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 235,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Easy Run (Zone 2)",
@@ -2628,6 +2870,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 236,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Small-Sided Game",
@@ -2638,6 +2881,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 237,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Rondo",
@@ -2648,6 +2892,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 238,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Passing Drill",
@@ -2658,6 +2903,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 239,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Dribbling Drill",
@@ -2668,6 +2914,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 240,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Finishing (Shooting)",
@@ -2678,6 +2925,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 241,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Agility",
                             Name = "Ball Juggling",
@@ -2688,6 +2936,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 242,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Hip 90/90 Stretch",
@@ -2698,6 +2947,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 243,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Couch Stretch",
@@ -2708,6 +2958,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 244,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "World's Greatest Stretch",
@@ -2718,6 +2969,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 245,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Hamstring Stretch",
@@ -2728,6 +2980,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 246,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Hip Flexor Stretch",
@@ -2738,6 +2991,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 247,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Adductor Stretch",
@@ -2748,6 +3002,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 248,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Ankle Mobility",
@@ -2758,6 +3013,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 249,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Thoracic Rotation",
@@ -2768,6 +3024,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 250,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Cat-Cow",
@@ -2778,6 +3035,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 251,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Leg Swings",
@@ -2788,6 +3046,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 252,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Mobility",
                             Name = "Foam Rolling",
@@ -2798,6 +3057,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 253,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Incline Treadmill Walk",
@@ -2808,6 +3068,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 254,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "SkiErg",
@@ -2818,6 +3079,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 255,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Battle Ropes",
@@ -2828,6 +3090,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 256,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Swimming",
@@ -2838,6 +3101,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 257,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Cardio",
                             Name = "Jumping Jacks",
@@ -2848,6 +3112,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 258,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Askling Extender",
@@ -2858,6 +3123,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 259,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Askling Diver",
@@ -2868,6 +3134,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 260,
                             Category = "Football",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Askling Glider",
@@ -2878,6 +3145,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 261,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Isometric Bridge Hold",
@@ -2888,6 +3156,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 262,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Swiss Ball Hamstring Curl",
@@ -2898,6 +3167,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 263,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Single-Leg Glute Bridge",
@@ -2908,6 +3178,7 @@ namespace SprintLog.Api.Migrations
                         {
                             Id = 264,
                             Category = "Gym",
+                            CreatedByCoach = false,
                             IsAssisted = false,
                             MuscleGroup = "Legs",
                             Name = "Assisted Nordic Hamstring Curl",
@@ -3380,6 +3651,9 @@ namespace SprintLog.Api.Migrations
                     b.Property<DateTime?>("StartedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("TeamDays")
+                        .HasColumnType("integer");
+
                     b.Property<string>("TemplateKey")
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
@@ -3552,6 +3826,10 @@ namespace SprintLog.Api.Migrations
                     b.Property<int?>("OpponentGoals")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Participation")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<string>("Position")
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
@@ -3567,6 +3845,10 @@ namespace SprintLog.Api.Migrations
 
                     b.Property<int?>("Sprints")
                         .HasColumnType("integer");
+
+                    b.Property<string>("TeamFocus")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<int?>("TeamGoals")
                         .HasColumnType("integer");

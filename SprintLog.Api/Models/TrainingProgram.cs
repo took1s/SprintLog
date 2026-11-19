@@ -37,6 +37,9 @@ public class TrainingProgram
     /// <summary>Spieltage (z. B. Sonntag) als Bitmaske wie <see cref="TrainingDays"/> - keine schwere Einheit, Erholung davor/danach.</summary>
     public int MatchDays { get; set; }
 
+    /// <summary>Mannschaftstraining im Verein (Bitmaske wie <see cref="TrainingDays"/>) - darf mit eigenen Trainingstagen zusammenfallen (Doppeltag).</summary>
+    public int TeamDays { get; set; }
+
     /// <summary>Übersetzungen der Texte (jsonb): { "Originaltext": { "en": ..., "de": ..., "ru": ... } }. Siehe ProgramTranslations.</summary>
     public string? Translations { get; set; }
 

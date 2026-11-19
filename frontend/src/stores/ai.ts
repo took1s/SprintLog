@@ -18,7 +18,7 @@ import type { Reason } from '../lib/coach';
 import { scheduleFor, type PlanAnswers } from '../lib/planBuilder';
 import { WEEKDAYS, kindOf, hasSchedule } from '../lib/schedule';
 import { readJson, userKeys, writeJson } from '../lib/storage';
-import type { TrainingProgram } from '../types';
+import type { Exercise, TrainingProgram } from '../types';
 import { useAppStore } from './app';
 import { useGoalsStore } from './goals';
 import { useRoutinesStore, type RoutineDraft } from './routines';
@@ -43,7 +43,7 @@ export type AiAction =
   | { type: 'program'; program: AiProgramDraft; summary: string }
   | { type: 'programUpdate'; programId: number; programName: string; program: AiProgramUpdateDraft; changes: string[] }
   | { type: 'goal'; exerciseId: number; exerciseName: string; targetWeight: number; targetReps: number; targetDate: string | null; reason: string }
-  | { type: 'schedule'; trainingDays: number; matchDays: number; reason: string }
+  | { type: 'schedule'; trainingDays: number; matchDays: number; teamDays?: number; reason: string }
   /** Änderung an der laufenden Einheit (nur im Training) - wird lokal angewendet, nichts geht an den Server. */
   | { type: 'workout'; operations: WorkoutOp[]; changes: string[] }
   /** Routine neben dem Plan (Dehnen, Reha ...); replacesId = Änderung einer bestehenden. */
@@ -58,7 +58,9 @@ export interface CoachMemory {
 }
 /** Was der Coach in einer Antwort an seinem Gedächtnis geändert hat (Hinweis unter der Antwort). */
 export interface MemoryChange { action: 'saved' | 'updated' | 'forgotten'; id: number; category: MemoryCategory; content: string; undone?: boolean }
-export interface AiChatMessage { role: 'user' | 'assistant'; content: string; at: string; mode?: AiMode; actions?: AiAction[]; applied?: number[]; memory?: MemoryChange[]; /** Nur Fragen: gleiche Id beim Wiederholen. */ requestId?: string }
+/** Vom Coach angelegte Übung (Hinweis im Chat; undone = per "Rückgängig" gelöscht). */
+export type CoachExercise = Exercise & { undone?: boolean };
+export interface AiChatMessage { role: 'user' | 'assistant'; content: string; at: string; mode?: AiMode; actions?: AiAction[]; applied?: number[]; memory?: MemoryChange[]; exercises?: CoachExercise[]; /** Nur Fragen: gleiche Id beim Wiederholen. */ requestId?: string }
 
 export interface AiReportSection { area?: string; title: string; status: 'good' | 'watch' | 'risk'; points: string[] }
 export interface AiReport { headline: string; summary: string; sections: AiReportSection[]; recommendations: { title: string; why: string; action: string }[]; nextWeekFocus: string }
@@ -252,13 +254,16 @@ export const useAiStore = defineStore('ai', () => {
     try {
       // Im Training sieht der Coach die laufende Einheit und darf sie (per Karte) ändern
       const session = app.isEditing ? null : app.liveSessionForAi();
-      const res = await aiPost<{ answer: string; remaining: number; actions?: AiAction[]; memory?: MemoryChange[] }>('/api/ai/ask', {
+      const res = await aiPost<{ answer: string; remaining: number; actions?: AiAction[]; memory?: MemoryChange[]; exercises?: Exercise[] }>('/api/ai/ask', {
         question: q, context: context(), history, locale: locale.value, mode: m, requestId, ...(session ? { session } : {}),
       });
       messages.value = [...messages.value, {
         role: 'assistant', content: res.answer, at: new Date().toISOString(), mode: m,
         actions: res.actions?.length ? res.actions : undefined, memory: res.memory?.length ? res.memory : undefined,
+        exercises: res.exercises?.length ? res.exercises : undefined,
       }];
+      // Neue Übungen des Coachs: sofort im Katalog (Karten mit ihnen zeigen Namen statt Nummern)
+      if (res.exercises?.length) app.rememberExercises(res.exercises);
       setRemaining(res.remaining);
       persist();
       // Gedächtnis geändert: Liste frisch holen (Reihenfolge, Zeitstempel kommen vom Server)
@@ -398,7 +403,9 @@ export const useAiStore = defineStore('ai', () => {
       } else {
         const active = app.activeProgram;
         if (!active) { ui.toast(t('ai.actions.noProgram'), 'error'); return; }
-        await app.setSchedule(active, { trainingDays: action.trainingDays, matchDays: action.matchDays });
+        // teamDays nur, wenn der Coach sie mitschickt - sonst bleiben die Team-Tage wie sie sind (Spieltag schlägt Team-Tag)
+        const teamDays = (action.teamDays ?? active.teamDays ?? 0) & ~action.matchDays;
+        await app.setSchedule(active, { trainingDays: action.trainingDays, matchDays: action.matchDays, teamDays });
         ui.toast(t('ai.actions.scheduleSaved'), 'success');
         ok = true;
       }
@@ -532,6 +539,16 @@ export const useAiStore = defineStore('ai', () => {
     useUiStore().toast(t('ai.memory.undone'), 'success');
   }
 
+  /** Vom Coach angelegte Übung wieder entfernen (Server lehnt ab, wenn sie schon in Plan/Verlauf steckt). */
+  async function undoExercise(messageIndex: number, ex: CoachExercise) {
+    if (ex.undone) return;
+    if (!(await app.deleteCustomExercise(ex, { confirmed: true }))) return;
+    messages.value = messages.value.map((m, i) => (i === messageIndex && m.exercises
+      ? { ...m, exercises: m.exercises.map((x) => (x.id === ex.id ? { ...x, undone: true } : x)) }
+      : m));
+    persist();
+  }
+
   /** confirmed: per Gedrückthalten bestätigt; sonst (Tastatur/Screenreader) mit Rückfrage. */
   async function clearMemory(opts?: { confirmed?: boolean }): Promise<boolean> {
     const ok = opts?.confirmed === true || await useUiStore().confirm({
@@ -618,6 +635,6 @@ export const useAiStore = defineStore('ai', () => {
     profile, profileOpen, profileBusy, profileFilled, cost, left, deviceOnline,
     loadStatus, openChat, ask, retry, askFromElsewhere, clearChat, applyAction, generatePlan, discardPlan, acceptPlan, translating, translateProgram,
     runAnalysis, loadProfile, openProfile, saveProfile, context,
-    memory, memoryOpen, memoryLoading, loadMemory, openMemory, addMemory, updateMemory, forgetMemory, undoMemory, clearMemory,
+    memory, memoryOpen, memoryLoading, loadMemory, openMemory, addMemory, updateMemory, forgetMemory, undoMemory, undoExercise, clearMemory,
   };
 });

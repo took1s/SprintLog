@@ -57,6 +57,12 @@ public class Workout
     public double? MaxSpeedKmh { get; set; }
     public int? Sprints { get; set; }
 
+    /// <summary>Mannschaftstraining (WorkoutType "Team"): Schwerpunkt (tactical, technical, conditioning, game, recovery, mixed).</summary>
+    public string? TeamFocus { get; set; }
+
+    /// <summary>Mannschaftstraining: Teilnahme (full, partial, modified, individual).</summary>
+    public string? Participation { get; set; }
+
     public int UserId { get; set; }
     public User User { get; set; } = null!;
 

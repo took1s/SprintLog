@@ -14,6 +14,19 @@ describe('coach', () => {
     expect(r.reasons).toContainEqual({ key: 'planNext', day: 'Lower A' });
   });
 
+  test('team training: on a free day it is the session of the day, on a plan day a double day', () => {
+    const free = coachToday({ ...base, todayKind: 'rest', teamToday: true });
+    expect(free.kind).toBe('team');
+    expect(free.startPlan).toBe(false);
+    expect(free.reasons[0]).toEqual({ key: 'teamToday' });
+    expect(free.reasons).not.toContainEqual({ key: 'restDay' });
+    const double = coachToday({ ...base, teamToday: true });
+    expect(double.kind).toBe('train');
+    expect(double.reasons[0]).toEqual({ key: 'teamDouble' });
+    // Spiel geht vor
+    expect(coachToday({ ...base, todayKind: 'match', teamToday: true }).kind).toBe('match');
+  });
+
   test('match today / tomorrow', () => {
     expect(coachToday({ ...base, todayKind: 'match' }).kind).toBe('match');
     const r = coachToday({ ...base, tomorrowKind: 'match' });

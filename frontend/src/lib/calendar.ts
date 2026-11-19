@@ -4,7 +4,7 @@ import type { Workout } from '@/types';
 import { dateKey, summarizeWorkout } from '@/lib/analytics';
 import { kindOf, weekdayOf, type DayKind, type Schedule } from '@/lib/schedule';
 
-export type CalendarKind = 'Gym' | 'Football' | 'Hybrid' | 'Match';
+export type CalendarKind = 'Gym' | 'Football' | 'Hybrid' | 'Match' | 'Team';
 
 export interface CalendarDay {
   key: string;
@@ -20,7 +20,7 @@ export interface CalendarDay {
 
 export type DayIndex = Map<string, CalendarDay>;
 
-const KINDS: readonly CalendarKind[] = ['Match', 'Gym', 'Football', 'Hybrid'];
+export const KINDS: readonly CalendarKind[] = ['Match', 'Team', 'Gym', 'Football', 'Hybrid'];
 
 /** Alle Einheiten nach Tag gruppiert. */
 export function indexByDay(workouts: readonly Workout[] | null | undefined): DayIndex {

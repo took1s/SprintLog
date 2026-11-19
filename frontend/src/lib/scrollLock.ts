@@ -1,6 +1,8 @@
 // Hintergrund festhalten, solange ein Dialog offen ist (jedes Element mit aria-modal="true").
 // Ohne das scrollt auf dem iPhone die Seite unter einem Sheet mit, sobald der Inhalt oben/unten anschlägt.
-// overflow: hidden reicht in iOS-Safari nicht - der Body wird fixiert und die Position danach wiederhergestellt.
+// overflow: hidden + overscroll-behavior auf <html>/<body> (iOS 16+ hält damit still). Früher wurde der Body fixiert
+// und die Position danach per scrollTo zurückgesetzt - das gab auf dem iPhone beim Schließen einen Frame lang die
+// Seite ganz oben zu sehen ("Blinken"). So bleibt die Seite einfach, wo sie ist.
 // Ein MutationObserver statt Aufrufen in jedem Dialog: neue Dialoge sind automatisch abgedeckt.
 
 let lockedAt: number | null = null;
@@ -11,22 +13,23 @@ const modalOpen = () =>
 
 function lock() {
   lockedAt = window.scrollY;
-  const s = document.body.style;
-  s.position = 'fixed';
-  s.top = `-${lockedAt}px`;
-  s.left = '0';
-  s.right = '0';
-  s.width = '100%';
+  for (const el of [document.documentElement, document.body]) {
+    el.style.overflow = 'hidden';
+    el.style.overscrollBehavior = 'none';
+  }
   document.documentElement.dataset.scrollLocked = '';
 }
 
 function unlock() {
   const y = lockedAt ?? 0;
   lockedAt = null;
-  const s = document.body.style;
-  s.position = s.top = s.left = s.right = s.width = '';
+  for (const el of [document.documentElement, document.body]) {
+    el.style.overflow = '';
+    el.style.overscrollBehavior = '';
+  }
   delete document.documentElement.dataset.scrollLocked;
-  window.scrollTo({ top: y, behavior: 'instant' });
+  // Nur falls sich doch etwas verschoben hat (z. B. Tastatur hat die Seite geschoben)
+  if (Math.abs(window.scrollY - y) > 1) window.scrollTo({ top: y, behavior: 'instant' });
 }
 
 function check() {

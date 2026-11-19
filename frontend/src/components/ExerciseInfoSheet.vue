@@ -70,6 +70,11 @@ function goal() {
                           <span class="text-sm text-slate-200">{{ t('workout.perSide') }}</span>
                       </label>
                   </div>
+                  <!-- Beschreibung (v. a. Übungen des KI-Coachs) -->
+                  <div v-if="ex.description" class="mb-4 rounded-2xl border border-white/5 bg-black/30 p-4" data-test="info-description">
+                      <p v-if="ex.byCoach" class="mb-2 text-[10px] font-bold uppercase text-accent tracking-label">{{ t('info.byCoach') }}</p>
+                      <p class="whitespace-pre-line text-sm leading-relaxed text-slate-200">{{ ex.description }}</p>
+                  </div>
                   <!-- Technik -->
                   <div v-if="technique.motion || technique.technique" class="overflow-hidden rounded-2xl border border-white/5 bg-black/30">
                       <ExerciseFigure v-if="technique.motion" :motion="technique.motion" class="fx-stage block h-48 w-full" />
@@ -85,7 +90,7 @@ function goal() {
                           </ol>
                       </div>
                   </div>
-                  <p v-else class="rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-sm text-slate-500">{{ t('info.noTechnique') }}</p>
+                  <p v-else-if="!ex.description" class="rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-sm text-slate-500">{{ t('info.noTechnique') }}</p>
 
                   <!-- Eigene Werte -->
                   <h3 class="mb-2 mt-5 text-[10px] font-bold uppercase text-slate-400 tracking-label">{{ t('info.yourNumbers') }}</h3>

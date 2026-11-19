@@ -1,10 +1,12 @@
 <script setup lang="ts">
 // Wochenplan des aktiven Programms: Trainings-, Spiel- und Ruhetage. Antippen im Bearbeiten-Modus schaltet um.
+// Zweite Reihe: Mannschaftstraining im Verein (eigene Ebene, auch an Trainingstagen möglich, nie am Spieltag).
 import { computed, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t, intlLocale } from '@/i18n';
 import { useAppStore } from '@/stores/app';
-import { countDays, cycleDay, hasSchedule, kindOf, scheduleWarnings, suggestTrainingDays, WEEKDAYS, weekdayOf, type DayKind, type Schedule } from '@/lib/schedule';
+import { countDays, cycleDay, hasSchedule, isTeamDay, kindOf, scheduleWarnings, suggestTrainingDays, toggleTeamDay, WEEKDAYS, weekdayOf, type DayKind, type Schedule } from '@/lib/schedule';
+import TeamIcon from './TeamIcon.vue';
 import { formatDate } from '@/lib/format';
 import type { TrainingProgram } from '@/types';
 
@@ -15,9 +17,11 @@ const { clockDate, todayPlan } = storeToRefs(app);
 const { setSchedule } = app;
 
 const editing = ref(false);
-const draft = ref<Schedule>({ trainingDays: 0, matchDays: 0 });
+const draft = ref<Schedule>({ trainingDays: 0, matchDays: 0, teamDays: 0 });
 
-const current = computed<Schedule>(() => (editing.value ? draft.value : { trainingDays: props.program.trainingDays ?? 0, matchDays: props.program.matchDays ?? 0 }));
+const saved = (): Schedule => ({ trainingDays: props.program.trainingDays ?? 0, matchDays: props.program.matchDays ?? 0, teamDays: props.program.teamDays ?? 0 });
+const current = computed<Schedule>(() => (editing.value ? draft.value : saved()));
+const teamCount = computed(() => WEEKDAYS.filter((d) => isTeamDay(current.value, d)).length);
 const today = computed(() => weekdayOf(clockDate.value));
 // 1.1.2024 war ein Montag
 const label = (d: number) => new Date(2024, 0, 1 + d).toLocaleDateString(intlLocale(), { weekday: 'short' }).replace('.', '');
@@ -28,11 +32,12 @@ const trainingCount = computed(() => countDays(current.value.trainingDays));
 
 function startEdit() {
   draft.value = hasSchedule(props.program)
-    ? { trainingDays: props.program.trainingDays ?? 0, matchDays: props.program.matchDays ?? 0 }
-    : { trainingDays: suggestTrainingDays(props.sessionsPerWeek), matchDays: 0 };
+    ? saved()
+    : { trainingDays: suggestTrainingDays(props.sessionsPerWeek), matchDays: 0, teamDays: 0 };
   editing.value = true;
 }
 function tapDay(d: number) { if (editing.value) draft.value = cycleDay(draft.value, d); }
+function tapTeam(d: number) { if (editing.value) draft.value = toggleTeamDay(draft.value, d); }
 function suggest() { draft.value = { ...draft.value, trainingDays: suggestTrainingDays(props.sessionsPerWeek, draft.value.matchDays) }; }
 async function save() {
   editing.value = false;
@@ -51,6 +56,7 @@ const todayLine = computed(() => {
   if (!p) return '';
   const when = (d: Date | null) => (d ? formatDate(d.toISOString(), { weekday: 'long' }) : '');
   if (p.kind === 'match') return t('schedule.today.match');
+  if (p.team) return p.kind === 'training' ? t('schedule.today.teamDouble') : t('schedule.today.team');
   if (p.kind === 'training') return t('schedule.today.training');
   return p.nextTraining ? t('schedule.today.restUntil', { day: when(p.nextTraining) }) : t('schedule.today.rest');
 });
@@ -79,8 +85,18 @@ const todayLine = computed(() => {
               </span>
           </button>
       </div>
+      <!-- Mannschaftstraining: im Bearbeiten antippbar, sonst nur Symbol an den Team-Tagen -->
+      <div v-if="editing || teamCount" class="mt-1.5 grid grid-cols-7 gap-1.5" role="group" :aria-label="t('schedule.teamRow')" data-test="schedule-team-row">
+          <button v-for="d in WEEKDAYS" :key="d" type="button" @click="tapTeam(d)" :disabled="!editing || kindOf(current, d) === 'match'" :data-team-day="d"
+                  :aria-pressed="isTeamDay(current, d)" :aria-label="`${longLabel(d)}: ${t('schedule.kind.team')}`"
+                  class="flex h-8 items-center justify-center rounded-lg border transition-colors disabled:cursor-default"
+                  :class="isTeamDay(current, d) ? 'border-accent bg-accent/30 text-accent' : editing && kindOf(current, d) !== 'match' ? 'border-dashed border-white/15 text-slate-500 active:scale-95' : 'border-transparent text-transparent'">
+              <TeamIcon class="h-4 w-4" />
+          </button>
+      </div>
 
       <template v-if="editing">
+          <p class="mt-2 text-[11px] leading-relaxed text-slate-400">{{ t('schedule.teamHint') }}</p>
           <p class="mt-2 text-[11px] leading-relaxed text-slate-400">{{ t('schedule.hint', { count: trainingCount, target: sessionsPerWeek }) }}</p>
           <ul v-if="warnings.length" class="mt-2 space-y-1" aria-live="polite">
               <li v-for="w in warnings" :key="w" class="text-[11px] font-bold text-orange-300">{{ t(`schedule.warnings.${w}`) }}</li>

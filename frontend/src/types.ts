@@ -2,7 +2,7 @@
 
 export type TrackingType = 'WeightReps' | 'DistanceTime' | 'Duration' | 'Cardio';
 export type Category = 'Gym' | 'Football';
-export type WorkoutType = 'Gym' | 'Football' | 'Hybrid' | 'Match';
+export type WorkoutType = 'Gym' | 'Football' | 'Hybrid' | 'Match' | 'Team';
 export type ProgramGoal = 'Strength' | 'Hypertrophy' | 'Speed' | 'General' | 'Rehab';
 
 export interface Exercise {
@@ -16,6 +16,10 @@ export interface Exercise {
   isAssisted?: boolean;
   /** Einseitig: Werte gelten pro Seite (Seitstütz, Split Squat). */
   perSide?: boolean;
+  /** Ausführung/Technik (v. a. bei Übungen des KI-Coachs). */
+  description?: string | null;
+  /** Vom KI-Coach angelegt. */
+  byCoach?: boolean;
 }
 
 export type ExerciseNoteReason = 'pain' | 'equipment' | 'time' | 'fatigue' | 'other';
@@ -81,6 +85,8 @@ export interface Workout {
   sets: WorkoutSet[];
   /** Nur bei Spielen (workoutType "Match"). */
   match?: MatchDetails | null;
+  /** Nur bei Mannschaftstraining (workoutType "Team"). */
+  team?: TeamDetails | null;
   /** Werte der Uhr (Apple Health). */
   health?: WorkoutHealth | null;
   // Nur lokal (noch nicht synchronisiert)
@@ -103,6 +109,11 @@ export interface MatchDetails {
   toImprove?: string | null;
 }
 
+export type TeamFocus = 'tactical' | 'technical' | 'conditioning' | 'game' | 'recovery' | 'mixed';
+export type TeamParticipation = 'full' | 'partial' | 'modified' | 'individual';
+/** Mannschaftstraining: Schwerpunkt und Teilnahme. "Wie lief es" = quality, Härte = sessionRpe. */
+export interface TeamDetails { focus?: TeamFocus | string | null; participation?: TeamParticipation | string | null }
+
 /** Werte der Uhr (Apple Health) zu einer Einheit. */
 export interface WorkoutHealth { distanceM?: number | null; avgHr?: number | null; maxHr?: number | null; maxSpeedKmh?: number | null; sprints?: number | null }
 
@@ -122,6 +133,7 @@ export interface QueueEntry {
   exerciseNotes?: ExerciseNote[] | null;
   sets: WorkoutSet[];
   match?: MatchDetails | null;
+  team?: TeamDetails | null;
   health?: WorkoutHealth | null;
   status: QueueStatusValue;
   attempts: number;
@@ -188,6 +200,8 @@ export interface TrainingProgram {
   trainingDays?: number;
   /** Spieltage, Bitmaske wie trainingDays. */
   matchDays?: number;
+  /** Mannschaftstraining im Verein, Bitmaske wie trainingDays (darf mit Trainingstagen zusammenfallen, nie mit Spieltagen). */
+  teamDays?: number;
   /** Übersetzungen frei geschriebener Texte: { Originaltext: { en, de, ru } } (KI-Übersetzung auf dem Server). */
   translations?: Record<string, Partial<Record<'en' | 'de' | 'ru', string>>> | null;
 }

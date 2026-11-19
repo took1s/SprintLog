@@ -117,11 +117,12 @@ export const usePlannedStore = defineStore('planned', () => {
     void pushPending();
   }
 
-  /** Neu oder geändert speichern. false = Datum liegt auf einem Plan-Tag (Hinweis wurde gezeigt). */
+  /** Neu oder geändert speichern. null = Datum ist ein Spieltag (Hinweis wurde gezeigt). */
   function upsert(clientId: string, draft: PlannedDraft, by: PlannedWorkout['source'], status: PlannedStatus = 'planned'): PlannedWorkout | null {
     const existing = items.value.find((x) => x.clientId === clientId);
     const clean = cleanPlanned(draft);
-    if (status === 'planned' && (!existing || existing.date !== clean.date) && planConflict(schedule.value, clean.date)) {
+    // Nur der Spieltag ist tabu; ein Trainingstag des Plans wird ein bewusster Doppeltag
+    if (status === 'planned' && (!existing || existing.date !== clean.date) && planConflict(schedule.value, clean.date) === 'match') {
       useUiStore().toast(t('planned.toast.planDay'), 'error');
       return null;
     }
@@ -178,7 +179,7 @@ export const usePlannedStore = defineStore('planned', () => {
   // ---------- Editor ----------
 
   function openNew(date?: string) {
-    const day = date && date >= today.value && !planConflict(schedule.value, date) ? date : freeDays(schedule.value, items.value, addDays(today.value, 1), 1)[0]?.day ?? today.value;
+    const day = date && date >= today.value && planConflict(schedule.value, date) !== 'match' ? date : freeDays(schedule.value, items.value, addDays(today.value, 1), 1)[0]?.day ?? today.value;
     editor.value = { open: true, clientId: null, draft: emptyDraft(day) };
   }
   function openEdit(clientId: string) {

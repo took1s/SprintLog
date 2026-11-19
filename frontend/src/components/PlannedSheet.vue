@@ -22,7 +22,9 @@ const short = (day: string) => parseDay(day).toLocaleDateString(intlLocale(), { 
 const free = computed(() => freeDays(schedule.value, items.value, today.value, 10, editor.value.clientId));
 const conflict = computed(() => (status.value === 'planned' ? planConflict(schedule.value, d.value.date) : null));
 const taken = computed(() => status.value === 'planned' && items.value.some((p) => p.pending !== 'delete' && p.status === 'planned' && p.date === d.value.date && p.clientId !== editor.value.clientId));
-const valid = computed(() => { const c = cleanPlanned(d.value); return !!c.title && c.exercises.length > 0 && !conflict.value; });
+/** Spieltag blockiert; Trainingstag ist ein erlaubter Doppeltag (nur Hinweis). */
+const blocked = computed(() => conflict.value === 'match');
+const valid = computed(() => { const c = cleanPlanned(d.value); return !!c.title && c.exercises.length > 0 && !blocked.value; });
 const tried = ref(false);
 
 // ---------- Übungen ----------
@@ -72,7 +74,8 @@ function save() {
                   <!-- Tag -->
                   <label class="label-xs mb-2" for="planned-date">{{ t('planned.sheet.date') }}</label>
                   <input id="planned-date" v-model="d.date" type="date" required :min="today" :max="addDays(today, 180)" class="field h-12 w-full rounded-xl px-3" data-test="planned-date">
-                  <p v-if="conflict" class="mt-2 text-xs font-bold text-red-300" role="alert" data-test="planned-conflict">{{ conflict === 'match' ? t('planned.sheet.matchDay') : t('planned.sheet.planDay') }}</p>
+                  <p v-if="conflict === 'match'" class="mt-2 text-xs font-bold text-red-300" role="alert" data-test="planned-conflict">{{ t('planned.sheet.matchDay') }}</p>
+                  <p v-else-if="conflict === 'training'" class="mt-2 text-xs font-bold text-amber-300" role="status" data-test="planned-double">{{ t('planned.sheet.doubleDay') }}</p>
                   <p v-else-if="taken" class="mt-2 text-xs text-yellow-300">{{ t('planned.sheet.takenDay') }}</p>
                   <p class="mt-3 text-[10px] font-bold uppercase text-slate-400 tracking-label">{{ t('planned.sheet.freeDays') }}</p>
                   <div class="no-scrollbar -mx-6 mt-1.5 flex gap-1.5 overflow-x-auto px-6" role="group" :aria-label="t('planned.sheet.freeDays')">
@@ -127,7 +130,7 @@ function save() {
 
                   <label class="label-xs mb-2 mt-5" for="planned-notes">{{ t('planned.sheet.notes') }} <span class="normal-case tracking-normal text-slate-500">({{ t('common.optional') }})</span></label>
                   <textarea id="planned-notes" v-model="d.notes" rows="2" maxlength="300" class="field w-full resize-none rounded-xl px-4 py-3 text-sm" :placeholder="t('planned.sheet.notesPlaceholder')"></textarea>
-                  <p v-if="tried && !valid && !conflict" class="mt-3 text-xs font-bold text-red-300" role="alert">{{ t('planned.sheet.invalid') }}</p>
+                  <p v-if="tried && !valid && !blocked" class="mt-3 text-xs font-bold text-red-300" role="alert">{{ t('planned.sheet.invalid') }}</p>
               </div>
 
               <div class="flex gap-2 border-t border-white/5 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">

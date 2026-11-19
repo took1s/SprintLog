@@ -8,6 +8,15 @@ class MainViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(AudioDuckPlugin())
         bridge?.registerPluginInstance(WidgetBridgePlugin())
         bridge?.registerPluginInstance(HealthPlugin())
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            // iOS 26 legt oben und unten eine weiche Unschärfe über den Inhalt (Scroll Edge Effect). Unsere Dialoge reichen
+            // bis knapp unter die Statusleiste - der Schleier lag über dem Schließen-Knopf und machte Text unscharf.
+            // Die App zeichnet ihre Kopfzeilen selbst (deckend), daher hier aus.
+            webView?.scrollView.topEdgeEffect.isHidden = true
+            webView?.scrollView.bottomEdgeEffect.isHidden = true
+        }
+        #endif
     }
 }
 

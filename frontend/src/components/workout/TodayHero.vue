@@ -25,7 +25,7 @@ const md = computed(() => mdInfo(today.value, activeProgram.value));
 const dateLabel = computed(() => clockDate.value.toLocaleDateString(intlLocale(), { weekday: 'long', day: 'numeric', month: 'long' }));
 const shortDate = computed(() => clockDate.value.toLocaleDateString(intlLocale(), { weekday: 'short', day: 'numeric', month: 'short' }));
 
-const tone: Record<TodayKind, string> = { train: 'is-train', light: 'is-light', rest: 'is-rest', match: 'is-match', rehab: 'is-rehab' };
+const tone: Record<TodayKind, string> = { train: 'is-train', light: 'is-light', rest: 'is-rest', match: 'is-match', rehab: 'is-rehab', team: 'is-team' };
 function reasonText(r: Reason): string {
   switch (r.key) {
     case 'readinessLow':
@@ -92,6 +92,7 @@ const mdAdjust = computed(() => (md.value && md.value.label !== 'MD' && md.value
               </span>
               <span v-if="coach.kind === 'light'" class="mt-0.5 block text-[11px] font-bold">{{ t('coach.kinds.light.title') }}</span>
               <span v-else-if="coach.kind === 'rest'" class="mt-0.5 block text-[11px] font-bold" data-test="plan-rest-hint">{{ t('coach.kinds.rest.title') }}</span>
+              <span v-else-if="coach.kind === 'team'" class="mt-0.5 block text-[11px] font-bold">{{ t('coach.kinds.team.title') }}</span>
           </span>
           <svg class="h-6 w-6 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 001.5.86l10.5-6.5a1 1 0 000-1.72L9.5 4.64A1 1 0 008 5.5z"/></svg>
       </button>

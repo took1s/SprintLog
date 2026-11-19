@@ -179,11 +179,17 @@ export const useHealthStore = defineStore('health', () => {
     dismiss(w);
   }
 
+  /** Fußball-Workout der Uhr als Mannschaftstraining erfassen (Dauer + Uhr-Werte vorbelegt, RPE/Schwerpunkt im Dialog). */
+  function logAsTeam(w: WatchWorkout) {
+    useAppStore().openTeamModal(undefined, { date: w.start, minutes: Math.round(w.durationSeconds / 60), health: healthOf(w) });
+    dismiss(w);
+  }
+
   /** Lauf/Fußballtraining der Uhr als Feld-Einheit mit Session-RPE erfassen. */
   async function logAsTraining(w: WatchWorkout, rpe: number) {
     dismiss(w);
     await useAppStore().logWatchSession(w, rpe, healthOf(w));
   }
 
-  return { available, connected, lastSync, busy, error, report, unmatched, offers, detect, connect, disconnect, sync, start, dismiss, logAsMatch, logAsTraining };
+  return { available, connected, lastSync, busy, error, report, unmatched, offers, detect, connect, disconnect, sync, start, dismiss, logAsMatch, logAsTeam, logAsTraining };
 });

@@ -33,7 +33,7 @@ public static class ExerciseEndpoints
 
         var exercises = await query
             .OrderBy(e => e.Name)
-            .Select(e => new ExerciseDto(e.Id, e.Name, e.Category, e.MuscleGroup, e.TrackingType, e.UserId != null, e.IsAssisted, e.PerSide))
+            .Select(e => new ExerciseDto(e.Id, e.Name, e.Category, e.MuscleGroup, e.TrackingType, e.UserId != null, e.IsAssisted, e.PerSide, e.Description, e.CreatedByCoach))
             .ToListAsync(ct);
 
         return Results.Ok(exercises);
@@ -62,6 +62,7 @@ public static class ExerciseEndpoints
             TrackingType = req.TrackingType ?? TrackingType.WeightReps,
             IsAssisted = req.IsAssisted,
             PerSide = req.PerSide,
+            Description = string.IsNullOrWhiteSpace(req.Description) ? null : req.Description.Trim(),
             UserId = userId
         };
 

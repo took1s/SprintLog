@@ -62,6 +62,16 @@ test('payload contains clientId, date and only API fields', () => {
   assert.deepEqual(Object.keys(p.sets[0]).sort(), ['distance', 'exerciseId', 'isWarmup', 'note', 'reps', 'rpe', 'time', 'weight']);
 });
 
+test('team training sends focus, participation and watch values; others stay lean', () => {
+  const team = toPayload({ ...entry('t'), workoutType: 'Team', sets: [], durationSeconds: 5400, sessionRpe: 6,
+    team: { focus: 'tactical', participation: 'full' }, health: { avgHr: 142, distanceM: 6400 } });
+  assert.deepEqual(team.team, { focus: 'tactical', participation: 'full' });
+  assert.deepEqual(team.health, { avgHr: 142, distanceM: 6400 });
+  const gym = toPayload(entry('g'));
+  assert.equal('team' in gym, false);
+  assert.equal('health' in gym, false);
+});
+
 test('legacy v2 queue is migrated with new client ids and original timestamp', () => {
   let n = 0;
   const migrated = migrateLegacyQueue([

@@ -90,7 +90,9 @@ function followLatest() {
     }
   });
 }
-watch(() => [messages.value.length, busy.value, error.value], followLatest);
+// Einzelne Quellen statt eines neuen Arrays: sonst feuert der Watcher bei JEDER Änderung an messages (z. B. Karte übernommen)
+// und springt zur letzten Antwort - beim Übernehmen einer Karte weiter oben "flog" der Chat nach oben/unten.
+watch([() => messages.value.length, busy, error], followLatest);
 
 /**
  * Fokus beim Öffnen: mit Maus/Tastatur direkt ins Eingabefeld; auf Touch-Geräten nur in den Dialog
@@ -133,7 +135,7 @@ watch(() => messages.value.length, (n, prev) => {
     fresh.value = n - 1;
     // Vorschlags-Karten mit ansagen - sonst erfährt man ohne Blick auf den Bildschirm nicht, dass es etwas zu speichern gibt
     const cards = (last.actions ?? []).map((a) => t(`ai.actions.${a.type}`));
-    const notes = (last.memory ?? []).map((c) => `${t(`ai.memory.${c.action}`)}: ${c.content}`);
+    const notes = [...(last.memory ?? []).map((c) => `${t(`ai.memory.${c.action}`)}: ${c.content}`), ...(last.exercises ?? []).map((x) => `${t('ai.exerciseNote.added')}: ${x.name}`)];
     announce.value = [`${t('ai.coach')}: ${last.content}`, ...notes, ...cards].join('. ');
   }
 });
@@ -252,6 +254,18 @@ const close = () => {
                                       <span class="break-words" :class="{ 'text-slate-400 line-through': c.undone || c.action === 'forgotten' }">{{ c.content }}</span>
                                   </button>
                                   <button v-if="c.action === 'saved' && !c.undone" type="button" @click="ai.undoMemory(i, c)" data-test="memory-undo"
+                                          class="min-h-[2.75rem] flex-shrink-0 rounded-lg px-3 text-[11px] font-bold uppercase text-slate-300 tracking-label hover:bg-white/5 hover:text-white">{{ t('ai.memory.undo') }}</button>
+                              </li>
+                          </ul>
+                          <!-- Neue Übungen des Coachs: antippen zeigt Ausführung, "Rückgängig" löscht sie wieder -->
+                          <ul v-if="m.exercises?.length" class="mt-2 space-y-1.5" data-test="exercise-notes">
+                              <li v-for="x in m.exercises" :key="x.id" class="flex items-center gap-1 rounded-xl border border-accent/25 bg-accent/5 pl-3 pr-1 text-xs text-slate-200" :data-exercise-note="x.undone ? 'undone' : 'added'">
+                                  <svg class="h-4 w-4 flex-shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                                  <button type="button" class="min-h-[2.75rem] min-w-0 flex-1 py-1.5 pl-1 text-left leading-snug" :disabled="x.undone" @click="appStore.openExerciseInfo(x.id, 'overlay')">
+                                      <span class="font-bold text-accent">{{ t(x.undone ? 'ai.exerciseNote.undone' : 'ai.exerciseNote.added') }}: </span>
+                                      <span class="break-words" :class="{ 'text-slate-400 line-through': x.undone }">{{ x.name }}</span>
+                                  </button>
+                                  <button v-if="!x.undone" type="button" @click="ai.undoExercise(i, x)" data-test="exercise-undo"
                                           class="min-h-[2.75rem] flex-shrink-0 rounded-lg px-3 text-[11px] font-bold uppercase text-slate-300 tracking-label hover:bg-white/5 hover:text-white">{{ t('ai.memory.undo') }}</button>
                               </li>
                           </ul>

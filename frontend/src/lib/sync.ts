@@ -23,6 +23,8 @@ export interface WorkoutPayload {
   notes: string | null;
   programDayId: number | null;
   match?: { goals?: number | null; assists?: number | null; opponent?: string | null } | null;
+  team?: { focus?: string | null; participation?: string | null } | null;
+  health?: { distanceM?: number | null; avgHr?: number | null; maxHr?: number | null; maxSpeedKmh?: number | null; sprints?: number | null } | null;
   gym?: string | null;
   exerciseNotes?: { exerciseId: number; note: string | null; skipped: boolean; reason: string | null }[];
   sets: {
@@ -54,6 +56,9 @@ export function toPayload(entry: QueueEntry): WorkoutPayload {
     notes: entry.notes ?? null,
     programDayId: entry.programDayId ?? null,
     match: entry.match ?? null,
+    // Nur mitsenden, wenn vorhanden (ältere Einträge/Server)
+    ...(entry.team ? { team: entry.team } : {}),
+    ...(entry.health ? { health: entry.health } : {}),
     gym: entry.gym?.trim() || null,
     exerciseNotes: (entry.exerciseNotes ?? []).map((n) => ({ exerciseId: n.exerciseId, note: n.note?.trim() || null, skipped: !!n.skipped, reason: n.reason ?? null })),
     sets: entry.sets.map((s) => ({
@@ -155,6 +160,8 @@ export function queueAsWorkouts(queue: readonly QueueEntry[] | null | undefined)
     op: e.op ?? 'create',
     programDayId: e.programDayId ?? null,
     match: e.match ?? null,
+    team: e.team ?? null,
+    health: e.health ?? null,
     gym: e.gym ?? null,
     exerciseNotes: e.exerciseNotes ?? [],
     pending: true,

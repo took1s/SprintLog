@@ -26,18 +26,23 @@ public record CreateWorkoutRequest(
     int? Quality = null,
     string? Gym = null,
     List<ExerciseNoteDto>? ExerciseNotes = null,
-    WorkoutHealth? Health = null)
+    WorkoutHealth? Health = null,
+    TeamDetails? Team = null)
 {
     public const string MatchType = "Match";
+    public const string TeamType = "Team";
     public static readonly string[] Positions = { "goalkeeper", "defender", "fullback", "midfielder", "winger", "striker" };
     public const int MaxGymLength = 40;
     public const int MaxExerciseNotes = 50;
     public bool IsMatch => WorkoutType == MatchType;
+    public bool IsTeam => WorkoutType == TeamType;
+    /// <summary>Spiel und Mannschaftstraining: keine Sätze, aber Minuten und Session-RPE (für die Trainingslast).</summary>
+    public bool IsSetless => IsMatch || IsTeam;
 
     public const int MaxNotesLength = 500;
     public const int MaxSetNoteLength = 200;
 
-    public static readonly string[] AllowedTypes = { "Gym", "Football", "Hybrid", MatchType };
+    public static readonly string[] AllowedTypes = { "Gym", "Football", "Hybrid", MatchType, TeamType };
     public const int MaxSets = 200;
 
     // Plausibilitätsgrenzen - schützen vor Tippfehlern (z. B. 2000 kg) und Missbrauch.
@@ -52,11 +57,16 @@ public record CreateWorkoutRequest(
     public ValidationErrors Validate(DateTimeOffset now)
     {
         var errors = new ValidationErrors()
-            .AddIf(WorkoutType is null || !AllowedTypes.Contains(WorkoutType), "workoutType", "Workout type must be 'Gym', 'Football', 'Hybrid' or 'Match'.")
-            // Ein Spiel hat keine Sätze, braucht aber Minuten und Session-RPE (sonst keine Trainingslast).
-            .AddIf(!IsMatch && (Sets is null || Sets.Count == 0), "sets", "Cannot save an empty workout.")
-            .AddIf(IsMatch && DurationSeconds is null or <= 0, "durationSeconds", "Enter the minutes played.")
-            .AddIf(IsMatch && SessionRpe is null, "sessionRpe", "Rate how hard the match was (1-10).")
+            .AddIf(WorkoutType is null || !AllowedTypes.Contains(WorkoutType), "workoutType", "Workout type must be 'Gym', 'Football', 'Hybrid', 'Match' or 'Team'.")
+            // Spiel und Mannschaftstraining haben keine Sätze, brauchen aber Minuten und Session-RPE (sonst keine Trainingslast).
+            .AddIf(!IsSetless && (Sets is null || Sets.Count == 0), "sets", "Cannot save an empty workout.")
+            .AddIf(IsTeam && Sets is { Count: > 0 }, "sets", "Team training has no sets.")
+            .AddIf(IsSetless && DurationSeconds is null or <= 0, "durationSeconds", IsTeam ? "Enter how long the training was." : "Enter the minutes played.")
+            .AddIf(IsSetless && SessionRpe is null, "sessionRpe", IsTeam ? "Rate how hard the training was (1-10)." : "Rate how hard the match was (1-10).")
+            .AddIf(IsTeam && DurationSeconds is > 4 * 3600, "durationSeconds", "A team training lasts at most 4 hours.")
+            .AddIf(!IsTeam && Team is not null, "team", "Team details are only allowed for team training.")
+            .AddIf(Team?.Focus is { } focus && !TeamDetails.Foci.Contains(focus), "team", "Unknown focus.")
+            .AddIf(Team?.Participation is { } part && !TeamDetails.Participations.Contains(part), "team", "Unknown participation.")
             .AddIf(Match is { Goals: < 0 or > 20 } || Match is { Assists: < 0 or > 20 }, "match", "Goals and assists must be between 0 and 20.")
             .AddIf(Match is { Opponent.Length: > 60 }, "match", "Opponent must not exceed 60 characters.")
             .AddIf(Match?.Position is { } pos && !Positions.Contains(pos), "match", "Unknown position.")
@@ -148,7 +158,15 @@ public record WorkoutResponse(
     int? Quality = null,
     string? Gym = null,
     List<ExerciseNoteDto>? ExerciseNotes = null,
-    WorkoutHealth? Health = null);
+    WorkoutHealth? Health = null,
+    TeamDetails? Team = null);
+
+/// <summary>Mannschaftstraining: Schwerpunkt und Teilnahme (wie Profi-Klubs es je Einheit erfassen). "Wie lief es" = Quality, Härte = Session-RPE.</summary>
+public record TeamDetails(string? Focus = null, string? Participation = null)
+{
+    public static readonly string[] Foci = { "tactical", "technical", "conditioning", "game", "recovery", "mixed" };
+    public static readonly string[] Participations = { "full", "partial", "modified", "individual" };
+}
 
 /// <summary>Spiel-Details (nur bei WorkoutType "Match"): Tore, Vorlagen, Gegner, Position, Endstand, Selbsteinschätzung als Text.</summary>
 public record MatchDetails(int? Goals, int? Assists, string? Opponent, string? Position = null, int? TeamGoals = null, int? OpponentGoals = null,

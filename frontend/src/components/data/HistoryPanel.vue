@@ -11,10 +11,10 @@ import { useAppStore, rpeText, sessionRpeLabel, setLabel, workoutStats } from '@
 import { describeSet, formatDuration, formatTime } from '@/lib/format';
 import { groupSetsByExercise, workoutKey } from '@/lib/analytics';
 import { groupByWeek, matchesSearch, mondayOf } from '@/lib/historyGroups';
-import type { Workout } from '@/types';
+import type { TeamFocus, TeamParticipation, Workout } from '@/types';
 import type { Position } from '@/lib/fitnessTests';
 
-const FILTERS = ['all', 'Gym', 'Football', 'Match', 'Hybrid'] as const;
+const FILTERS = ['all', 'Gym', 'Football', 'Team', 'Match', 'Hybrid'] as const;
 const app = useAppStore();
 const { allWorkouts, failedCount, filteredHistory, historyFilter, historyLimit, pendingCount, settings, syncing } = storeToRefs(app);
 const { deleteWorkout, editWorkout, openObsidian, programNameForDay, repeatWorkout, retryEntry, setBadges, syncNow } = app;
@@ -53,9 +53,10 @@ function toggle(w: Workout) {
 }
 
 // ---------- Inhalt einer Karte ----------
-const type = (w: Workout) => (({ Gym: 'gym', Football: 'football', Match: 'match', Hybrid: 'hybrid' } as Record<string, string>)[w.workoutType] ?? 'football');
+const type = (w: Workout) => (({ Gym: 'gym', Football: 'football', Match: 'match', Hybrid: 'hybrid', Team: 'team' } as Record<string, string>)[w.workoutType] ?? 'football');
 function title(w: Workout): string {
   if (w.workoutType === 'Match') return w.match?.opponent ? t('match.vs', { opponent: w.match.opponent }) : t('categories.Match');
+  if (w.workoutType === 'Team') return t('team.historyTitle');
   const plan = w.programDayId ? programNameForDay(w.programDayId) : null;
   return plan ?? categoryName(w.workoutType);
 }
@@ -159,6 +160,12 @@ const kmh = (v: number) => v.toLocaleString(intlLocale(), { maximumFractionDigit
                                       </div>
                                       <p v-if="w.match?.wentWell" class="text-xs leading-snug text-slate-300"><span class="font-bold text-emerald-300">+</span> {{ w.match.wentWell }}</p>
                                       <p v-if="w.match?.toImprove" class="text-xs leading-snug text-slate-300"><span class="font-bold text-amber-300">→</span> {{ w.match.toImprove }}</p>
+                                  </div>
+
+                                  <!-- Mannschaftstraining -->
+                                  <div v-else-if="w.workoutType === 'Team'" class="mt-3 flex flex-wrap items-center gap-2 text-sm" data-test="team-summary">
+                                      <span v-if="w.team?.focus" class="hist-tag">{{ t(`team.foci.${w.team.focus as TeamFocus}`) }}</span>
+                                      <span v-if="w.team?.participation && w.team.participation !== 'full'" class="hist-tag">{{ t(`team.parts.${w.team.participation as TeamParticipation}`) }}</span>
                                   </div>
 
                                   <!-- Übungen: Sätze als Chips -->

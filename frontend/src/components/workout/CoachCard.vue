@@ -23,6 +23,7 @@ const tone: Record<TodayKind, { dot: string; text: string }> = {
   rest: { dot: 'bg-slate-400', text: 'text-white' },
   match: { dot: 'bg-yellow-400', text: 'text-yellow-300' },
   rehab: { dot: 'bg-emerald-400', text: 'text-emerald-300' },
+  team: { dot: 'bg-orange-400', text: 'text-orange-300' },
 };
 
 function reasonText(r: Reason): string {

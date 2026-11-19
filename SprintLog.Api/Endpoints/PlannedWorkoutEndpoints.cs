@@ -51,11 +51,11 @@ public static class PlannedWorkoutEndpoints
         var created = planned is null;
         var status = input.Status ?? planned?.Status ?? "planned";
 
-        // Neuer oder verschobener offener Termin: nicht auf einen Plan-Tag (sonst zwei Einheiten an einem Tag)
+        // Neuer oder verschobener offener Termin: nie auf einen Spieltag. Trainingstag = erlaubter Doppeltag.
         if (status == "planned" && (created || planned!.Date != input.Date))
         {
             var active = await db.Programs.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive, ct);
-            if (PlannedWorkoutRules.ConflictOn(input.Date, active) is { } kind)
+            if (PlannedWorkoutRules.ConflictOn(input.Date, active) is { } kind && PlannedWorkoutRules.Blocks(kind))
                 return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "plan_conflict",
                     detail: kind == "match" ? "This day is a match day in your plan." : "This day is a training day in your plan.",
                     extensions: new Dictionary<string, object?> { ["code"] = "plan_conflict", ["kind"] = kind });
