@@ -90,7 +90,7 @@ const todayLine = computed(() => {
           <button v-for="d in WEEKDAYS" :key="d" type="button" @click="tapTeam(d)" :disabled="!editing || kindOf(current, d) === 'match'" :data-team-day="d"
                   :aria-pressed="isTeamDay(current, d)" :aria-label="`${longLabel(d)}: ${t('schedule.kind.team')}`"
                   class="flex h-8 items-center justify-center rounded-lg border transition-colors disabled:cursor-default"
-                  :class="isTeamDay(current, d) ? 'border-accent/60 bg-accent/10 text-accent' : editing && kindOf(current, d) !== 'match' ? 'border-dashed border-white/15 text-slate-500 active:scale-95' : 'border-transparent text-transparent'">
+                  :class="isTeamDay(current, d) ? 'border-accent bg-accent/30 text-accent' : editing && kindOf(current, d) !== 'match' ? 'border-dashed border-white/15 text-slate-500 active:scale-95' : 'border-transparent text-transparent'">
               <TeamIcon class="h-4 w-4" />
           </button>
       </div>
