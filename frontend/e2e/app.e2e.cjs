@@ -1631,6 +1631,7 @@ test('Training feedback: gym per workout, assisted machine, side plank per side,
   await page.click('[data-reason=equipment]');
   await page.click('[data-test=exnote-save]');
   await lat.locator('[data-test=block-skipped] >> text=Machine busy or missing').waitFor();
+  await page.waitForSelector('[data-test=note-sheet]', { state: 'detached' }); // Schließen-Animation abwarten
 
   // Speichern -> Server hat Studio, Notiz und Ausdauerwerte
   await page.click('[data-test=finish-workout]');
@@ -1880,10 +1881,15 @@ test('extra sessions: never on a match day, double day allowed, start from the s
   await page.click('[data-subtab=calendar]');
   await page.click(`[data-test=calendar-grid] [data-day="${day(0)}"]`);
   await page.waitForSelector('[data-test=calendar-session] >> text=Speed extra');
-  // Plan-Tag morgen: keine Zusatz-Einheit möglich; übermorgen frei
+  // Plan-Tag morgen: Zusatz-Einheit als Doppeltag möglich; Spieltag: nicht
   await page.click(`[data-test=calendar-grid] [data-day="${day(1)}"]`);
   await page.waitForSelector('[data-test=calendar-plan-day]');
-  assert.equal(await page.locator('[data-test=calendar-add-session]').count(), 0);
+  assert.equal(await page.locator('[data-test=calendar-add-session]').count(), 1);
+  if (day(3).slice(0, 7) === day(0).slice(0, 7)) {
+    await page.click(`[data-test=calendar-grid] [data-day="${day(3)}"]`);
+    await page.waitForSelector('[data-test=calendar-plan-day] >> text=Match');
+    assert.equal(await page.locator('[data-test=calendar-add-session]').count(), 0);
+  }
 
   // Coach: Einheit planen -> Karte, Übernehmen legt sie an einem freien Tag an
   await page.click('nav >> text=GYM');
