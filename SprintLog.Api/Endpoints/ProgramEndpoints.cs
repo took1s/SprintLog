@@ -179,6 +179,9 @@ public static class ProgramEndpoints
         if (program is null) return Results.NotFound();
         program.TrainingDays = input.TrainingDays;
         program.MatchDays = input.MatchDays;
+        if (input.TeamDays is { } team) program.TeamDays = team;
+        // Spiel verschoben auf einen Mannschaftstag: Spiel hat Vorrang
+        program.TeamDays &= ~program.MatchDays;
         await db.SaveChangesAsync(ct);
         return Results.Ok(ToResponse(await Load(db, userId.Value).FirstAsync(p => p.Id == id, ct)));
     }
@@ -262,6 +265,6 @@ public static class ProgramEndpoints
                 x.Id, x.Position, x.ExerciseId, x.Exercise.Name, x.Exercise.TrackingType, x.Exercise.MuscleGroup,
                 x.Sets, x.RepsMin, x.RepsMax, x.Distance, x.Time, x.TargetRpe, x.RestSeconds, x.ProgressionStep,
                 x.PercentOf1Rm, x.Note, (x.WeekSteps ?? new()).OrderBy(s => s.FromWeek).Select(WeekStepDto.From).ToList())).ToList()
-        )).ToList(), p.CycleWeeks, p.DeloadEvery, p.TrainingDays, p.MatchDays,
+        )).ToList(), p.CycleWeeks, p.DeloadEvery, p.TrainingDays, p.MatchDays, p.TeamDays,
         ProgramTranslations.Parse(p.Translations) is { Count: > 0 } tr ? tr : null);
 }

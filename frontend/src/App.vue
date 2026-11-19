@@ -14,6 +14,7 @@ import ExerciseCatalog from '@/components/ExerciseCatalog.vue';
 import SessionBar from '@/components/SessionBar.vue';
 import FinishModal from '@/components/FinishModal.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import TeamIcon from '@/components/TeamIcon.vue';
 import { t } from '@/i18n';
 import { useGoalsStore } from '@/stores/goals';
 import { useRoutinesStore } from '@/stores/routines';
@@ -37,6 +38,7 @@ const CustomExerciseModal = defineAsyncComponent(() => import('@/components/Cust
 const SettingsModal = defineAsyncComponent(() => import('@/components/SettingsModal.vue'));
 const ProgramEditor = defineAsyncComponent(() => import('@/components/ProgramEditor.vue'));
 const MatchModal = defineAsyncComponent(() => import('@/components/MatchModal.vue'));
+const TeamModal = defineAsyncComponent(() => import('@/components/TeamModal.vue'));
 const RecoveryCodesModal = defineAsyncComponent(() => import('@/components/RecoveryCodesModal.vue'));
 const ExerciseInfoSheet = defineAsyncComponent(() => import('@/components/ExerciseInfoSheet.vue'));
 const GoalSheet = defineAsyncComponent(() => import('@/components/GoalSheet.vue'));
@@ -65,13 +67,14 @@ const aiStore = useAiStore();
 const { booting, isAuthenticated, tab, authMode, sessionActive } = storeToRefs(app);
 
 /** Dialog-Chunks erst beim ersten Öffnen laden - danach bleiben sie gemountet (Schließen-Animation bleibt erhalten). */
-const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, codes: false, info: false, goal: false, routine: false, routineDetail: false, library: false, player: false, tests: false, testDay: false, planned: false, hold: false, builder: false, summary: false, ai: false, profile: false, memory: false });
+const used = reactive({ set: false, custom: false, settings: false, editor: false, match: false, team: false, codes: false, info: false, goal: false, routine: false, routineDetail: false, library: false, player: false, tests: false, testDay: false, planned: false, hold: false, builder: false, summary: false, ai: false, profile: false, memory: false });
 watchEffect(() => {
   if (app.setModal.open) used.set = true;
   if (app.customModal.open) used.custom = true;
   if (app.settingsOpen) used.settings = true;
   if (app.programEditor.open) used.editor = true;
   if (app.matchModal.open) used.match = true;
+  if (app.teamModal.open) used.team = true;
   if (app.recoveryCodes) used.codes = true;
   if (app.exerciseInfo) used.info = true;
   if (goals.draft.open) used.goal = true;
@@ -130,11 +133,22 @@ watch(() => reminders.focus, (f) => {
         <WorkoutView v-if="sessionActive" />
         <template v-else>
           <StartPanel />
-          <button v-if="tab === 'Football'" type="button" @click="app.openMatchModal()" data-test="log-match"
-                  class="glass-panel mb-6 flex w-full items-center justify-between rounded-2xl px-5 py-4 text-left transition-colors hover:border-accent/60">
-            <span class="display text-lg text-white">{{ t('match.log') }}</span>
-            <span class="font-mono text-[10px] text-slate-400">{{ t('match.info') }}</span>
-          </button>
+          <!-- Feld: Spiel und Mannschaftstraining ohne Sätze erfassen (zählen über Minuten × sRPE in die Last) -->
+          <div v-if="tab === 'Football'" class="mb-6 grid grid-cols-2 gap-3">
+            <button type="button" @click="app.openMatchModal()" data-test="log-match"
+                    class="glass-panel flex flex-col items-start rounded-2xl px-4 py-4 text-left transition-colors hover:border-accent/60">
+              <span class="display text-lg leading-tight text-white">{{ t('match.log') }}</span>
+              <span class="mt-1 font-mono text-[10px] text-slate-400">{{ t('match.infoShort') }}</span>
+            </button>
+            <button type="button" @click="app.openTeamModal()" data-test="log-team"
+                    class="glass-panel relative flex flex-col items-start rounded-2xl px-4 py-4 text-left transition-colors hover:border-accent/60"
+                    :class="app.todayPlan?.team && !app.teamLoggedToday ? 'border-accent/60' : ''">
+              <span class="display flex items-center gap-1.5 text-lg leading-tight text-white"><TeamIcon class="h-5 w-5 flex-shrink-0 text-accent" />{{ t('team.log') }}</span>
+              <span class="mt-1 font-mono text-[10px]" :class="app.todayPlan?.team && !app.teamLoggedToday ? 'font-bold text-accent' : 'text-slate-400'">
+                {{ app.todayPlan?.team ? (app.teamLoggedToday ? t('team.loggedToday') : t('team.today')) : t('team.infoShort') }}
+              </span>
+            </button>
+          </div>
           <h2 class="label-xs mb-3">{{ t('catalog.title') }}</h2>
           <ExerciseCatalog />
         </template>
@@ -150,6 +164,7 @@ watch(() => reminders.focus, (f) => {
       <ProgramEditor v-if="used.editor" />
       <FinishModal />
       <MatchModal v-if="used.match" />
+      <TeamModal v-if="used.team" />
       <ExerciseInfoSheet v-if="used.info" />
       <GoalSheet v-if="used.goal" />
       <RoutineDetailSheet v-if="used.routineDetail" />

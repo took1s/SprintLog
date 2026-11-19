@@ -65,7 +65,7 @@ function newProgram(user, input, templateKey, activate) {
   if (activate) db.programs.filter((p) => p.userId === user.id).forEach((p) => { p.isActive = false; });
   const p = {
     id: db.nextProgramId++, userId: user.id, name: input.name, goal: input.goal, weeks: input.weeks, templateKey,
-    cycleWeeks: input.cycleWeeks ?? null, deloadEvery: input.deloadEvery ?? null, trainingDays: 0, matchDays: 0,
+    cycleWeeks: input.cycleWeeks ?? null, deloadEvery: input.deloadEvery ?? null, trainingDays: 0, matchDays: 0, teamDays: 0,
     isActive: activate, startedAt: activate ? new Date().toISOString() : null, createdAt: new Date().toISOString(),
     days: input.days.map((d) => ({ id: db.nextDayId++, name: d.name, notes: d.notes ?? null, exercises: d.exercises.map((x) => ({ ...x, id: db.nextPxId++ })) })),
   };
@@ -137,7 +137,8 @@ function sendMail(to, subject, param, token) {
   db.outbox.push({ to, subject, link, sentAt: new Date().toISOString() });
 }
 const visible = (userId) => db.exercises.filter((e) => e.userId === null || e.userId === userId);
-const exerciseDto = (e) => ({ id: e.id, name: e.name, category: e.category, muscleGroup: e.muscleGroup, trackingType: e.trackingType, isCustom: e.userId !== null, isAssisted: !!e.isAssisted, perSide: !!e.perSide });
+const exerciseDto = (e) => ({ id: e.id, name: e.name, category: e.category, muscleGroup: e.muscleGroup, trackingType: e.trackingType, isCustom: e.userId !== null, isAssisted: !!e.isAssisted, perSide: !!e.perSide,
+  description: e.description ?? null, byCoach: !!e.byCoach });
 const CARDIO_KEYS = ['level', 'power', 'heartRate', 'cadence', 'calories'];
 const NOTE_REASONS = ['pain', 'equipment', 'time', 'fatigue', 'other'];
 const cleanNotes = (notes) => (notes ?? []).map((n) => ({ exerciseId: n.exerciseId, note: n.note?.trim() || null, skipped: !!n.skipped, reason: n.reason ?? null }));
@@ -151,6 +152,7 @@ function workoutResponse(w) {
       goals: w.match?.goals ?? null, assists: w.match?.assists ?? null, opponent: w.match?.opponent?.trim() || null, position: w.match?.position ?? null,
       teamGoals: w.match?.teamGoals ?? null, opponentGoals: w.match?.opponentGoals ?? null, wentWell: w.match?.wentWell?.trim() || null, toImprove: w.match?.toImprove?.trim() || null,
     } : null,
+    team: w.workoutType === 'Team' ? { focus: w.team?.focus ?? null, participation: w.team?.participation ?? null } : null,
     health: w.health && Object.values(w.health).some((v) => v != null) ? w.health : null,
     sets: (w.sets ?? []).map((s, i) => {
       const ex = db.exercises.find((e) => e.id === s.exerciseId);
@@ -175,11 +177,14 @@ function addUser(username, password) {
 
 function validateWorkout(user, body) {
   const errors = {};
-  if (!['Gym', 'Football', 'Hybrid', 'Match'].includes(body.workoutType)) errors.workoutType = ['Invalid workout type.'];
-  const isMatch = body.workoutType === 'Match';
+  if (!['Gym', 'Football', 'Hybrid', 'Match', 'Team'].includes(body.workoutType)) errors.workoutType = ['Invalid workout type.'];
+  // Spiel und Mannschaftstraining: ohne Sätze, aber Minuten + sRPE
+  const isMatch = body.workoutType === 'Match' || body.workoutType === 'Team';
   if (!isMatch && (!Array.isArray(body.sets) || body.sets.length === 0)) errors.sets = ['Cannot save an empty workout.'];
+  if (body.workoutType === 'Team' && body.sets?.length) errors.sets = ['Team training has no sets.'];
   if (isMatch && !(body.durationSeconds > 0)) errors.durationSeconds = ['Enter the minutes played.'];
   if (isMatch && !body.sessionRpe) errors.sessionRpe = ['Rate how hard the match was (1-10).'];
+  if (body.team && body.workoutType !== 'Team') errors.team = ['Team details are only allowed for team training.'];
   (body.sets ?? []).forEach((s, i) => {
     if ([s.weight, s.reps, s.distance, s.time].some((v) => v != null && v < 0)) errors[`sets[${i}]`] = ['Metrics cannot be negative.'];
   });
@@ -213,7 +218,7 @@ function saveWorkout(user, body) {
     id: db.nextWorkoutId++, userId: user.id, clientId, workoutType: body.workoutType,
     date: body.date ? new Date(body.date).toISOString() : new Date().toISOString(),
     durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null, quality: body.quality ?? null,
-    notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets ?? [], match: body.match ?? null,
+    notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets ?? [], match: body.match ?? null, team: body.team ?? null,
     gym: body.gym?.trim() || null, exerciseNotes: cleanNotes(body.exerciseNotes), health: body.health ?? null,
     updatedAt: new Date().toISOString(),
   };
@@ -581,13 +586,26 @@ async function handleApi(req, res, url) {
         memoryChanges.push({ action: 'saved', id: m.id, category, content });
         answer += '\n- Noted.';
       }
+      // Eigene Übung wie create_exercise: "copenhagen" -> neue Übung (einmal; danach wird die vorhandene genutzt)
+      const exercisesAdded = [];
+      if (/copenhagen|копенгаген/.test(lower)) {
+        const name = 'Copenhagen Plank Long Lever';
+        let ex = db.exercises.find((e) => e.name === name && e.userId === user.id);
+        if (!ex) {
+          ex = { id: Math.max(...db.exercises.map((e) => e.id)) + 1, name, category: 'Gym', muscleGroup: 'Core', trackingType: 'Duration', userId: user.id, perSide: true, byCoach: true,
+            description: 'Side plank, top leg on a bench, bottom leg free. Hips high and in line - do not tilt forward. Start with 2 x 15 s per side.' };
+          db.exercises.push(ex);
+          exercisesAdded.push(exerciseDto(ex));
+          answer += '\n- Added Copenhagen Plank Long Lever.';
+        }
+      }
       const memoryCount = (db.memory ?? []).filter((m) => m.userId === user.id).length;
       answer += `\n- Memory: ${memoryCount} entries.`;
       // Lange, gegliederte Antwort wie vom echten Modell (Lesbarkeit, Screenshots)
       if (/long|подробн|ausführlich/.test(lower)) {
         answer += '\n\nLoad this week:\n- ACWR 1.12 (rolling), 1.08 (EWMA) - in the 0.8-1.3 range\n- Monotony 1.4 - fine\n\nPlan for today:\n1. Warm-up 15 min, A-skips, strides\n2. Sprints 6x30 m at >95 %, 2-3 min rest\n3. Nordic curls 3x5, slow eccentric\n\nRecovery: 8+ h sleep, 1.6-2.2 g/kg protein, carbs the evening before the match. **End of answer.**';
       }
-      return json(res, 200, { answer, remaining: limit - used - costs[mode], actions, memory: memoryChanges });
+      return json(res, 200, { answer, remaining: limit - used - costs[mode], actions, memory: memoryChanges, exercises: exercisesAdded });
     }
     if (method === 'POST' && path === '/api/ai/plan') {
       if (used + costs.plan > limit) return quota();
@@ -814,7 +832,7 @@ async function handleApi(req, res, url) {
     Object.assign(w, {
       workoutType: body.workoutType, date: body.date ? new Date(body.date).toISOString() : w.date,
       durationSeconds: body.durationSeconds ?? null, sessionRpe: body.sessionRpe ?? null, quality: body.quality ?? null,
-      notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets ?? [], match: body.match ?? null,
+      notes: body.notes?.trim() ? body.notes.trim() : null, programDayId: body.programDayId ?? null, sets: body.sets ?? [], match: body.match ?? null, team: body.team ?? null,
       gym: body.gym?.trim() || null, exerciseNotes: cleanNotes(body.exerciseNotes), health: body.health ?? w.health ?? null,
       updatedAt: new Date().toISOString(),
     });
@@ -852,7 +870,9 @@ async function handleApi(req, res, url) {
     const body = await readBody(req);
     const ok = (v) => Number.isInteger(v) && v >= 0 && v <= 127;
     if (!ok(body.trainingDays) || !ok(body.matchDays) || (body.trainingDays & body.matchDays) !== 0) return problem(res, 400, 'Validation failed', { matchDays: ['Invalid schedule.'] });
-    Object.assign(p, { trainingDays: body.trainingDays, matchDays: body.matchDays });
+    if (body.teamDays != null && (!ok(body.teamDays) || (body.teamDays & body.matchDays) !== 0)) return problem(res, 400, 'Validation failed', { teamDays: ['Team training never on a match day.'] });
+    Object.assign(p, { trainingDays: body.trainingDays, matchDays: body.matchDays, ...(body.teamDays != null ? { teamDays: body.teamDays } : {}) });
+    p.teamDays = (p.teamDays ?? 0) & ~p.matchDays;
     return json(res, 200, programResponse(p));
   }
   m = path.match(/^\/api\/programs\/(\d+)(\/(activate|deactivate))?$/);
@@ -963,7 +983,8 @@ function seedDemo() {
     { name: 'Speed & agility', exercises: [{ exerciseId: 12, sets: 6, distance: 30 }, { exerciseId: 58, sets: 4, distance: 20 }] },
     { name: 'Upper body', exercises: [{ exerciseId: 1, sets: 4, repsMin: 6, repsMax: 8, targetRpe: 8 }, { exerciseId: 44, sets: 3, repsMin: 10, repsMax: 10 }] },
   ] }, null, true);
-  Object.assign(prog, { trainingDays: 1 | 2 | 8, matchDays: 32 });
+  // Mannschaftstraining Di + Do (Di: Doppeltag mit eigenem Training)
+  Object.assign(prog, { trainingDays: 1 | 2 | 8, matchDays: 32, teamDays: 2 | 8 });
   // Leistungstests: zwei Testtage
   [[-60, { sprint10: 1.86, sprint30: 4.38, cmj: 36, agility: 4.72, yoyo: 1720 }], [-12, { sprint10: 1.81, sprint30: 4.29, cmj: 38.5, agility: 4.61, yoyo: 1880 }]]
     .forEach(([d, values]) => Object.entries(values).forEach(([test, value]) => db.tests.push({ userId: user.id, clientId: `ft-demo-${test}${-d}`, day: dayKey(d), test, value, notes: null, updatedAt: created })));

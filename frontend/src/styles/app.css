@@ -513,12 +513,14 @@
 .today-hero.is-rest { --tone: var(--c-fg); }
 .today-hero.is-match { --tone: var(--c-gold); }
 .today-hero.is-rehab { --tone: var(--c-success); }
+.today-hero.is-team { --tone: var(--c-warn); }
 .today-dot { height: 8px; width: 8px; flex-shrink: 0; border-radius: 9999px; background: rgb(var(--tone)); box-shadow: 0 0 0 4px rgb(var(--tone) / 0.18); }
 .today-title { color: rgb(var(--c-fg)); }
 .today-hero.is-train .today-title { color: rgb(var(--c-accent-text)); }
 .today-hero.is-light .today-title { color: rgb(var(--c-warn-text)); }
 .today-hero.is-match .today-title { color: rgb(var(--c-gold)); }
 .today-hero.is-rehab .today-title { color: rgb(var(--c-success-text)); }
+.today-hero.is-team .today-title { color: rgb(var(--c-warn-text)); }
 .today-ask { display: flex; height: 2.25rem; width: 2.25rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 12px; color: rgb(var(--c-accent-text)); background: rgb(var(--c-fg) / 0.06); border: var(--border-w) solid rgb(var(--c-fg) / 0.1); }
 .today-ask:active { transform: scale(0.94); }
 .today-cta {
@@ -693,6 +695,7 @@
 .week-dot.is-training { box-shadow: inset 0 0 0 1.5px rgb(var(--c-accent)); }
 .week-dot.is-done { background: rgb(var(--c-accent)); }
 .week-dot.is-match { background: rgb(var(--c-gold)); }
+.week-dot.is-team { background: rgb(var(--c-warn)); }
 .week-dot.is-extra { background: rgb(var(--c-gym)); }
 .week-dot.is-routines { background: rgb(var(--c-success)); }
 .week-dot.is-routines-part { box-shadow: inset 0 0 0 1.5px rgb(var(--c-success)); }
@@ -1130,6 +1133,7 @@ input[type="number"] { -moz-appearance: textfield; }
 .hist-chip.is-football, .hist-card.is-football { --hist-c: rgb(var(--c-accent)); }
 .hist-chip.is-match, .hist-card.is-match { --hist-c: rgb(var(--c-gold)); }
 .hist-chip.is-hybrid, .hist-card.is-hybrid { --hist-c: rgb(var(--c-success)); }
+.hist-chip.is-team, .hist-card.is-team { --hist-c: rgb(var(--c-warn)); }
 .hist-week { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 12px; row-gap: 2px; padding: 6px 4px 8px; }
 .hist-week h3 { min-width: 0; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: var(--label-tracking); color: rgb(var(--c-fg)); }
 .hist-week p { flex-shrink: 0; font-size: 10px; color: rgb(var(--c-subtle)); }

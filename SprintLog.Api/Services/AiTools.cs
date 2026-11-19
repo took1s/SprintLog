@@ -25,10 +25,17 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
     public const string ProposeWorkoutChange = "propose_workout_change";
     public const string ProposeRoutine = "propose_routine";
     public const string ProposeSession = "propose_session";
+    public const string CreateExercise = "create_exercise";
+    /// <summary>Höchstens so viele neue Übungen pro Antwort und insgesamt vom Coach - gegen Katalog-Wildwuchs.</summary>
+    public const int MaxCoachExercisesPerAnswer = 3;
+    public const int MaxCoachExercisesTotal = 60;
     public const int MaxWorkoutOps = 10;
 
     /// <summary>Gedächtnis-Änderungen dieser Anfrage (Hinweise im Chat). AiTools lebt pro Request.</summary>
     public List<MemoryChangeDto> MemoryChanges { get; } = new();
+
+    /// <summary>Vom Coach in dieser Anfrage neu angelegte Übungen (Hinweis im Chat mit "Rückgängig").</summary>
+    public List<ExerciseDto> ExercisesAdded { get; } = new();
     private const int MaxResultChars = 9_000;
 
     private static JsonObject Schema(string json) => JsonNode.Parse(json)!.AsObject();
@@ -80,8 +87,9 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
         Schema("""{"type":"object","required":["exerciseId","targetWeight","targetReps","reason"],"properties":{"exerciseId":{"type":"integer"},"targetWeight":{"type":"number"},"targetReps":{"type":"integer"},"targetDate":{"type":"string","description":"yyyy-MM-dd, optional"},"reason":{"type":"string"}}}"""));
 
     public static readonly AiTool ProposeScheduleTool = new(ProposeSchedule,
-        "Propose the weekly schedule of the active program: training days and match days (0 = Monday ... 6 = Sunday). The athlete confirms it.",
-        Schema("""{"type":"object","required":["trainingDays","matchDays","reason"],"properties":{"trainingDays":{"type":"array","items":{"type":"integer"}},"matchDays":{"type":"array","items":{"type":"integer"}},"reason":{"type":"string"}}}"""));
+        "Propose the weekly schedule of the active program: own training days, match days and the club's team training days (0 = Monday ... 6 = Sunday). " +
+        "Team days may coincide with own training days (double day), never with match days. Omit teamDays to keep them as they are. The athlete confirms it.",
+        Schema("""{"type":"object","required":["trainingDays","matchDays","reason"],"properties":{"trainingDays":{"type":"array","items":{"type":"integer"}},"matchDays":{"type":"array","items":{"type":"integer"}},"teamDays":{"type":"array","items":{"type":"integer"},"description":"Club team training days; omit to keep"},"reason":{"type":"string"}}}"""));
 
     public static readonly AiTool SubmitReportTool = new(SubmitReport,
         "Submit the final analysis report.",
@@ -200,8 +208,24 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
             "targetRpe":{"type":"number"},"note":{"type":"string","description":"max 80 characters"}}}}}}
         """));
 
+    public static readonly AiTool CreateExerciseTool = new(CreateExercise,
+        "Add a NEW exercise to the athlete's catalog when nothing in it fits the session you want to propose. ALWAYS search_exercises first " +
+        "(catalog names are English - search with English terms and synonyms). Only established exercises from coaching practice " +
+        "(e.g. 'Copenhagen Plank', 'Single-Leg RDL', 'A-Skip', 'Pallof Press') - never invent movements, never variants that only differ in weight or reps. " +
+        $"Max {MaxCoachExercisesPerAnswer} per answer. It is saved immediately as the athlete's own exercise (he sees a note and can undo it). " +
+        "Near-duplicates are refused and the existing exercise is returned instead. Use the returned id right away in your proposals.",
+        Schema("""
+        {"type":"object","required":["name","category","muscleGroup","tracking","description"],"properties":{
+          "name":{"type":"string","description":"Common English name, 2-60 characters, Title Case"},
+          "category":{"type":"string","enum":["Gym","Football"]},
+          "muscleGroup":{"type":"string","enum":["Legs","Back","Chest","Shoulders","Arms","Core","Mobility","Explosive","Agility","Cardio","Other"]},
+          "tracking":{"type":"string","enum":["WeightReps","DistanceTime","Duration","Cardio"],"description":"WeightReps also for bodyweight (0 kg)"},
+          "perSide":{"type":"boolean","description":"Unilateral: values count per side"},
+          "description":{"type":"string","description":"How to do it in the athlete's language: setup, 2-3 key technique cues, common mistake. 40-400 characters."}}}
+        """));
+
     public static readonly IReadOnlyList<AiTool> DataTools = new[] { Programs, ExerciseHistory, PersonalRecords, TrainingSummary, LoadMetrics, WellnessTrend, MatchStats, SearchExercises };
-    public static readonly IReadOnlyList<AiTool> ChatTools = DataTools.Concat(new[] { ProposeProgramTool, ProposeProgramUpdateTool, ProposeGoalTool, ProposeScheduleTool, ProposeRoutineTool, ProposeSessionTool, RememberTool, ForgetMemoryTool }).ToList();
+    public static readonly IReadOnlyList<AiTool> ChatTools = DataTools.Concat(new[] { ProposeProgramTool, ProposeProgramUpdateTool, ProposeGoalTool, ProposeScheduleTool, ProposeRoutineTool, ProposeSessionTool, CreateExerciseTool, RememberTool, ForgetMemoryTool }).ToList();
 
     /// <summary>Im Training: zusätzlich die laufende Einheit ändern.</summary>
     public static readonly IReadOnlyList<AiTool> LiveWorkoutTools = ChatTools.Append(ProposeWorkoutChangeTool).ToList();
@@ -230,6 +254,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
                 ProposeWorkoutChange => await WorkoutChangeActionAsync(userId, use.Input, actions, ct),
                 ProposeRoutine => await RoutineActionAsync(userId, use.Input, actions, ct),
                 ProposeSession => await SessionActionAsync(userId, use.Input, actions, ct),
+                CreateExercise => await CreateExerciseAsync(userId, use.Input, ct),
                 Remember => await RememberAsync(userId, use.Input, ct),
                 ForgetMemory => await ForgetAsync(userId, Int(use.Input, "id"), ct),
                 _ => new { error = $"Unknown tool {use.Name}" },
@@ -437,7 +462,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
             .ToListAsync(ct);
         var sb = new System.Text.StringBuilder();
         sb.Append("Today: ").Append(today.ToString("yyyy-MM-dd ddd", CultureInfo.InvariantCulture)).Append('\n');
-        sb.Append(active is null ? "No active plan.\n" : $"Plan '{active.Name}': training {DaysText(active.TrainingDays)}{(active.TrainingDays == 0 ? " (no fixed days)" : "")}, match {(active.MatchDays == 0 ? "none" : DaysText(active.MatchDays))}\n");
+        sb.Append(active is null ? "No active plan.\n" : $"Plan '{active.Name}': training {DaysText(active.TrainingDays)}{(active.TrainingDays == 0 ? " (no fixed days)" : "")}, match {(active.MatchDays == 0 ? "none" : DaysText(active.MatchDays))}, team training {(active.TeamDays == 0 ? "none" : DaysText(active.TeamDays))}\n");
         foreach (var p in planned.Where(p => p.Date < today))
             sb.Append("- past ").Append(p.Date.ToString("yyyy-MM-dd ddd", CultureInfo.InvariantCulture)).Append(" | id ").Append(p.ClientId).Append(" | ").Append(p.Title)
               .Append(" | ").Append(p.Status == "planned" ? "missed" : p.Status).Append('\n');
@@ -445,6 +470,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
         {
             var parts = new List<string>();
             if (PlannedWorkoutRules.ConflictOn(d, active) is { } kind) parts.Add(kind == "match" ? "MATCH" : "plan training");
+            if (active is not null && (active.TeamDays & DayBit(d)) != 0) parts.Add("TEAM training (club)");
             if (MatchDay.Label(d, active?.MatchDays ?? 0) is { } md && md != "MD") parts.Add($"{md} ({MatchDay.Focus(md)})");
             foreach (var p in planned.Where(p => p.Date == d && p.Status != "skipped"))
                 parts.Add($"session id {p.ClientId} '{p.Title}' ({p.Category}, {p.Status}, by {p.Source}): {string.Join(", ", p.Exercises.Select(x => $"#{x.ExerciseId} {x.Sets}x"))}");
@@ -531,6 +557,62 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
                 : doubleDay ? "Double day: this date is also a plan training day. That is allowed - say it is a double day, keep the extra session short and complementary " +
                               "(different quality than the plan day, e.g. speed or prevention next to strength), say which to do first, and count both in the week's load."
                 : "The athlete adds it with one tap. Mention the day and the focus in one sentence.",
+        };
+    }
+
+    // ---------- Eigene Übungen des Coachs ----------
+
+    private static readonly string[] CoachMuscleGroups = ["Legs", "Back", "Chest", "Shoulders", "Arms", "Core", "Mobility", "Explosive", "Agility", "Cardio", "Other"];
+
+    /// <summary>Vergleichsschlüssel: nur Buchstaben/Ziffern, klein ("Single-Leg RDL" == "single leg rdl").</summary>
+    internal static string NameKey(string name) => new(name.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+
+    /// <summary>
+    /// Legt eine eigene Übung an, wenn der Katalog keine passende hat. Schutz gegen "Tüdeln": Pflicht-Beschreibung, feste Muskelgruppen,
+    /// Dubletten-Abgleich (Name ohne Satzzeichen/Leerzeichen, auch "-s"-Plural), Limit pro Antwort und insgesamt.
+    /// </summary>
+    private async Task<object> CreateExerciseAsync(int userId, JsonElement input, CancellationToken ct)
+    {
+        if (ExercisesAdded.Count >= MaxCoachExercisesPerAnswer)
+            return new { error = $"Limit reached: max {MaxCoachExercisesPerAnswer} new exercises per answer. Use catalog exercises for the rest." };
+
+        var name = string.Join(' ', (Str(input, "name") ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        var category = Str(input, "category");
+        var muscle = Str(input, "muscleGroup");
+        var description = Str(input, "description")?.Trim() ?? string.Empty;
+        TrackingType? tracking = Enum.TryParse<TrackingType>(Str(input, "tracking"), out var t) && Enum.IsDefined(t) && !int.TryParse(Str(input, "tracking"), out _) ? t : null;
+        var errors = new List<string>();
+        if (name.Length is < 2 or > 60) errors.Add("name must be 2-60 characters");
+        if (category is not ("Gym" or "Football")) errors.Add("category must be Gym or Football");
+        if (muscle is null || !CoachMuscleGroups.Contains(muscle)) errors.Add("muscleGroup must be one of " + string.Join(", ", CoachMuscleGroups));
+        if (tracking is null) errors.Add("tracking must be WeightReps, DistanceTime, Duration or Cardio");
+        if (description.Length is < 40 or > 400) errors.Add("description must be 40-400 characters (setup, cues, common mistake)");
+        if (errors.Count > 0) return new { error = "Not created: " + string.Join("; ", errors) + "." };
+
+        var key = NameKey(name);
+        var keys = new[] { key, key.EndsWith('s') ? key[..^1] : key + "s" };
+        var visible = await db.Exercises.AsNoTracking().VisibleTo(userId).Select(e => new { e.Id, e.Name, e.TrackingType }).ToListAsync(ct);
+        var same = visible.FirstOrDefault(e => keys.Contains(NameKey(e.Name)));
+        if (same is not null)
+            return new { exists = true, same.Id, same.Name, tracking = same.TrackingType.ToString(), note = "Already in the catalog - use this id, nothing was created." };
+
+        var byCoach = await db.Exercises.CountAsync(e => e.UserId == userId && e.CreatedByCoach, ct);
+        if (byCoach >= MaxCoachExercisesTotal)
+            return new { error = $"The athlete already has {byCoach} coach-made exercises. Use existing ones (search_exercises)." };
+
+        var perSide = input.TryGetProperty("perSide", out var ps) && ps.ValueKind == JsonValueKind.True;
+        var exercise = new Exercise
+        {
+            Name = name, Category = category!, MuscleGroup = muscle, TrackingType = tracking!.Value,
+            PerSide = perSide, Description = description, CreatedByCoach = true, UserId = userId,
+        };
+        db.Exercises.Add(exercise);
+        await db.SaveChangesAsync(ct);
+        ExercisesAdded.Add(ExerciseDto.From(exercise));
+        return new
+        {
+            created = true, exercise.Id, exercise.Name, tracking = exercise.TrackingType.ToString(),
+            note = "Saved to the athlete's catalog. Use this id in your proposal and mention in one short sentence that you added it.",
         };
     }
 
@@ -717,6 +799,8 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
                 gym = ws.Count(w => w.WorkoutType == "Gym"),
                 football = ws.Count(w => w.WorkoutType is "Football" or "Hybrid"),
                 matches = ws.Count(w => w.WorkoutType == "Match"),
+                teamTrainings = ws.Count(w => w.WorkoutType == "Team"),
+                teamMinutes = ws.Where(w => w.WorkoutType == "Team").Sum(w => (w.DurationSeconds ?? 0) / 60),
                 workSets = work.Count,
                 tonnageKg = R(work.Where(s => !s.Exercise.IsAssisted && s.Exercise.TrackingType == TrackingType.WeightReps)
                     .Sum(s => (s.Weight ?? 0) * (s.Reps ?? 0) * (s.Exercise.PerSide ? 2 : 1)), 0),
@@ -733,7 +817,14 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
             .ToDictionary(g => g.Key, g => R(g.Count() / (double)fullWeeks))
             .OrderByDescending(kv => kv.Value).ToDictionary(kv => kv.Key, kv => kv.Value);
 
-        return new { weeks = perWeek, avgWorkSetsPerWeekByMuscle = muscle, totalSessions = list.Count };
+        // Mannschaftstraining: die letzten Einheiten mit Schwerpunkt, Teilnahme und Selbsteinschätzung
+        var team = list.Where(w => w.WorkoutType == "Team").OrderByDescending(w => w.Date).Take(8).Select(w => new
+        {
+            date = w.Date.ToString("yyyy-MM-dd ddd", CultureInfo.InvariantCulture), minutes = (w.DurationSeconds ?? 0) / 60, rpe = w.SessionRpe,
+            loadAU = (w.SessionRpe ?? 0) * (w.DurationSeconds ?? 0) / 60, focus = w.TeamFocus, participation = w.Participation, howItWent = w.Quality, w.Notes,
+        }).ToList();
+
+        return new { weeks = perWeek, avgWorkSetsPerWeekByMuscle = muscle, totalSessions = list.Count, recentTeamTrainings = team };
     }
 
     private async Task<object> WellnessAsync(int userId, int days, CancellationToken ct)
@@ -816,7 +907,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
             {
                 chosen.Id, chosen.Name, chosen.Goal, chosen.Weeks, active = chosen.IsActive, template = chosen.TemplateKey,
                 startedAt = chosen.StartedAt is { } s ? Day(s) : null, currentWeek, chosen.CycleWeeks, chosen.DeloadEvery,
-                weekPlan = chosen.TrainingDays == 0 && chosen.MatchDays == 0 ? "not set" : $"training: {Week(chosen.TrainingDays)}; match: {Week(chosen.MatchDays)}",
+                weekPlan = chosen.TrainingDays == 0 && chosen.MatchDays == 0 && chosen.TeamDays == 0 ? "not set" : $"training: {Week(chosen.TrainingDays)}; match: {Week(chosen.MatchDays)}; team training: {Week(chosen.TeamDays)}",
                 days = chosen.Days.OrderBy(d => d.Position).Select(d => new
                 {
                     dayId = d.Id, d.Name, d.Notes,
@@ -1006,7 +1097,14 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
         var training = Mask(input, "trainingDays");
         var match = Mask(input, "matchDays");
         if ((training & match) != 0) return new { error = "A day cannot be both a training and a match day." };
-        actions.Add(new JsonObject { ["type"] = "schedule", ["trainingDays"] = training, ["matchDays"] = match, ["reason"] = Clip(Str(input, "reason"), 300) });
+        var action = new JsonObject { ["type"] = "schedule", ["trainingDays"] = training, ["matchDays"] = match, ["reason"] = Clip(Str(input, "reason"), 300) };
+        if (input.TryGetProperty("teamDays", out var t) && t.ValueKind == JsonValueKind.Array)
+        {
+            var team = Mask(input, "teamDays");
+            if ((team & match) != 0) return new { error = "A team training day cannot be a match day." };
+            action["teamDays"] = team;
+        }
+        actions.Add(action);
         return new { shown = true, note = "The athlete sees the week plan as a card and decides." };
     }
 

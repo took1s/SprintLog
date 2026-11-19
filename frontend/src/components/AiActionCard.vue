@@ -14,6 +14,7 @@ import { useAppStore } from '@/stores/app';
 import type { AiAction } from '@/stores/ai';
 import type { WorkoutOp } from '@/lib/liveWorkout';
 import RoutineStepRow from './RoutineStepRow.vue';
+import TeamIcon from './TeamIcon.vue';
 
 const props = defineProps<{ action: AiAction; applied: boolean; busy: boolean }>();
 const emit = defineEmits<{ apply: [] }>();
@@ -105,6 +106,11 @@ const goalExercise = computed(() => {
 const kind = (d: number) => {
   if (props.action.type !== 'schedule') return 'rest';
   return props.action.matchDays & bit(d) ? 'match' : props.action.trainingDays & bit(d) ? 'training' : 'rest';
+};
+/** Mannschaftstraining laut Vorschlag (ohne teamDays: wie bisher im aktiven Plan). */
+const team = (d: number) => {
+  if (props.action.type !== 'schedule' || props.action.matchDays & bit(d)) return false;
+  return !!((props.action.teamDays ?? useAppStore().activeProgram?.teamDays ?? 0) & bit(d));
 };
 // Gleiche Optik wie der Wochenplan (WeekSchedule.vue) - Training, Spiel und Ruhe sehen überall gleich aus
 const pill = (k: 'training' | 'match' | 'rest') => ({
@@ -220,7 +226,7 @@ const apply = () => { if (!locked.value) emit('apply'); };
       <template v-else-if="action.type === 'schedule'">
           <ul class="mt-2 grid grid-cols-7 gap-1">
               <li v-for="d in WEEKDAYS" :key="d" class="flex flex-col items-center rounded-lg border py-1.5" :class="pill(kind(d))">
-                  <span class="sr-only">{{ dayLong(d) }}: {{ t(`schedule.kind.${kind(d)}`) }}</span>
+                  <span class="sr-only">{{ dayLong(d) }}: {{ t(`schedule.kind.${kind(d)}`) }}<template v-if="team(d)">, {{ t('schedule.kind.team') }}</template></span>
                   <span class="text-[10px] font-bold uppercase tracking-label" aria-hidden="true">{{ dayShort(d) }}</span>
                   <!-- Symbol statt nur Farbe (Spieltag/Training auch ohne Farbsehen erkennbar) -->
                   <span class="mt-0.5 flex h-3.5 items-center" aria-hidden="true">
@@ -228,6 +234,7 @@ const apply = () => { if (!locked.value) emit('apply'); };
                       <svg v-else-if="kind(d) === 'match'" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5l3.2 2.3-1.2 3.7h-4l-1.2-3.7z" fill="currentColor"/></svg>
                       <span v-else class="h-1 w-1 rounded-full bg-current opacity-60"></span>
                   </span>
+                  <TeamIcon v-if="team(d)" class="mt-0.5 h-3 w-3" data-test="schedule-card-team" />
               </li>
           </ul>
           <p v-if="action.reason" class="mt-2 text-sm leading-relaxed text-slate-300">{{ action.reason }}</p>

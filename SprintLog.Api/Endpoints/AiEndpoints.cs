@@ -99,7 +99,7 @@ public static class AiEndpoints
         var run = await RunAsync(ai, tools, userId, model, system, messages, live is null ? AiTools.ChatTools : AiTools.LiveWorkoutTools,
             deep ? 6000 : 2500, deep ? 8 : 5, null, logs, ct);
         var answer = string.IsNullOrWhiteSpace(run.Text) ? throw new AiException("ai_empty", HttpStatusCode.BadGateway) : run.Text;
-        return Results.Ok(new AiAskResponse(answer, quota.Remaining(userId, limit), run.Actions, tools.MemoryChanges));
+        return Results.Ok(new AiAskResponse(answer, quota.Remaining(userId, limit), run.Actions, tools.MemoryChanges, tools.ExercisesAdded));
     }
 
     private static async Task<IResult> Plan(AiPlanInput input, HttpContext http, IAiClient ai, AiQuota quota, AiTools tools, AppDbContext db,
@@ -392,7 +392,9 @@ public static class AiEndpoints
         - Fitness tests (<performance>): compare with the previous result and with typical values for the athlete's position and level; suggest a retest when the last one is older than 6-8 weeks; turn weaknesses into concrete training (e.g. slow 10 m -> acceleration work).
         - Matches (get_matches): use minutes, position, self-rating and the athlete's own notes (went well / to improve) to give specific feedback.
         - Rehab pain (<routines>, 0-10): latest > 3/10 or rising -> suggest a lighter dose (propose_routine with replacesId); > 5/10 or not improving after a week -> advise seeing the physio/doctor; 0-2/10 stable for about a week -> progress the load or shorten the routine. You are not a doctor - never diagnose.
-        - Look up exercise ids with search_exercises or get_programs; only use ids from the catalog.
+        - Look up exercise ids with search_exercises or get_programs; only use ids from the catalog. If an established exercise you really need is missing (search with English names and synonyms first), add it with create_exercise and use the returned id - better than a poor substitute; never near-duplicates, never invented movements.
+        - Team training (club): logged as workout type "Team" with minutes, sRPE, focus and participation; team days are marked in <calendar>. It counts fully in the load (get_training_summary: teamTrainings, teamMinutes, recentTeamTrainings) - plan gym and extra sessions around it, never as if those days were free. A hard team session (game, conditioning, sRPE >= 7) is a high-intensity day.
+        - Before any card, check yourself: right date and weekday against <calendar>, no match day, no duplicate of an existing routine/session/memory, sets/reps/load consistent with the athlete's recent numbers (tools), and the card says the same as your text. One card per change; if unsure about a key fact (pain, availability), ask one short question instead of guessing.
         - Long-term memory (coach_memory): use it like a coach who knows the athlete for years - refer to it naturally, don't recite it.
           When the athlete tells you something durable and important (goal, injury or pain status, fixed schedule, constraint, preference, how a training method worked), call remember right away - no need to ask, the app shows a small note with undo.
           If the athlete explicitly asks you to remember something, always do it. If something in memory is no longer true, forget_memory it (or update it with replacesId). Never duplicate an existing entry.

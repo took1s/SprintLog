@@ -356,7 +356,8 @@ public static class WorkoutEndpoints
             w.Gym,
             w.ExerciseNotes.OrderBy(n => n.Id).Select(n => new ExerciseNoteDto(n.ExerciseId, n.Note, n.Skipped, n.Reason)).ToList(),
             w.DistanceM == null && w.AvgHr == null && w.MaxHr == null && w.MaxSpeedKmh == null && w.Sprints == null
-                ? null : new WorkoutHealth(w.DistanceM, w.AvgHr, w.MaxHr, w.MaxSpeedKmh, w.Sprints)));
+                ? null : new WorkoutHealth(w.DistanceM, w.AvgHr, w.MaxHr, w.MaxSpeedKmh, w.Sprints),
+            w.WorkoutType == CreateWorkoutRequest.TeamType ? new TeamDetails(w.TeamFocus, w.Participation) : null));
 
     /// <summary>Nur die Uhr-Werte einer Einheit setzen (Import aus Apple Health), ohne die Sätze anzufassen.</summary>
     private static async Task<IResult> SetHealth(int id, WorkoutHealth health, HttpContext http, AppDbContext db, TimeProvider time, CancellationToken ct)
@@ -386,6 +387,8 @@ public static class WorkoutEndpoints
         w.OpponentGoals = req.Match?.OpponentGoals;
         w.WentWell = Clean(req.Match?.WentWell);
         w.ToImprove = Clean(req.Match?.ToImprove);
+        w.TeamFocus = req.IsTeam ? req.Team?.Focus : null;
+        w.Participation = req.IsTeam ? req.Team?.Participation : null;
         if (req.Health is null && keepHealth) return;
         w.DistanceM = req.Health?.DistanceM;
         w.AvgHr = req.Health?.AvgHr;

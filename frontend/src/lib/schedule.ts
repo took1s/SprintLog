@@ -1,4 +1,5 @@
 // Wochenplan eines Programms: an welchen Wochentagen trainiert und gespielt wird, der Rest ist Erholung.
+// Mannschaftstraining (Verein) ist eine eigene Ebene: kann mit eigenem Training zusammenfallen (Doppeltag), nie mit dem Spiel.
 // Bitmaske wie im Backend: Montag = 1, Dienstag = 2 ... Sonntag = 64.
 
 export type DayKind = 'training' | 'match' | 'rest';
@@ -10,9 +11,20 @@ export const bit = (weekday: number): number => 1 << weekday;
 /** JS-Datum -> 0 = Montag ... 6 = Sonntag. */
 export const weekdayOf = (d: Date): number => (d.getDay() + 6) % 7;
 
-export interface Schedule { trainingDays: number; matchDays: number }
+export interface Schedule { trainingDays: number; matchDays: number; teamDays?: number }
 
-export const hasSchedule = (s: Partial<Schedule> | null | undefined): boolean => !!s && ((s.trainingDays ?? 0) | (s.matchDays ?? 0)) !== 0;
+export const hasSchedule = (s: Partial<Schedule> | null | undefined): boolean => !!s && ((s.trainingDays ?? 0) | (s.matchDays ?? 0) | (s.teamDays ?? 0)) !== 0;
+
+/** Mannschaftstraining an diesem Wochentag (nie am Spieltag). */
+export const isTeamDay = (s: Partial<Schedule> | null | undefined, weekday: number): boolean =>
+  !!s && ((s.teamDays ?? 0) & bit(weekday)) !== 0 && ((s.matchDays ?? 0) & bit(weekday)) === 0;
+
+/** Mannschaftstraining an/aus; am Spieltag nicht möglich. */
+export function toggleTeamDay(s: Schedule, weekday: number): Schedule {
+  const b = bit(weekday);
+  if (s.matchDays & b) return s;
+  return { ...s, teamDays: (s.teamDays ?? 0) ^ b };
+}
 
 export function kindOf(s: Partial<Schedule> | null | undefined, weekday: number): DayKind {
   if (!s) return 'rest';
@@ -25,9 +37,11 @@ export function kindOf(s: Partial<Schedule> | null | undefined, weekday: number)
 export function cycleDay(s: Schedule, weekday: number): Schedule {
   const b = bit(weekday);
   const kind = kindOf(s, weekday);
-  if (kind === 'rest') return { trainingDays: s.trainingDays | b, matchDays: s.matchDays & ~b };
-  if (kind === 'training') return { trainingDays: s.trainingDays & ~b, matchDays: s.matchDays | b };
-  return { trainingDays: s.trainingDays & ~b, matchDays: s.matchDays & ~b };
+  const team = s.teamDays ?? 0;
+  if (kind === 'rest') return { trainingDays: s.trainingDays | b, matchDays: s.matchDays & ~b, teamDays: team };
+  // Spieltag: Mannschaftstraining an dem Tag fällt weg
+  if (kind === 'training') return { trainingDays: s.trainingDays & ~b, matchDays: s.matchDays | b, teamDays: team & ~b };
+  return { trainingDays: s.trainingDays & ~b, matchDays: s.matchDays & ~b, teamDays: team };
 }
 
 export const countDays = (mask: number): number => WEEKDAYS.filter((d) => mask & bit(d)).length;
@@ -71,7 +85,7 @@ export function nextDayOf(s: Partial<Schedule> | null | undefined, kind: DayKind
 export function scheduleWarnings(s: Schedule): ('noRest' | 'beforeMatch' | 'afterMatch' | 'threeInRow')[] {
   const out = new Set<'noRest' | 'beforeMatch' | 'afterMatch' | 'threeInRow'>();
   const k = (d: number) => kindOf(s, ((d % 7) + 7) % 7);
-  const busy = (d: number) => k(d) !== 'rest';
+  const busy = (d: number) => k(d) !== 'rest' || isTeamDay(s, ((d % 7) + 7) % 7);
   if (WEEKDAYS.every((d) => busy(d))) out.add('noRest');
   for (const d of WEEKDAYS) {
     if (k(d) === 'training' && k(d + 1) === 'match') out.add('beforeMatch');

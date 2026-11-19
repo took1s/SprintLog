@@ -47,6 +47,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.Name).HasMaxLength(60);
             e.Property(x => x.Category).HasMaxLength(20);
             e.Property(x => x.MuscleGroup).HasMaxLength(30);
+            e.Property(x => x.Description).HasMaxLength(400);
             e.Property(x => x.TrackingType).HasConversion<string>().HasMaxLength(20);
 
             // Eigene Übungen gehören einem Nutzer; Standard-Übungen haben UserId = NULL.
@@ -73,6 +74,8 @@ public class AppDbContext : DbContext
             e.Property(w => w.Opponent).HasMaxLength(60);
             e.Property(w => w.Position).HasMaxLength(16);
             e.Property(w => w.WentWell).HasMaxLength(300);
+            e.Property(w => w.TeamFocus).HasMaxLength(16);
+            e.Property(w => w.Participation).HasMaxLength(16);
             e.Property(w => w.ToImprove).HasMaxLength(300);
             e.Property(w => w.Gym).HasMaxLength(CreateWorkoutRequest.MaxGymLength);
             e.ToTable(t => t.HasCheckConstraint("CK_Workouts_Quality", "\"Quality\" IS NULL OR \"Quality\" BETWEEN 1 AND 10"));

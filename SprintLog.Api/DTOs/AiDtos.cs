@@ -44,7 +44,8 @@ public record AiAskInput(string? Question, string? Context, List<AiChatMessage>?
 
 /// <param name="Actions">Vorschläge als Karten: { type: program | goal | schedule, ... } - erst der Nutzer speichert.</param>
 /// <param name="Memory">Was sich der Coach dabei gemerkt / aktualisiert / vergessen hat (Hinweis mit "Rückgängig").</param>
-public record AiAskResponse(string Answer, int Remaining, List<JsonObject> Actions, List<MemoryChangeDto>? Memory = null);
+/// <summary>Exercises = vom Coach in dieser Antwort neu angelegte eigene Übungen (Client zeigt Hinweis + Rückgängig).</summary>
+public record AiAskResponse(string Answer, int Remaining, List<JsonObject> Actions, List<MemoryChangeDto>? Memory = null, List<ExerciseDto>? Exercises = null);
 
 public record AiPlanAnswers(string? Focus, int DaysPerWeek, int? MatchDay, string? Level);
 

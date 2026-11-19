@@ -18,6 +18,12 @@ public class Exercise
     /// <summary>Einseitig (Seitstütz, Bulgarian Split Squat): Werte gelten pro Seite, beide Seiten werden trainiert.</summary>
     public bool PerSide { get; set; }
 
+    /// <summary>Kurze Ausführungsbeschreibung (Technik, Hinweise) - v. a. für Übungen, die der KI-Coach anlegt.</summary>
+    public string? Description { get; set; }
+
+    /// <summary>Vom KI-Coach angelegt (eigene Übung des Nutzers, im Katalog markiert).</summary>
+    public bool CreatedByCoach { get; set; }
+
     /// <summary>NULL = Standard-Übung für alle. Gesetzt = eigene Übung dieses Nutzers.</summary>
     public int? UserId { get; set; }
     public User? User { get; set; }

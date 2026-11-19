@@ -79,6 +79,7 @@ export function inferPart(sets: readonly WorkoutSet[], muscleOf: (s: WorkoutSet)
 /** Session-Code aus Typ und Übungen ableiten (der Nutzer kann ihn im Dialog ändern). */
 export function inferSessionCode(workout: Workout, opts: Pick<ObsidianOptions, 'muscleOf' | 'categoryOf'> = {}): SessionCode {
   if (workout.workoutType === 'Match') return 'match';
+  if (workout.workoutType === 'Team') return 'team';
   const sets = workout.sets ?? [];
   const cat = (s: WorkoutSet) => opts.categoryOf?.(s) ?? s.category ?? 'Gym';
   const gym = sets.filter((s) => cat(s) === 'Gym').length;

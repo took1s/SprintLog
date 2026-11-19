@@ -15,8 +15,10 @@ import { displayStatus, planConflict, prescriptionText } from '@/lib/planned';
 import { routinesOnDay, doneCount } from '@/lib/routines';
 import {
   indexByDay, levelOf, maxScoreOf, monthGrid, monthStats, plannedKind, sessionsPerMonth, yearStats, yearsWithData,
-  type CalendarDay, type CalendarKind, type GridCell, type PeriodStats,
+  KINDS, type CalendarDay, type CalendarKind, type GridCell, type PeriodStats,
 } from '@/lib/calendar';
+import { isTeamDay, weekdayOf } from '@/lib/schedule';
+import TeamIcon from '../TeamIcon.vue';
 
 const app = useAppStore();
 const { allWorkouts, clockDate, activeProgram, selectedDay } = storeToRefs(app);
@@ -69,7 +71,7 @@ const planned = (cell: GridCell) => (cell.key > todayKey.value && cell.inMonth ?
 const HEAT = ['heat-0', 'heat-1', 'heat-2', 'heat-3', 'heat-4'] as const;
 const heat = (day: CalendarDay | undefined) => HEAT[levelOf(day, maxScore.value)];
 
-const KIND_DOT: Record<CalendarKind, string> = { Gym: 'bar-accent', Football: 'bg-emerald-400', Match: 'bg-yellow-400', Hybrid: 'bg-violet-400' };
+const KIND_DOT: Record<CalendarKind, string> = { Gym: 'bar-accent', Football: 'bg-emerald-400', Match: 'bg-yellow-400', Hybrid: 'bg-violet-400', Team: 'bg-orange-400' };
 
 function cellLabel(cell: GridCell) {
   const d = dayOf(cell);
@@ -101,6 +103,8 @@ const sessionText = (x: { exerciseId: number } & Parameters<typeof prescriptionT
   return `${exerciseName(ex ?? x.exerciseId)} ${prescriptionText(x, ex?.trackingType)}`;
 };
 
+/** Mannschaftstraining laut Wochenplan an diesem (künftigen) Tag. */
+const selectedTeam = computed(() => !!selectedDate.value && selectedDay.value! >= todayKey.value && isTeamDay(schedule.value, weekdayOf(selectedDate.value)));
 const selectedPlan = computed(() => {
   if (!selectedDate.value || selectedDay.value! < todayKey.value) return 'rest';
   return plannedKind(schedule.value, selectedDate.value);
@@ -250,6 +254,7 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
               <span class="flex items-center gap-1"><i class="h-1.5 w-1.5 rounded-full bar-accent"></i>{{ t('calendar.legend.gym') }}</span>
               <span class="flex items-center gap-1"><i class="h-1.5 w-1.5 rounded-full bg-emerald-400"></i>{{ t('calendar.legend.field') }}</span>
               <span class="flex items-center gap-1"><i class="h-1.5 w-1.5 rounded-full bg-yellow-400"></i>{{ t('calendar.legend.match') }}</span>
+              <span class="flex items-center gap-1"><i class="h-1.5 w-1.5 rounded-full bg-orange-400"></i>{{ t('categories.Team') }}</span>
               <span v-if="schedule?.trainingDays || schedule?.matchDays" class="flex items-center gap-1"><i class="h-2.5 w-2.5 rounded-[3px] border border-dashed border-accent/70"></i>{{ t('calendar.legend.planned') }}</span>
               <span v-if="perDay.size" class="flex items-center gap-1"><i class="cal-session !static"></i>{{ t('calendar.legend.session') }}</span>
               <span v-if="routines.length" class="flex items-center gap-1"><i class="cal-routine !static" data-mark="all"></i>{{ t('calendar.legend.routines') }}</span>
@@ -263,7 +268,7 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
                       <li v-for="w in selected.workouts" :key="workoutKey(w)" class="rounded-2xl border border-white/5 bg-black/20 p-3" data-test="calendar-workout">
                           <div class="flex flex-col gap-0.5">
                               <span class="flex min-w-0 items-center gap-2 text-sm font-bold text-white">
-                                  <i class="h-2 w-2 flex-shrink-0 rounded-full" :class="KIND_DOT[(['Gym', 'Football', 'Hybrid', 'Match'].includes(w.workoutType) ? w.workoutType : 'Gym') as CalendarKind]" aria-hidden="true"></i>
+                                  <i class="h-2 w-2 flex-shrink-0 rounded-full" :class="KIND_DOT[((KINDS as readonly string[]).includes(w.workoutType) ? w.workoutType : 'Gym') as CalendarKind]" aria-hidden="true"></i>
                                   <span class="truncate">{{ categoryName(w.workoutType) }} · {{ formatTime(w.date) }}</span>
                               </span>
                               <span class="font-mono text-[10px] text-slate-400">{{ workoutStats(w) }}</span>
@@ -274,7 +279,10 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
                   <p v-if="selectedPlan !== 'rest'" class="mt-2 flex items-center gap-2 text-sm text-slate-300" data-test="calendar-plan-day">
                       <i class="h-2.5 w-2.5 rounded-[3px] border border-dashed border-accent/70" aria-hidden="true"></i>{{ t(`calendar.planned.${selectedPlan}`) }}
                   </p>
-                  <p v-else-if="!selected && !selectedSessions.length" class="mt-2 text-sm text-slate-400">{{ t('calendar.noWorkouts') }}</p>
+                  <p v-if="selectedTeam" class="mt-2 flex items-center gap-2 text-sm text-slate-300" data-test="calendar-team-day">
+                      <TeamIcon class="h-3.5 w-3.5 text-orange-300" />{{ t('team.planned') }}
+                  </p>
+                  <p v-else-if="selectedPlan === 'rest' && !selected && !selectedSessions.length" class="mt-2 text-sm text-slate-400">{{ t('calendar.noWorkouts') }}</p>
 
                   <!-- Zusatz-Einheiten des Tages -->
                   <ul v-if="selectedSessions.length" class="mt-2 space-y-2">

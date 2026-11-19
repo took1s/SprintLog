@@ -32,7 +32,7 @@ import type { WeeklyMetric } from '../lib/charts';
 import type {
   AuthResult, AuthUser, Exercise, ExerciseNote, Profile, ProgramDay, ProgramExercise, ProgramTemplate, QueueEntry,
   TrackingType as TrackingTypeValue, TrainingProgram, Workout, WorkoutSet,
-  WorkoutHealth,
+  WorkoutHealth, TeamFocus, TeamParticipation,
 } from '../types';
 import { applyWorkoutOps, gymKey, isGymDependent, liveSessionText, type WorkoutOp } from '../lib/liveWorkout';
 import { useUiStore } from './ui';
@@ -44,7 +44,7 @@ import { useAthleteStore } from './athlete';
 import { useAiStore } from './ai';
 import type { PlannedWorkout } from '../lib/planned';
 import { alternativesFor, type Alternative } from '../lib/alternatives';
-import { hasSchedule, kindOf, nextDayOf, weekdayOf, type Schedule } from '../lib/schedule';
+import { hasSchedule, isTeamDay, kindOf, nextDayOf, weekdayOf, type Schedule } from '../lib/schedule';
 import { estimateRecovery, recoveryStatus, type RecoveryEstimate } from '../lib/recovery';
 import { dailyLine, eventLine, isMilestone, startTrigger } from '../lib/motivation';
 import { coachToday, regionsOf } from '../lib/coach';
@@ -94,6 +94,8 @@ export const SESSION_RPE = Object.freeze([
 export type Tab = 'Gym' | 'Football' | 'Plan' | 'Data';
 /** Workout-Typ eines Spiels (ohne Sätze). */
 export const MATCH = 'Match';
+/** Mannschaftstraining im Verein: ohne Sätze, Minuten × sRPE zählen in die Last. */
+export const TEAM = 'Team';
 export type DataTab = 'overview' | 'athlete' | 'ai' | 'history' | 'progress' | 'records' | 'calendar';
 export type SortMode = 'fav' | 'freq' | 'recent' | 'az' | 'za';
 
@@ -313,7 +315,7 @@ export const useAppStore = defineStore('app', () => {
   const clock = ref(Date.now());  // Minutentakt (Auswertungen)
 
   // Auswertungen
-  const historyFilter = ref<'all' | 'Gym' | 'Football' | 'Hybrid' | 'Match'>('all');
+  const historyFilter = ref<'all' | 'Gym' | 'Football' | 'Hybrid' | 'Match' | 'Team'>('all');
   const historyLimit = ref(20);
   const progress = ref<{ key: string; metric: string; range: ProgressRange }>({ key: '', metric: '', range: 'all' });
   const weeklyMetric = ref<WeeklyMetric>('volume');
@@ -569,7 +571,7 @@ export const useAppStore = defineStore('app', () => {
     const today = clockDate.value;
     const kind = kindOf(p, weekdayOf(today));
     const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-    return { kind, nextTraining: kind === 'training' ? today : nextDayOf(p, 'training', tomorrow), nextTrainingAfterToday: nextDayOf(p, 'training', tomorrow), nextMatch: nextDayOf(p, 'match', today) };
+    return { kind, team: isTeamDay(p, weekdayOf(today)), nextTraining: kind === 'training' ? today : nextDayOf(p, 'training', tomorrow), nextTrainingAfterToday: nextDayOf(p, 'training', tomorrow), nextMatch: nextDayOf(p, 'match', today) };
   });
 
   /** Tage der Reha-Programme (Einheiten daraus belasten wenig). */
@@ -615,7 +617,6 @@ export const useAppStore = defineStore('app', () => {
     const now = clockDate.value;
     const p = activeProgram.value;
     const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-    const days = new Set(allWorkouts.value.map((w) => dayKey(new Date(String(w.date)))));
     const last = allWorkouts.value.reduce<number>((m, w) => Math.max(m, new Date(String(w.date)).getTime() || 0), 0);
     const next = programInfo.value?.next ?? null;
     const nextRegions = next ? regionsOf(next.exercises.map((x) => ({ region: regionOf(x.muscleGroup ?? exercisesById.value.get(x.exerciseId)?.muscleGroup, x.trackingType ?? exercisesById.value.get(x.exerciseId)?.trackingType), sets: x.sets }))) : [];
@@ -627,10 +628,13 @@ export const useAppStore = defineStore('app', () => {
       readiness: readinessToday.value,
       recovery: recovery.value,
       daysSinceLast: last ? calendarDaysBetween(last, now) : null,
-      trainedToday: days.has(dayKey(now)),
+      // Doppeltag: erfasstes Mannschaftstraining "verbraucht" den eigenen Trainingstag nicht
+      trainedToday: allWorkouts.value.some((w) => dayKey(new Date(String(w.date))) === dayKey(now)
+        && (w.workoutType !== TEAM || !(p && hasSchedule(p) && kindOf(p, weekdayOf(now)) === 'training'))),
       rehab: p?.goal === 'Rehab',
       nextDay: p && next ? trDayName(p, next) : null,
       nextDayRegions: nextRegions,
+      teamToday: !!p && isTeamDay(p, weekdayOf(now)) && !teamLoggedToday.value,
     });
   });
 
@@ -2063,6 +2067,7 @@ export const useAppStore = defineStore('app', () => {
   async function editWorkout(workout: Workout) {
     if (!workout.pending && !workout.id) return;
     if (workout.workoutType === MATCH) { openMatchModal(workout); return; }
+    if (workout.workoutType === TEAM) { openTeamModal(workout); return; }
     if (sessionActive.value) {
       const ok = await confirm({ title: t('session.confirm.replaceTitle'), message: t('session.confirm.replaceEdit'), confirmText: t('common.edit') });
       if (!ok) return;
@@ -2204,6 +2209,83 @@ export const useAppStore = defineStore('app', () => {
     tab.value = 'Data';
     dataTab.value = 'history';
     await syncAndAnnounce(saved.clientId, t(editing ? 'finish.toast.updated' : 'match.toast.saved'), t(editing ? 'finish.toast.updatedOffline' : 'finish.toast.savedOffline'));
+  }
+
+  // ---------- Mannschaftstraining (Verein) ----------
+  /** Typische Dauer, wenn nichts bekannt ist (Vereinstraining meist 75-105 min). */
+  const TEAM_DEFAULT_MINUTES = 90;
+  const lastTeamMinutes = () => {
+    const last = allWorkouts.value.find((w) => w.workoutType === TEAM && w.durationSeconds);
+    return last?.durationSeconds ? Math.round(last.durationSeconds / 60) : TEAM_DEFAULT_MINUTES;
+  };
+  const teamModal = ref({
+    open: false, editing: null as Editing | null, date: '', minutes: TEAM_DEFAULT_MINUTES as number | null, rpe: null as number | null, quality: null as number | null,
+    focus: null as TeamFocus | null, participation: 'full' as TeamParticipation, notes: '', error: '', health: null as WorkoutHealth | null,
+  });
+
+  /** Mannschaftstraining erfassen/bearbeiten; prefill = z. B. Werte eines Workouts der Uhr. */
+  function openTeamModal(workout?: Workout, prefill?: { date?: string; minutes?: number; health?: WorkoutHealth | null }) {
+    teamModal.value = workout
+      ? {
+          open: true,
+          editing: workout.pending ? { kind: 'pending', clientId: workout.clientId! } : { kind: 'server', id: workout.id!, clientId: workout.clientId },
+          date: toLocalInput(workout.date), minutes: workout.durationSeconds ? Math.round(workout.durationSeconds / 60) : TEAM_DEFAULT_MINUTES,
+          rpe: workout.sessionRpe ?? null, quality: workout.quality ?? null,
+          focus: (workout.team?.focus as TeamFocus | null | undefined) ?? null, participation: (workout.team?.participation as TeamParticipation | null | undefined) ?? 'full',
+          notes: workout.notes ?? '', error: '', health: workout.health ?? null,
+        }
+      : {
+          open: true, editing: null, date: toLocalInput(prefill?.date ? new Date(prefill.date) : new Date()), minutes: prefill?.minutes ?? lastTeamMinutes(),
+          rpe: null, quality: null, focus: null, participation: 'full', notes: '', error: '', health: prefill?.health ?? null,
+        };
+  }
+
+  /** Mannschaftstraining heute schon erfasst? (Erinnerung am Team-Tag ausblenden) */
+  const teamLoggedToday = computed(() => {
+    const d = clockDate.value;
+    return allWorkouts.value.some((w) => w.workoutType === TEAM && new Date(w.date).toDateString() === d.toDateString());
+  });
+
+  async function saveTeam() {
+    const m = teamModal.value;
+    const date = new Date(m.date);
+    if (Number.isNaN(date.getTime())) { m.error = t('finish.errors.date'); return; }
+    if (date.getTime() > Date.now() + 60 * 60 * 1000) { m.error = t('finish.errors.future'); return; }
+    const minutes = Number(m.minutes);
+    if (!(minutes > 0 && minutes <= 240)) { m.error = t('team.errors.minutes'); return; }
+    if (!m.rpe) { m.error = t('team.errors.rpe'); return; }
+    const base = {
+      date: date.toISOString(),
+      durationSeconds: Math.round(minutes * 60),
+      sessionRpe: m.rpe,
+      quality: m.quality ?? null,
+      notes: m.notes.trim() ? m.notes.trim().slice(0, 500) : null,
+      programDayId: null,
+      workoutType: TEAM,
+      sets: [] as WorkoutSet[],
+      team: { focus: m.focus, participation: m.participation },
+      health: m.health,
+      status: QueueStatus.Pending,
+      attempts: 0,
+      error: null,
+    };
+    const editing = m.editing;
+    let saved: QueueEntry;
+    if (editing?.kind === 'server') {
+      saved = { ...base, op: 'update', workoutId: editing.id, clientId: editing.clientId ?? newClientId() };
+      queue.value = [...queue.value.filter((q) => !(isUpdate(q) && q.workoutId === editing.id)), saved];
+    } else if (editing?.kind === 'pending') {
+      const existing = queue.value.find((q) => q.clientId === editing.clientId);
+      saved = { ...base, op: existing?.op ?? 'create', workoutId: existing?.workoutId, clientId: editing.clientId };
+      const entry = saved;
+      queue.value = existing ? queue.value.map((q) => (q === existing ? entry : q)) : [...queue.value, entry];
+    } else {
+      saved = { ...base, clientId: newClientId() };
+      queue.value = [...queue.value, saved];
+    }
+    persistQueue();
+    m.open = false;
+    await syncAndAnnounce(saved.clientId, t(editing ? 'finish.toast.updated' : 'team.toast.saved'), t(editing ? 'finish.toast.updatedOffline' : 'finish.toast.savedOffline'));
   }
 
   /**
@@ -2600,13 +2682,22 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  async function deleteCustomExercise(ex: Exercise) {
+  /** Vom KI-Coach angelegte Übungen sofort im Katalog zeigen (Server hat sie schon gespeichert). */
+  function rememberExercises(list: readonly Exercise[]) {
+    if (!list.length) return;
+    const ids = new Set(list.map((x) => x.id));
+    exercises.value = [...exercises.value.filter((x) => !ids.has(x.id)), ...list];
+    if (keys.value) writeJson(keys.value.exercises, exercises.value);
+  }
+
+  /** Eigene Übung löschen; confirmed = ohne Rückfrage (z. B. "Rückgängig" im Coach-Chat). true = gelöscht. */
+  async function deleteCustomExercise(ex: Exercise, opts?: { confirmed?: boolean }): Promise<boolean> {
     // Noch nicht synchronisierte Sätze (laufende Einheit oder Warteschlange) brauchen die Übung - sonst lehnt der
     // Server die ganze Einheit ab.
     const usedUnsynced = session.value.sets.some((x) => x.exerciseId === ex.id) || queue.value.some((q) => q.sets.some((x) => x.exerciseId === ex.id));
-    if (usedUnsynced) { toast(t('custom.toast.inUse', { name: ex.name }), 'error'); return; }
-    const ok = await confirm({ title: t('custom.confirm.title'), message: t('custom.confirm.message', { name: ex.name }), confirmText: t('common.delete'), danger: true });
-    if (!ok) return;
+    if (usedUnsynced) { toast(t('custom.toast.inUse', { name: ex.name }), 'error'); return false; }
+    const ok = opts?.confirmed || await confirm({ title: t('custom.confirm.title'), message: t('custom.confirm.message', { name: ex.name }), confirmText: t('common.delete'), danger: true });
+    if (!ok) return false;
     try {
       if (!isLocalExerciseId(ex.id)) await api().del(`/api/exercises/${ex.id}`);
       exercises.value = exercises.value.filter((e) => e.id !== ex.id);
@@ -2614,8 +2705,10 @@ export const useAppStore = defineStore('app', () => {
       writeJson(keys.value!.exercises, exercises.value);
       closeSetModal();
       toast(t('custom.toast.deleted'), 'success');
+      return true;
     } catch (e) {
       toast(errorMessage(e), 'error');
+      return false;
     }
   }
 
@@ -2972,7 +3065,7 @@ export const useAppStore = defineStore('app', () => {
     isAuthenticated, keys, exercisesById, allWorkouts, records, prInfo, usage, clockDate,
     activeProgram, otherPrograms, programInfo, loadInfo, loadZone, planTargets, planProgress, exerciseGroups,
     planWeek, isDeloadNow, currentPrescription, templateFilter, filteredTemplates,
-    matchModal, openMatchModal, saveMatch, setWorkoutHealth, logWatchSession, wellness, checkIn, todayWellness, readinessToday, readinessWeek, readinessDays, readinessHint,
+    rememberExercises, matchModal, openMatchModal, saveMatch, teamModal, openTeamModal, saveTeam, teamLoggedToday, setWorkoutHealth, logWatchSession, wellness, checkIn, todayWellness, readinessToday, readinessWeek, readinessDays, readinessHint,
     loadWellness, openCheckIn, setWellnessValue, saveCheckIn, checkInDays, missedYesterday, progressInPlan,
     pendingCount, failedCount, syncState,
     categoryExercises, availableMuscleGroups, allMuscleGroups, filteredExercises, sortLabel,
@@ -3040,7 +3133,7 @@ export function toastClass(tone: string): string {
   } as Record<string, string>)[tone] ?? 'border-accent/40 text-accent';
 }
 export function workoutStats(workout: Workout): string {
-  if (workout.workoutType === MATCH) {
+  if (workout.workoutType === MATCH || workout.workoutType === TEAM) {
     const minutes = Math.round((workout.durationSeconds ?? 0) / 60);
     return t('match.summary', { minutes, rpe: workout.sessionRpe ?? '-', load: workout.sessionRpe ? workout.sessionRpe * minutes : 0 });
   }

@@ -2166,6 +2166,62 @@ test('athlete data: fitness tests with levels, protein, weight and match details
   assert.deepEqual(errors, []);
 });
 
+test('team training: team days in the week plan, log from today, counted in load, filter and edit in history', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `team_${Date.now()}`);
+  const program = await api('POST', '/api/programs/templates/football-strength', token);
+  const wd = (new Date().getDay() + 6) % 7;
+  const matchWd = (wd + 2) % 7;
+  await api('PUT', `/api/programs/${program.id}/schedule`, token, { trainingDays: 1 << wd, matchDays: 1 << matchWd });
+  await page.reload();
+
+  // Wochenplan: heute zusätzlich Mannschaftstraining (Doppeltag), Spieltag ist gesperrt
+  await page.click('nav >> text=PLAN');
+  await page.click('[data-test=schedule-edit]');
+  assert.equal(await page.isDisabled(`[data-test=schedule-team-row] [data-team-day="${matchWd}"]`), true);
+  await page.click(`[data-test=schedule-team-row] [data-team-day="${wd}"]`);
+  await page.click('[data-test=schedule-save]');
+  await page.waitForSelector('[data-test=schedule-today] >> text=Today: team + your own session (double day)');
+  const saved = await waitFor(async () => { const [p] = await api('GET', '/api/programs', token); return p.teamDays === 1 << wd ? p : null; });
+  assert.equal(saved.trainingDays, 1 << wd, 'own training day stays');
+
+  // Heute: Erinnerung -> Dialog mit Dauer, Härte, wie es lief, Inhalt, Teilnahme
+  await page.click('nav >> text=GYM');
+  await page.click('[data-test=todo-team]');
+  await page.waitForSelector('[data-test=team-modal]');
+  await page.click('[data-team-min="75"]');
+  await page.click('[data-team-rpe="7"]');
+  await page.waitForSelector('[data-test=team-load] >> text=525');
+  await page.click('[data-team-quality="6"]');
+  await page.click('[data-team-focus="game"]');
+  await page.click('[data-team-part="modified"]');
+  await page.fill('[data-test=team-notes]', 'Small-sided games, tight calf');
+  await page.click('[data-test=team-save]');
+  const team = await waitFor(async () => (await api('GET', '/api/workouts/history', token)).find((w) => w.workoutType === 'Team'));
+  assert.deepEqual([team.durationSeconds, team.sessionRpe, team.quality, team.sets.length, team.notes], [4500, 7, 6, 0, 'Small-sided games, tight calf']);
+  assert.deepEqual({ ...team.team }, { focus: 'game', participation: 'modified' });
+  await page.waitForSelector('[data-test=todo-team]', { state: 'detached' });
+
+  // Verlauf: Filter "Team", Zusammenfassung, Bearbeiten öffnet den Team-Dialog (kein zweiter Eintrag)
+  await page.click('nav >> text=DATA');
+  await page.click('[data-subtab=history]');
+  await page.click('[data-filter=Team]');
+  await page.waitForSelector('[data-test=team-summary] >> text=Small-sided games');
+  await page.waitForSelector('text=75 min · RPE 7 · load 525');
+  await page.click('article >> button:text-is("Edit")');
+  await page.waitForSelector('[data-test=team-modal]');
+  await page.click('[data-team-min="90"]');
+  await page.click('[data-test=team-save]');
+  const edited = await waitFor(async () => { const l = await api('GET', '/api/workouts/history', token); return l.length === 1 && l[0].durationSeconds === 5400 ? l : null; });
+  assert.equal(edited[0].team.focus, 'game');
+
+  // Feld-Tab: zwei Kacheln, Team mit "heute erfasst"
+  await page.click('nav >> text=FIELD');
+  await page.waitForSelector('[data-test=log-team] >> text=Logged today');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
 test('body, wellness and history: weigh-in with steps, catch up yesterday, undo protein, search and expand history', async () => {
   const { page, errors } = await newPage();
   const token = await register(page, `body_${Date.now()}`);
