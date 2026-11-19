@@ -319,10 +319,11 @@ async function handleApi(req, res, url) {
     return json(res, 200, { email: u.email });
   }
   if (method === 'GET' && path === '/api/__test/outbox') return json(res, 200, db.outbox);
+  // Wie im echten Backend anonym erreichbar (AllowAnonymous)
+  if (method === 'GET' && path === '/api/config') return json(res, 200, { sentryDsn: null, environment: 'Mock', release: 'sprintlog@mock' });
 
   if (!user) return problem(res, 401, 'Unauthorized');
 
-  if (method === 'GET' && path === '/api/config') return json(res, 200, { sentryDsn: null, environment: 'Mock', release: 'sprintlog@mock' });
   if (method === 'GET' && path === '/api/auth/me') {
     return json(res, 200, {
       id: user.id, username: user.username, createdAt: user.createdAt, workoutCount: db.workouts.filter((w) => w.userId === user.id).length, customExerciseCount: 0,
