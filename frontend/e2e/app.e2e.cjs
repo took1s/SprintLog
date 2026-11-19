@@ -1150,7 +1150,8 @@ test('Motion: page stays put under sheets, pull down to close, long-press shortc
   await page.waitForTimeout(100);
   assert.equal(await dialogs(), 1, 'only the info sheet, no set dialog');
   assert.equal(await locked(), true);
-  assert.equal(await page.evaluate(() => document.body.style.top), `-${y0}px`);
+  assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).overflow), 'hidden');
+  assert.equal(await page.evaluate(() => window.scrollY), y0, 'page stays where it was (no jump to the top)');
 
   // Nach unten ziehen schließt; danach steht die Seite wieder an derselben Stelle
   const sheet = page.locator('[data-test=exercise-info]');
@@ -1822,7 +1823,7 @@ test('routines several times a day: tick rounds, catch up a missed day and fix h
   assert.deepEqual(errors, []);
 });
 
-test('extra sessions: never on a plan day, start from the start screen, done after saving; coach card moves the plan first', async () => {
+test('extra sessions: never on a match day, double day allowed, start from the start screen, done after saving; coach card moves the plan first', async () => {
   const { page, errors } = await newPage();
   const token = await register(page, `planned_${Date.now()}`);
   const day = (n) => { const d = new Date(Date.now() + n * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -1831,12 +1832,15 @@ test('extra sessions: never on a plan day, start from the start screen, done aft
   await api('PUT', `/api/programs/${plan.id}/schedule`, token, { trainingDays: bit(day(1)), matchDays: bit(day(3)) });
   await page.reload();
 
-  // Plan-Tab: neue Einheit - Plan-Tag morgen ist gesperrt, freie Tage als Chips
+  // Plan-Tab: neue Einheit - Spieltag gesperrt, Trainingstag morgen = Doppeltag (nur Hinweis), freie Tage als Chips
   await page.click('nav >> text=PLAN');
   await page.click('[data-test=planned-new]');
   await page.waitForSelector('[data-test=planned-sheet]');
-  await page.fill('[data-test=planned-date]', day(1));
+  await page.fill('[data-test=planned-date]', day(3));
   await page.waitForSelector('[data-test=planned-conflict]');
+  await page.fill('[data-test=planned-date]', day(1));
+  await page.waitForSelector('[data-test=planned-double]');
+  assert.equal(await page.locator('[data-test=planned-conflict]').count(), 0);
   assert.equal(await page.locator(`[data-free="${day(1)}"]`).count(), 0);
   await page.click(`[data-free="${day(0)}"]`);
   assert.equal(await page.locator('[data-test=planned-conflict]').count(), 0);
@@ -1851,9 +1855,9 @@ test('extra sessions: never on a plan day, start from the start screen, done aft
   let [pl] = await waitFor(async () => { const list = await api('GET', '/api/planned', token); return list.length === 1 && list[0].date === day(0) ? list : null; });
   assert.equal(pl.status, 'planned');
 
-  // Server lehnt einen Plan-Tag ab
+  // Server lehnt einen Spieltag ab
   const res = await fetch(`${BASE}/api/planned/pl-e2econflict`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ date: day(1), title: 'X', category: 'Gym', exercises: [{ exerciseId: 1, sets: 3 }] }) });
+    body: JSON.stringify({ date: day(3), title: 'X', category: 'Gym', exercises: [{ exerciseId: 1, sets: 3 }] }) });
   assert.equal(res.status, 409);
 
   // Start-Bildschirm: heute geplant -> starten, Satz loggen, speichern -> Termin erledigt

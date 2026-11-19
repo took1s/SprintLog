@@ -42,15 +42,17 @@ public class PlannedWorkoutTests
     };
 
     [Fact]
-    public async Task Sessions_never_land_on_plan_days_and_put_is_idempotent()
+    public async Task Sessions_never_land_on_match_days_but_may_double_a_training_day_and_put_is_idempotent()
     {
         var user = await _factory.CreateUserAsync();
         await PlanWithTrainingTomorrowAsync(user);
 
-        var onTraining = await user.Client.PutAsJsonAsync("/api/planned/pl-0000001", Session(Today.AddDays(1)));
-        Assert.Equal(HttpStatusCode.Conflict, onTraining.StatusCode);
-        Assert.Contains("plan_conflict", await onTraining.Content.ReadAsStringAsync());
-        Assert.Equal(HttpStatusCode.Conflict, (await user.Client.PutAsJsonAsync("/api/planned/pl-0000001", Session(Today.AddDays(2)))).StatusCode);
+        // Spieltag: nie. Trainingstag: erlaubter Doppeltag.
+        var onMatch = await user.Client.PutAsJsonAsync("/api/planned/pl-0000001", Session(Today.AddDays(2)));
+        Assert.Equal(HttpStatusCode.Conflict, onMatch.StatusCode);
+        Assert.Contains("plan_conflict", await onMatch.Content.ReadAsStringAsync());
+        await HttpAssert.StatusAsync(HttpStatusCode.OK, await user.Client.PutAsJsonAsync("/api/planned/pl-0000009", Session(Today.AddDays(1))));
+        await HttpAssert.StatusAsync(HttpStatusCode.NoContent, await user.Client.DeleteAsync("/api/planned/pl-0000009"));
 
         var free = Today.AddDays(3);
         var created = await HttpAssert.JsonAsync<PlannedWorkoutResponse>(HttpStatusCode.OK, await user.Client.PutAsJsonAsync("/api/planned/pl-0000001", Session(free)));
@@ -103,25 +105,24 @@ public class PlannedWorkoutTests
                 Assert.Contains($"{tomorrow:yyyy-MM-dd} {tomorrow.ToString("ddd", System.Globalization.CultureInfo.InvariantCulture)}: plan training", req.System);
                 Assert.Contains("session id pl-cal00001 'Sprint-Zusatz'", req.System);
                 Assert.Contains(req.Tools!, t => t.Name == AiTools.ProposeSession);
-                // Erst direkt auf den Plan-Tag -> Fehler
-                return AiResponse.FromTool(AiTools.ProposeSession, new { date = Iso(tomorrow), title = "Speed", category = "Football", reason = "x", exercises = new[] { new { exerciseId = Seed.Sprints, sets = 6 } } });
+                // Erst auf den Spieltag -> Fehler
+                return AiResponse.FromTool(AiTools.ProposeSession, new { date = Iso(Today.AddDays(2)), title = "Speed", category = "Football", reason = "x", exercises = new[] { new { exerciseId = Seed.Sprints, sets = 6 } } });
             }
             if (n == 1)
             {
                 results.Add(req.Messages.ToJsonString());
-                // Wochenplan verschieben (Training von morgen auf in 3 Tagen, Spiel bleibt), dann die Einheit auf den frei gewordenen Tag
-                return AiResponse.FromTools(
-                    (AiTools.ProposeSchedule, new { trainingDays = new[] { Wd(Today.AddDays(3)) }, matchDays = new[] { Wd(Today.AddDays(2)) }, reason = "Platz schaffen" }),
-                    (AiTools.ProposeSession, new { date = Iso(tomorrow), title = "Speed day", category = "Football", reason = "Zusatz",
-                        exercises = new object[] { new { exerciseId = Seed.Sprints, sets = 6, distance = 30, targetRpe = 12 }, new { exerciseId = 999_999, sets = 2 } } }));
+                // Trainingstag morgen: erlaubt als Doppeltag
+                return AiResponse.FromTool(AiTools.ProposeSession, new { date = Iso(tomorrow), title = "Speed day", category = "Football", reason = "Zusatz",
+                    exercises = new object[] { new { exerciseId = Seed.Sprints, sets = 6, distance = 30, targetRpe = 12 }, new { exerciseId = 999_999, sets = 2 } } });
             }
+            if (n == 2) results.Add(req.Messages.ToJsonString());
             return AiResponse.FromText("Fertig.");
         };
 
         var res = await HttpAssert.JsonAsync<AiAskResponse>(HttpStatusCode.OK, await user.Client.PostAsJsonAsync("/api/ai/ask", new { question = "Plane mir morgen eine Speed-Einheit" }));
-        Assert.Contains("is a training day of the plan", results[0]);
+        Assert.Contains("is a match day of the plan", results[0]);
+        Assert.Contains("Double day", results[1]);
         var session = Assert.Single(res.Actions, a => (string?)a["type"] == "session");
-        Assert.Single(res.Actions, a => (string?)a["type"] == "schedule");
         var s = session["session"]!;
         Assert.Equal(Iso(tomorrow), (string?)s["date"]);
         Assert.Single(s["exercises"]!.AsArray());                // unbekannte Übung raus

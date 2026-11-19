@@ -92,10 +92,10 @@ const selected = computed(() => (selectedDay.value ? index.value.get(selectedDay
 const selectedDate = computed(() => (selectedDay.value ? new Date(`${selectedDay.value}T12:00:00`) : null));
 const selectedSessions = computed(() => (selectedDay.value ? perDay.value.get(selectedDay.value) ?? [] : []));
 const selectedRoutines = computed(() => (selectedDay.value ? routinesOnDay(routines.value, selectedDay.value) : null));
-/** Am gewählten Tag lässt sich eine Zusatz-Einheit planen (ab heute, kein Plan-Tag, noch keine offene). */
+/** Am gewählten Tag lässt sich eine Zusatz-Einheit planen (ab heute, kein Spieltag, noch keine offene). Trainingstag = Doppeltag. */
 const canPlan = computed(() => !!selectedDay.value && selectedDay.value >= todayKey.value
-  && !planConflict(schedule.value, selectedDay.value) && !selectedSessions.value.some((p) => p.status === 'planned'));
-const selectedBusy = computed(() => !!selectedDay.value && selectedDay.value >= todayKey.value && !!planConflict(schedule.value, selectedDay.value));
+  && planConflict(schedule.value, selectedDay.value) !== 'match' && !selectedSessions.value.some((p) => p.status === 'planned'));
+const selectedBusy = computed(() => !!selectedDay.value && selectedDay.value >= todayKey.value && planConflict(schedule.value, selectedDay.value) === 'match');
 const sessionText = (x: { exerciseId: number } & Parameters<typeof prescriptionText>[0]) => {
   const ex = app.exerciseFor(x.exerciseId);
   return `${exerciseName(ex ?? x.exerciseId)} ${prescriptionText(x, ex?.trackingType)}`;

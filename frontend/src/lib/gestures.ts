@@ -14,7 +14,8 @@ export const dismissDistance = (height: number) => Math.min(160, Math.max(80, he
 /** Schließen, wenn weit genug gezogen oder kräftig nach unten geschnippt (px/ms). */
 export function shouldDismiss(dy: number, velocity: number, height: number): boolean {
   if (dy <= 0) return false;
-  return dy >= dismissDistance(height) || (velocity > 0.6 && dy > 24);
+  // Schnippen braucht spürbar Weg und Tempo - ein flüchtiges Zurückwischen beim Scrollen schließt nicht
+  return dy >= dismissDistance(height) || (velocity > 0.9 && dy > 48);
 }
 
 /** Gummiband nach oben: das Sheet gibt nur wenig nach. */
@@ -81,11 +82,19 @@ function scrollerAt(target: Element, panel: HTMLElement): HTMLElement | null {
   return null;
 }
 
+/** Letztes Scrollen je Scrollbereich: solange der Inhalt noch nachläuft (iOS-Schwung), gehört die Geste dem Scrollen. */
+const lastScroll = new WeakMap<Element, number>();
+if (typeof document !== 'undefined') {
+  document.addEventListener('scroll', (e) => { if (e.target instanceof Element) lastScroll.set(e.target, performance.now()); }, { capture: true, passive: true });
+}
+
 function canStart(panel: HTMLElement, s: DragState, target: Element, y: number): boolean {
   if (desktop() || target.closest(NO_DRAG)) return false;
-  // Nur ziehen, wenn der Bereich unter dem Finger ganz oben steht (wie bei iOS-Sheets) - sonst wird gescrollt
+  // Nur ziehen, wenn der Bereich unter dem Finger ganz oben steht (wie bei iOS-Sheets) - sonst wird gescrollt.
+  // scrollTop < 0 = iOS-Gummiband oben; kurz nach dem Scrollen (Schwung) ebenfalls nicht - sonst schloss ein
+  // schnelles Hochscrollen das Sheet "von selbst".
   const scroller = scrollerAt(target, panel);
-  if (scroller && scroller.scrollTop > 0) return false;
+  if (scroller && (scroller.scrollTop !== 0 || performance.now() - (lastScroll.get(scroller) ?? -1e9) < 350)) return false;
   // Formulare: nur am Kopf (Griff, Titel)
   return !s.handleOnly || y - panel.getBoundingClientRect().top < HANDLE;
 }

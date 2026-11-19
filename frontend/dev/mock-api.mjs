@@ -657,7 +657,8 @@ async function handleApi(req, res, url) {
     if (status === 'planned' && (!old || old.date !== body.date)) {
       const active = db.programs.find((p) => p.userId === user.id && p.isActive);
       const b = dayBit(body.date);
-      if (active && ((active.trainingDays & b) || (active.matchDays & b))) return json(res, 409, { title: 'plan_conflict', code: 'plan_conflict', kind: active.matchDays & b ? 'match' : 'training' });
+      // Wie der Server: nur der Spieltag blockiert, Trainingstag = Doppeltag
+      if (active && (active.matchDays & b)) return json(res, 409, { title: 'plan_conflict', code: 'plan_conflict', kind: 'match' });
     }
     const now = new Date().toISOString();
     const planned = {

@@ -90,7 +90,9 @@ function followLatest() {
     }
   });
 }
-watch(() => [messages.value.length, busy.value, error.value], followLatest);
+// Einzelne Quellen statt eines neuen Arrays: sonst feuert der Watcher bei JEDER Änderung an messages (z. B. Karte übernommen)
+// und springt zur letzten Antwort - beim Übernehmen einer Karte weiter oben "flog" der Chat nach oben/unten.
+watch([() => messages.value.length, busy, error], followLatest);
 
 /**
  * Fokus beim Öffnen: mit Maus/Tastatur direkt ins Eingabefeld; auf Touch-Geräten nur in den Dialog

@@ -182,8 +182,8 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
     public static readonly AiTool ProposeSessionTool = new(ProposeSession,
         "Schedule a single extra session on a date next to the plan (e.g. a speed session on a free Saturday, a recovery or rehab session, a make-up session). " +
         "The athlete sees a card and adds it with one tap; on that day the app offers to start it with your targets. " +
-        "RULE: never on a training or match day of the active plan (see <calendar>) - one session per day. If the athlete needs it on a plan day, " +
-        "first move the plan with propose_schedule (or change the plan day with propose_program_update) in the same answer, then propose the session. " +
+        "RULES: never on a match day. Prefer free days from <calendar>; a plan training day is allowed (double day) when the athlete wants it or it fits better - " +
+        "then keep it short and complementary and say it is a double day. " +
         "Avoid hard sessions the day before a match. To move, change or cancel an existing session send its id as replacesId (status 'skipped' cancels it).",
         Schema("""
         {"type":"object","required":["date","title","category","exercises","reason"],"properties":{
@@ -475,17 +475,19 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
             if (existing is null) return new { error = $"Session {replaces} not found. Use an id from <calendar>." };
         }
 
-        // Kein Termin auf einem Plan-Tag. Ein Wochenplan-Vorschlag in derselben Antwort zählt schon (der Nutzer wendet ihn zuerst an).
+        // Nie am Spieltag. Trainingstag = Doppeltag (erlaubt, der Coach soll ihn bewusst dosieren).
+        // Ein Wochenplan-Vorschlag in derselben Antwort zählt schon (der Nutzer wendet ihn zuerst an).
         var active = await db.Programs.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive, ct);
         var proposed = actions.LastOrDefault(a => (string?)a["type"] == "schedule");
         var training = proposed is not null ? (int)proposed["trainingDays"]! : active?.TrainingDays ?? 0;
         var match = proposed is not null ? (int)proposed["matchDays"]! : active?.MatchDays ?? 0;
-        if (status == "planned" && PlannedWorkoutRules.ConflictOn(date, training, match) is { } kind)
+        var conflict = status == "planned" ? PlannedWorkoutRules.ConflictOn(date, training, match) : null;
+        if (PlannedWorkoutRules.Blocks(conflict))
             return new
             {
-                error = $"{date:yyyy-MM-dd} is a {kind} day of the plan ({DaysText(kind == "match" ? match : training)}). One session per day: pick a free day from <calendar>, " +
-                        "or first call propose_schedule to move the plan's training days, then propose the session again.",
+                error = $"{date:yyyy-MM-dd} is a match day of the plan ({DaysText(match)}). No extra session on a match day: pick another day from <calendar>.",
             };
+        var doubleDay = conflict == "training";
 
         if (!input.TryGetProperty("exercises", out var exEl) || exEl.ValueKind != JsonValueKind.Array) return new { error = "exercises are required." };
         var ids = exEl.EnumerateArray().Select(x => Int(x, "exerciseId")).Where(x => x is not null).Select(x => x!.Value).Distinct().ToList();
@@ -522,7 +524,14 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
                 ["exercises"] = list,
             },
         });
-        return new { shown = true, note = status == "skipped" ? "The athlete confirms the cancellation." : "The athlete adds it with one tap. Mention the day and the focus in one sentence." };
+        return new
+        {
+            shown = true,
+            note = status == "skipped" ? "The athlete confirms the cancellation."
+                : doubleDay ? "Double day: this date is also a plan training day. That is allowed - say it is a double day, keep the extra session short and complementary " +
+                              "(different quality than the plan day, e.g. speed or prevention next to strength), say which to do first, and count both in the week's load."
+                : "The athlete adds it with one tap. Mention the day and the focus in one sentence.",
+        };
     }
 
     // ---------- Gedächtnis ----------

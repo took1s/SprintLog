@@ -38,8 +38,11 @@
   /* Wischbare Zeilen: vertikal scrollen erlaubt, horizontal gehört die Geste der Zeile. */
   .swipe-row { touch-action: pan-y; }
 
-  /* Bottom-Sheets (fixed inset-0 items-end) wachsen nicht unter die Notch. */
-  .fixed.inset-0.items-end { padding-top: env(safe-area-inset-top); }
+  /* Bottom-Sheets (fixed inset-0 items-end) wachsen nicht unter die Notch - plus etwas Luft, damit Kopf und
+     Schließen-Knopf nie an der Statusleiste kleben (dort fängt iOS Tipps ab: "nach oben scrollen"). */
+  .fixed.inset-0.items-end { padding-top: calc(env(safe-area-inset-top) + 12px); }
+  /* ...und das Sheet selbst nie höher als der freie Platz (92vh ragte auf dem iPhone sonst unter die Statusleiste) */
+  .fixed.inset-0.items-end > .max-h-\[92vh\], .fixed.inset-0.items-end > .max-h-\[92dvh\], .fixed.inset-0.items-end > .max-h-\[94vh\] { max-height: min(92dvh, 100%); }
 
   /* Zahlen immer gleich breit (Gewichte, Zeiten untereinander) */
   .font-mono { font-variant-numeric: tabular-nums; }

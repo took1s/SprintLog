@@ -9,7 +9,8 @@ describe('Sheet nach unten ziehen', () => {
     expect(dismissDistance(1000)).toBe(160);
     expect(shouldDismiss(170, 0, 800)).toBe(true);
     expect(shouldDismiss(60, 0.1, 800)).toBe(false);
-    expect(shouldDismiss(30, 0.9, 800)).toBe(true);
+    expect(shouldDismiss(60, 1.2, 800)).toBe(true);
+    expect(shouldDismiss(30, 0.9, 800)).toBe(false); // kurzes Zurückwischen beim Scrollen
     expect(shouldDismiss(10, 2, 800)).toBe(false); // kurzes Zucken
     expect(shouldDismiss(-40, 2, 800)).toBe(false);
   });

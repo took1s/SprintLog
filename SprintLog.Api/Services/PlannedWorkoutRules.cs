@@ -2,7 +2,10 @@ using SprintLog.Api.Models;
 
 namespace SprintLog.Api.Services;
 
-/// <summary>Regeln für geplante Einzel-Einheiten: kein Termin an einem Trainings- oder Spieltag des aktiven Plans.</summary>
+/// <summary>
+/// Regeln für geplante Einzel-Einheiten: am Spieltag des aktiven Plans nie (Spiel hat Vorrang); an einem Trainingstag erlaubt -
+/// das ist dann ein Doppeltag (z. B. Mannschaftstraining + kurze Extra-Einheit), den Athlet und Coach bewusst wählen.
+/// </summary>
 public static class PlannedWorkoutRules
 {
     /// <summary>Wochentag als Bit (Montag = Bit 0) - wie TrainingDays/MatchDays.</summary>
@@ -14,4 +17,7 @@ public static class PlannedWorkoutRules
 
     public static string? ConflictOn(DateOnly date, TrainingProgram? active) =>
         active is null ? null : ConflictOn(date, active.TrainingDays, active.MatchDays);
+
+    /// <summary>Blockiert nur der Spieltag ("match"); ein Trainingstag ist ein erlaubter Doppeltag.</summary>
+    public static bool Blocks(string? conflict) => conflict == "match";
 }
