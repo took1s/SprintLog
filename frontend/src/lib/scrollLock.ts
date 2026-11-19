@@ -19,8 +19,9 @@ function syncViewport() {
   const vv = window.visualViewport;
   const html = document.documentElement;
   if (!vv) return;
-  // Erst ab spürbarer Differenz (Tastatur, nicht Adressleiste/Rundungen)
-  if (window.innerHeight - vv.height > 80) {
+  // Erst ab spürbarer Differenz (Tastatur, nicht Adressleiste/Rundungen). Gezoomt (scale > 1) ist der sichtbare
+  // Bereich auch kleiner - das ist keine Tastatur, sonst würde das Sheet gestaucht/verschoben.
+  if ((vv.scale ?? 1) <= 1.01 && window.innerHeight - vv.height > 80) {
     html.style.setProperty('--vv-top', `${Math.round(vv.offsetTop)}px`);
     // Von der Tastatur verdeckter Streifen unten
     html.style.setProperty('--kb', `${Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))}px`);

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { initScrollLock, isScrollLocked } from '@/lib/scrollLock';
 
 /** visualViewport-Attrappe: Höhe/Verschiebung setzen und Ereignis auslösen wie iOS beim Öffnen der Tastatur. */
-class FakeViewport extends EventTarget { height = 800; offsetTop = 0; }
+class FakeViewport extends EventTarget { height = 800; offsetTop = 0; scale = 1; }
 
 const frame = () => new Promise((r) => setTimeout(r, 30));
 
@@ -40,6 +40,11 @@ describe('Scroll-Sperre unter Dialogen', () => {
     // Tastatur zu
     vv.height = 800; vv.offsetTop = 0; vv.dispatchEvent(new Event('resize'));
     expect('keyboard' in html.dataset).toBe(false);
+
+    // Hineingezoomt (kleinerer sichtbarer Bereich ohne Tastatur): kein Tastatur-Modus
+    vv.height = 600; vv.scale = 1.3; vv.dispatchEvent(new Event('resize'));
+    expect('keyboard' in html.dataset).toBe(false);
+    vv.height = 800; vv.scale = 1;
 
     overlay.remove();
     await frame();

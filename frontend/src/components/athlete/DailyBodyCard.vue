@@ -144,7 +144,10 @@ function addCustom() {
                   <p v-if="left && left.grams" class="mt-1 text-xs leading-snug text-slate-300">{{ t('body.proteinLeft', { g: left.grams, meals: left.meals }) }}</p>
                   <p v-else-if="left" class="mt-1 text-xs font-bold text-emerald-300">{{ t('body.proteinDone') }}</p>
                   <p v-else class="mt-1 text-xs text-slate-400">{{ t('body.proteinNoWeight') }}</p>
-                  <button v-if="lastAdd" type="button" class="routine-link -ml-3 mt-1" data-test="protein-undo" @click="undoLast">↺ {{ t('body.undo', { g: lastAdd.grams }) }}</button>
+                  <!-- Platz für "Rückgängig" immer reserviert: sonst rutscht beim Hinzufügen alles darunter (auch das Eingabefeld) nach unten -->
+                  <div class="mt-1 h-9">
+                      <button v-if="lastAdd" type="button" class="routine-link -ml-3" data-test="protein-undo" @click="undoLast">↺ {{ t('body.undo', { g: lastAdd.grams }) }}</button>
+                  </div>
               </div>
           </div>
           <div class="mt-3 grid grid-cols-2 gap-1.5 min-[400px]:grid-cols-4">

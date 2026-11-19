@@ -327,7 +327,7 @@ const close = () => {
                           <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h13M13 6l6 6-6 6"/></svg>
                       </button>
                   </div>
-                  <p class="mt-2 px-1 text-[11px] leading-snug text-slate-400">{{ t('ai.disclaimer') }} {{ t('ai.privacy') }}</p>
+                  <p class="kb-hide mt-2 px-1 text-[11px] leading-snug text-slate-400">{{ t('ai.disclaimer') }} {{ t('ai.privacy') }}</p>
               </form>
           </div>
       </div>
