@@ -283,6 +283,7 @@ public class AppDbContext : DbContext
             e.HasOne(n => n.Exercise).WithMany().HasForeignKey(n => n.ExerciseId).OnDelete(DeleteBehavior.NoAction);
             e.Property(n => n.Note).HasMaxLength(CreateWorkoutRequest.MaxSetNoteLength);
             e.Property(n => n.Reason).HasMaxLength(20);
+            e.ToTable(t => t.HasCheckConstraint("CK_WorkoutExerciseNotes_Pain", "\"Pain\" IS NULL OR (\"Pain\" >= 0 AND \"Pain\" <= 10)"));
             e.HasIndex(n => new { n.WorkoutId, n.ExerciseId }).IsUnique();
         });
     }

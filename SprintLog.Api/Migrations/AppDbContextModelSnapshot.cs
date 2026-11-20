@@ -3339,6 +3339,9 @@ namespace SprintLog.Api.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
 
+                    b.Property<bool>("ReplacesPlan")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(8)
@@ -3906,6 +3909,9 @@ namespace SprintLog.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<int?>("Pain")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Reason")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -3923,7 +3929,10 @@ namespace SprintLog.Api.Migrations
                     b.HasIndex("WorkoutId", "ExerciseId")
                         .IsUnique();
 
-                    b.ToTable("WorkoutExerciseNotes");
+                    b.ToTable("WorkoutExerciseNotes", t =>
+                        {
+                            t.HasCheckConstraint("CK_WorkoutExerciseNotes_Pain", "\"Pain\" IS NULL OR (\"Pain\" >= 0 AND \"Pain\" <= 10)");
+                        });
                 });
 
             modelBuilder.Entity("SprintLog.Api.Models.WorkoutSet", b =>

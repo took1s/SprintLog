@@ -26,7 +26,7 @@ export interface WorkoutPayload {
   team?: { focus?: string | null; participation?: string | null } | null;
   health?: { distanceM?: number | null; avgHr?: number | null; maxHr?: number | null; maxSpeedKmh?: number | null; sprints?: number | null } | null;
   gym?: string | null;
-  exerciseNotes?: { exerciseId: number; note: string | null; skipped: boolean; reason: string | null }[];
+  exerciseNotes?: { exerciseId: number; note: string | null; skipped: boolean; reason: string | null; pain?: number | null }[];
   sets: {
     exerciseId: number | null | undefined;
     weight: number | null;
@@ -60,7 +60,7 @@ export function toPayload(entry: QueueEntry): WorkoutPayload {
     ...(entry.team ? { team: entry.team } : {}),
     ...(entry.health ? { health: entry.health } : {}),
     gym: entry.gym?.trim() || null,
-    exerciseNotes: (entry.exerciseNotes ?? []).map((n) => ({ exerciseId: n.exerciseId, note: n.note?.trim() || null, skipped: !!n.skipped, reason: n.reason ?? null })),
+    exerciseNotes: (entry.exerciseNotes ?? []).map((n) => ({ exerciseId: n.exerciseId, note: n.note?.trim() || null, skipped: !!n.skipped, reason: n.reason ?? null, ...(n.pain != null ? { pain: n.pain } : {}) })),
     sets: entry.sets.map((s) => ({
       exerciseId: s.exerciseId,
       weight: s.weight ?? null,

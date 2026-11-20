@@ -12,6 +12,7 @@ const texts: ReminderTexts = {
   training: () => ({ title: 'training', body: '' }),
   match: () => ({ title: 'match', body: '' }),
   report: () => ({ title: 'report', body: '' }),
+  checkIn: () => ({ title: 'checkin', body: '' }),
 };
 const routine = (over: Partial<Routine> = {}): Routine => ({
   clientId: 'rt-a0000001', title: 'Dehnen', kind: 'mobility', days: 127, startDate: '2026-11-01', endDate: null, reason: null, source: 'user',
@@ -21,11 +22,23 @@ const planned = (over: Partial<PlannedWorkout> = {}): PlannedWorkout => ({
   clientId: 'pl-a0000001', date: '2026-11-14', title: 'Speed', category: 'Football', notes: null, source: 'coach', status: 'planned',
   workoutClientId: null, exercises: [], createdAt: '', updatedAt: '', ...over,
 } as PlannedWorkout);
-const prefs = { ...DEFAULT_REMINDER_PREFS, enabled: true };
+// Check-in eigens getestet (unten) - hier aus, damit die Zählungen der anderen Arten klar bleiben
+const prefs = { ...DEFAULT_REMINDER_PREFS, enabled: true, checkIn: false };
 const plan = (over: Partial<Parameters<typeof planReminders>[0]> = {}) =>
   planReminders({ now: NOW, prefs, routines: [], planned: [], schedule: null, texts, ...over });
 
 describe('Erinnerungen planen', () => {
+  it('Check-in täglich zur gewählten Zeit, heute nicht mehr, wenn schon eingetragen', () => {
+    const on = { ...prefs, checkIn: true, checkInTime: '13:30' };
+    const open = plan({ prefs: on }).filter((r) => r.kind === 'checkIn');
+    expect(open).toHaveLength(7);
+    expect(open[0].at.getDate()).toBe(12);
+    expect(open[0].at.getHours()).toBe(13);
+    const done = plan({ prefs: on, checkedInToday: true }).filter((r) => r.kind === 'checkIn');
+    expect(done).toHaveLength(6);
+    expect(done[0].at.getDate()).toBe(13);
+  });
+
   it('aus: keine Erinnerungen', () => {
     expect(planReminders({ now: NOW, prefs: DEFAULT_REMINDER_PREFS, routines: [routine()], planned: [], schedule: null, texts })).toEqual([]);
   });

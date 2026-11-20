@@ -2,8 +2,8 @@ namespace SprintLog.Api.Models;
 
 /// <summary>
 /// Einzelne geplante Einheit an einem Datum neben dem Trainingsplan (z. B. Zusatz-Sprinteinheit am Samstag, Reha-Einheit).
-/// Legt der Nutzer an oder der KI-Coach schlägt sie vor. Nie an einem Trainings- oder Spieltag des aktiven Plans:
-/// dann wird zuerst der Wochenplan geändert (siehe <see cref="Services.PlannedWorkoutRules"/>).
+/// Legt der Nutzer an oder der KI-Coach schlägt sie vor. Nie an einem Spieltag; an einem Trainingstag entweder Doppeltag
+/// (zusätzlich) oder - mit <see cref="ReplacesPlan"/> - Ersatz für den Plan-Tag an diesem Datum (siehe <see cref="Services.PlannedWorkoutRules"/>).
 /// </summary>
 public class PlannedWorkout
 {
@@ -28,6 +28,9 @@ public class PlannedWorkout
 
     /// <summary>planned, done, skipped.</summary>
     public string Status { get; set; } = "planned";
+
+    /// <summary>Ersetzt an diesem Datum den Tag des Trainingsplans (statt zusätzlich = Doppeltag). Nur an Trainingstagen.</summary>
+    public bool ReplacesPlan { get; set; }
 
     /// <summary>Client-Id der geloggten Einheit, wenn erledigt.</summary>
     public string? WorkoutClientId { get; set; }

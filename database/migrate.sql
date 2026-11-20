@@ -6947,3 +6947,36 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261120150651_CoachTodayReplacePain') THEN
+    ALTER TABLE "WorkoutExerciseNotes" ADD "Pain" integer;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261120150651_CoachTodayReplacePain') THEN
+    ALTER TABLE "PlannedWorkouts" ADD "ReplacesPlan" boolean NOT NULL DEFAULT FALSE;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261120150651_CoachTodayReplacePain') THEN
+    ALTER TABLE "WorkoutExerciseNotes" ADD CONSTRAINT "CK_WorkoutExerciseNotes_Pain" CHECK ("Pain" IS NULL OR ("Pain" >= 0 AND "Pain" <= 10));
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261120150651_CoachTodayReplacePain') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261120150651_CoachTodayReplacePain', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

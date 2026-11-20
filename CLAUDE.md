@@ -19,6 +19,7 @@ PWA zum Loggen von Gym- und Feldtraining (Fußball). Offline-first, ein Nutzer =
 - Strikte CSP: kein Inline-Script/-Style aus Strings, keine Drittanbieter-Hosts im Browser.
 - Farben/Schriften NUR über Design-Tokens (`frontend/src/styles/themes.css`), nie Hex-Werte in Komponenten.
 - Offline-first: Änderungen zuerst lokal (Queue), dann Sync; Server erkennt `clientId` wieder (idempotent).
+- Plan-Tag nach Wochentag: `frontend/src/lib/program.ts` (`dayForWeekday`) und `SprintLog.Api/Services/PlanWeekdays.cs` müssen dieselben Regeln haben (Wochentag in Klammern im Namen > k-ter Trainingstag = k-ter Tag > Rotation).
 - Feature-Branches + PR; kein Force-Push; `main` merged der Nutzer.
 
 ## Agenten

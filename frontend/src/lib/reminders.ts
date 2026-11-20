@@ -16,13 +16,16 @@ export interface ReminderPrefs {
   /** Sonntags: Wochenbericht. */
   report: boolean;
   reportTime: string;
+  /** Täglich: Check-in (Schlaf, Energie, Muskeln, Stimmung) - entfällt, wenn heute schon eingetragen. */
+  checkIn: boolean;
+  checkInTime: string;
 }
 
 export const DEFAULT_REMINDER_PREFS: ReminderPrefs = Object.freeze({
-  enabled: false, routines: true, routineTime: '18:30', today: true, todayTime: '08:30', report: true, reportTime: '19:00',
+  enabled: false, routines: true, routineTime: '18:30', today: true, todayTime: '08:30', report: true, reportTime: '19:00', checkIn: true, checkInTime: '08:00',
 });
 
-export type ReminderKind = 'routine' | 'today' | 'report';
+export type ReminderKind = 'routine' | 'today' | 'report' | 'checkIn';
 
 export interface Reminder {
   /** Stabile Nummer (iOS-Mitteilungen brauchen eine Zahl): gleiche Erinnerung = gleiche Id. */
@@ -42,6 +45,7 @@ export interface ReminderTexts {
   training(): { title: string; body: string };
   match(): { title: string; body: string };
   report(): { title: string; body: string };
+  checkIn(): { title: string; body: string };
 }
 
 export interface ReminderInput {
@@ -51,6 +55,8 @@ export interface ReminderInput {
   planned: readonly PlannedWorkout[];
   schedule: Partial<Schedule> | null;
   texts: ReminderTexts;
+  /** Heute schon eingecheckt (dann keine Check-in-Erinnerung mehr heute). */
+  checkedInToday?: boolean;
   /** Wie viele Tage im Voraus (iOS erlaubt 64 ausstehende Mitteilungen). */
   days?: number;
 }
@@ -112,6 +118,8 @@ export function planReminders(input: ReminderInput): Reminder[] {
       else if (kind === 'match') add(`m:${day}`, when, 'today', null, texts.match());
       else if (kind === 'training') add(`t:${day}`, when, 'today', null, texts.training());
     }
+
+    if (prefs.checkIn && !(day === today && input.checkedInToday)) add(`c:${day}`, at(day, prefs.checkInTime), 'checkIn', null, texts.checkIn());
 
     if (prefs.report && wd === 6) add(`w:${day}`, at(day, prefs.reportTime), 'report', null, texts.report());
   }

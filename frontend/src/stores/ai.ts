@@ -49,7 +49,7 @@ export type AiAction =
   /** Routine neben dem Plan (Dehnen, Reha ...); replacesId = Änderung einer bestehenden. */
   | { type: 'routine'; routine: RoutineDraft; replacesId: string | null }
   /** Einzel-Einheit an einem Datum; status 'skipped' = absagen. */
-  | { type: 'session'; session: PlannedDraft & { status?: PlannedStatus; reason?: string | null; exercises: (PlannedDraft['exercises'][number] & { exerciseName?: string })[] }; replacesId: string | null };
+  | { type: 'session'; session: PlannedDraft & { status?: PlannedStatus; reason?: string | null; planDayName?: string | null; exercises: (PlannedDraft['exercises'][number] & { exerciseName?: string })[] }; replacesId: string | null };
 export type MemoryCategory = 'injury' | 'health' | 'goal' | 'schedule' | 'preference' | 'equipment' | 'insight' | 'other';
 export const MEMORY_CATEGORIES: readonly MemoryCategory[] = ['injury', 'health', 'goal', 'schedule', 'preference', 'equipment', 'insight', 'other'];
 export interface CoachMemory {
@@ -198,6 +198,23 @@ export const useAiStore = defineStore('ai', () => {
   }
 
   /** Zusammenfassung der eigenen Daten zum Zeitpunkt der Frage. */
+  /** Was die App heute zeigt: Plan-Tag nach Wochentag, Ersatz, Zusatz-Einheiten, laufende Einheit. */
+  function todayContext() {
+    const p = app.activeProgram;
+    const info = app.programInfo;
+    const planned = usePlannedStore();
+    const repl = planned.replacementToday;
+    const s = app.session;
+    return {
+      planDay: p && info?.todayDay ? info.todayDay.name : null,
+      planDone: !!info?.doneToday,
+      replacement: repl ? { title: repl.title, status: repl.status } : null,
+      extra: planned.forToday.map((x) => x.title),
+      shownAsNext: repl?.status === 'planned' ? repl.title : info?.next ? `${info.next.name} (${app.nextPlanKicker})` : null,
+      inProgress: app.sessionActive ? { title: s.plan?.dayName ?? 'free workout', sets: s.sets.length } : null,
+    };
+  }
+
   function context(): string {
     const p = app.activeProgram;
     const info = app.programInfo;
@@ -219,6 +236,7 @@ export const useAiStore = defineStore('ai', () => {
       wellness: app.wellness,
       workouts: app.allWorkouts,
       exerciseName: (s) => (s.exerciseId != null ? app.exercisesById.get(s.exerciseId)?.name : null) ?? s.exerciseName ?? s.name ?? 'Exercise',
+      today: todayContext(),
       goals: goals.views.map((v) => ({
         exercise: v.exercise?.name ?? exerciseName(v.goal.exerciseId),
         target: `${v.goal.targetWeight} kg x${v.goal.targetReps}`,

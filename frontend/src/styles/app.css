@@ -480,6 +480,11 @@
   color: rgb(var(--c-accent-text)); background: rgb(var(--c-accent) / 0.1); border: var(--border-w) solid rgb(var(--accent-ring) / 0.35);
 }
 .routine-link:hover { background: rgb(var(--c-accent) / 0.18); }
+/* Schmerz an der Übung (0-10): neutral, bis angegeben - dann Ampel wie die Schmerz-Skala */
+.pain-chip { min-height: 2.75rem; border-radius: 9999px; padding: 0 12px; font-size: 11px; font-weight: 700; color: rgb(var(--c-muted)); border: var(--border-w) dashed rgb(var(--c-muted) / 0.4); }
+.pain-chip.is-ok { color: rgb(var(--c-success-text)); border-style: solid; border-color: rgb(var(--c-success) / 0.4); background: rgb(var(--c-success) / 0.08); }
+.pain-chip.is-warn { color: rgb(var(--c-warn-text)); border-style: solid; border-color: rgb(var(--c-warn) / 0.45); background: rgb(var(--c-warn) / 0.1); }
+.pain-chip.is-bad { color: rgb(var(--c-danger-text)); border-style: solid; border-color: rgb(var(--c-danger) / 0.5); background: rgb(var(--c-danger) / 0.12); }
 .routine-missed-dot { height: 8px; width: 8px; flex-shrink: 0; border-radius: 9999px; background: rgb(var(--c-warn-text)); }
 
 /* Detailansicht: Kennzahlen und Verlauf */

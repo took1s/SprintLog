@@ -75,7 +75,20 @@ function save() {
                   <label class="label-xs mb-2" for="planned-date">{{ t('planned.sheet.date') }}</label>
                   <input id="planned-date" v-model="d.date" type="date" required :min="today" :max="addDays(today, 180)" class="field h-12 w-full rounded-xl px-3" data-test="planned-date">
                   <p v-if="conflict === 'match'" class="mt-2 text-xs font-bold text-red-300" role="alert" data-test="planned-conflict">{{ t('planned.sheet.matchDay') }}</p>
-                  <p v-else-if="conflict === 'training'" class="mt-2 text-xs font-bold text-amber-300" role="status" data-test="planned-double">{{ t('planned.sheet.doubleDay') }}</p>
+                  <!-- Trainingstag des Plans: ersetzen (nur dieses Datum, Plan bleibt) oder zusätzlich (Doppeltag) -->
+                  <div v-else-if="conflict === 'training'" class="mt-2" data-test="planned-training-day">
+                      <div class="grid grid-cols-2 gap-1.5" role="radiogroup" :aria-label="t('planned.sheet.onPlanDay')">
+                          <button type="button" role="radio" :aria-checked="!!d.replacesPlan" data-test="planned-replace" @click="d.replacesPlan = true"
+                                  class="min-h-[2.75rem] rounded-xl border px-2 py-2 text-xs font-bold leading-tight transition-colors"
+                                  :class="d.replacesPlan ? 'border-accent/60 bg-accent/15 text-accent' : 'border-white/5 bg-white/5 text-slate-400 hover:text-white'">{{ t('planned.sheet.replace') }}</button>
+                          <button type="button" role="radio" :aria-checked="!d.replacesPlan" data-test="planned-extra" @click="d.replacesPlan = false"
+                                  class="min-h-[2.75rem] rounded-xl border px-2 py-2 text-xs font-bold leading-tight transition-colors"
+                                  :class="!d.replacesPlan ? 'border-amber-400/60 bg-amber-400/10 text-amber-300' : 'border-white/5 bg-white/5 text-slate-400 hover:text-white'">{{ t('planned.sheet.extra') }}</button>
+                      </div>
+                      <p class="mt-1.5 text-[11px] leading-snug" :class="d.replacesPlan ? 'text-slate-400' : 'font-bold text-amber-300'" role="status" :data-test="d.replacesPlan ? 'planned-replace-hint' : 'planned-double'">
+                          {{ d.replacesPlan ? t('planned.sheet.replaceHint') : t('planned.sheet.doubleDay') }}
+                      </p>
+                  </div>
                   <p v-else-if="taken" class="mt-2 text-xs text-yellow-300">{{ t('planned.sheet.takenDay') }}</p>
                   <p class="mt-3 text-[10px] font-bold uppercase text-slate-400 tracking-label">{{ t('planned.sheet.freeDays') }}</p>
                   <div class="no-scrollbar -mx-6 mt-1.5 flex gap-1.5 overflow-x-auto px-6" role="group" :aria-label="t('planned.sheet.freeDays')">

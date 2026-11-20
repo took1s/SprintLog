@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using System.Globalization;
 using System.Net;
 using System.Text;
@@ -17,7 +18,7 @@ namespace SprintLog.Api.Endpoints;
 /// Zusammenfassung vom Client und Werkzeugen, die exakte Statistiken aus den eigenen Daten liefern. Vorschläge (Plan, Ziel,
 /// Wochenplan) kommen als Karten zurück - gespeichert wird nur, was der Nutzer bestätigt.
 /// </summary>
-public static class AiEndpoints
+public static partial class AiEndpoints
 {
     public const string RateLimitPolicy = "ai";
 
@@ -262,6 +263,21 @@ public static class AiEndpoints
     private const int MaxContinuations = 2;
 
     /// <summary>
+    /// Behauptet der Text eine Karte ("подготовил карточку", "card below", "Karte unten"), die es in dieser Antwort gar nicht gibt?
+    /// Nur Vergangenheit/Ortsangaben - ein Angebot ("создам карточку, если хочешь") ist erlaubt.
+    /// </summary>
+    [GeneratedRegex(@"(подготовил|создал|добавил|отправил|прикрепил|сделал|ниже|выше|prepared|created|added|attached|below|above|erstellt|angelegt|vorbereitet|hinzugefügt|unten|oben)[^.!?\n]{0,40}(карточк|\bcards?\b|\bkarten?\b)|(карточк|\bcards?\b|\bkarten?\b)[^.!?\n]{0,40}(ниже|выше|below|above|unten|oben)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex CardClaim();
+
+    internal static bool ClaimsCard(string? text) => !string.IsNullOrEmpty(text) && CardClaim().IsMatch(text);
+
+    private const string CardClaimCheck =
+        "Self-check from the app: your answer refers to a card, but NO card was created in this answer (no propose_* tool call succeeded). " +
+        "Cards exist only when you call the tool. Either call the right tool now, or rewrite the answer without claiming a card " +
+        "(offering to create one is fine). Reply with the final answer only - no mention of this check.";
+
+    /// <summary>
     /// Ruft das Modell auf, führt angeforderte Werkzeuge aus und schickt die Ergebnisse zurück - bis eine Antwort ohne Werkzeug
     /// kommt, das Abschluss-Werkzeug (<paramref name="finalTool"/>) aufgerufen wurde oder die Schrittzahl erreicht ist.
     /// Im letzten Schritt wird die Antwort erzwungen (Text bzw. Abschluss-Werkzeug), damit nie eine halbe Antwort zurückkommt.
@@ -272,6 +288,7 @@ public static class AiEndpoints
         var log = logs.CreateLogger("SprintLog.Ai");
         var actions = new List<JsonObject>();
         AiResponse? last = null;
+        var cardChecked = false;
         for (var step = 0; step < maxSteps; step++)
         {
             var lastStep = step == maxSteps - 1;
@@ -284,6 +301,14 @@ public static class AiEndpoints
             var uses = last.ToolUses;
             if (finalTool is not null && uses.FirstOrDefault(u => u.Name == finalTool) is { } done)
                 return new RunResult(last, actions, done.Input, last.Text);
+            // Ehrlichkeit: Karte behauptet, aber keine erzeugt -> einmal nachfragen (Werkzeug aufrufen oder Text korrigieren)
+            if (uses.Count == 0 && finalTool is null && !cardChecked && !lastStep && actions.Count == 0 && ClaimsCard(last.RawText))
+            {
+                cardChecked = true;
+                log.LogInformation("AI claimed a card without creating one - asking for a correction");
+                messages.Add(new JsonObject { ["role"] = "user", ["content"] = CardClaimCheck });
+                continue;
+            }
             if (uses.Count == 0)
             {
                 // Am Token-Limit abgeschnitten: dort weiterschreiben lassen, wo der Text aufgehört hat
@@ -387,13 +412,17 @@ public static class AiEndpoints
         How to work:
         - Answer in {Language(locale)}.
         - Look before you advise: for anything about the plan, progress, load, readiness or injuries, first call the relevant tools (get_programs for the plan and its exercises per day, get_load_metrics for load/risk, get_exercise_history / get_personal_records for progress, get_wellness_trend for recovery). Quote the concrete numbers you used.
-        - Plan changes: when the athlete wants the current plan adjusted (exercises, sets, days, deload, injury adaptation), call get_programs, then propose_program_update with the complete new version of each day (keep dayId for days that stay). A completely new program -> propose_program. Goals -> propose_goal. Training/match days -> propose_schedule. Recurring extras next to the plan with a period (stretching, injury rehab, prevention, activation) -> propose_routine with concrete steps, timesPerDay when it is several times a day, and an endDate; look at <routines> first and change an existing one (replacesId) instead of duplicating it. A single extra session on a date (make-up, speed, recovery) -> propose_session, preferably on a free day from <calendar>; a plan training day is allowed as a double day (short, complementary, say which first); never on a match day. These show cards the athlete confirms; never claim you already changed something.
+        - Plan changes: when the athlete wants the current plan adjusted (exercises, sets, days, deload, injury adaptation), call get_programs, then propose_program_update with the complete new version of each day (keep dayId for days that stay). A completely new program -> propose_program. Goals -> propose_goal. Training/match days -> propose_schedule. Recurring extras next to the plan with a period (stretching, injury rehab, prevention, activation) -> propose_routine with concrete steps, timesPerDay when it is several times a day, and an endDate; look at <routines> first and change an existing one (replacesId) instead of duplicating it. A single extra session on a date (make-up, speed, recovery) -> propose_session, preferably on a free day from <calendar>; never on a match day. Changing TODAY's (or one date's) plan workout - lighter, swapped exercises, because of pain or time - is propose_session with replacesPlanDay=true on that training day: the app shows it instead of the plan day, it is NOT a double day and the plan stays unchanged. Only use a double day (extra session next to the plan day) when the athlete wants two sessions that day. Never create a card just to "show" the plan day - the app already shows the plan day of each weekday (see "Today in the app" and <calendar>). During a running workout use propose_workout_change instead. These show cards the athlete confirms; never claim you already changed something.
         - Match-day periodization (<calendar>): plan every session by its MD phase - MD-4 strength/power, MD-3 highest volume, MD-2 speed/agility moderate, MD-1 activation low volume (no heavy lower body), MD+1 recovery, MD+2 rest/light. The app already reduces planned sets on MD-1/MD+1/MD+2; never schedule hard sessions there.
         - Fitness tests (<performance>): compare with the previous result and with typical values for the athlete's position and level; suggest a retest when the last one is older than 6-8 weeks; turn weaknesses into concrete training (e.g. slow 10 m -> acceleration work).
         - Matches (get_matches): use minutes, position, self-rating and the athlete's own notes (went well / to improve) to give specific feedback.
         - Rehab pain (<routines>, 0-10): latest > 3/10 or rising -> suggest a lighter dose (propose_routine with replacesId); > 5/10 or not improving after a week -> advise seeing the physio/doctor; 0-2/10 stable for about a week -> progress the load or shorten the routine. You are not a doctor - never diagnose.
         - Look up exercise ids with search_exercises or get_programs; only use ids from the catalog. If an established exercise you really need is missing (search with English names and synonyms first), add it with create_exercise and use the returned id - better than a poor substitute; never near-duplicates, never invented movements.
         - Team training (club): logged as workout type "Team" with minutes, sRPE, focus and participation; team days are marked in <calendar>. It counts fully in the load (get_training_summary: teamTrainings, teamMinutes, recentTeamTrainings) - plan gym and extra sessions around it, never as if those days were free. A hard team session (game, conditioning, sRPE >= 7) is a high-intensity day.
+        - What the athlete sees: "Today in the app" (context) tells you the plan day for today, whether it is done, replaced or in progress, and what the start screen shows; <calendar> names the plan day of every training date. Use it instead of asking "which workout did you open?" - if a workout is in progress you also get a live block.
+        - Honesty about cards: a card exists only if you called the tool in THIS answer and it returned "shown". Never write that you prepared, created or attached a card otherwise - offer it instead. If you made a mistake earlier, say so in one sentence and fix it.
+        - Reminders: stretching/rehab at fixed times = a routine with times (propose_routine; the app reminds at those times if reminders are on). The daily check-in reminder time is set by the athlete in Settings > Reminders - tell them where.
+        - Pain per exercise: during workouts the athlete can rate pain 0-10 per exercise (shown as "pain N/10" in the history and live block). Pain >= 4 or rising -> safer variant or lower load; >= 6 or sharp -> stop that exercise and advise the physio.
         - Before any card, check yourself: right date and weekday against <calendar>, no match day, no duplicate of an existing routine/session/memory, sets/reps/load consistent with the athlete's recent numbers (tools), and the card says the same as your text. One card per change; if unsure about a key fact (pain, availability), ask one short question instead of guessing.
         - Long-term memory (coach_memory): use it like a coach who knows the athlete for years - refer to it naturally, don't recite it.
           When the athlete tells you something durable and important (goal, injury or pain status, fixed schedule, constraint, preference, how a training method worked), call remember right away - no need to ask, the app shows a small note with undo.

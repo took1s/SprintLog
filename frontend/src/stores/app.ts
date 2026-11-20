@@ -284,6 +284,13 @@ export const useAppStore = defineStore('app', () => {
   // Navigation
   const tab = ref<Tab>('Gym');
   const dataTab = ref<DataTab>('overview');
+  /** Kalender auf diesem Tag öffnen (yyyy-MM-dd); CalendarPanel übernimmt und setzt zurück. */
+  const calendarFocus = ref<string | null>(null);
+  function openCalendarDay(day: string) {
+    calendarFocus.value = day;
+    tab.value = 'Data';
+    dataTab.value = 'calendar';
+  }
 
   // Übungsliste
   const search = ref('');
@@ -433,7 +440,18 @@ export const useAppStore = defineStore('app', () => {
   watch(programs, (list) => setPlanTranslations(list), { immediate: true });
   const activeProgram = computed(() => programs.value.find((p) => p.isActive) ?? null);
   const otherPrograms = computed(() => programs.value.filter((p) => !p.isActive));
-  const programInfo = computed(() => (activeProgram.value ? programStatus(activeProgram.value, allWorkouts.value, clockDate.value) : null));
+  /** Tage, an denen eine Ersatz-Einheit den Plan-Tag ersetzt (der Plan zeigt dann den nächsten Tag). */
+  const replacedDays = computed(() => new Set(plannedStore.items.filter((p) => p.replacesPlan && p.status !== 'skipped' && p.pending !== 'delete').map((p) => p.date)));
+  const programInfo = computed(() => (activeProgram.value ? programStatus(activeProgram.value, allWorkouts.value, clockDate.value, replacedDays.value) : null));
+  /** Überschrift zum nächsten Plan-Tag: "Сегодня по плану", "Завтра по плану", "Пт, 27 нояб. по плану" oder (Rotation) "Следующий день плана". */
+  const nextPlanKicker = computed(() => {
+    const info = programInfo.value;
+    if (!info?.next || info.nextBy !== 'weekday' || !info.nextDate) return t('start.nextPlanDay');
+    const days = calendarDaysBetween(clockDate.value.getTime(), info.nextDate);
+    if (days <= 0) return t('start.planToday');
+    if (days === 1) return t('start.planTomorrow');
+    return t('start.planOn', { date: info.nextDate.toLocaleDateString(intlLocale(), { weekday: 'short', day: 'numeric', month: 'short' }) });
+  });
   /** Planwoche des aktiven Plans (über das Planende hinaus wird weitergezählt - Zyklen laufen weiter). */
   const planWeek = computed(() => programInfo.value?.week ?? 1);
   const isDeloadNow = computed(() => !!activeProgram.value && effectivePrescription({ exerciseId: 0, sets: 1 }, activeProgram.value, planWeek.value).deload);
@@ -1704,14 +1722,15 @@ export const useAppStore = defineStore('app', () => {
   function openNoteSheet(id: number) { noteSheetFor.value = id; }
   function closeNoteSheet() { noteSheetFor.value = null; }
   /** Notiz setzen; leer und nicht ausgelassen = Notiz entfernen. Auslassen schließt die Übung (kein offener Satz). */
-  function setExerciseNote(id: number, value: { note?: string | null; skipped?: boolean; reason?: ExerciseNote['reason'] }) {
+  function setExerciseNote(id: number, value: { note?: string | null; skipped?: boolean; reason?: ExerciseNote['reason']; pain?: number | null }) {
     const s = session.value;
     const note = value.note?.trim().slice(0, 200) || null;
     const skipped = !!value.skipped;
     const reason = value.reason ?? null;
+    const pain = typeof value.pain === 'number' && value.pain >= 0 && value.pain <= 10 ? Math.round(value.pain) : null;
     const notes = { ...(s.notes ?? {}) };
-    if (!note && !skipped && !reason) delete notes[id];
-    else notes[id] = { exerciseId: id, note, skipped, reason };
+    if (!note && !skipped && !reason && pain == null) delete notes[id];
+    else notes[id] = { exerciseId: id, note, skipped, reason, pain };
     s.notes = notes;
     if (skipped) {
       s.done = [...new Set([...(s.done ?? []), id])];
@@ -1968,7 +1987,7 @@ export const useAppStore = defineStore('app', () => {
       workoutType: inferWorkoutType(s.sets),
       sets: s.sets.map((x) => ({ ...x })),
       gym: sessionGym.value?.trim() || null,
-      exerciseNotes: Object.values(s.notes ?? {}).filter((n) => n.skipped || n.note?.trim() || n.reason).map((n) => ({ ...n })),
+      exerciseNotes: Object.values(s.notes ?? {}).filter((n) => n.skipped || n.note?.trim() || n.reason || n.pain != null).map((n) => ({ ...n })),
       status: QueueStatus.Pending,
       attempts: 0,
       error: null,
@@ -3063,7 +3082,7 @@ export const useAppStore = defineStore('app', () => {
     historyFilter, historyLimit, progress, weeklyMetric, selectedDay,
     // Abgeleitet
     isAuthenticated, keys, exercisesById, allWorkouts, records, prInfo, usage, clockDate,
-    activeProgram, otherPrograms, programInfo, loadInfo, loadZone, planTargets, planProgress, exerciseGroups,
+    calendarFocus, openCalendarDay, activeProgram, otherPrograms, programInfo, nextPlanKicker, loadInfo, loadZone, planTargets, planProgress, exerciseGroups,
     planWeek, isDeloadNow, currentPrescription, templateFilter, filteredTemplates,
     rememberExercises, matchModal, openMatchModal, saveMatch, teamModal, openTeamModal, saveTeam, teamLoggedToday, setWorkoutHealth, logWatchSession, wellness, checkIn, todayWellness, readinessToday, readinessWeek, readinessDays, readinessHint,
     loadWellness, openCheckIn, setWellnessValue, saveCheckIn, checkInDays, missedYesterday, progressInPlan,

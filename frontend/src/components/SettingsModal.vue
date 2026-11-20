@@ -34,6 +34,7 @@ const pickIcon = (c: AppIconChoice) => { void setAppIcon(c); };
 const reminders = useRemindersStore();
 const REMINDER_ROWS = [
   { key: 'routines', time: 'routineTime', hint: 'reminders.routinesHint' },
+  { key: 'checkIn', time: 'checkInTime', hint: 'reminders.checkInHint' },
   { key: 'today', time: 'todayTime', hint: 'reminders.todayHint' },
   { key: 'report', time: 'reportTime', hint: 'reminders.reportHint' },
 ] as const;

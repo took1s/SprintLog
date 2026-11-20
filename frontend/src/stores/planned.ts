@@ -4,15 +4,15 @@
 
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import { t } from '../i18n';
+import { intlLocale, t } from '../i18n';
 import { isApiError, type Api } from '../lib/api';
 import { createClientSync } from '../lib/clientSync';
 import { readJson, userKeys, writeJson } from '../lib/storage';
 import { localDay } from '../lib/wellness';
-import { addDays } from '../lib/routines';
+import { addDays, parseDay } from '../lib/routines';
 import type { Schedule } from '../lib/schedule';
 import {
-  MAX_PLANNED_EXERCISES, byDay, freeDays, newPlannedId, past, planConflict, plannedToday, upcoming,
+  MAX_PLANNED_EXERCISES, byDay, freeDays, newPlannedId, past, planConflict, plannedToday, replacementOn, upcoming,
   type PlannedCategory, type PlannedExercise, type PlannedStatus, type PlannedWorkout,
 } from '../lib/planned';
 import { useUiStore } from './ui';
@@ -34,6 +34,8 @@ export interface PlannedDraft {
   category: PlannedCategory;
   notes: string | null;
   exercises: PlannedExercise[];
+  /** Ersetzt den Plan-Tag an diesem Datum (nur an Trainingstagen; sonst wird es eine normale Einheit). */
+  replacesPlan?: boolean;
 }
 
 export interface PlannedEditor { open: boolean; clientId: string | null; draft: PlannedDraft }
@@ -48,6 +50,7 @@ export function cleanPlanned(d: PlannedDraft): PlannedDraft {
     title: d.title.trim().slice(0, 60),
     category: d.category === 'Football' ? 'Football' : 'Gym',
     notes: d.notes?.trim().slice(0, 300) || null,
+    replacesPlan: !!d.replacesPlan,
     exercises: d.exercises.filter((x) => x.exerciseId > 0).slice(0, MAX_PLANNED_EXERCISES).map((x) => {
       const repsMin = num(x.repsMin, 1, 100);
       const repsMax = num(x.repsMax, 1, 100);
@@ -81,7 +84,10 @@ export const usePlannedStore = defineStore('planned', () => {
 
   const today = computed(() => localDay(source ? app().clockDate : new Date()));
   const schedule = computed(() => (source ? app().schedule : null));
-  const forToday = computed(() => plannedToday(items.value, today.value));
+  /** Heute offene Einheiten - ohne den Ersatz für den Plan-Tag (der steht oben als Haupt-Knopf). */
+  const forToday = computed(() => plannedToday(items.value, today.value).filter((p) => !p.replacesPlan));
+  /** Ersatz für den heutigen Plan-Tag (offen oder erledigt). */
+  const replacementToday = computed(() => replacementOn(items.value, today.value));
   const next = computed(() => upcoming(items.value, today.value));
   const recent = computed(() => past(items.value, today.value));
   const perDay = computed(() => byDay(items.value));
@@ -95,7 +101,7 @@ export const usePlannedStore = defineStore('planned', () => {
     setItems: (list) => { items.value = list; },
     persist,
     api: () => app().api(),
-    body: ({ date, title, category, notes, exercises, status, workoutClientId, source: by }) => ({ date, title, category, notes, exercises, status, workoutClientId, source: by }),
+    body: ({ date, title, category, notes, exercises, status, workoutClientId, source: by, replacesPlan }) => ({ date, title, category, notes, exercises, status, workoutClientId, source: by, replacesPlan: !!replacesPlan }),
     onRejected: (p, e) => {
       console.warn('[planned] rejected', e);
       const conflict = isApiError(e) && e.status === 409;
@@ -127,6 +133,8 @@ export const usePlannedStore = defineStore('planned', () => {
       return null;
     }
     const now = new Date().toISOString();
+    // Ersatz nur, solange der Tag ein Trainingstag des Plans ist (sonst ganz normale Einheit)
+    clean.replacesPlan = !!clean.replacesPlan && planConflict(schedule.value, clean.date) === 'training';
     const p: PlannedWorkout = {
       ...clean, clientId, status, source: existing?.source ?? by, workoutClientId: status === 'done' ? existing?.workoutClientId ?? null : null,
       createdAt: existing?.createdAt ?? now, updatedAt: now, pending: 'put',
@@ -151,6 +159,13 @@ export const usePlannedStore = defineStore('planned', () => {
     useUiStore().toast(t('planned.toast.skipped', { title: p.title }), 'success');
   }
 
+  /** Ersatz zurücknehmen: der Plan-Tag gilt an dem Datum wieder. */
+  function restorePlanDay(clientId: string) {
+    if (!byId(clientId)) return;
+    setStatus(clientId, 'skipped');
+    useUiStore().toast(t('planned.toast.restored'), 'success');
+  }
+
   /** Auf den nächsten freien Tag (bzw. einen gewählten) verschieben. */
   function move(clientId: string, date?: string) {
     const p = byId(clientId);
@@ -172,7 +187,15 @@ export const usePlannedStore = defineStore('planned', () => {
     const target = replacesId && byId(replacesId) ? replacesId : newPlannedId();
     const status = session.status === 'skipped' ? 'skipped' : 'planned';
     const r = upsert(target, session, 'coach', status);
-    if (r) useUiStore().toast(t(status === 'skipped' ? 'planned.toast.skipped' : replacesId ? 'planned.toast.updated' : 'planned.toast.added', { title: r.title }), 'success');
+    if (r) {
+      // Bestätigung mit Datum: "Добавлено в календарь: пт, 20 нояб." - und was es ist (Ersatz/Doppeltag/frei)
+      const when = parseDay(r.date).toLocaleDateString(intlLocale(), { weekday: 'short', day: 'numeric', month: 'short' });
+      const key = status === 'skipped' ? 'planned.toast.skipped'
+        : r.replacesPlan ? 'planned.toast.replaced'
+        : planConflict(schedule.value, r.date) === 'training' ? 'planned.toast.addedDouble'
+        : replacesId ? 'planned.toast.updated' : 'planned.toast.addedOn';
+      useUiStore().toast(t(key, { title: r.title, date: when }), 'success');
+    }
     return !!r;
   }
 
@@ -185,7 +208,7 @@ export const usePlannedStore = defineStore('planned', () => {
   function openEdit(clientId: string) {
     const p = byId(clientId);
     if (!p) return;
-    editor.value = { open: true, clientId, draft: { date: p.date, title: p.title, category: p.category, notes: p.notes, exercises: p.exercises.map((x) => ({ ...x })) } };
+    editor.value = { open: true, clientId, draft: { date: p.date, title: p.title, category: p.category, notes: p.notes, replacesPlan: !!p.replacesPlan, exercises: p.exercises.map((x) => ({ ...x })) } };
   }
   function close() { editor.value = { ...editor.value, open: false }; }
 
@@ -215,7 +238,7 @@ export const usePlannedStore = defineStore('planned', () => {
   function clear() { items.value = []; editor.value = { open: false, clientId: null, draft: emptyDraft(localDay()) }; }
 
   return {
-    connect, items, editor, today, schedule, forToday, next, recent, perDay, byId, conflictOf, load, pushPending,
-    upsert, setStatus, markDone, skip, move, start, applyFromCoach, openNew, openEdit, close, save, remove, clear,
+    connect, items, editor, today, schedule, forToday, replacementToday, next, recent, perDay, byId, conflictOf, load, pushPending,
+    upsert, setStatus, markDone, skip, restorePlanDay, move, start, applyFromCoach, openNew, openEdit, close, save, remove, clear,
   };
 });

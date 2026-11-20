@@ -100,12 +100,71 @@ export interface ProgramStatus {
   finished: boolean;
   sessions: number;
   lastByDay: Map<number, string>;
+  /** Nächster Tag: nach Wochenplan (Tag des heutigen bzw. nächsten Trainingstags), sonst Rotation. */
   next: ProgramDay | null;
+  /** Datum zu `next` (nur bei Zuordnung über den Wochenplan). */
+  nextDate: Date | null;
+  /** Wie `next` bestimmt wurde. */
+  nextBy: 'weekday' | 'rotation';
+  /** Heute ist laut Wochenplan dieser Tag dran (unabhängig davon, ob schon erledigt). */
+  todayDay: ProgramDay | null;
+  /** Heute schon eine Einheit aus diesem Plan geloggt. */
+  doneToday: boolean;
   lastDate: string | null;
 }
 
+// ---------- Wochentag -> Plan-Tag ----------
+// Ein Plan mit festen Trainingstagen soll am Freitag den Freitags-Tag zeigen - nicht stur den nächsten in der Reihe
+// (wer Mittwoch ausgelassen hat, sah sonst am Freitag den Mittwochs-Tag). Zuordnung:
+// 1. Wochentag im Namen, in Klammern: "Bedro B (пт, MD-2)", "Lower (Fri)", "Unterkörper (Fr)" - eindeutig gewinnt.
+// 2. Sonst gleich viele Trainingstage wie Plan-Tage: der k-te Trainingstag der Woche = k-ter Plan-Tag.
+// 3. Sonst keine Zuordnung -> Rotation wie bisher (z. B. 2 Tage A/B an 3 Wochentagen).
+
+const WEEKDAY_TOKENS: readonly (readonly string[])[] = [
+  ['пн', 'понедельник', 'mo', 'montag', 'mon', 'monday'],
+  ['вт', 'вторник', 'di', 'dienstag', 'tue', 'tues', 'tuesday'],
+  ['ср', 'среда', 'mi', 'mittwoch', 'wed', 'wednesday'],
+  ['чт', 'четверг', 'do', 'donnerstag', 'thu', 'thur', 'thurs', 'thursday'],
+  ['пт', 'пятница', 'fr', 'freitag', 'fri', 'friday'],
+  ['сб', 'суббота', 'sa', 'samstag', 'sat', 'saturday'],
+  ['вс', 'воскресенье', 'so', 'sonntag', 'sun', 'sunday'],
+];
+
+/** Wochentage (0 = Montag), die im Namen in Klammern stehen: "Tag 2 (пт, MD-2)" -> [4]. */
+export function weekdayHints(name: string): number[] {
+  const out = new Set<number>();
+  for (const m of name.matchAll(/\(([^)]*)\)/g)) {
+    for (const raw of m[1].split(/[\s,;/+&|-]+/)) {
+      const token = raw.toLowerCase().replace(/[.:]/g, '');
+      const wd = WEEKDAY_TOKENS.findIndex((list) => list.includes(token));
+      if (wd >= 0) out.add(wd);
+    }
+  }
+  return [...out];
+}
+
+const trainingWeekdays = (p: Pick<TrainingProgram, 'trainingDays' | 'matchDays'>) =>
+  [0, 1, 2, 3, 4, 5, 6].filter((d) => ((p.trainingDays ?? 0) & (1 << d)) !== 0 && ((p.matchDays ?? 0) & (1 << d)) === 0);
+
+/** Plan-Tag für einen Wochentag (0 = Montag) laut Wochenplan; null = kein Trainingstag oder keine eindeutige Zuordnung. */
+export function dayForWeekday(program: TrainingProgram, weekday: number): ProgramDay | null {
+  const training = trainingWeekdays(program);
+  if (!training.includes(weekday)) return null;
+  const days = [...(program.days ?? [])].sort((a, b) => a.position - b.position);
+  if (!days.length) return null;
+  const names = (d: ProgramDay) => [d.name, ...Object.values(program.translations?.[d.name] ?? {})].filter((x): x is string => !!x);
+  const hinted = days.filter((d) => names(d).some((n) => weekdayHints(n).includes(weekday)));
+  if (hinted.length === 1) return hinted[0];
+  if (hinted.length > 1) return null;
+  return training.length === days.length ? days[training.indexOf(weekday)] : null;
+}
+
+const weekdayOfDate = (d: Date) => (d.getDay() + 6) % 7;
+const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
 /** Fortschritt im Plan: erledigte Einheiten seit Start, zuletzt erledigter Tag je Tag, nächster Tag (Rotation). */
-export function programStatus(program: TrainingProgram, workouts: readonly Workout[] | null | undefined, now = new Date()): ProgramStatus {
+/** replacedDays: lokale Tage (yyyy-MM-dd), an denen eine Ersatz-Einheit den Plan-Tag ersetzt - die zählen als belegt. */
+export function programStatus(program: TrainingProgram, workouts: readonly Workout[] | null | undefined, now = new Date(), replacedDays: ReadonlySet<string> = new Set()): ProgramStatus {
   const days = [...(program?.days ?? [])].sort((a, b) => a.position - b.position);
   const done = programWorkouts(program, workouts);
   const since = program?.startedAt ? time(program.startedAt) : 0;
@@ -120,6 +179,20 @@ export function programStatus(program: TrainingProgram, workouts: readonly Worko
     next = days[(lastIndex + 1) % days.length];
   }
 
+  // Wochenplan: heutiger Tag (wenn heute noch nichts aus dem Plan geloggt), sonst der des nächsten Trainingstags
+  const doneToday = done.some((w) => sameDay(new Date(w.date), now));
+  const todayDay = program ? dayForWeekday(program, weekdayOfDate(now)) : null;
+  let nextDate: Date | null = null;
+  let nextBy: ProgramStatus['nextBy'] = 'rotation';
+  for (let i = doneToday ? 1 : 0; program && i < 8; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+    if (replacedDays.has(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)) continue;
+    const byWeekday = dayForWeekday(program, weekdayOfDate(d));
+    if (byWeekday) { next = byWeekday; nextDate = d; nextBy = 'weekday'; break; }
+    // Trainingstag ohne eindeutige Zuordnung: Rotation bleibt
+    if (trainingWeekdays(program).includes(weekdayOfDate(d))) break;
+  }
+
   const week = currentWeek(program, now);
   return {
     week,
@@ -128,6 +201,10 @@ export function programStatus(program: TrainingProgram, workouts: readonly Worko
     sessions: doneSinceStart.length,
     lastByDay,
     next,
+    nextDate,
+    nextBy,
+    todayDay,
+    doneToday,
     lastDate: done[0]?.date ?? null,
   };
 }

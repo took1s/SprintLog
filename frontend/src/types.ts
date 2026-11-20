@@ -30,6 +30,8 @@ export interface ExerciseNote {
   note?: string | null;
   skipped?: boolean;
   reason?: ExerciseNoteReason | null;
+  /** Schmerz bei dieser Übung, 0-10 (null = nicht angegeben). */
+  pain?: number | null;
 }
 
 /** Ein Satz - vom Server (WorkoutSetResponse) oder lokal (laufende Session / Queue). */

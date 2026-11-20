@@ -66,6 +66,8 @@ useSwipeNav(content, (dir) => {
           <AiAnalysisPanel v-if="dataTab === 'ai' && ai.enabled" />
           <!-- Athlet: Tests und Körperwerte gehen auch ohne erfasste Einheiten -->
           <AthletePanel v-else-if="dataTab === 'athlete'" />
+          <!-- Kalender: Plan-Tage, geplante Einheiten und Routinen gibt es auch ohne erfasste Einheiten -->
+          <CalendarPanel v-else-if="dataTab === 'calendar' && !loadingHistory" />
 
           <Spinner v-else-if="loadingHistory" />
 
@@ -80,7 +82,6 @@ useSwipeNav(content, (dir) => {
             <HistoryPanel v-else-if="dataTab === 'history'" />
             <ProgressPanel v-else-if="dataTab === 'progress'" />
             <RecordsPanel v-else-if="dataTab === 'records'" />
-            <CalendarPanel v-else-if="dataTab === 'calendar'" />
           </template>
         </div>
       </Transition>

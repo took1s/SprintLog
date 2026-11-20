@@ -7,7 +7,7 @@ public record PlannedExerciseDto(int ExerciseId, int Sets, int? RepsMin = null, 
     double? Time = null, double? TargetRpe = null, string? Note = null);
 
 public record PlannedWorkoutInput(DateOnly Date, string? Title, string? Category, string? Notes, List<PlannedExerciseDto>? Exercises,
-    string? Status = null, string? WorkoutClientId = null, string? Source = null)
+    string? Status = null, string? WorkoutClientId = null, string? Source = null, bool? ReplacesPlan = null)
 {
     public static readonly IReadOnlySet<string> Categories = new HashSet<string> { "Gym", "Football" };
     public static readonly IReadOnlySet<string> Statuses = new HashSet<string> { "planned", "done", "skipped" };
@@ -31,9 +31,9 @@ public record PlannedWorkoutInput(DateOnly Date, string? Title, string? Category
 }
 
 public record PlannedWorkoutResponse(string ClientId, DateOnly Date, string Title, string Category, string? Notes, string Source, string Status,
-    string? WorkoutClientId, List<PlannedExerciseDto> Exercises, DateTime CreatedAt, DateTime UpdatedAt)
+    string? WorkoutClientId, List<PlannedExerciseDto> Exercises, DateTime CreatedAt, DateTime UpdatedAt, bool ReplacesPlan = false)
 {
     public static PlannedWorkoutResponse From(PlannedWorkout p) => new(p.ClientId, p.Date, p.Title, p.Category, p.Notes, p.Source, p.Status,
         p.WorkoutClientId, p.Exercises.Select(x => new PlannedExerciseDto(x.ExerciseId, x.Sets, x.RepsMin, x.RepsMax, x.Weight, x.Distance, x.Time, x.TargetRpe, x.Note)).ToList(),
-        p.CreatedAt, p.UpdatedAt);
+        p.CreatedAt, p.UpdatedAt, p.ReplacesPlan);
 }

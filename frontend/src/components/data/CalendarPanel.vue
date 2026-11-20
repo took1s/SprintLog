@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // Kalender: Monat (Raster mit Belastung, Arten und Vorschau aus dem Wochenplan) und Jahr (12 Mini-Monate, Balken je Monat).
 // Wischen wechselt den Monat bzw. das Jahr; ein Tag zeigt darunter seine Einheiten. Rechnen: lib/calendar.ts.
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t, tn, intlLocale } from '@/i18n';
-import { exerciseName, categoryName } from '@/i18n/content';
+import { dayName, exerciseName, categoryName } from '@/i18n/content';
 import { useAppStore, workoutStats } from '@/stores/app';
 import { formatDate, formatNumber, formatTime } from '@/lib/format';
 import { groupSetsByExercise, workoutKey, dateKey } from '@/lib/analytics';
@@ -18,6 +18,7 @@ import {
   KINDS, type CalendarDay, type CalendarKind, type GridCell, type PeriodStats,
 } from '@/lib/calendar';
 import { isTeamDay, weekdayOf } from '@/lib/schedule';
+import { dayForWeekday } from '@/lib/program';
 import TeamIcon from '../TeamIcon.vue';
 
 const app = useAppStore();
@@ -93,6 +94,10 @@ function pick(cell: GridCell) {
 const selected = computed(() => (selectedDay.value ? index.value.get(selectedDay.value) ?? null : null));
 const selectedDate = computed(() => (selectedDay.value ? new Date(`${selectedDay.value}T12:00:00`) : null));
 const selectedSessions = computed(() => (selectedDay.value ? perDay.value.get(selectedDay.value) ?? [] : []));
+/** Welcher Plan-Tag an diesem Wochentag dran ist (Zuordnung wie auf dem Startbildschirm) - und ob er an dem Datum ersetzt wird. */
+const selectedPlanDay = computed(() => (selectedDate.value && app.activeProgram && selectedPlan.value === 'training'
+  ? dayForWeekday(app.activeProgram, weekdayOf(selectedDate.value)) : null));
+const selectedReplaced = computed(() => selectedSessions.value.some((p) => p.replacesPlan && p.status !== 'skipped'));
 const selectedRoutines = computed(() => (selectedDay.value ? routinesOnDay(routines.value, selectedDay.value) : null));
 /** Am gewählten Tag lässt sich eine Zusatz-Einheit planen (ab heute, kein Spieltag, noch keine offene). Trainingstag = Doppeltag. */
 const canPlan = computed(() => !!selectedDay.value && selectedDay.value >= todayKey.value
@@ -153,6 +158,16 @@ function setView(v: 'month' | 'year') {
   view.value = v;
   tap();
 }
+
+// Von außen gewünschter Tag (z. B. "Im Kalender zeigen" nach einer Coach-Karte): Monat aufschlagen und Tag wählen
+watch(() => app.calendarFocus, (day) => {
+  if (!day) return;
+  const [y, m] = day.split('-').map(Number);
+  cursor.value = { year: y, month: m - 1 };
+  view.value = 'month';
+  void nextTick(() => { selectedDay.value = day; });
+  app.calendarFocus = null;
+}, { immediate: true });
 
 // Ausgewählter Tag gehört nicht mehr zum sichtbaren Monat -> Details schließen
 watch(cursor, () => {
@@ -277,7 +292,9 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
                       </li>
                   </ul>
                   <p v-if="selectedPlan !== 'rest'" class="mt-2 flex items-center gap-2 text-sm text-slate-300" data-test="calendar-plan-day">
-                      <i class="h-2.5 w-2.5 rounded-[3px] border border-dashed border-accent/70" aria-hidden="true"></i>{{ t(`calendar.planned.${selectedPlan}`) }}
+                      <i class="h-2.5 w-2.5 flex-shrink-0 rounded-[3px] border border-dashed border-accent/70" aria-hidden="true"></i>
+                      <span class="min-w-0" :class="{ 'text-slate-500 line-through': selectedReplaced }">{{ t(`calendar.planned.${selectedPlan}`) }}<template v-if="selectedPlanDay">: {{ dayName(app.activeProgram, selectedPlanDay) }}</template></span>
+                      <span v-if="selectedReplaced" class="flex-shrink-0 text-[11px] font-bold text-accent" data-test="calendar-replaced">{{ t('planned.replacedBadge') }}</span>
                   </p>
                   <p v-if="selectedTeam" class="mt-2 flex items-center gap-2 text-sm text-slate-300" data-test="calendar-team-day">
                       <TeamIcon class="h-3.5 w-3.5 text-orange-300" />{{ t('team.planned') }}
@@ -289,7 +306,7 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
                       <li v-for="p in selectedSessions" :key="p.clientId" class="rounded-2xl border border-accent/30 bg-accent/5 p-3" data-test="calendar-session">
                           <div class="flex items-start justify-between gap-2">
                               <span class="min-w-0">
-                                  <span class="block text-[10px] font-bold uppercase text-accent tracking-label">{{ t('calendar.day.session') }}<template v-if="p.source === 'coach'"> · {{ t('planned.byCoach') }}</template></span>
+                                  <span class="block text-[10px] font-bold uppercase text-accent tracking-label">{{ p.replacesPlan ? t('planned.replacedBadge') : t('calendar.day.session') }}<template v-if="p.source === 'coach'"> · {{ t('planned.byCoach') }}</template></span>
                                   <span class="block break-words text-sm font-bold text-white">{{ p.title }}</span>
                               </span>
                               <span class="planned-status flex-shrink-0" :data-status="displayStatus(p, todayKey)">{{ t(`planned.status.${displayStatus(p, todayKey)}`) }}</span>

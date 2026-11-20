@@ -104,6 +104,8 @@ watch(isAuthenticated, (signedIn) => {
 // Mitteilung angetippt: Startbildschirm zeigen (Routinen, Einheit des Tages, Wochenbericht liegen dort)
 watch(() => reminders.focus, (f) => {
   if (!f || sessionActive.value) return;
+  // Check-in: direkt die Eingabe öffnen (liegt im Plan-Tab)
+  if (f.kind === 'checkIn') { tab.value = 'Plan'; app.openCheckIn(); return; }
   if (tab.value !== 'Gym' && tab.value !== 'Football') tab.value = 'Gym';
 });
 

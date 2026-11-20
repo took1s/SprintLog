@@ -68,7 +68,7 @@ const day = (w: Workout) => new Date(w.date);
 function noteOf(w: Workout, exerciseId: number | null): string {
   const n = w.exerciseNotes?.find((x) => x.exerciseId === exerciseId);
   if (!n) return '';
-  return [n.skipped ? t('exnote.skipped') : '', n.reason ? t(`exnote.reasons.${n.reason}`) : '', n.note ?? ''].filter(Boolean).join(' · ');
+  return [n.skipped ? t('exnote.skipped') : '', n.pain != null ? t('exnote.painValue', { n: n.pain }) : '', n.reason ? t(`exnote.reasons.${n.reason}`) : '', n.note ?? ''].filter(Boolean).join(' · ');
 }
 const skippedOf = (w: Workout) => (w.exerciseNotes ?? []).filter((n) => !w.sets.some((s) => s.exerciseId === n.exerciseId));
 const kmh = (v: number) => v.toLocaleString(intlLocale(), { maximumFractionDigits: 1 });

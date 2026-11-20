@@ -8,7 +8,7 @@ public record WorkoutSetDto(
     double? Level = null, int? Power = null, int? HeartRate = null, int? Cadence = null, int? Calories = null);
 
 /// <summary>Notiz zu einer Übung der Einheit; <c>Skipped</c> + <c>Reason</c> = ausgelassen (pain, equipment, time, fatigue, other).</summary>
-public record ExerciseNoteDto(int ExerciseId, string? Note, bool Skipped = false, string? Reason = null)
+public record ExerciseNoteDto(int ExerciseId, string? Note, bool Skipped = false, string? Reason = null, int? Pain = null)
 {
     public static readonly string[] Reasons = { "pain", "equipment", "time", "fatigue", "other" };
 }
@@ -94,7 +94,8 @@ public record CreateWorkoutRequest(
                 errors
                     .AddIf(n.Note is { Length: > MaxSetNoteLength }, key, $"Exercise notes must not exceed {MaxSetNoteLength} characters.")
                     .AddIf(n.Reason is not null && !ExerciseNoteDto.Reasons.Contains(n.Reason), key, "Unknown reason.")
-                    .AddIf(!n.Skipped && n.Reason is null && string.IsNullOrWhiteSpace(n.Note), key, "Empty exercise note.");
+                    .AddIf(n.Pain is < 0 or > 10, key, "Pain must be between 0 and 10.")
+                    .AddIf(!n.Skipped && n.Reason is null && n.Pain is null && string.IsNullOrWhiteSpace(n.Note), key, "Empty exercise note.");
             }
             errors.AddIf(ExerciseNotes.Select(n => n.ExerciseId).Distinct().Count() != ExerciseNotes.Count, "exerciseNotes", "One note per exercise.");
         }

@@ -5,6 +5,7 @@
 // - "Fertig" schließt eine Übung ab: kein hängender nächster Satz mehr; automatisch, sobald das Plan-Ziel erfüllt ist.
 // - ⋯ öffnet ein Aktions-Sheet (über allen Blöcken, nichts wird verdeckt).
 import { computed, defineAsyncComponent, onBeforeUnmount, ref } from 'vue';
+import { painTone } from '@/lib/routines';
 import { storeToRefs } from 'pinia';
 import { t, tn, intlLocale } from '@/i18n';
 import { dayName, exerciseName, muscleName, noteText, programName } from '@/i18n/content';
@@ -390,6 +391,11 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                       <span class="font-mono text-[10px]" :class="block.target?.sets && block.workingDone >= block.target.sets ? 'text-emerald-400' : 'text-slate-500'">
                           <template v-if="block.target?.sets">{{ t('workout.planProgress', { done: Math.min(block.workingDone, block.target.sets), total: block.target.sets }) }}</template>
                       </span>
+                      <!-- Schmerz 0-10 direkt an der Übung: ein Tipp öffnet die Skala -->
+                      <button type="button" class="pain-chip ml-auto" :class="block.note?.pain != null ? `is-${painTone(block.note.pain)}` : ''" data-test="block-pain"
+                              :aria-label="block.note?.pain != null ? t('exnote.painValue', { n: block.note.pain }) : t('exnote.painAdd')" @click="openNote(block.exercise.id)">
+                          {{ block.note?.pain != null ? t('exnote.painValue', { n: block.note.pain }) : t('exnote.painAdd') }}
+                      </button>
                       <button v-if="block.workingDone" type="button" @click="completeBlock(block.exercise.id)" data-test="complete-block"
                               class="flex min-h-[2.75rem] items-center gap-1.5 rounded-lg px-3 text-[11px] font-bold uppercase text-slate-400 tracking-label hover:bg-white/5 hover:text-emerald-400">
                           <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
@@ -404,7 +410,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                       <span class="block truncate font-mono text-[11px] text-orange-300">{{ t('workout.skippedLine', { reason: reasonText(block.note.reason) }) }}</span>
                       <span v-if="block.note.note" class="block truncate text-[11px] text-slate-400">{{ block.note.note }}</span>
                   </button>
-                  <span v-else class="font-mono text-[11px] text-emerald-400">{{ t('workout.completed') }} · {{ tn('units.sets', block.workingDone) }}</span>
+                  <span v-else class="min-w-0 truncate font-mono text-[11px] text-emerald-400">{{ t('workout.completed') }} · {{ tn('units.sets', block.workingDone) }}<template v-if="block.note?.pain != null"> · <span :class="painTone(block.note.pain) === 'ok' ? '' : painTone(block.note.pain) === 'warn' ? 'text-amber-300' : 'text-red-300'">{{ t('exnote.painValue', { n: block.note.pain }) }}</span></template></span>
                   <button type="button" @click="reopenBlock(block.exercise.id)" data-test="reopen-block"
                           class="flex min-h-[2.75rem] flex-shrink-0 items-center rounded-lg px-3 text-[11px] font-bold uppercase text-accent tracking-label hover:bg-accent/10">
                       + {{ t('workout.addSet') }}
