@@ -84,7 +84,7 @@ const kmh = (v: number) => v.toLocaleString(intlLocale(), { maximumFractionDigit
               <p v-if="failedCount" class="text-red-300">{{ tn('history.unsentFailed', failedCount) }}</p>
           </div>
           <button v-if="pendingCount" @click="syncNow()" :disabled="syncing"
-                  class="cyber-outline-btn rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-widest disabled:opacity-40">
+                  class="cyber-outline-btn rounded-xl px-4 py-2 text-tiny font-bold caps tracking-widest disabled:opacity-40">
               {{ syncing ? t('settings.syncing') : t('history.sendNow') }}
           </button>
       </div>
@@ -118,7 +118,7 @@ const kmh = (v: number) => v.toLocaleString(intlLocale(), { maximumFractionDigit
                   <article class="hist-card" :class="[`is-${type(w)}`, { 'is-open': isOpen(w) }]">
                       <button type="button" class="hist-head" :aria-expanded="isOpen(w)" data-test="history-toggle" @click="toggle(w)">
                           <span class="hist-date" aria-hidden="true">
-                              <span class="text-[10px] font-bold uppercase">{{ day(w).toLocaleDateString(intlLocale(), { weekday: 'short' }) }}</span>
+                              <span class="text-tiny font-bold caps">{{ day(w).toLocaleDateString(intlLocale(), { weekday: 'short' }) }}</span>
                               <span class="font-mono text-xl font-black leading-none">{{ day(w).getDate() }}</span>
                           </span>
                           <span class="min-w-0 flex-1">
@@ -177,7 +177,7 @@ const kmh = (v: number) => v.toLocaleString(intlLocale(), { maximumFractionDigit
                                               <template v-for="(set, n) in group.sets" :key="set.index">
                                                   <span class="hist-set" :class="{ 'is-warmup': set.isWarmup, 'is-pr': setBadges(w, set.index).length }" :title="setLabel(group.sets, n)">
                                                       <span v-if="setBadges(w, set.index).length" aria-hidden="true">{{ setBadges(w, set.index)[0]!.icon }}</span>
-                                                      {{ describeSet(set, group.trackingType) }}<span v-if="set.rpe" class="ml-1 text-[10px] text-orange-300">{{ rpeText(set.rpe, settings.useRir) }}</span>
+                                                      {{ describeSet(set, group.trackingType) }}<span v-if="set.rpe" class="ml-1 text-tiny text-orange-300">{{ rpeText(set.rpe, settings.useRir) }}</span>
                                                   </span>
                                               </template>
                                           </div>
@@ -191,7 +191,7 @@ const kmh = (v: number) => v.toLocaleString(intlLocale(), { maximumFractionDigit
                                   <dl v-if="w.health && (w.health.distanceM || w.health.avgHr || w.health.maxSpeedKmh)" class="mt-3 grid grid-cols-4 gap-1.5 text-center" data-test="history-health">
                                       <div v-if="w.health.distanceM" class="report-stat"><dt>km</dt><dd class="!text-sm">{{ kmh(w.health.distanceM / 1000) }}</dd></div>
                                       <div v-if="w.health.avgHr" class="report-stat"><dt>♥ Ø/max</dt><dd class="!text-sm">{{ w.health.avgHr }}<template v-if="w.health.maxHr">/{{ w.health.maxHr }}</template></dd></div>
-                                      <div v-if="w.health.maxSpeedKmh" class="report-stat"><dt>km/h</dt><dd class="!text-sm">{{ kmh(w.health.maxSpeedKmh) }}</dd></div>
+                                      <div v-if="w.health.maxSpeedKmh" class="report-stat"><dt>{{ t('units.kmh') }}</dt><dd class="!text-sm">{{ kmh(w.health.maxSpeedKmh) }}</dd></div>
                                       <div v-if="w.health.sprints != null" class="report-stat"><dt>{{ t('history.sprints') }}</dt><dd class="!text-sm">{{ w.health.sprints }}</dd></div>
                                   </dl>
 
@@ -203,7 +203,7 @@ const kmh = (v: number) => v.toLocaleString(intlLocale(), { maximumFractionDigit
                                       </li>
                                   </ul>
                                   <p v-if="w.notes" class="mt-3 whitespace-pre-line rounded-xl bg-white/[0.04] px-3 py-2 text-xs italic text-slate-300">{{ w.notes }}</p>
-                                  <p v-if="w.pending && w.error" class="mt-2 font-mono text-[10px] text-red-400">{{ w.error }}</p>
+                                  <p v-if="w.pending && w.error" class="mt-2 font-mono text-tiny text-red-400">{{ w.error }}</p>
 
                                   <!-- Aktionen -->
                                   <div class="hist-actions">
@@ -221,7 +221,7 @@ const kmh = (v: number) => v.toLocaleString(intlLocale(), { maximumFractionDigit
           </ol>
       </section>
 
-      <button v-if="matching.length > historyLimit" @click="historyLimit += 20" class="cyber-outline-btn w-full rounded-xl py-3 text-[10px] font-bold uppercase tracking-widest" data-test="history-more">
+      <button v-if="matching.length > historyLimit" @click="historyLimit += 20" class="cyber-outline-btn w-full rounded-xl py-3 text-tiny font-bold caps tracking-widest" data-test="history-more">
           {{ t('history.showMore', { n: matching.length - historyLimit }) }}
       </button>
       <p v-if="!matching.length" class="glass-panel rounded-2xl p-8 text-center text-xs text-slate-400">{{ query ? t('history.noneForSearch') : t('history.noneForFilter') }}</p>

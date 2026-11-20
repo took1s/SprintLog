@@ -39,7 +39,6 @@ function spark(id: TestId) {
   <section class="glass-panel rounded-3xl p-5" data-test="tests-card">
       <div class="flex flex-wrap items-start justify-between gap-3">
           <div class="min-w-[12rem] flex-1">
-              <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('tests.kicker') }}</p>
               <h2 class="display text-2xl text-white">{{ t('tests.title') }}</h2>
               <p class="mt-1 text-xs leading-snug" :class="due.state === 'overdue' || due.state === 'due' ? 'text-amber-300' : 'text-slate-400'" data-test="tests-due">
                   <template v-if="due.state === 'none'">{{ t('tests.none') }}</template>
@@ -62,7 +61,7 @@ function spark(id: TestId) {
       </button>
 
       <!-- Legende der Stufen (einmal statt unter jedem Balken) -->
-      <div class="mt-4 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-bold uppercase text-slate-400" aria-hidden="true">
+      <div class="mt-4 flex flex-wrap gap-x-3 gap-y-1 text-tiny font-bold caps text-slate-400" aria-hidden="true">
           <span v-for="l in LEVELS" :key="l" class="flex items-center gap-1"><i class="level-seg inline-block h-2 w-3" :class="`is-${l}`"></i>{{ t(`tests.levels.${l}`) }}</span>
       </div>
       <ul class="mt-2 space-y-2">
@@ -85,7 +84,7 @@ function spark(id: TestId) {
                       <span v-for="l in LEVELS" :key="l" class="level-seg" :class="`is-${l}`"></span>
                       <span class="level-marker" :style="{ left: `${r.rating.score}%` }"></span>
                   </div>
-                  <div class="mt-1 grid grid-cols-4 font-mono text-[10px] text-slate-500">
+                  <div class="mt-1 grid grid-cols-4 font-mono text-tiny text-slate-500">
                       <span v-for="(l, i) in LEVELS" :key="l" class="truncate pr-0.5 text-right">{{ fmt(r.id, r.th[i]!) }}</span>
                   </div>
                   <p v-if="r.rating.next" class="mt-1.5 text-[11px] text-slate-300">{{ t('tests.toNext', { level: t(`tests.levels.${r.rating.next}`), gap: fmt(r.id, r.rating.gap!), unit: unit(r.id) }) }}</p>
@@ -111,6 +110,6 @@ function spark(id: TestId) {
               </transition>
           </li>
       </ul>
-      <p class="mt-3 text-[10px] leading-relaxed text-slate-500">{{ t('tests.source') }}</p>
+      <p class="mt-3 text-tiny leading-relaxed text-slate-500">{{ t('tests.source') }}</p>
   </section>
 </template>

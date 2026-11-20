@@ -49,7 +49,6 @@ const weekday = (d: string) => parseDay(d).toLocaleDateString(intlLocale(), { we
 
 <template>
   <section class="glass-panel rounded-3xl p-5" data-test="body-trends">
-      <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('body.trendsKicker') }}</p>
       <h2 class="display text-2xl text-white">{{ t('body.trendsTitle') }}</h2>
 
       <!-- Gewicht 8 Wochen -->
@@ -75,18 +74,18 @@ const weekday = (d: string) => parseDay(d).toLocaleDateString(intlLocale(), { we
           <div class="flex items-baseline justify-between gap-3">
               <span class="body-tile-label">{{ t('body.protein14') }}</span>
               <span class="font-mono text-[11px] text-slate-300">
-                  <template v-if="avg7 != null">Ø {{ avg7 }} g</template><template v-if="onTarget != null"> · {{ t('body.onTarget', { n: onTarget }) }}</template>
+                  <template v-if="avg7 != null">Ø {{ avg7 }} {{ t('units.g') }}</template><template v-if="onTarget != null"> · {{ t('body.onTarget', { n: onTarget }) }}</template>
               </span>
           </div>
           <div class="relative mt-2 h-24">
               <!-- Zielband -->
               <div v-if="target" class="body-band absolute inset-x-0" :style="{ bottom: `${(target.min / maxG) * 100}%`, height: `${((target.max - target.min) / maxG) * 100}%` }" aria-hidden="true"></div>
-              <div class="relative grid h-full grid-cols-[repeat(14,minmax(0,1fr))] items-end gap-1" role="img" :aria-label="`${t('body.protein14')}: ${days14.map((d) => `${short(d.day)} ${d.g} g`).join(', ')}`">
-                  <span v-for="d in days14" :key="d.day" class="block w-full self-end rounded-t-sm transition-[height] duration-300" :title="`${short(d.day)}: ${d.g} g`"
+              <div class="relative grid h-full grid-cols-[repeat(14,minmax(0,1fr))] items-end gap-1" role="img" :aria-label="`${t('body.protein14')}: ${days14.map((d) => `${short(d.day)} ${d.g} ${t('units.g')}`).join(', ')}`">
+                  <span v-for="d in days14" :key="d.day" class="block w-full self-end rounded-t-sm transition-[height] duration-300" :title="`${short(d.day)}: ${d.g} ${t('units.g')}`"
                         :class="target && d.g >= target.min ? 'bg-emerald-400/80' : d.g ? 'bg-accent/70' : 'bg-white/10'" :style="{ height: `${Math.max(3, (d.g / maxG) * 100)}%` }"></span>
               </div>
           </div>
-          <div class="mt-1 grid grid-cols-[repeat(14,minmax(0,1fr))] gap-1 text-center text-[9px] font-bold uppercase text-slate-500" aria-hidden="true"><span v-for="d in days14" :key="d.day">{{ weekday(d.day) }}</span></div>
+          <div class="mt-1 grid grid-cols-[repeat(14,minmax(0,1fr))] gap-1 text-center text-micro font-bold caps text-slate-500" aria-hidden="true"><span v-for="d in days14" :key="d.day">{{ weekday(d.day) }}</span></div>
       </div>
   </section>
 </template>

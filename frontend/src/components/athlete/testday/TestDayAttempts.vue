@@ -86,11 +86,11 @@ function fromStopwatch(r: { split: number | null; total: number }) {
                   <span class="w-5 font-mono text-xs text-slate-400">{{ i + 1 }}</span>
                   <span class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 font-mono text-sm text-white">
                       <span v-for="id in def.tests.filter((x) => a.values[x] != null)" :key="id">
-                          <span v-if="def.tests.length > 1" class="mr-1 text-[10px] text-slate-400">{{ testLabel(id) }}</span>{{ fmt(id, a.values[id]!) }}<span class="ml-0.5 text-[11px] text-slate-400">{{ unit(id) }}</span>
+                          <span v-if="def.tests.length > 1" class="mr-1 text-tiny text-slate-400">{{ testLabel(id) }}</span>{{ fmt(id, a.values[id]!) }}<span class="ml-0.5 text-[11px] text-slate-400">{{ unit(id) }}</span>
                       </span>
-                      <span v-if="a.side" class="text-[10px] text-slate-400">{{ t(`testDay.sideShort.${a.side}`) }}</span>
+                      <span v-if="a.side" class="text-tiny text-slate-400">{{ t(`testDay.sideShort.${a.side}`) }}</span>
                   </span>
-                  <span v-if="isBest(a, attempts, def.tests)" class="text-[10px] font-bold uppercase tracking-label text-accent">{{ t('testDay.best') }}</span>
+                  <span v-if="isBest(a, attempts, def.tests)" class="text-tiny font-bold caps tracking-label text-accent">{{ t('testDay.best') }}</span>
                   <button type="button" class="h-8 w-8 flex-shrink-0 rounded-lg text-slate-500 hover:text-red-300" :aria-label="t('testDay.removeAttempt', { n: i + 1 })" data-test="attempt-remove" @click="emit('remove', i)">✕</button>
               </li>
           </ol>
@@ -122,7 +122,7 @@ function fromStopwatch(r: { split: number | null; total: number }) {
 
           <!-- Test fertig -->
           <div v-else class="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-center" data-test="block-done">
-              <p class="text-xs font-bold uppercase tracking-label text-slate-400">{{ t('testDay.bestResult') }}</p>
+              <p class="text-xs font-bold caps tracking-label text-slate-400">{{ t('testDay.bestResult') }}</p>
               <p class="mt-1 font-mono text-2xl font-black text-white">
                   <span v-for="id in def.tests.filter((x) => best[x] != null)" :key="id" class="mx-2 inline-block">
                       <span v-if="def.tests.length > 1" class="mr-1 text-xs text-slate-400">{{ testLabel(id) }}</span>{{ fmt(id, best[id]!) }}<span class="ml-0.5 text-sm text-slate-400">{{ unit(id) }}</span>

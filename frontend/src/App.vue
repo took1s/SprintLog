@@ -25,7 +25,8 @@ import { clearWidget, startWidgetSync } from '@/stores/widget';
 import { useHealthStore } from '@/stores/health';
 import { useAthleteStore } from '@/stores/athlete';
 const athlete = useAthleteStore();
-import { appearance } from '@/lib/theme';
+import { appearance, PREVIOUS_DEFAULT_THEME, setTheme, themeMigrated } from '@/lib/theme';
+import { useUiStore } from '@/stores/ui';
 
 // Seltener gebrauchte Teile als eigene Chunks (kleineres Start-Bundle; offline per Service-Worker-Cache verfügbar):
 // Auswertungen inkl. Chart.js, Plan, Satz-Dialog mit Animationen, Einstellungen, Editoren.
@@ -101,6 +102,13 @@ const reminders = useRemindersStore();
 watch(isAuthenticated, (signedIn) => {
   if (signedIn) { void reminders.start(); startWidgetSync(); void useHealthStore().start(); } else { void reminders.clear(); void clearWidget(); }
 }, { immediate: true });
+// Neues Standard-Theme: einmal sagen, dass es umgestellt wurde und wie man zurückkommt (nur bisherige Nutzer)
+watch([isAuthenticated, booting], ([signedIn, boot]) => {
+  if (!signedIn || boot || !themeMigrated.value) return;
+  themeMigrated.value = false;
+  useUiStore().toast(t('appearance.newLook'), 'info', { label: t('appearance.oldLook'), run: () => setTheme(PREVIOUS_DEFAULT_THEME) }, 10000);
+}, { immediate: true });
+
 // Mitteilung angetippt: Startbildschirm zeigen (Routinen, Einheit des Tages, Wochenbericht liegen dort)
 watch(() => reminders.focus, (f) => {
   if (!f || sessionActive.value) return;
@@ -140,18 +148,18 @@ watch(() => reminders.focus, (f) => {
             <button type="button" @click="app.openMatchModal()" data-test="log-match"
                     class="glass-panel flex flex-col items-start rounded-2xl px-4 py-4 text-left transition-colors hover:border-accent/60">
               <span class="display text-lg leading-tight text-white">{{ t('match.log') }}</span>
-              <span class="mt-1 font-mono text-[10px] text-slate-400">{{ t('match.infoShort') }}</span>
+              <span class="mt-1 font-mono text-tiny text-slate-400">{{ t('match.infoShort') }}</span>
             </button>
             <button type="button" @click="app.openTeamModal()" data-test="log-team"
                     class="glass-panel relative flex flex-col items-start rounded-2xl px-4 py-4 text-left transition-colors hover:border-accent/60"
                     :class="app.todayPlan?.team && !app.teamLoggedToday ? 'border-accent/60' : ''">
               <span class="display flex items-center gap-1.5 text-lg leading-tight text-white"><TeamIcon class="h-5 w-5 flex-shrink-0 text-accent" />{{ t('team.log') }}</span>
-              <span class="mt-1 font-mono text-[10px]" :class="app.todayPlan?.team && !app.teamLoggedToday ? 'font-bold text-accent' : 'text-slate-400'">
+              <span class="mt-1 font-mono text-tiny" :class="app.todayPlan?.team && !app.teamLoggedToday ? 'font-bold text-accent' : 'text-slate-400'">
                 {{ app.todayPlan?.team ? (app.teamLoggedToday ? t('team.loggedToday') : t('team.today')) : t('team.infoShort') }}
               </span>
             </button>
           </div>
-          <h2 class="label-xs mb-3">{{ t('catalog.title') }}</h2>
+          <h2 class="section-label mb-3 mt-8">{{ t('catalog.title') }}</h2>
           <ExerciseCatalog />
         </template>
       </section>

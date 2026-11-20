@@ -1,7 +1,7 @@
 /*
  * SprintLog - Design-Tokens für alle Themes.
  *
- * Aufbau: <html data-theme="pitch|clean|midnight|mono|halloween" data-scheme="light|dark">
+ * Aufbau: <html data-theme="matchday|pitch|clean|midnight|mono|striker|halloween" data-scheme="light|dark">
  *   - data-theme bestimmt den Charakter (Schriften, Radien, Effekte),
  *   - data-scheme die Farben (hell/dunkel; "auto" wird in lib/theme.ts aufgelöst).
  *
@@ -43,6 +43,57 @@
   --btn-case: uppercase;
   --btn-tracking: 0.08em;
   --accent-ring: var(--c-accent);
+  /* Kleine Beschriftungen (Klasse "caps", .label-xs, Chips): Versalien mit Sperrung - Matchday schreibt sie normal */
+  --label-case: uppercase;
+  --caps-tracking: 0.1em;
+  --caps-tracking-2: 0.05em;
+  /* Kleinste Schriftgrade (text-micro / text-tiny) */
+  --fs-micro: 9px;
+  --fs-tiny: 10px;
+  /* Gewählter Zustand (aktiver Chip, Tab-Marker): hier der Akzent, in Matchday neutral */
+  --c-sel: var(--c-accent);
+  --c-on-sel: var(--c-on-accent);
+  --sel-ring: var(--accent-ring);
+  /* Zweitbutton: hier akzentgetönt, in Matchday neutral */
+  --c-btn2: var(--c-accent);
+  --c-btn2-text: var(--c-accent-text);
+  --btn2-border-a: 0.35;
+}
+
+/*
+ * Matchday (Standard) - ruhig und nativ: Systemschrift (SF auf dem iPhone), Satzschreibung statt Versalien,
+ * neutrale Flächen; Lime nur für die eine Hauptaktion, den aktiven Tab und Fortschritt.
+ */
+[data-theme='matchday'] {
+  --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter Variable', Inter, 'Segoe UI', Roboto, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter Variable', Inter, 'Segoe UI', Roboto, sans-serif;
+  --font-num: ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Inter Variable', Inter, system-ui, sans-serif;
+  --display-weight: 700;
+  --display-case: none;
+  --display-tracking: -0.022em;
+  --label-tracking: 0.005em;
+  --label-case: none;
+  --caps-tracking: 0;
+  --caps-tracking-2: 0;
+  --fs-micro: 11px;
+  --fs-tiny: 11px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 22px;
+  --r-pill: 999px;
+  --border-w: 1px;
+  --panel-blur: 24px;
+  --orbs: 0;
+  --glow: none;
+  --btn-case: none;
+  --btn-tracking: -0.005em;
+  --c-sel: var(--c-fg);
+  --c-on-sel: var(--c-bg);
+  --sel-ring: var(--c-fg);
+  --c-btn2: var(--c-fg);
+  --c-btn2-text: var(--c-fg);
+  --btn2-border-a: 0;
 }
 
 [data-theme='clean'] {
@@ -198,6 +249,73 @@
   --backdrop: rgb(14 19 17 / 0.45);
   --glow: none;
   --accent-ring: 52 110 0;
+}
+
+/* M · Matchday - Graphit ohne Farbstich, Kreideweiß, Lime nur als Signal */
+[data-theme='matchday'][data-scheme='dark'] {
+  --heat2-text: var(--c-on-accent);
+  color-scheme: dark;
+  --c-bg: 11 12 12;
+  --c-surface: 24 25 25;
+  --c-surface-2: 32 33 33;
+  --c-fg: 245 246 243;
+  --c-fg-2: 216 218 214;
+  --c-muted: 162 165 161;
+  --c-subtle: 138 142 138;
+  --c-faint: 84 87 85;
+  --c-well: 0 0 0;
+  --c-accent: 200 242 72;
+  --c-accent-text: 200 242 72;
+  --c-on-accent: 12 14 10;
+  --c-danger: 255 105 97;
+  --c-danger-text: 255 130 122;
+  --c-success: 48 209 120;
+  --c-success-text: 80 222 145;
+  --c-warn: 255 159 10;
+  --c-warn-text: 255 181 71;
+  --c-gold: 255 204 0;
+  --c-gold-text: 255 214 64;
+  --c-gym: 150 140 255;
+  --c-gym-text: 178 170 255;
+  --panel-bg: rgb(var(--c-surface));
+  --panel-border: rgb(var(--c-fg) / 0.06);
+  --panel-shadow: none;
+  --modal-bg: rgb(var(--c-surface-2));
+  --backdrop: rgb(0 0 0 / 0.62);
+  --glow: none;
+}
+
+[data-theme='matchday'][data-scheme='light'] {
+  color-scheme: light;
+  --c-bg: 242 242 238;
+  --c-surface: 255 255 255;
+  --c-surface-2: 255 255 255;
+  --c-fg: 16 18 16;
+  --c-fg-2: 42 45 42;
+  --c-muted: 90 95 90;
+  --c-subtle: 108 113 108;
+  --c-faint: 168 172 167;
+  --c-well: 214 216 210;
+  --c-accent: 200 242 72;
+  --c-accent-text: 56 104 0;
+  --c-on-accent: 16 18 16;
+  --c-danger: 220 38 38;
+  --c-danger-text: 185 28 28;
+  --c-success: 22 150 80;
+  --c-success-text: 8 118 60;
+  --c-warn: 222 120 0;
+  --c-warn-text: 168 84 0;
+  --c-gold: 176 116 4;
+  --c-gold-text: 150 95 5;
+  --c-gym: 98 80 230;
+  --c-gym-text: 84 62 205;
+  --panel-bg: rgb(var(--c-surface));
+  --panel-border: rgb(var(--c-fg) / 0.06);
+  --panel-shadow: 0 1px 2px rgb(16 18 16 / 0.04);
+  --modal-bg: rgb(var(--c-surface));
+  --backdrop: rgb(16 18 16 / 0.4);
+  --glow: none;
+  --accent-ring: 56 104 0;
 }
 
 /* B · Clean Pro - hell, Orange, wie eine gute Lauf-App */

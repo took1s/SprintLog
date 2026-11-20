@@ -21,7 +21,7 @@ const load = computed(() => (matchModal.value.rpe && Number(matchModal.value.min
               <div class="mb-5 flex items-start justify-between">
                   <div>
                       <h3 class="text-2xl display text-white">{{ matchModal.editing ? t('match.editTitle') : t('match.title') }} <span class="text-accent">{{ t('match.titleAccent') }}</span></h3>
-                      <p class="mt-1 font-mono text-[10px] text-slate-400">{{ t('match.info') }}</p>
+                      <p class="mt-1 font-mono text-tiny text-slate-400">{{ t('match.info') }}</p>
                   </div>
                   <button type="button" @click="matchModal.open = false" class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>
               </div>
@@ -43,7 +43,7 @@ const load = computed(() => (matchModal.value.rpe && Number(matchModal.value.min
                           class="rounded-lg border py-2 font-mono text-sm font-black transition-all"
                           :class="matchModal.rpe === r.value ? 'border-orange-400/70 bg-orange-400/15 text-orange-300' : 'border-white/5 bg-white/5 text-slate-400 hover:text-white'">{{ r.value }}</button>
               </div>
-              <p class="mb-5 min-h-[1rem] font-mono text-[10px] text-slate-500">
+              <p class="mb-5 min-h-[1rem] font-mono text-tiny text-slate-500">
                   <template v-if="matchModal.rpe">{{ sessionRpeLabel(matchModal.rpe) }}<template v-if="load"> · {{ t('finish.loadValue', { load }) }}</template></template>
               </p>
 
@@ -53,7 +53,7 @@ const load = computed(() => (matchModal.value.rpe && Number(matchModal.value.min
                           class="rounded-lg border py-2 font-mono text-sm font-bold transition-all"
                           :class="matchModal.quality === q ? 'border-emerald-400/70 bg-emerald-400/15 text-emerald-400' : 'border-white/5 bg-white/5 text-slate-400 hover:text-white'">{{ q }}</button>
               </div>
-              <p class="mb-5 min-h-[1rem] font-mono text-[10px] text-slate-500">{{ t('quality.hint') }}</p>
+              <p class="mb-5 min-h-[1rem] font-mono text-tiny text-slate-500">{{ t('quality.hint') }}</p>
 
               <div class="mb-4 grid grid-cols-3 gap-3">
                   <label class="block"><span class="label-xs mb-2">{{ t('match.goals') }}</span>
@@ -84,10 +84,10 @@ const load = computed(() => (matchModal.value.rpe && Number(matchModal.value.min
               <textarea id="match-improve" v-model="matchModal.toImprove" rows="2" maxlength="300" class="cyber-input mb-4 w-full resize-none rounded-xl p-3 text-sm" :placeholder="t('match.toImprovePlaceholder')" data-test="match-to-improve"></textarea>
               <!-- Werte der Uhr (aus Apple Health übernommen) -->
               <div v-if="matchModal.health" class="mb-4 flex flex-wrap gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] text-slate-300" data-test="match-health">
-                  <span class="w-full text-[10px] font-bold uppercase tracking-label text-slate-400">{{ t('match.fromWatch') }}</span>
+                  <span class="w-full text-tiny font-bold caps tracking-label text-slate-400">{{ t('match.fromWatch') }}</span>
                   <span v-if="matchModal.health.distanceM" class="lib-chip">{{ (matchModal.health.distanceM / 1000).toFixed(1) }} km</span>
                   <span v-if="matchModal.health.avgHr" class="lib-chip">Ø {{ matchModal.health.avgHr }} bpm</span>
-                  <span v-if="matchModal.health.maxSpeedKmh" class="lib-chip">{{ matchModal.health.maxSpeedKmh }} km/h</span>
+                  <span v-if="matchModal.health.maxSpeedKmh" class="lib-chip">{{ matchModal.health.maxSpeedKmh }} {{ t('units.kmh') }}</span>
                   <span v-if="matchModal.health.sprints != null" class="lib-chip">{{ t('match.sprints', { n: matchModal.health.sprints }) }}</span>
               </div>
               <label class="label-xs mb-2" for="match-notes">{{ t('finish.notes') }}</label>

@@ -231,7 +231,7 @@ const clock = (s: number) => (s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).
           <header class="flex items-center gap-3 px-5 pb-2" :style="{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }">
               <button type="button" class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 hover:text-white" :aria-label="t('routines.player.exit')" data-test="player-close" @click="close">✕</button>
               <div class="min-w-0 flex-1">
-                  <p class="truncate text-[10px] font-bold uppercase tracking-label text-accent">{{ r.title }}<template v-if="roundLabel"> · <span data-test="player-round">{{ roundLabel }}</span></template></p>
+                  <p class="truncate text-tiny font-bold caps tracking-label text-accent">{{ r.title }}<template v-if="roundLabel"> · <span data-test="player-round">{{ roundLabel }}</span></template></p>
                   <p class="font-mono text-[11px] text-slate-400">
                       <template v-if="!finished && phase">{{ t('routines.player.stepOf', { n: phase.step + 1, total: stepCount }) }} · {{ t('routines.player.total', { n: totalMinutes }) }}</template>
                   </p>
@@ -275,11 +275,11 @@ const clock = (s: number) => (s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).
                   </svg>
                   <div v-if="timed" class="absolute flex flex-col items-center">
                       <span class="player-time" :class="{ 'is-low': leftSeconds <= 3 && !paused }" role="timer" data-test="player-time">{{ clock(leftSeconds) }}</span>
-                      <span v-if="paused" class="text-[11px] font-bold uppercase tracking-label text-slate-400">{{ t('routines.player.paused') }}</span>
+                      <span v-if="paused" class="text-[11px] font-bold caps tracking-label text-slate-400">{{ t('routines.player.paused') }}</span>
                   </div>
                   <div v-else class="player-reps" data-test="player-reps">
                       <span class="player-time">{{ phase.reps ?? '✓' }}</span>
-                      <span class="text-xs font-bold uppercase tracking-label text-slate-400">{{ phase.reps ? tn('routines.player.reps', phase.reps) : t('routines.player.noTimer') }}</span>
+                      <span class="text-xs font-bold caps tracking-label text-slate-400">{{ phase.reps ? tn('routines.player.reps', phase.reps) : t('routines.player.noTimer') }}</span>
                   </div>
               </div>
 

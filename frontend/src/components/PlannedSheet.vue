@@ -64,7 +64,7 @@ function save() {
                 role="dialog" aria-modal="true" aria-labelledby="planned-sheet-title" data-test="planned-sheet" @submit.prevent="save">
               <div class="flex items-start justify-between gap-3 px-6 pb-3 pt-6">
                   <div class="min-w-0">
-                      <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('planned.title') }}</p>
+                      <p class="text-tiny font-bold caps text-accent tracking-label">{{ t('planned.title') }}</p>
                       <h2 id="planned-sheet-title" class="display mt-1 break-words text-2xl leading-tight text-white">{{ editor.clientId ? t('planned.sheet.editTitle') : t('planned.sheet.newTitle') }}</h2>
                   </div>
                   <button type="button" @click="planned.close()" class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>
@@ -90,7 +90,7 @@ function save() {
                       </p>
                   </div>
                   <p v-else-if="taken" class="mt-2 text-xs text-yellow-300">{{ t('planned.sheet.takenDay') }}</p>
-                  <p class="mt-3 text-[10px] font-bold uppercase text-slate-400 tracking-label">{{ t('planned.sheet.freeDays') }}</p>
+                  <p class="mt-3 text-tiny font-bold caps text-slate-400 tracking-label">{{ t('planned.sheet.freeDays') }}</p>
                   <div class="no-scrollbar -mx-6 mt-1.5 flex gap-1.5 overflow-x-auto px-6" role="group" :aria-label="t('planned.sheet.freeDays')">
                       <button v-for="f in free" :key="f.day" type="button" class="planned-day-chip" :class="{ 'is-on': d.date === f.day }" :aria-pressed="d.date === f.day"
                               :title="f.beforeMatch ? t('planned.sheet.beforeMatch') : undefined" :data-free="f.day" @click="d.date = f.day">
@@ -117,7 +117,7 @@ function save() {
                               <span class="min-w-0 flex-1 truncate text-sm font-bold text-white">{{ exerciseName(app.exerciseFor(x.exerciseId) ?? x.exerciseId) }}</span>
                               <button type="button" class="routine-icon-btn !h-9 !w-9 hover:!text-red-300" :aria-label="t('planned.sheet.remove', { name: exerciseName(app.exerciseFor(x.exerciseId) ?? x.exerciseId) })" @click="removeExercise(i)">✕</button>
                           </div>
-                          <div class="mt-2 grid grid-cols-3 gap-2 pl-8 font-mono text-[10px] text-slate-400">
+                          <div class="mt-2 grid grid-cols-3 gap-2 pl-8 font-mono text-tiny text-slate-400">
                               <label>{{ t('planned.sheet.sets') }}<input v-model.number="x.sets" type="number" inputmode="numeric" min="1" max="20" class="field mt-1 h-10 w-full rounded-lg px-2 text-sm" data-test="planned-sets"></label>
                               <template v-if="typeOf(x.exerciseId) === 'WeightReps'">
                                   <label>{{ t('planned.sheet.reps') }}<input v-model.number="x.repsMin" type="number" inputmode="numeric" min="1" max="100" class="field mt-1 h-10 w-full rounded-lg px-2 text-sm"></label>
@@ -134,7 +134,7 @@ function save() {
                           <li v-for="e in matches" :key="e.id">
                               <button type="button" class="flex min-h-[2.75rem] w-full items-center justify-between gap-2 rounded-lg px-2 text-left hover:bg-white/5" :data-pick="e.id" @click="addExercise(e.id)">
                                   <span class="min-w-0 truncate text-sm font-bold text-white">{{ exerciseName(e) }}</span>
-                                  <span class="flex-shrink-0 font-mono text-[10px] text-slate-500">{{ muscleName(e.muscleGroup) }}</span>
+                                  <span class="flex-shrink-0 font-mono text-tiny text-slate-500">{{ muscleName(e.muscleGroup) }}</span>
                               </button>
                           </li>
                       </ul>

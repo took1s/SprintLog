@@ -17,7 +17,7 @@ import {
 import { formatNumber, formatClock, formatDate, formatRelative, formatSeconds, describeSet, toLocalInput } from '../lib/format';
 import { unlockAudio, playRestAlarm, createWakeLock } from '../lib/feedback';
 import { createSignalScheduler } from '../lib/signals';
-import { alarmHaptic, isNative, loadNativeSession, nativeSession, scheduleRestNotification, setKeepAwake, tap } from '../lib/native';
+import { alarmHaptic, isNative, loadNativeSession, nativeSession, recordHaptic, scheduleRestNotification, setKeepAwake, tap } from '../lib/native';
 import { exportCsv, exportJson } from '../lib/export';
 import { BODYWEIGHT_EXERCISES } from '../lib/bodyweight';
 import { blockOrder, ghostFor, matchScore, normalize, previousSets, type GhostValues } from '../lib/workout';
@@ -1420,7 +1420,7 @@ export const useAppStore = defineStore('app', () => {
       s.sets.push(set);
       const planRest = planTargetFor(set.exerciseId)?.restSeconds;
       if (settings.value.autoTimer && !isEditing.value) startTimer(planRest || (set.category === 'Football' ? settings.value.restField : settings.value.restGym));
-      if (settings.value.vibration) tap();
+      if (settings.value.vibration) (wasPR ? recordHaptic : tap)();
     }
     persistSession();
     closeSetModal();
@@ -1654,7 +1654,7 @@ export const useAppStore = defineStore('app', () => {
     ghostDraft.value = rest;
     const planRest = block.target?.restSeconds;
     if (settings.value.autoTimer && !isEditing.value && !set.isWarmup) startTimer(planRest || (set.category === 'Football' ? settings.value.restField : settings.value.restGym));
-    if (settings.value.vibration) tap();
+    if (settings.value.vibration) (wasPR ? recordHaptic : tap)();
     // Plan-Ziel erfüllt -> Übung automatisch abschließen (kein "hängender" nächster Satz)
     if (block.target?.sets && !set.isWarmup && block.workingDone + 1 >= block.target.sets) markDone(id, true);
     rpePrompt.value = settings.value.rpePrompt && !set.isWarmup && type === TrackingType.WeightReps ? { index: session.value.sets.length - 1, exerciseId: id } : null;
@@ -3172,20 +3172,20 @@ export function recordHeadline(r: ExerciseRecord): string {
     case TrackingType.Cardio:
       return r.longest ? formatClock(Math.round(r.longest.value)) : r.maxDistance ? `${formatNumber(r.maxDistance.value / 1000, 2)} ${t('units.km')}` : '--';
     case TrackingType.DistanceTime:
-      return r.topSpeed ? `${formatNumber(msToKmh(r.topSpeed.value))} km/h` : r.maxDistance ? `${formatNumber(r.maxDistance.value)} m` : '--';
+      return r.topSpeed ? `${formatNumber(msToKmh(r.topSpeed.value))} ${t('units.kmh')}` : r.maxDistance ? `${formatNumber(r.maxDistance.value)} ${t('units.m')}` : '--';
     case TrackingType.Duration:
       return r.longest ? formatSeconds(r.longest.value) : '--';
     default:
-      return r.maxWeight ? `${formatNumber(r.maxWeight.value, 2)} kg` : '--';
+      return r.maxWeight ? `${formatNumber(r.maxWeight.value, 2)} ${t('units.kg')}` : '--';
   }
 }
 export function prValue(event: { field: string; value: number }): string {
   switch (event.field) {
-    case 'topSpeed': return `${formatNumber(msToKmh(event.value))} km/h`;
-    case 'maxDistance': return `${formatNumber(event.value)} m`;
+    case 'topSpeed': return `${formatNumber(msToKmh(event.value))} ${t('units.kmh')}`;
+    case 'maxDistance': return `${formatNumber(event.value)} ${t('units.m')}`;
     case 'longest': return formatSeconds(event.value);
-    case 'minAssist': return `−${formatNumber(event.value)} kg`;
-    default: return `${formatNumber(event.value)} kg`;
+    case 'minAssist': return `−${formatNumber(event.value)} ${t('units.kg')}`;
+    default: return `${formatNumber(event.value)} ${t('units.kg')}`;
   }
 }
 export function heatTitle(day: { future: boolean; date: string; sessions: number; sets: number }): string {

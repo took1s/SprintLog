@@ -4,7 +4,7 @@ import { exerciseNameByKey, muscleName } from '@/i18n/content';
 
 const WEEKLY = ['volume', 'sessions', 'distance', 'load'] as const;
 import { storeToRefs } from 'pinia';
-import { useAppStore, badgeClass, prValue } from '@/stores/app';
+import { useAppStore, prValue } from '@/stores/app';
 import { formatCompact, formatRelative } from '@/lib/format';
 
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue';
@@ -37,24 +37,25 @@ onBeforeUnmount(() => chart?.destroy());
           <div class="stat-card">
               <div class="stat-label">{{ t('data.thisWeek') }}</div>
               <div class="stat-value">{{ kpis.sessions }}</div>
-              <div class="font-mono text-[10px] text-slate-500">{{ t('data.sessionsLast', { n: kpis.sessionsPrev }) }}</div>
+              <div class="font-mono text-tiny text-slate-500">{{ t('data.sessionsLast', { n: kpis.sessionsPrev }) }}</div>
           </div>
           <div class="stat-card">
               <div class="stat-label">{{ t('data.volume') }}</div>
               <div class="stat-value">{{ formatCompact(kpis.volume) }}<span class="ml-1 text-xs text-slate-500">{{ t('units.kg') }}</span></div>
-              <div class="font-mono text-[10px]" :class="kpis.volumeChange === null ? 'text-slate-500' : kpis.volumeChange >= 0 ? 'text-emerald-400' : 'text-red-400'">
-                  {{ kpis.volumeChange === null ? t('data.noComparison') : t('data.vsLast', { arrow: kpis.volumeChange >= 0 ? '▲' : '▼', pct: Math.abs(kpis.volumeChange) }) }}
+              <!-- Die Woche läuft noch: weniger als letzte Woche ist kein Alarm (grau statt rot); ohne Kraft gar kein Vergleich -->
+              <div class="font-mono text-tiny" :class="kpis.volumeChange !== null && kpis.volumeChange > 0 && kpis.volume ? 'text-emerald-400' : 'text-slate-500'">
+                  {{ !kpis.volume ? t('data.noVolumeYet') : kpis.volumeChange === null ? t('data.noComparison') : t('data.vsLast', { arrow: kpis.volumeChange >= 0 ? '▲' : '▼', pct: Math.abs(kpis.volumeChange) }) }}
               </div>
           </div>
           <div class="stat-card">
               <div class="stat-label">{{ t('data.streak') }}</div>
               <div class="stat-value">{{ kpis.streak }}<span class="ml-1 text-xs text-slate-500">{{ t('units.wk') }}</span></div>
-              <div class="font-mono text-[10px] text-slate-500">{{ t('data.weeksInRow') }}</div>
+              <div class="font-mono text-tiny text-slate-500">{{ t('data.weeksInRow') }}</div>
           </div>
           <div class="stat-card">
               <div class="stat-label">{{ t('data.field') }}</div>
               <div class="stat-value">{{ formatCompact(kpis.distance) }}<span class="ml-1 text-xs text-slate-500">{{ t('units.m') }}</span></div>
-              <div class="font-mono text-[10px] text-slate-500">{{ t('data.distanceThisWeek') }}</div>
+              <div class="font-mono text-tiny text-slate-500">{{ t('data.distanceThisWeek') }}</div>
           </div>
       </div>
 
@@ -63,7 +64,7 @@ onBeforeUnmount(() => chart?.destroy());
               <h3 class="display text-white">{{ t('data.last12') }}</h3>
               <div class="flex flex-wrap gap-1">
                   <button v-for="m in WEEKLY" :key="m" @click="weeklyMetric = m"
-                          class="rounded-lg px-2.5 py-2 text-[11px] font-bold uppercase tracking-label" :class="weeklyMetric === m ? 'bg-accent/20 text-accent' : 'text-slate-500 hover:text-white'">{{ t(`data.weeklyMetric.${m}`) }}</button>
+                          class="rounded-full px-3 py-1.5 text-xs font-semibold caps tracking-label" :class="weeklyMetric === m ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-white'" :aria-pressed="weeklyMetric === m">{{ t(`data.weeklyMetric.${m}`) }}</button>
               </div>
           </div>
           <div class="relative h-48"><canvas ref="weeklyCanvas" :aria-label="t('data.weeklyChart')"></canvas></div>
@@ -72,14 +73,14 @@ onBeforeUnmount(() => chart?.destroy());
       <div class="grid grid-cols-[minmax(0,1fr)] gap-6 sm:grid-cols-2">
           <div class="glass-panel min-w-0 rounded-3xl p-5">
               <h3 class="mb-1 display text-white">{{ t('data.muscleSplit') }}</h3>
-              <p class="mb-4 font-mono text-[10px] text-slate-500">{{ t('data.muscleInfo', { days: activeDaysLast30 }) }}</p>
+              <p class="mb-4 font-mono text-tiny text-slate-500">{{ t('data.muscleInfo', { days: activeDaysLast30 }) }}</p>
               <div v-if="!muscleSplit.length" class="font-mono text-xs text-slate-500">{{ t('data.noSets30') }}</div>
               <div v-for="m in muscleSplit" :key="m.group" class="mb-3">
-                  <div class="mb-1 flex justify-between text-[10px] font-bold uppercase tracking-widest">
+                  <div class="mb-1 flex justify-between text-tiny font-bold caps tracking-widest">
                       <span class="text-slate-300">{{ muscleName(m.group) }}</span><span class="font-mono text-slate-500">{{ m.sets }}</span>
                   </div>
-                  <div class="h-2 overflow-hidden rounded-full bg-white/5">
-                      <div class="h-full rounded-full bg-gradient-to-r from-accent/60 to-accent" :style="{ width: Math.max(4, m.share / muscleSplit[0].share * 100) + '%' }"></div>
+                  <div class="h-1.5 overflow-hidden rounded-full bg-white/5">
+                      <div class="bar-accent h-full rounded-full" :style="{ width: Math.max(4, m.share / muscleSplit[0].share * 100) + '%' }"></div>
                   </div>
               </div>
           </div>
@@ -87,14 +88,18 @@ onBeforeUnmount(() => chart?.destroy());
           <div class="glass-panel rounded-3xl p-5">
               <h3 class="mb-4 display text-white">{{ t('data.recentRecords') }}</h3>
               <div v-if="!recentPRs.length" class="font-mono text-xs text-slate-500">{{ t('data.noRecords') }}</div>
-              <button v-for="(pr, i) in recentPRs" :key="i" @click="openProgress(pr.key)"
-                      class="mb-2 flex w-full items-center justify-between rounded-xl border border-white/5 bg-black/20 p-3 text-left transition-colors hover:border-accent/30">
-                  <div class="min-w-0">
-                      <div class="truncate text-sm font-bold text-white">{{ exerciseNameByKey(pr.key, pr.name) }}</div>
-                      <div class="font-mono text-[10px] text-slate-500">{{ t(`records.badges.${pr.field}`) }} · {{ formatRelative(pr.date, clockDate) }}</div>
-                  </div>
-                  <span class="ml-2 whitespace-nowrap rounded border px-2 py-1 text-[9px] font-black uppercase tracking-widest" :class="badgeClass(pr.tone)">{{ pr.icon }} {{ prValue(pr) }}</span>
-              </button>
+              <!-- Liste statt Karten in der Karte; der Wert rechts, ohne Emoji-Abzeichen -->
+              <ul class="-mx-2">
+                  <li v-for="(pr, i) in recentPRs" :key="i" class="border-t border-white/5 first:border-t-0">
+                      <button type="button" @click="openProgress(pr.key)" class="flex min-h-[3.5rem] w-full items-center justify-between gap-3 rounded-xl px-2 text-left transition-colors hover:bg-white/5">
+                          <span class="min-w-0">
+                              <span class="block truncate text-[15px] font-semibold text-white">{{ exerciseNameByKey(pr.key, pr.name) }}</span>
+                              <span class="block truncate text-xs text-slate-500">{{ t(`records.badges.${pr.field}`) }} · {{ formatRelative(pr.date, clockDate) }}</span>
+                          </span>
+                          <span class="whitespace-nowrap font-mono text-[15px] font-bold text-white">{{ prValue(pr) }}</span>
+                      </button>
+                  </li>
+              </ul>
           </div>
       </div>
   </div>

@@ -59,17 +59,17 @@ function clear() {
       <div v-if="ex" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/70 sm:items-center" @click.self="app.closeNoteSheet()" @keydown.esc.stop="app.closeNoteSheet()" data-test="note-sheet">
         <form v-sheet-drag="() => app.closeNoteSheet()" class="glass-panel modal-panel w-full max-w-md overflow-hidden rounded-t-3xl px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6 sm:rounded-3xl"
               role="dialog" aria-modal="true" aria-labelledby="note-title" @submit.prevent="save">
-          <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('exnote.title') }}</p>
+          <p class="text-tiny font-bold caps text-accent tracking-label">{{ t('exnote.title') }}</p>
           <h2 id="note-title" class="display truncate text-xl text-white">{{ exerciseName(ex) }}</h2>
 
           <!-- Schmerz 0-10: zuerst, weil es für den Coach am meisten zählt (sichere Alternative statt mehr Gewicht) -->
-          <p class="mt-4 text-[10px] font-bold uppercase text-slate-400 tracking-label" id="exnote-pain">{{ t('exnote.pain') }}</p>
+          <p class="mt-4 text-tiny font-bold caps text-slate-400 tracking-label" id="exnote-pain">{{ t('exnote.pain') }}</p>
           <PainScale class="mt-1.5" :model-value="pain" :label="t('exnote.pain')" @pick="pickPain" />
           <p class="mt-1 min-h-[1rem] text-[11px] leading-snug" :class="pain == null ? 'text-slate-500' : painTone(pain) === 'bad' ? 'text-red-300' : painTone(pain) === 'warn' ? 'text-amber-300' : 'text-emerald-300'" data-test="exnote-pain-hint">
               {{ pain == null ? t('exnote.painHint') : t(`exnote.painAdvice.${painTone(pain)}`) }}
           </p>
 
-          <label class="mt-3 block text-[10px] font-bold uppercase text-slate-400 tracking-label" for="exnote-text">{{ t('exnote.note') }}</label>
+          <label class="mt-3 block text-tiny font-bold caps text-slate-400 tracking-label" for="exnote-text">{{ t('exnote.note') }}</label>
           <textarea id="exnote-text" v-model="note" rows="2" maxlength="200" :placeholder="t('exnote.placeholder')"
                     class="cyber-input mt-1.5 w-full resize-none rounded-xl px-3 py-2.5 text-sm outline-none" data-test="exnote-text"></textarea>
 
@@ -81,7 +81,7 @@ function clear() {
             </span>
           </label>
 
-          <p class="mt-4 text-[10px] font-bold uppercase text-slate-400 tracking-label" id="exnote-reason">{{ t('exnote.reason') }}</p>
+          <p class="mt-4 text-tiny font-bold caps text-slate-400 tracking-label" id="exnote-reason">{{ t('exnote.reason') }}</p>
           <div class="mt-1.5 flex flex-wrap gap-2" role="group" aria-labelledby="exnote-reason">
             <button v-for="r in REASONS" :key="r" type="button" class="chip" :class="reason === r ? 'chip-active' : 'chip-idle'"
                     :aria-pressed="reason === r" @click="pickReason(r)" :data-reason="r">{{ t(`exnote.reasons.${r}`) }}</button>

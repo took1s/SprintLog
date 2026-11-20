@@ -113,7 +113,7 @@ function finish(complete: boolean) {
   <transition name="fade">
       <div v-if="holdTimer && ex" class="fixed inset-0 z-[65] flex flex-col items-center justify-center bg-ink px-6" role="dialog" aria-modal="true" :aria-label="exerciseName(ex)" data-test="hold-timer">
           <!-- Phasenwechsel ansagen (Bereit / Halten / Pause) - nicht jede Sekunde, das wäre für VoiceOver Dauerfeuer -->
-          <p class="text-[11px] font-bold uppercase tracking-label" :class="switching ? 'text-yellow-400' : 'text-accent'" aria-live="polite" data-test="hold-phase">{{ phase }}</p>
+          <p class="text-[11px] font-bold caps tracking-label" :class="switching ? 'text-yellow-400' : 'text-accent'" aria-live="polite" data-test="hold-phase">{{ phase }}</p>
           <h2 class="display mt-2 max-w-xs break-words text-center text-2xl text-white">{{ exerciseName(ex) }}</h2>
           <!-- Einseitig: welche Seite gerade läuft -->
           <div v-if="holdTimer.sides === 2" class="mt-3 flex items-center gap-2" data-test="hold-side">
@@ -136,7 +136,7 @@ function finish(complete: boolean) {
           <div class="mt-10 grid w-full max-w-xs grid-cols-2 gap-3 pb-[env(safe-area-inset-bottom)]">
               <button type="button" @click="togglePause" class="btn-secondary rounded-xl py-4 text-sm">{{ holdTimer.pausedAt ? t('hold.resume') : t('hold.pause') }}</button>
               <button type="button" @click="finish(false)" :disabled="leadLeft > 0" class="btn-primary rounded-xl py-4 text-sm" data-test="hold-done">{{ t('hold.done') }}</button>
-              <button type="button" @click="closeHoldTimer" class="col-span-2 min-h-[2.75rem] rounded-xl py-3 text-[11px] font-bold uppercase text-slate-400 hover:text-red-400 tracking-label">{{ t('hold.cancel') }}</button>
+              <button type="button" @click="closeHoldTimer" class="col-span-2 min-h-[2.75rem] rounded-xl py-3 text-[11px] font-bold caps text-slate-400 hover:text-red-400 tracking-label">{{ t('hold.cancel') }}</button>
           </div>
       </div>
   </transition>

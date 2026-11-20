@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // KI-Analyse: strukturierter Bericht (Gesamt oder Woche) mit Status je Bereich, Top-Empfehlungen und Wochenfokus.
 // Der letzte Bericht bleibt lokal gespeichert; "Mit dem Coach besprechen" öffnet den Chat im gründlichen Modus.
+import AppIcon from '@/components/AppIcon.vue';
 import { computed, nextTick, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t } from '@/i18n';
@@ -51,7 +52,7 @@ async function run(period: 'full' | 'week') {
   <section class="space-y-4" data-test="ai-analysis" :aria-busy="!!analysisBusy">
       <div class="glass-panel rounded-2xl p-5">
           <div class="flex items-start gap-3">
-              <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3zM19 15l.9 2.1 2.1.9-2.1.9L19 21l-.9-2.1-2.1-.9 2.1-.9L19 15z"/></svg>
+              <AppIcon name="coach" class="mt-0.5 h-5 w-5 flex-shrink-0 text-accent" />
               <div class="min-w-0">
                   <h2 class="display text-xl text-white">{{ t('ai.analysis.title') }}</h2>
                   <p class="mt-1 text-sm leading-relaxed text-slate-300">{{ t('ai.analysis.intro') }}</p>
@@ -85,7 +86,7 @@ async function run(period: 'full' | 'week') {
 
       <template v-if="report">
           <article class="glass-panel rounded-2xl p-5" data-test="ai-report">
-              <p class="font-mono text-[10px] uppercase text-slate-400 tracking-label">{{ stamp }}</p>
+              <p class="font-mono text-tiny caps text-slate-400 tracking-label">{{ stamp }}</p>
               <h3 ref="headline" tabindex="-1" class="mt-1 break-words text-lg font-bold leading-snug text-white outline-none" data-test="ai-report-headline">{{ report.headline }}</h3>
               <p class="mt-2 text-sm leading-relaxed text-slate-200">{{ report.summary }}</p>
           </article>
@@ -95,7 +96,7 @@ async function run(period: 'full' | 'week') {
                   <!-- Status gehört in die Überschrift: beim Springen von Überschrift zu Überschrift hört man "Erholung, Handeln" -->
                   <h4 class="flex items-start justify-between gap-2">
                       <span class="min-w-0 break-words font-bold leading-6 text-white">{{ sec.title }}</span>
-                      <span class="flex h-6 flex-shrink-0 items-center gap-1.5 text-[10px] font-bold uppercase tracking-label" :class="tone(sec.status).text">
+                      <span class="flex h-6 flex-shrink-0 items-center gap-1.5 text-tiny font-bold caps tracking-label" :class="tone(sec.status).text">
                           <span class="h-2 w-2 rounded-full" :class="tone(sec.status).dot" aria-hidden="true"></span><span class="sr-only">, </span>{{ t(`ai.analysis.status.${statusKey(sec.status)}`) }}
                       </span>
                   </h4>

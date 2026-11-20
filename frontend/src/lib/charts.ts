@@ -20,6 +20,8 @@ function palette() {
     accent: tokenColor('accent-text'),
     accentLine: tokenColor('accent-text'),
     accentSoft: tokenColor('accent-text', 0.3),
+    // Vergangene Wochen neutral - nur die laufende Woche trägt den Akzent (ein Blick: "wo stehe ich jetzt?")
+    past: tokenColor('fg', 0.16),
     accentFill: tokenColor('accent-text', 0.12),
     field: tokenColor('success-text'),
     fieldFill: tokenColor('success', 0.15),
@@ -46,10 +48,11 @@ const axes = (unit: string, c: ReturnType<typeof palette>) => ({
   y: {
     beginAtZero: false,
     grid: { color: c.grid },
-    ticks: { color: c.tick, font: { size: 10 } },
+    ticks: { color: c.tick, font: { size: 11 }, maxTicksLimit: 4 },
+    border: { display: false },
     title: unit ? { display: true, text: unit, color: c.tick, font: { size: 10 } } : undefined,
   },
-  x: { grid: { display: false }, ticks: { color: c.tick, font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 } },
+  x: { grid: { display: false }, border: { display: false }, ticks: { color: c.tick, font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } },
 });
 
 export interface ProgressChartOptions { label: string; unit: string; highlightBest?: boolean; lowerIsBetter?: boolean; field?: boolean }
@@ -112,9 +115,10 @@ export function renderWeeklyChart(canvas: HTMLCanvasElement | null | undefined, 
       datasets: [{
         label: metric,
         data: weeks.map((w) => w[metric]),
-        backgroundColor: weeks.map((_, i) => (i === currentIndex ? c.accent : c.accentSoft)),
-        borderRadius: 6,
-        maxBarThickness: 28,
+        backgroundColor: weeks.map((_, i) => (i === currentIndex ? c.accent : c.past)),
+        hoverBackgroundColor: weeks.map((_, i) => (i === currentIndex ? c.accent : c.accentSoft)),
+        borderRadius: 5,
+        maxBarThickness: 22,
       }],
     },
     options: {

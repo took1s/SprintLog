@@ -31,7 +31,7 @@ const barClass = (p: number) => (p >= 85 ? 'bg-emerald-400' : p >= 55 ? 'bg-yell
   <div v-if="recovery.length" class="mt-3 rounded-2xl border border-white/10 bg-white/[0.03]" data-test="recovery-card">
       <button type="button" class="flex min-h-[3rem] w-full items-center gap-3 px-4 py-3 text-left" :aria-expanded="expanded" data-test="recovery-toggle" @click="expanded = !expanded">
           <span class="min-w-0 flex-1">
-              <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-label">{{ t('recovery.title') }}</span>
+              <span class="block text-tiny font-bold caps text-slate-400 tracking-label">{{ t('recovery.title') }}</span>
               <span v-if="allReady" class="block text-sm font-bold text-emerald-400">{{ t('recovery.allReady') }}</span>
               <span v-else-if="lowest" class="block truncate text-sm font-bold text-white">{{ t(`recovery.regions.${lowest.region}`) }} · {{ lowest.percent }} %</span>
           </span>
@@ -51,7 +51,7 @@ const barClass = (p: number) => (p >= 85 ? 'bg-emerald-400' : p >= 55 ? 'bg-yell
                           <span class="whitespace-nowrap font-mono text-[11px]" :class="r.percent >= 100 ? 'text-emerald-400' : 'text-slate-300'">{{ r.percent >= 100 ? t('recovery.ready') : readyText(r.readyAt) }}</span>
                       </li>
                   </ul>
-                  <p class="mt-3 text-[10px] leading-relaxed text-slate-500">{{ t('recovery.disclaimer') }}</p>
+                  <p class="mt-3 text-tiny leading-relaxed text-slate-500">{{ t('recovery.disclaimer') }}</p>
               </div>
           </div>
       </transition>

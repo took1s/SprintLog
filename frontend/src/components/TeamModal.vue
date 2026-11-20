@@ -32,7 +32,7 @@ const close = () => (teamModal.value.open = false);
               <div class="mb-5 flex items-start justify-between gap-3">
                   <div>
                       <h3 class="text-2xl display text-white">{{ teamModal.editing ? t('match.editTitle') : t('team.title') }} <span class="text-accent">{{ t('team.titleAccent') }}</span></h3>
-                      <p class="mt-1 font-mono text-[10px] text-slate-400">{{ t('team.info') }}</p>
+                      <p class="mt-1 font-mono text-tiny text-slate-400">{{ t('team.info') }}</p>
                   </div>
                   <button type="button" @click="close" class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>
               </div>
@@ -59,7 +59,7 @@ const close = () => (teamModal.value.open = false);
                           class="rounded-lg border py-2 font-mono text-sm font-black transition-all"
                           :class="teamModal.rpe === r.value ? 'border-orange-400/70 bg-orange-400/15 text-orange-300' : 'border-white/5 bg-white/5 text-slate-400 hover:text-white'">{{ r.value }}</button>
               </div>
-              <p class="mb-5 min-h-[1rem] font-mono text-[10px] text-slate-500" data-test="team-load">
+              <p class="mb-5 min-h-[1rem] font-mono text-tiny text-slate-500" data-test="team-load">
                   <template v-if="teamModal.rpe">{{ sessionRpeLabel(teamModal.rpe) }}<template v-if="load"> · {{ t('finish.loadValue', { load }) }}<template v-if="loadTone"> · {{ t(`team.loadTone.${loadTone}`) }}</template></template></template>
               </p>
 
@@ -69,7 +69,7 @@ const close = () => (teamModal.value.open = false);
                           class="rounded-lg border py-2 font-mono text-sm font-bold transition-all"
                           :class="teamModal.quality === q ? 'border-emerald-400/70 bg-emerald-400/15 text-emerald-400' : 'border-white/5 bg-white/5 text-slate-400 hover:text-white'">{{ q }}</button>
               </div>
-              <p class="mb-5 min-h-[1rem] font-mono text-[10px] text-slate-500">{{ t('quality.hint') }}</p>
+              <p class="mb-5 min-h-[1rem] font-mono text-tiny text-slate-500">{{ t('quality.hint') }}</p>
 
               <span class="label-xs mb-2">{{ t('team.focus') }} <span class="normal-case tracking-normal text-slate-500">({{ t('common.optional') }})</span></span>
               <div class="mb-5 flex flex-wrap gap-1.5" role="radiogroup" :aria-label="t('team.focus')">
@@ -86,13 +86,13 @@ const close = () => (teamModal.value.open = false);
                           :class="teamModal.participation === p ? 'border-accent/60 bg-accent/15 text-accent' : 'border-white/5 bg-white/5 text-slate-400 hover:text-white'"
                           @click="teamModal.participation = p">{{ t(`team.parts.${p}`) }}</button>
               </div>
-              <p class="mb-5 min-h-[1rem] font-mono text-[10px] text-slate-500">{{ t(`team.partHints.${teamModal.participation}`) }}</p>
+              <p class="mb-5 min-h-[1rem] font-mono text-tiny text-slate-500">{{ t(`team.partHints.${teamModal.participation}`) }}</p>
 
               <div v-if="teamModal.health" class="mb-4 flex flex-wrap gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] text-slate-300" data-test="team-health">
-                  <span class="w-full text-[10px] font-bold uppercase tracking-label text-slate-400">{{ t('match.fromWatch') }}</span>
+                  <span class="w-full text-tiny font-bold caps tracking-label text-slate-400">{{ t('match.fromWatch') }}</span>
                   <span v-if="teamModal.health.distanceM" class="lib-chip">{{ (teamModal.health.distanceM / 1000).toFixed(1) }} km</span>
                   <span v-if="teamModal.health.avgHr" class="lib-chip">Ø {{ teamModal.health.avgHr }} bpm</span>
-                  <span v-if="teamModal.health.maxSpeedKmh" class="lib-chip">{{ teamModal.health.maxSpeedKmh }} km/h</span>
+                  <span v-if="teamModal.health.maxSpeedKmh" class="lib-chip">{{ teamModal.health.maxSpeedKmh }} {{ t('units.kmh') }}</span>
                   <span v-if="teamModal.health.sprints != null" class="lib-chip">{{ t('match.sprints', { n: teamModal.health.sprints }) }}</span>
               </div>
 

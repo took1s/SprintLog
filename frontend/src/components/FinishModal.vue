@@ -16,7 +16,7 @@ const { confirmFinish } = app;
               <div class="mb-5 flex items-start justify-between">
                   <div>
                       <h3 class="text-2xl display text-white">{{ isEditing ? t('finish.titleSave') : t('finish.titleFinish') }} <span class="text-accent">{{ isEditing ? t('finish.titleSaveAccent') : t('finish.titleAccent') }}</span></h3>
-                      <p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-slate-400">{{ t('finish.summary', { sets: tn('units.sets', session.sets.length), exercises: tn('units.exercises', sessionSummary.exercises) }) }}</p>
+                      <p class="mt-1 font-mono text-tiny caps tracking-widest text-slate-400">{{ t('finish.summary', { sets: tn('units.sets', session.sets.length), exercises: tn('units.exercises', sessionSummary.exercises) }) }}</p>
                   </div>
                   <button type="button" @click="finishModal.open = false" class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>
               </div>
@@ -27,7 +27,7 @@ const { confirmFinish } = app;
                           class="rounded-lg border py-2 font-mono text-sm font-black transition-all"
                           :class="finishModal.sessionRpe === r.value ? 'border-orange-400/70 bg-orange-400/15 text-orange-300' : 'border-white/5 bg-white/5 text-slate-400 hover:text-white'">{{ r.value }}</button>
               </div>
-              <p class="mb-5 min-h-[1rem] font-mono text-[10px] text-slate-500">
+              <p class="mb-5 min-h-[1rem] font-mono text-tiny text-slate-500">
                   <template v-if="finishModal.sessionRpe">{{ sessionRpeLabel(finishModal.sessionRpe) }}<template v-if="finishLoad"> · {{ t('finish.loadValue', { load: finishLoad }) }}</template></template>
                   <template v-else>{{ t('finish.rpeOptional') }}</template>
               </p>
@@ -38,7 +38,7 @@ const { confirmFinish } = app;
                           class="rounded-lg border py-2 font-mono text-sm font-bold transition-all"
                           :class="finishModal.quality === q ? 'border-emerald-400/70 bg-emerald-400/15 text-emerald-400' : 'border-white/5 bg-white/5 text-slate-400 hover:text-white'">{{ q }}</button>
               </div>
-              <p class="mb-5 min-h-[1rem] font-mono text-[10px] text-slate-500">{{ t('quality.hint') }}</p>
+              <p class="mb-5 min-h-[1rem] font-mono text-tiny text-slate-500">{{ t('quality.hint') }}</p>
 
               <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label class="block">
@@ -53,7 +53,7 @@ const { confirmFinish } = app;
 
               <label class="label-xs mb-2" for="finish-notes">{{ t('finish.notes') }}</label>
               <textarea id="finish-notes" v-model="finishModal.notes" rows="3" maxlength="500" class="cyber-input mb-1 w-full resize-none rounded-xl p-3 text-sm" :placeholder="t('finish.notesPlaceholder')"></textarea>
-              <p class="mb-5 text-right font-mono text-[9px] text-slate-600">{{ (finishModal.notes || '').length }}/500</p>
+              <p class="mb-5 text-right font-mono text-micro text-slate-600">{{ (finishModal.notes || '').length }}/500</p>
 
               <p v-if="!isEditing" class="mb-4 flex items-center gap-2 rounded-xl border border-white/5 bg-black/20 px-3 py-2.5 text-xs text-slate-300" data-test="finish-recovery">
                   <svg class="h-4 w-4 flex-shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path stroke-linecap="round" d="M12 7.5V12l3 2"/></svg>

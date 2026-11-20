@@ -38,7 +38,7 @@ const isCurrent = (g: string | null) => (g === null ? sessionGym.value == null :
       <div v-if="open" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/70 sm:items-center" @click.self="emit('close')" @keydown.esc.stop="emit('close')" data-test="gym-sheet">
         <div v-sheet-drag="() => emit('close')" class="glass-panel modal-panel w-full max-w-md overflow-hidden rounded-t-3xl pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:rounded-3xl" role="dialog" aria-modal="true" aria-labelledby="gym-title">
           <div class="px-6 pb-2 pt-6">
-            <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('gym.title') }}</p>
+            <p class="text-tiny font-bold caps text-accent tracking-label">{{ t('gym.title') }}</p>
             <h2 id="gym-title" class="display text-xl text-white">{{ t('gym.choose') }}</h2>
             <p class="mt-1 text-xs leading-relaxed text-slate-400">{{ t('gym.hint') }}</p>
           </div>
@@ -72,7 +72,7 @@ const isCurrent = (g: string | null) => (g === null ? sessionGym.value == null :
           </form>
           <div class="flex items-center justify-between gap-3 px-6 pt-3">
             <p class="text-[11px] leading-snug text-slate-500">{{ t('gym.mainHint') }}</p>
-            <button v-if="gyms.length" type="button" class="min-h-[2.75rem] flex-shrink-0 rounded-lg px-2 text-[11px] font-bold uppercase text-slate-400 tracking-label hover:text-white" @click="editing = !editing">
+            <button v-if="gyms.length" type="button" class="min-h-[2.75rem] flex-shrink-0 rounded-lg px-2 text-[11px] font-bold caps text-slate-400 tracking-label hover:text-white" @click="editing = !editing">
               {{ editing ? t('common.done') : t('common.edit') }}
             </button>
           </div>

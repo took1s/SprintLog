@@ -76,7 +76,7 @@ async function discard() {
                   </div>
                   <div class="mt-2 flex flex-wrap items-center gap-2">
                       <span class="level-chip" :class="`is-${r.level}`">{{ t(`tests.levels.${r.level}`) }}</span>
-                      <span v-if="r.record" class="text-[10px] font-bold uppercase tracking-label text-yellow-300">★ {{ t('testDay.summary.record') }}</span>
+                      <span v-if="r.record" class="text-tiny font-bold caps tracking-label text-yellow-300">★ {{ t('testDay.summary.record') }}</span>
                   </div>
               </li>
           </ul>

@@ -72,7 +72,7 @@ const realismClass = computed(() => ({ ok: 'text-emerald-400', ambitious: 'text-
           <div v-sheet-drag:handle="() => goals.closeGoal()" class="glass-panel modal-panel flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="t('goals.sheetTitle')" data-test="goal-sheet">
               <div class="flex items-start justify-between gap-3 px-6 pb-3 pt-6">
                   <div class="min-w-0">
-                      <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('goals.sheetTitle') }}</p>
+                      <p class="text-tiny font-bold caps text-accent tracking-label">{{ t('goals.sheetTitle') }}</p>
                       <h2 class="display mt-1 truncate text-2xl text-white">{{ ex ? exerciseName(ex) : t('goals.pick') }}</h2>
                   </div>
                   <button type="button" @click="goals.closeGoal()" class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>
@@ -132,7 +132,7 @@ const realismClass = computed(() => ({ ok: 'text-emerald-400', ambitious: 'text-
 
                       <!-- Vorschau -->
                       <div v-if="preview" class="mt-5 rounded-2xl border border-accent/30 bg-accent/5 p-4" data-test="goal-preview">
-                          <div class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('goals.next') }}</div>
+                          <div class="text-tiny font-bold caps text-accent tracking-label">{{ t('goals.next') }}</div>
                           <div class="mt-1 font-mono text-sm font-bold text-white">{{ prescriptionLabel(preview.next, preview.goal) }}</div>
                           <p v-if="tooEasy" class="mt-1 text-xs text-orange-300">{{ t('goals.tooEasy') }}</p>
                           <p class="mt-2 text-xs leading-relaxed text-slate-400">{{ t('goals.howItWorks') }}</p>

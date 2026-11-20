@@ -37,7 +37,6 @@ const status = computed(() => (!health.available ? 'web' : health.connected ? 'o
   <section class="glass-panel rounded-3xl p-5" data-test="health">
       <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-              <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('watch.kicker') }}</p>
               <h2 class="display text-2xl text-white">{{ t('watch.title') }}</h2>
           </div>
           <span class="watch-status mt-1" :class="`is-${status}`" data-test="watch-status">{{ t(`watch.status.${status}`) }}</span>
@@ -51,7 +50,7 @@ const status = computed(() => (!health.available ? 'web' : health.connected ? 'o
               <div class="report-stat"><dt>HRV</dt><dd class="!text-base">{{ hrvAvg != null ? Math.round(hrvAvg) : '–' }}</dd></div>
           </dl>
           <div class="mt-2 flex items-center justify-between gap-2">
-              <p class="text-[10px] text-slate-500">{{ t('body.healthWeekAvg') }}<template v-if="synced"> · {{ t('body.healthSynced', { time: synced }) }}</template></p>
+              <p class="text-tiny text-slate-500">{{ t('body.healthWeekAvg') }}<template v-if="synced"> · {{ t('body.healthSynced', { time: synced }) }}</template></p>
               <button type="button" class="routine-link -mr-3" :disabled="health.busy" data-test="health-sync" @click="health.sync()">{{ health.busy ? t('body.healthSyncing') : t('body.healthSync') }}</button>
           </div>
           <p v-if="health.error" class="mt-1 text-[11px] text-red-300">{{ health.error }}</p>
@@ -101,6 +100,6 @@ const status = computed(() => (!health.available ? 'web' : health.connected ? 'o
       </transition>
 
       <button v-if="status === 'off'" type="button" class="btn-primary mt-3 h-12 w-full rounded-xl text-sm" data-test="health-connect" @click="health.connect()">♥ {{ t('watch.connect') }}</button>
-      <p v-if="status === 'off'" class="mt-2 text-[10px] leading-snug text-slate-500">{{ t('body.healthHint') }}</p>
+      <p v-if="status === 'off'" class="mt-2 text-tiny leading-snug text-slate-500">{{ t('body.healthHint') }}</p>
   </section>
 </template>

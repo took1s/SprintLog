@@ -25,7 +25,6 @@ function bar(clientId: string) {
   <section class="glass-panel rounded-3xl p-5" data-test="routines-panel">
       <div class="mb-4 flex items-center justify-between gap-3">
           <div class="min-w-0">
-              <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('routines.kicker') }}</p>
               <h2 class="display text-2xl text-white">{{ t('routines.title') }}</h2>
           </div>
           <div class="flex flex-shrink-0 gap-2">
@@ -60,12 +59,12 @@ function bar(clientId: string) {
                   <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10" role="progressbar" :aria-valuenow="bar(r.clientId)" aria-valuemin="0" aria-valuemax="100">
                       <div class="h-full rounded-full bg-accent transition-all" :style="{ width: Math.max(3, bar(r.clientId)) + '%' }"></div>
                   </div>
-                  <p class="mt-1.5 flex flex-wrap gap-x-3 font-mono text-[10px] text-slate-400">
+                  <p class="mt-1.5 flex flex-wrap gap-x-3 font-mono text-tiny text-slate-400">
                       <span v-if="routines.progressOf(r).adherence != null">{{ t('routines.adherence', { pct: routines.progressOf(r).adherence ?? 0 }) }}</span>
                       <span v-if="routines.progressOf(r).streak >= 2" class="routine-streak">{{ tn('routines.streak', routines.progressOf(r).streak) }}</span>
                   </p>
                   <p class="mt-2 line-clamp-2 break-words text-xs leading-snug text-slate-300">{{ r.steps.map((s) => s.dose ? `${s.name} (${s.dose})` : s.name).join(' · ') }}</p>
-                  <p v-if="r.pending" class="mt-1 font-mono text-[10px] text-slate-500">{{ t('routines.pendingSync') }}</p>
+                  <p v-if="r.pending" class="mt-1 font-mono text-tiny text-slate-500">{{ t('routines.pendingSync') }}</p>
               </button>
           </li>
       </ul>

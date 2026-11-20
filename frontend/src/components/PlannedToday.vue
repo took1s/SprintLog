@@ -28,7 +28,7 @@ const summary = (p: PlannedWorkout) => p.exercises.slice(0, 4).map((x) => {
 <template>
   <div v-if="forToday.length || soon || missed" class="mt-5 space-y-2">
       <section v-for="p in forToday" :key="p.clientId" class="planned-today rounded-2xl border p-4" data-test="planned-today" :data-planned="p.clientId">
-          <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('planned.todayKicker') }}<template v-if="p.source === 'coach'"> · {{ t('planned.byCoach') }}</template></p>
+          <p class="text-tiny font-bold caps text-accent tracking-label">{{ t('planned.todayKicker') }}<template v-if="p.source === 'coach'"> · {{ t('planned.byCoach') }}</template></p>
           <h3 class="display mt-1 break-words text-xl leading-tight text-white">{{ p.title }}</h3>
           <p class="mt-1 text-xs leading-relaxed text-slate-300">{{ summary(p) }}</p>
           <p v-if="p.notes" class="mt-1 text-[11px] leading-snug text-slate-400">{{ p.notes }}</p>
@@ -49,10 +49,13 @@ const summary = (p: PlannedWorkout) => p.exercises.slice(0, 4).map((x) => {
           </span>
       </div>
 
-      <button v-if="soon" type="button" class="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left hover:bg-white/5" data-test="planned-next" @click="planned.openEdit(soon.clientId)">
-          <svg class="h-4 w-4 flex-shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path stroke-linecap="round" d="M8 3v4M16 3v4M3.5 10h17"/></svg>
-          <span class="min-w-0 flex-1 truncate text-xs text-slate-300">{{ t('planned.next', { title: soon.title, date: date(soon.date) }) }}</span>
-          <span class="flex-shrink-0 font-mono text-[10px] text-slate-500">{{ tn('planned.exercises', soon.exercises.length) }}</span>
+      <button v-if="soon" type="button" class="glass-panel flex min-h-[3.75rem] w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left hover:bg-white/5" data-test="planned-next" @click="planned.openEdit(soon.clientId)">
+          <svg class="h-5 w-5 flex-shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path stroke-linecap="round" d="M8 3v4M16 3v4M3.5 10h17"/></svg>
+          <span class="min-w-0 flex-1">
+              <span class="block truncate text-[15px] font-semibold text-white">{{ soon.title }}</span>
+              <span class="block truncate text-xs text-slate-400">{{ t('planned.nextOn', { date: date(soon.date) }) }} · {{ tn('planned.exercises', soon.exercises.length) }}</span>
+          </span>
+          <svg class="h-4 w-4 flex-shrink-0 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
       </button>
   </div>
 </template>

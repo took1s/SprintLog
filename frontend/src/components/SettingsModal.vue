@@ -50,7 +50,7 @@ const setRowTime = (row: ReminderRow, value: string) => { if (value) reminders.u
               <div class="mb-6 flex items-start justify-between">
                   <div>
                       <h3 class="display text-2xl text-white">{{ t('settings.title') }}</h3>
-                      <p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-slate-400">
+                      <p class="mt-1 font-mono text-tiny caps tracking-widest text-slate-400">
                           {{ user?.username }}<template v-if="profile"> · {{ t('settings.since', { date: formatDate(profile.createdAt, { month: 'short', year: 'numeric' }) }) }} · {{ tn('units.workouts', profile.workoutCount) }}</template>
                       </p>
                   </div>
@@ -76,7 +76,7 @@ const setRowTime = (row: ReminderRow, value: string) => { if (value) reminders.u
                           <span class="h-8 w-8 rounded-md" :style="{ background: THEME_SWATCHES[name][activeScheme][2] }"></span>
                       </span>
                       <span class="mt-2 flex items-center gap-1.5 px-1 text-sm font-bold text-white">{{ t(`appearance.themes.${name}.name`) }}
-                          <span v-if="inSeason(name)" class="rounded-full bg-accent/15 px-1.5 py-0.5 text-[9px] font-black uppercase text-accent tracking-label">{{ t('appearance.season') }}</span>
+                          <span v-if="inSeason(name)" class="rounded-full bg-accent/15 px-1.5 py-0.5 text-micro font-black caps text-accent tracking-label">{{ t('appearance.season') }}</span>
                       </span>
                       <span class="block px-1 pb-1 text-[11px] leading-tight text-slate-400">{{ t(`appearance.themes.${name}.description`) }}</span>
                   </button>
@@ -159,32 +159,32 @@ const setRowTime = (row: ReminderRow, value: string) => { if (value) reminders.u
 
               <h4 class="label-xs mb-3 text-accent">{{ t('settings.data') }}</h4>
               <div class="mb-3 grid grid-cols-2 gap-3">
-                  <button @click="exportData('csv')" class="cyber-outline-btn rounded-xl py-3 text-[10px] font-bold uppercase tracking-widest">{{ t('settings.exportCsv') }}</button>
-                  <button @click="exportData('json')" class="cyber-outline-btn rounded-xl py-3 text-[10px] font-bold uppercase tracking-widest">{{ t('settings.exportJson') }}</button>
+                  <button @click="exportData('csv')" class="cyber-outline-btn rounded-xl py-3 text-tiny font-bold caps tracking-widest">{{ t('settings.exportCsv') }}</button>
+                  <button @click="exportData('json')" class="cyber-outline-btn rounded-xl py-3 text-tiny font-bold caps tracking-widest">{{ t('settings.exportJson') }}</button>
               </div>
-              <button @click="syncNow()" :disabled="syncing || !pendingCount" class="cyber-outline-btn mb-6 w-full rounded-xl py-3 text-[10px] font-bold uppercase tracking-widest disabled:opacity-40">
+              <button @click="syncNow()" :disabled="syncing || !pendingCount" class="cyber-outline-btn mb-6 w-full rounded-xl py-3 text-tiny font-bold caps tracking-widest disabled:opacity-40">
                   {{ syncing ? t('settings.syncing') : pendingCount ? tn('settings.syncNow', pendingCount) : t('settings.allSynced') }}
               </button>
 
               <AccountSecurity />
 
               <h4 class="label-xs mb-3 text-accent">{{ t('settings.account') }}</h4>
-              <button @click="logout" class="mb-3 w-full rounded-xl border border-white/10 bg-white/5 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-300 hover:text-white">{{ t('settings.logout') }}</button>
+              <button @click="logout" class="mb-3 w-full rounded-xl border border-white/10 bg-white/5 py-3 text-tiny font-bold caps tracking-widest text-slate-300 hover:text-white">{{ t('settings.logout') }}</button>
 
               <div class="rounded-2xl border border-red-500/20 p-4">
-                  <button v-if="!deleteAccount.open" @click="deleteAccount.open = true" class="min-h-[2.75rem] w-full text-[10px] font-bold uppercase tracking-widest text-red-400">{{ t('settings.deleteAccount') }}</button>
+                  <button v-if="!deleteAccount.open" @click="deleteAccount.open = true" class="min-h-[2.75rem] w-full text-tiny font-bold caps tracking-widest text-red-400">{{ t('settings.deleteAccount') }}</button>
                   <form v-else @submit.prevent="confirmDeleteAccount">
                       <p class="mb-3 text-xs text-slate-300">{{ t('settings.deleteInfo') }}</p>
                       <input v-model="deleteAccount.password" type="password" autocomplete="current-password" :placeholder="t('settings.confirmPassword')" class="cyber-input mb-2 w-full rounded-xl p-3 text-sm">
-                      <p v-if="deleteAccount.error" class="mb-2 font-mono text-[10px] text-red-400">{{ deleteAccount.error }}</p>
+                      <p v-if="deleteAccount.error" class="mb-2 font-mono text-tiny text-red-400">{{ deleteAccount.error }}</p>
                       <div class="grid grid-cols-2 gap-2">
-                          <button type="button" @click="deleteAccount.open = false" class="rounded-xl bg-white/5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-300">{{ t('common.cancel') }}</button>
-                          <button type="submit" :disabled="deleteAccount.busy || !online" class="danger-btn rounded-xl py-2.5 text-[10px] font-bold uppercase tracking-widest">{{ deleteAccount.busy ? '...' : t('settings.deleteForever') }}</button>
+                          <button type="button" @click="deleteAccount.open = false" class="rounded-xl bg-white/5 py-2.5 text-tiny font-bold caps tracking-widest text-slate-300">{{ t('common.cancel') }}</button>
+                          <button type="submit" :disabled="deleteAccount.busy || !online" class="danger-btn rounded-xl py-2.5 text-tiny font-bold caps tracking-widest">{{ deleteAccount.busy ? '...' : t('settings.deleteForever') }}</button>
                       </div>
                   </form>
               </div>
 
-              <p class="mt-6 text-center font-mono text-[9px] uppercase tracking-widest text-slate-600">{{ t('settings.version') }}</p>
+              <p class="mt-6 text-center font-mono text-micro caps tracking-widest text-slate-600">{{ t('settings.version') }}</p>
           </div>
       </div>
   </transition>

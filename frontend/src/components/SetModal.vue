@@ -52,34 +52,34 @@ const modalTechnique = computed(() => {
               <div class="mb-6 flex items-start justify-between gap-3">
                   <div class="min-w-0">
                       <h3 class="text-2xl display text-white">{{ exerciseName(modalEx) }}</h3>
-                      <p class="mt-1 text-xs font-bold uppercase tracking-widest text-accent">{{ muscleName(modalEx.muscleGroup) }} · {{ t(`tracking.${modalType}`) }}</p>
+                      <p class="mt-1 text-xs font-bold caps tracking-widest text-slate-400">{{ muscleName(modalEx.muscleGroup) }} · {{ t(`tracking.${modalType}`) }}</p>
                   </div>
                   <button @click="closeSetModal" class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>
               </div>
 
               <div v-if="modalTarget && setModal.editIndex === null" class="mb-5 rounded-xl border border-accent/30 bg-accent/5 px-4 py-3">
                   <div class="flex items-center justify-between">
-                      <span class="text-[9px] font-bold uppercase tracking-widest text-accent">{{ t('set.plan', { text: prescriptionText(modalTarget) }) }}</span>
-                      <span class="font-mono text-[10px] text-slate-400">{{ modalSessionSets.filter(s => !s.isWarmup).length }}/{{ modalTarget.sets }}</span>
+                      <span class="text-micro font-bold caps tracking-widest text-accent">{{ t('set.plan', { text: prescriptionText(modalTarget) }) }}</span>
+                      <span class="font-mono text-tiny text-slate-400">{{ modalSessionSets.filter(s => !s.isWarmup).length }}/{{ modalTarget.sets }}</span>
                   </div>
-                  <div class="mt-1 font-mono text-[10px]" :class="modalTarget.suggestion.kind === 'progress' ? 'text-yellow-400' : 'text-slate-400'">{{ suggestionNote(modalTarget.suggestion) }}</div>
+                  <div class="mt-1 font-mono text-tiny" :class="modalTarget.suggestion.kind === 'progress' ? 'text-yellow-400' : 'text-slate-400'">{{ suggestionNote(modalTarget.suggestion) }}</div>
               </div>
 
               <!-- Technik: animierte Figur + Hinweise -->
               <div v-if="modalTechnique.motion || modalTechnique.technique" class="mb-5 overflow-hidden rounded-2xl border border-white/5 bg-black/30">
                   <button @click="settings.showTechnique = !settings.showTechnique" class="flex w-full items-center justify-between px-4 py-2.5 text-left" :aria-expanded="settings.showTechnique">
                       <span class="label-xs">{{ t('set.technique') }}</span>
-                      <span class="font-mono text-[10px] text-slate-500">{{ settings.showTechnique ? t('common.hide') : t('common.show') }}</span>
+                      <span class="font-mono text-tiny text-slate-500">{{ settings.showTechnique ? t('common.hide') : t('common.show') }}</span>
                   </button>
                   <div v-if="settings.showTechnique" class="flex gap-3 border-t border-white/5 p-3">
                       <ExerciseFigure v-if="modalTechnique.motion" :motion="modalTechnique.motion" class="block h-44 w-[46%] max-w-[220px] flex-shrink-0 rounded-xl fx-stage" />
                       <div v-if="modalTechnique.technique" class="min-w-0 flex-1">
                           <div class="mb-2 flex flex-wrap gap-1">
-                              <span v-for="m in modalTechnique.technique.muscles" :key="m" class="rounded-md border border-accent/20 bg-accent/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-accent">{{ m }}</span>
+                              <span v-for="m in modalTechnique.technique.muscles" :key="m" class="rounded-md border border-accent/20 bg-accent/10 px-2 py-0.5 text-micro font-bold caps tracking-widest text-accent">{{ m }}</span>
                           </div>
                           <ol class="space-y-1.5">
                               <li v-for="(cue, i) in modalTechnique.technique.cues" :key="i" class="flex gap-2 text-xs leading-snug text-slate-300">
-                                  <span class="font-mono text-[10px] font-bold text-accent">{{ i + 1 }}</span><span>{{ cue }}</span>
+                                  <span class="font-mono text-tiny font-bold text-accent">{{ i + 1 }}</span><span>{{ cue }}</span>
                               </li>
                           </ol>
                       </div>
@@ -89,15 +89,15 @@ const modalTechnique = computed(() => {
               <div v-if="modalPrevious && setModal.editIndex === null" @click="copyPrevious" role="button" tabindex="0"
                    class="group mb-5 flex cursor-pointer items-center justify-between rounded-xl border border-accent/20 bg-accent/5 p-4 transition-all hover:border-accent/50 hover:bg-accent/15">
                   <div>
-                      <div class="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">{{ t('set.previous', { when: formatRelative(modalPrevious.date, clockDate) }) }}</div>
+                      <div class="mb-1 text-micro font-bold caps tracking-widest text-slate-400">{{ t('set.previous', { when: formatRelative(modalPrevious.date, clockDate) }) }}</div>
                       <div class="font-mono text-sm font-bold text-white group-hover:text-accent">{{ describeSet(modalPrevious, modalType) }}</div>
                   </div>
-                  <span class="rounded-lg border border-accent/20 bg-accent/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-accent group-hover:bg-accent group-hover:text-black">{{ t('common.copy') }}</span>
+                  <span class="rounded-lg border border-accent/20 bg-accent/10 px-3 py-1.5 text-tiny font-bold caps tracking-widest text-accent group-hover:bg-accent group-hover:text-black">{{ t('common.copy') }}</span>
               </div>
 
               <div v-if="modalSessionSets.length && setModal.editIndex === null" class="mb-5 flex flex-wrap gap-1.5">
-                  <span class="mr-1 self-center text-[9px] font-bold uppercase tracking-widest text-slate-500">{{ t('set.today') }}</span>
-                  <span v-for="(s, i) in modalSessionSets" :key="i" class="rounded-md border border-white/10 bg-white/5 px-2 py-1 font-mono text-[10px] text-slate-300">{{ describeSet(s, modalType) }}</span>
+                  <span class="mr-1 self-center text-micro font-bold caps tracking-widest text-slate-500">{{ t('set.today') }}</span>
+                  <span v-for="(s, i) in modalSessionSets" :key="i" class="rounded-md border border-white/10 bg-white/5 px-2 py-1 font-mono text-tiny text-slate-300">{{ describeSet(s, modalType) }}</span>
               </div>
 
               <!-- Gewicht × Wiederholungen -->
@@ -109,7 +109,7 @@ const modalTechnique = computed(() => {
                   <div v-else class="mb-6 rounded-2xl border border-white/5 bg-black/30 p-4">
                       <div class="mb-3 flex items-center justify-between">
                           <span class="label-xs">{{ t('set.telemetry') }}</span>
-                          <span class="rounded border border-white/5 bg-black/40 px-2 py-1 text-[9px] font-black uppercase tracking-widest" :class="modalZone.color">{{ tDynamic(`set.zones.${modalZone.key}`, modalZone.key) }}</span>
+                          <span class="rounded border border-white/5 bg-black/40 px-2 py-1 text-micro font-black caps tracking-widest" :class="modalZone.color">{{ tDynamic(`set.zones.${modalZone.key}`, modalZone.key) }}</span>
                       </div>
                       <div class="grid grid-cols-2 gap-4">
                           <div>
@@ -150,16 +150,16 @@ const modalTechnique = computed(() => {
                   <div class="mb-6 rounded-2xl border border-white/5 bg-black/30 p-4">
                       <div class="mb-3 flex items-center justify-between">
                           <span class="label-xs">{{ t('set.telemetry') }}</span>
-                          <span v-if="modalRecord?.topSpeed" class="font-mono text-[9px] font-bold uppercase tracking-widest text-slate-400">{{ t('set.top', { speed: formatNumber(msToKmh(modalRecord.topSpeed.value)) }) }}</span>
+                          <span v-if="modalRecord?.topSpeed" class="font-mono text-micro font-bold caps tracking-widest text-slate-400">{{ t('set.top', { speed: formatNumber(msToKmh(modalRecord.topSpeed.value)) }) }}</span>
                       </div>
                       <div class="grid grid-cols-3 gap-3">
                           <div>
                               <div class="mb-1 font-mono text-xs text-slate-500">{{ t('set.speed') }}</div>
-                              <div class="font-mono text-xl font-black text-white">{{ modalSpeed > 0 ? formatNumber(msToKmh(modalSpeed)) : '--' }}<span class="ml-1 text-[10px] text-slate-500">{{ t('units.kmh') }}</span></div>
+                              <div class="font-mono text-xl font-black text-white">{{ modalSpeed > 0 ? formatNumber(msToKmh(modalSpeed)) : '--' }}<span class="ml-1 text-tiny text-slate-500">{{ t('units.kmh') }}</span></div>
                           </div>
                           <div>
                               <div class="mb-1 font-mono text-xs text-slate-500">{{ t('set.pace') }}</div>
-                              <div class="font-mono text-xl font-black text-white">{{ modalSpeed > 0 ? formatNumber(modalSpeed, 2) : '--' }}<span class="ml-1 text-[10px] text-slate-500">{{ t('units.ms') }}</span></div>
+                              <div class="font-mono text-xl font-black text-white">{{ modalSpeed > 0 ? formatNumber(modalSpeed, 2) : '--' }}<span class="ml-1 text-tiny text-slate-500">{{ t('units.ms') }}</span></div>
                           </div>
                           <div>
                               <div class="mb-1 font-mono text-xs text-slate-500">{{ t('set.vsBest') }}</div>
@@ -236,7 +236,7 @@ const modalTechnique = computed(() => {
                           <input id="in-duration" v-model.number="setModal.time" type="number" inputmode="numeric" min="0" step="1" class="stepper-input">
                           <button @click="step('time', 5, 0, 0)" class="stepper-btn" :aria-label="t('set.increase', { what: t('set.fields.duration') })">+</button>
                       </div>
-                      <p v-if="modalRecord?.longest" class="mt-2 font-mono text-[10px] text-slate-500">{{ t('set.longest', { time: formatSeconds(modalRecord.longest.value) }) }}</p>
+                      <p v-if="modalRecord?.longest" class="mt-2 font-mono text-tiny text-slate-500">{{ t('set.longest', { time: formatSeconds(modalRecord.longest.value) }) }}</p>
                   </div>
               </template>
 
@@ -244,7 +244,7 @@ const modalTechnique = computed(() => {
               <div class="mb-6">
                   <div class="mb-2 flex items-center justify-between">
                       <span class="label-xs">{{ settings.useRir ? t('set.rir') : t('set.rpe') }} <span class="normal-case tracking-normal text-slate-500">{{ settings.useRir ? t('set.rirHint') : t('set.rpeHint') }}</span></span>
-                      <label class="flex cursor-pointer items-center gap-2 text-[10px] font-bold uppercase tracking-widest" :class="setModal.isWarmup ? 'text-orange-300' : 'text-slate-500'">
+                      <label class="flex cursor-pointer items-center gap-2 text-tiny font-bold caps tracking-widest" :class="setModal.isWarmup ? 'text-orange-300' : 'text-slate-500'">
                           <input v-model="setModal.isWarmup" type="checkbox" class="h-4 w-4"> {{ t('set.warmup') }}
                       </label>
                   </div>
@@ -256,21 +256,21 @@ const modalTechnique = computed(() => {
 
               <!-- Notiz zum Satz -->
               <div class="mb-6">
-                  <button v-if="!setModal.showNote" type="button" @click="setModal.showNote = true" class="text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-accent">{{ t('set.addNote') }}</button>
+                  <button v-if="!setModal.showNote" type="button" @click="setModal.showNote = true" class="text-tiny font-bold caps tracking-widest text-slate-500 hover:text-accent">{{ t('set.addNote') }}</button>
                   <template v-else>
                       <label for="in-set-note" class="label-xs mb-2 block">{{ t('set.note') }}</label>
                       <input id="in-set-note" v-model="setModal.note" maxlength="200" class="cyber-input w-full rounded-xl p-3 text-sm" :placeholder="t('set.notePlaceholder')">
                   </template>
               </div>
 
-              <p v-if="modalIsNewPR" class="mb-3 text-center text-[10px] font-black uppercase tracking-widest text-yellow-400">{{ t('set.newRecord') }}</p>
+              <p v-if="modalIsNewPR" class="mb-3 text-center text-tiny font-black caps tracking-widest text-yellow-400">{{ t('set.newRecord') }}</p>
 
               <button @click="saveSet" class="cyber-btn w-full rounded-xl py-4 text-lg font-bold">{{ setModal.editIndex !== null ? t('set.update') : t('set.log') }}</button>
               <button v-if="setModal.editIndex !== null" type="button" @click="deleteEditedSet" class="danger-btn mt-3 w-full rounded-xl py-3.5 text-sm font-bold" data-test="delete-set">{{ t('set.delete') }}</button>
-              <p v-if="settings.autoTimer && setModal.editIndex === null && !isEditing" class="mt-3 text-center font-mono text-[10px] text-slate-500">{{ t('set.autoTimer', { seconds: modalTarget?.restSeconds || (modalEx.category === 'Football' ? settings.restField : settings.restGym) }) }}</p>
+              <p v-if="settings.autoTimer && setModal.editIndex === null && !isEditing" class="mt-3 text-center font-mono text-tiny text-slate-500">{{ t('set.autoTimer', { seconds: modalTarget?.restSeconds || (modalEx.category === 'Football' ? settings.restField : settings.restGym) }) }}</p>
 
               <div v-if="modalEx.isCustom" class="mt-6 border-t border-white/5 pt-4 text-center">
-                  <button @click="deleteCustomExercise(modalEx)" class="text-[10px] font-bold uppercase tracking-widest text-red-400/80 hover:text-red-400">{{ t('set.deleteCustom') }}</button>
+                  <button @click="deleteCustomExercise(modalEx)" class="text-tiny font-bold caps tracking-widest text-red-400/80 hover:text-red-400">{{ t('set.deleteCustom') }}</button>
               </div>
           </div>
       </div>

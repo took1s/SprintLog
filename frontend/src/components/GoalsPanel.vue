@@ -17,7 +17,6 @@ const { exerciseFor } = app;
   <section class="glass-panel rounded-3xl p-5" data-test="goals-panel">
       <div class="mb-4 flex items-center justify-between gap-3">
           <div>
-              <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('goals.kicker') }}</p>
               <h2 class="display text-2xl text-white">{{ t('goals.title') }}</h2>
           </div>
           <button type="button" @click="goals.openNewGoal()" class="btn-secondary flex-shrink-0 rounded-xl px-4 py-2.5 text-xs" data-test="goal-new">+ {{ t('goals.add') }}</button>
@@ -41,7 +40,7 @@ const { exerciseFor } = app;
                   </div>
                   <div class="mt-3 flex items-center justify-between gap-2">
                       <span class="min-w-0 truncate font-mono text-xs font-bold text-white">{{ prescriptionLabel(v.next, v.goal) }}</span>
-                      <span v-if="v.progress.onTrack != null && !v.progress.achieved" class="flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-label"
+                      <span v-if="v.progress.onTrack != null && !v.progress.achieved" class="flex-shrink-0 rounded-full px-2 py-0.5 text-tiny font-bold caps tracking-label"
                             :class="v.progress.onTrack ? 'bg-emerald-400/15 text-emerald-400' : 'bg-orange-400/15 text-orange-300'">{{ v.progress.onTrack ? t('goals.onTrack') : t('goals.behind') }}</span>
                   </div>
                   <div class="mt-1 font-mono text-[11px] leading-relaxed text-slate-500">
