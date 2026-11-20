@@ -12,7 +12,7 @@ const { finishSession } = app;
 
 <template>
   <transition name="slide-up">
-      <div v-if="sessionActive && tab === 'Plan'" class="pointer-events-none fixed bottom-0 left-0 right-0 z-30 flex justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
+      <div v-if="sessionActive && tab === 'Plan'" class="session-bar pointer-events-none fixed left-0 right-0 z-30 flex justify-center px-4 pb-2">
           <div class="glass-panel modal-panel pointer-events-auto flex w-full max-w-3xl items-center justify-between gap-3 rounded-3xl p-3">
               <div class="flex min-w-0 items-center gap-3">
                   <div class="hidden h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-accent/15 font-mono font-bold text-accent sm:flex">{{ session.sets.length }}</div>

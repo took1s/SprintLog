@@ -186,7 +186,7 @@ onBeforeUnmount(() => { window.clearInterval(ticker); player.stop(); });
       <!-- Ergebnis prüfen -->
       <template v-else-if="view === 'confirm'">
           <div class="flex flex-1 flex-col items-center justify-center px-6 text-center">
-              <p class="text-xs font-bold uppercase tracking-label text-slate-400">{{ t('testDay.endur.lastCompleted') }}</p>
+              <p class="text-xs font-bold caps tracking-label text-slate-400">{{ t('testDay.endur.lastCompleted') }}</p>
               <div class="mt-4 flex items-center gap-4">
                   <button type="button" class="player-ctl" :aria-label="t('testDay.endur.less')" :disabled="completed <= minCompleted" data-test="endurance-less" @click="adjust(-1)">−</button>
                   <p class="min-w-[7rem]" data-test="endurance-result">
@@ -222,7 +222,7 @@ onBeforeUnmount(() => { window.clearInterval(ticker); player.stop(); });
       <!-- Fertig -->
       <template v-else>
           <div class="flex flex-1 flex-col items-center justify-center px-6 text-center" data-test="endurance-done">
-              <p class="text-xs font-bold uppercase tracking-label text-slate-400">{{ t(`tests.names.${kind}`) }}</p>
+              <p class="text-xs font-bold caps tracking-label text-slate-400">{{ t(`tests.names.${kind}`) }}</p>
               <p class="mt-2 font-mono text-4xl font-black text-white">{{ shownResult }}</p>
               <span v-if="level" class="level-chip mt-3" :class="`is-${level}`">{{ t(`tests.levels.${level}`) }}</span>
               <button type="button" class="routine-link mt-4" @click="view = 'intro'">{{ t('testDay.endur.redo') }}</button>

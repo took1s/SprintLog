@@ -12,7 +12,8 @@ const dayChip = (date: string, isToday: boolean, i: number) => (isToday ? t('wel
 const { openCheckIn, saveCheckIn, setWellnessValue } = app;
 
 const tone = (value: number | null) => ({ good: 'text-emerald-300', ok: 'text-yellow-300', low: 'text-red-300' } as const)[readinessLevel(value) ?? 'ok'];
-const bar = (value: number | null) => ({ good: 'bg-emerald-400', ok: 'bg-yellow-400', low: 'bg-red-400' } as const)[readinessLevel(value) ?? 'ok'];
+// Farbe nur für die Ausreißer: normal = neutral, gut = grün, niedrig = rot (sonst ist die Leiste eine gelbe Wand)
+const bar = (value: number | null) => ({ good: 'bg-emerald-400', ok: 'bg-white/30', low: 'bg-red-400' } as const)[readinessLevel(value) ?? 'ok'];
 </script>
 
 <template>
@@ -20,7 +21,7 @@ const bar = (value: number | null) => ({ good: 'bg-emerald-400', ok: 'bg-yellow-
       <div class="mb-3 flex items-start justify-between gap-3">
           <div>
               <h3 class="display text-white">{{ t('wellness.title') }}</h3>
-              <p class="font-mono text-[10px] text-slate-500">{{ t('wellness.subtitle') }}</p>
+              <p class="font-mono text-tiny text-slate-500">{{ t('wellness.subtitle') }}</p>
           </div>
           <div v-if="readinessToday != null" class="text-right">
               <div class="font-mono text-2xl font-black" :class="tone(readinessToday)" data-test="readiness">{{ readinessToday }}%</div>
@@ -44,7 +45,7 @@ const bar = (value: number | null) => ({ good: 'bg-emerald-400', ok: 'bg-yellow-
           <div v-for="field in WELLNESS_FIELDS" :key="field">
               <div class="mb-1 flex items-baseline justify-between">
                   <span class="label-xs">{{ t(`wellness.fields.${field}`) }}</span>
-                  <span class="font-mono text-[9px] text-slate-500">1 = {{ t(`wellness.low.${field}`) }} · 5 = {{ t(`wellness.high.${field}`) }}</span>
+                  <span class="font-mono text-micro text-slate-500">1 = {{ t(`wellness.low.${field}`) }} · 5 = {{ t(`wellness.high.${field}`) }}</span>
               </div>
               <div class="grid grid-cols-5 gap-1.5" role="radiogroup" :aria-label="t(`wellness.fields.${field}`)">
                   <button v-for="n in 5" :key="n" type="button" role="radio" :aria-checked="checkIn[field] === n" @click="setWellnessValue(field, n)" :data-wellness="`${field}-${n}`"
@@ -71,7 +72,7 @@ const bar = (value: number | null) => ({ good: 'bg-emerald-400', ok: 'bg-yellow-
               <div v-for="d in readinessDays" :key="d.date" class="flex-1 rounded-sm" :title="`${formatDate(d.date, { day: '2-digit', month: 'short' })}${d.value != null ? `: ${d.value}%` : ''}`"
                    :class="d.value == null ? 'bg-white/5' : bar(d.value)" :style="{ height: d.value == null ? '12%' : Math.max(12, d.value) + '%' }"></div>
           </div>
-          <div class="mb-3 flex justify-between font-mono text-[9px] text-slate-500">
+          <div class="mb-3 flex justify-between font-mono text-micro text-slate-500">
               <span>{{ t('wellness.trend') }}</span>
               <span v-if="readinessWeek != null">{{ t('wellness.week') }}: {{ readinessWeek }}%</span>
           </div>

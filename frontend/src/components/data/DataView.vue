@@ -72,7 +72,7 @@ useSwipeNav(content, (dir) => {
           <Spinner v-else-if="loadingHistory" />
 
           <div v-else-if="!allWorkouts.length" class="glass-panel rounded-2xl px-6 py-12 text-center">
-            <p class="font-mono text-sm uppercase tracking-widest text-slate-400">{{ t('data.empty') }}</p>
+            <p class="font-mono text-sm caps tracking-widest text-slate-400">{{ t('data.empty') }}</p>
             <p class="mt-2 text-xs text-slate-500">{{ t('data.emptyInfo') }}</p>
             <button @click="tab = 'Gym'" class="cyber-btn mt-6 rounded-xl px-5 py-3 text-xs font-bold">{{ t('data.startTraining') }}</button>
           </div>

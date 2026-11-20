@@ -52,7 +52,7 @@ function goal() {
           <div v-sheet-drag="closeExerciseInfo" class="glass-panel modal-panel flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="exerciseName(ex)" data-test="exercise-info">
               <div class="flex items-start justify-between gap-3 px-6 pb-3 pt-6">
                   <div class="min-w-0">
-                      <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ muscleName(ex.muscleGroup) }} · {{ t(`tracking.${ex.trackingType}`) }}</p>
+                      <p class="text-tiny font-bold caps text-accent tracking-label">{{ muscleName(ex.muscleGroup) }} · {{ t(`tracking.${ex.trackingType}`) }}</p>
                       <h2 class="display mt-1 text-2xl leading-tight text-white">{{ exerciseName(ex) }}</h2>
                   </div>
                   <button type="button" @click="closeExerciseInfo" class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>
@@ -72,7 +72,7 @@ function goal() {
                   </div>
                   <!-- Beschreibung (v. a. Übungen des KI-Coachs) -->
                   <div v-if="ex.description" class="mb-4 rounded-2xl border border-white/5 bg-black/30 p-4" data-test="info-description">
-                      <p v-if="ex.byCoach" class="mb-2 text-[10px] font-bold uppercase text-accent tracking-label">{{ t('info.byCoach') }}</p>
+                      <p v-if="ex.byCoach" class="mb-2 text-tiny font-bold caps text-accent tracking-label">{{ t('info.byCoach') }}</p>
                       <p class="whitespace-pre-line text-sm leading-relaxed text-slate-200">{{ ex.description }}</p>
                   </div>
                   <!-- Technik -->
@@ -80,11 +80,11 @@ function goal() {
                       <ExerciseFigure v-if="technique.motion" :motion="technique.motion" class="fx-stage block h-48 w-full" />
                       <div v-if="technique.technique" class="p-4">
                           <div class="mb-3 flex flex-wrap gap-1">
-                              <span v-for="m in technique.technique.muscles" :key="m" class="rounded-md border border-accent/20 bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase text-accent tracking-label">{{ m }}</span>
+                              <span v-for="m in technique.technique.muscles" :key="m" class="rounded-md border border-accent/20 bg-accent/10 px-2 py-0.5 text-tiny font-bold caps text-accent tracking-label">{{ m }}</span>
                           </div>
                           <ol class="space-y-2">
                               <li v-for="(cue, i) in technique.technique.cues" :key="i" class="flex gap-3 text-sm leading-snug text-slate-200">
-                                  <span class="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-accent/15 font-mono text-[10px] font-bold text-accent">{{ i + 1 }}</span>
+                                  <span class="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-accent/15 font-mono text-tiny font-bold text-accent">{{ i + 1 }}</span>
                                   <span>{{ cue }}</span>
                               </li>
                           </ol>
@@ -93,23 +93,23 @@ function goal() {
                   <p v-else-if="!ex.description" class="rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-sm text-slate-500">{{ t('info.noTechnique') }}</p>
 
                   <!-- Eigene Werte -->
-                  <h3 class="mb-2 mt-5 text-[10px] font-bold uppercase text-slate-400 tracking-label">{{ t('info.yourNumbers') }}</h3>
+                  <h3 class="mb-2 mt-5 text-tiny font-bold caps text-slate-400 tracking-label">{{ t('info.yourNumbers') }}</h3>
                   <div v-if="record" class="grid grid-cols-2 gap-2">
                       <div class="rounded-xl bg-white/5 p-3">
-                          <div class="text-[10px] font-bold uppercase text-slate-500 tracking-label">{{ t('info.last') }}</div>
+                          <div class="text-tiny font-bold caps text-slate-500 tracking-label">{{ t('info.last') }}</div>
                           <div class="mt-1 truncate font-mono text-sm font-bold text-white">{{ lastSetLabel(ex) || '-' }}</div>
                       </div>
                       <div class="rounded-xl bg-white/5 p-3">
-                          <div class="text-[10px] font-bold uppercase text-slate-500 tracking-label">{{ t('info.sessions') }}</div>
+                          <div class="text-tiny font-bold caps text-slate-500 tracking-label">{{ t('info.sessions') }}</div>
                           <div class="mt-1 font-mono text-sm font-bold text-white">{{ record.sessions }}</div>
                       </div>
                       <template v-if="isWeight">
                           <div class="rounded-xl bg-white/5 p-3">
-                              <div class="text-[10px] font-bold uppercase text-slate-500 tracking-label">{{ t('info.best') }}</div>
+                              <div class="text-tiny font-bold caps text-slate-500 tracking-label">{{ t('info.best') }}</div>
                               <div class="mt-1 font-mono text-sm font-bold text-white">{{ record.maxWeight ? formatNumber(record.maxWeight.value, 2) + ' ' + t('units.kg') : '-' }}</div>
                           </div>
                           <div class="rounded-xl bg-white/5 p-3">
-                              <div class="text-[10px] font-bold uppercase text-slate-500 tracking-label">{{ t('info.e1rm') }}</div>
+                              <div class="text-tiny font-bold caps text-slate-500 tracking-label">{{ t('info.e1rm') }}</div>
                               <div class="mt-1 font-mono text-sm font-bold text-white">{{ record.maxE1RM ? formatNumber(record.maxE1RM.value, 1) + ' ' + t('units.kg') : '-' }}</div>
                           </div>
                       </template>
@@ -118,7 +118,7 @@ function goal() {
 
                   <!-- Kraft-Ziel -->
                   <template v-if="isWeight">
-                      <h3 class="mb-2 mt-5 text-[10px] font-bold uppercase text-slate-400 tracking-label">{{ t('goals.title') }}</h3>
+                      <h3 class="mb-2 mt-5 text-tiny font-bold caps text-slate-400 tracking-label">{{ t('goals.title') }}</h3>
                       <button v-if="goalView" type="button" @click="goal" class="w-full rounded-2xl border border-accent/30 bg-accent/5 p-4 text-left transition-colors hover:bg-accent/10" data-test="info-goal">
                           <div class="flex items-baseline justify-between gap-2">
                               <span class="display text-lg text-white">{{ goalTargetLabel(goalView.goal) }}</span>

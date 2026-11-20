@@ -18,10 +18,10 @@ export const useUiStore = defineStore('ui', () => {
   function dismiss(id: number) { toasts.value = toasts.value.filter((t) => t.id !== id); }
 
   /** Kurze Meldung; mit `action` (z. B. Rückgängig) bleibt sie länger stehen. */
-  function toast(message: string, tone: ToastTone = 'info', action?: ToastAction) {
+  function toast(message: string, tone: ToastTone = 'info', action?: ToastAction, ms?: number) {
     const id = Date.now() + Math.random();
     toasts.value = [...toasts.value.slice(-2), { id, message, tone, action }];
-    setTimeout(() => dismiss(id), action ? 6000 : tone === 'error' ? 5000 : 3000);
+    setTimeout(() => dismiss(id), ms ?? (action ? 6000 : tone === 'error' ? 5000 : 3000));
   }
 
   function runAction(id: number) {

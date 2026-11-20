@@ -41,7 +41,7 @@ function openAthlete() { app.tab = 'Data'; app.dataTab = 'athlete'; }
               <span class="block text-sm font-bold text-white">{{ t('body.protein') }}</span>
               <span class="block font-mono text-[11px] text-slate-400">{{ protein.today }}<template v-if="protein.target"> / {{ protein.target.goal }}</template> g</span>
           </button>
-          <button type="button" class="protein-btn !min-h-[2.5rem] px-3" data-protein-quick @click="athlete.addProtein(30)">+30 g</button>
+          <button type="button" class="protein-btn !min-h-[2.5rem] px-3" data-protein-quick @click="athlete.addProtein(30)">+30 {{ t('units.g') }}</button>
       </div>
       <!-- Тренировка с командой: записать после тренировки (минуты × RPE идут в нагрузку) -->
       <button v-if="teamDue" type="button" class="todo-row w-full text-left" data-test="todo-team" @click="app.openTeamModal()">

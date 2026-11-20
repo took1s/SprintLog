@@ -26,7 +26,7 @@ const clock = computed(() => { const s = Math.ceil(left.value / 1000); return `$
               </svg>
               <span class="player-time absolute" :class="{ 'is-low': left <= 3000 }" role="timer" data-test="rest-time">{{ clock }}</span>
           </div>
-          <p class="mt-6 text-xs font-bold uppercase tracking-label text-slate-400">{{ t('testDay.restNext') }}</p>
+          <p class="mt-6 text-xs font-bold caps tracking-label text-slate-400">{{ t('testDay.restNext') }}</p>
           <p class="mt-1 text-lg font-bold text-white" data-test="rest-next">{{ next }}</p>
           <p class="mt-3 max-w-xs text-xs leading-relaxed text-slate-400">{{ kind === 'block' ? t('testDay.restBlockHint') : t('testDay.restHint') }}</p>
       </div>

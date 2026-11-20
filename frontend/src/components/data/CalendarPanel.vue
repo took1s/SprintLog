@@ -204,7 +204,6 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
       <!-- Kopf: Titel, Monat/Jahr, Blättern -->
       <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-              <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('calendar.kicker') }}</p>
               <h3 class="display mt-0.5 truncate text-2xl text-white" aria-live="polite" data-test="calendar-title">{{ title }}</h3>
           </div>
           <div class="flex flex-shrink-0 items-center gap-1">
@@ -220,7 +219,7 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
       <div class="mt-3 flex items-center gap-2">
       <div class="grid flex-1 grid-cols-2 gap-1 rounded-2xl border border-white/10 bg-black/20 p-1" role="group" :aria-label="t('calendar.title')">
           <button v-for="v in (['month', 'year'] as const)" :key="v" type="button" @click="setView(v)" :aria-pressed="view === v" :data-test="`calendar-view-${v}`"
-                  class="min-h-[2.5rem] rounded-xl text-xs font-bold uppercase tracking-label transition-colors"
+                  class="min-h-[2.5rem] rounded-xl text-xs font-bold caps tracking-label transition-colors"
                   :class="view === v ? 'bg-accent text-on-accent' : 'text-slate-300 hover:text-white'">{{ t(`calendar.views.${v}`) }}</button>
       </div>
       <button v-if="!isCurrent" type="button" @click="goToday" class="chip chip-idle min-h-[2.75rem] flex-shrink-0" data-test="calendar-today">{{ t('calendar.today') }}</button>
@@ -229,14 +228,14 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
       <!-- Kennzahlen des Zeitraums -->
       <dl class="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-6 sm:px-0" data-test="calendar-stats">
           <div v-for="s in stats" :key="s.key" class="min-w-[5.75rem] flex-shrink-0 rounded-2xl border border-white/5 bg-white/[0.03] px-3 py-2 sm:min-w-0">
-              <dt class="truncate text-[10px] font-bold uppercase text-slate-400 tracking-label">{{ t(`calendar.stats.${s.key}`) }}</dt>
+              <dt class="truncate text-tiny font-bold caps text-slate-400 tracking-label">{{ t(`calendar.stats.${s.key}`) }}</dt>
               <dd class="mt-0.5 font-mono text-lg font-black leading-none text-white tabular-nums" :data-stat="s.key">{{ s.value }}</dd>
           </div>
       </dl>
 
       <!-- ===== Monat ===== -->
       <div v-if="view === 'month'" class="mt-4">
-          <div class="grid grid-cols-7 gap-1 pb-1.5 text-center text-[10px] font-bold uppercase text-slate-400 tracking-label" aria-hidden="true">
+          <div class="grid grid-cols-7 gap-1 pb-1.5 text-center text-tiny font-bold caps text-slate-400 tracking-label" aria-hidden="true">
               <span v-for="w in weekdays" :key="w">{{ w }}</span>
           </div>
           <div data-own-swipe class="cal-swipe -m-1 overflow-hidden p-1" @pointerdown="swipeStart" @pointerup="swipeEnd" @pointercancel="start = null">
@@ -262,7 +261,7 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
           </div>
 
           <!-- Legende -->
-          <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-slate-400">
+          <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-tiny text-slate-400">
               <span class="flex items-center gap-1">{{ t('calendar.legend.load') }}
                   <span v-for="l in 4" :key="l" class="h-2.5 w-2.5 rounded-[3px]" :class="HEAT[l]"></span>
               </span>
@@ -278,7 +277,7 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
           <!-- Tag -->
           <div class="mt-4 border-t border-white/5 pt-4" data-test="calendar-day">
               <template v-if="selectedDay && selectedDate">
-                  <p class="text-[11px] font-bold uppercase text-accent tracking-label">{{ formatDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }}</p>
+                  <p class="text-[11px] font-bold caps text-accent tracking-label">{{ formatDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }}</p>
                   <ul v-if="selected" class="mt-2 space-y-2">
                       <li v-for="w in selected.workouts" :key="workoutKey(w)" class="rounded-2xl border border-white/5 bg-black/20 p-3" data-test="calendar-workout">
                           <div class="flex flex-col gap-0.5">
@@ -286,9 +285,9 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
                                   <i class="h-2 w-2 flex-shrink-0 rounded-full" :class="KIND_DOT[((KINDS as readonly string[]).includes(w.workoutType) ? w.workoutType : 'Gym') as CalendarKind]" aria-hidden="true"></i>
                                   <span class="truncate">{{ categoryName(w.workoutType) }} · {{ formatTime(w.date) }}</span>
                               </span>
-                              <span class="font-mono text-[10px] text-slate-400">{{ workoutStats(w) }}</span>
+                              <span class="font-mono text-tiny text-slate-400">{{ workoutStats(w) }}</span>
                           </div>
-                          <p v-if="w.sets.length" class="mt-1 truncate font-mono text-[10px] text-slate-400">{{ groupSetsByExercise(w.sets).map((g) => exerciseName(g.exerciseId, g.name)).join(', ') }}</p>
+                          <p v-if="w.sets.length" class="mt-1 truncate font-mono text-tiny text-slate-400">{{ groupSetsByExercise(w.sets).map((g) => exerciseName(g.exerciseId, g.name)).join(', ') }}</p>
                       </li>
                   </ul>
                   <p v-if="selectedPlan !== 'rest'" class="mt-2 flex items-center gap-2 text-sm text-slate-300" data-test="calendar-plan-day">
@@ -306,7 +305,7 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
                       <li v-for="p in selectedSessions" :key="p.clientId" class="rounded-2xl border border-accent/30 bg-accent/5 p-3" data-test="calendar-session">
                           <div class="flex items-start justify-between gap-2">
                               <span class="min-w-0">
-                                  <span class="block text-[10px] font-bold uppercase text-accent tracking-label">{{ p.replacesPlan ? t('planned.replacedBadge') : t('calendar.day.session') }}<template v-if="p.source === 'coach'"> · {{ t('planned.byCoach') }}</template></span>
+                                  <span class="block text-tiny font-bold caps text-accent tracking-label">{{ p.replacesPlan ? t('planned.replacedBadge') : t('calendar.day.session') }}<template v-if="p.source === 'coach'"> · {{ t('planned.byCoach') }}</template></span>
                                   <span class="block break-words text-sm font-bold text-white">{{ p.title }}</span>
                               </span>
                               <span class="planned-status flex-shrink-0" :data-status="displayStatus(p, todayKey)">{{ t(`planned.status.${displayStatus(p, todayKey)}`) }}</span>
@@ -325,7 +324,7 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
 
                   <!-- Routinen des Tages: abhaken/nachtragen bis heute -->
                   <div v-if="selectedRoutines?.due.length" class="mt-3" data-test="calendar-routines">
-                      <p class="flex items-baseline justify-between text-[10px] font-bold uppercase text-slate-400 tracking-label">
+                      <p class="flex items-baseline justify-between text-tiny font-bold caps text-slate-400 tracking-label">
                           <span>{{ t('calendar.day.routines') }}</span>
                           <span class="font-mono normal-case tracking-normal">{{ t('calendar.day.routinesDone', { done: selectedRoutines.done, total: selectedRoutines.due.length }) }}</span>
                       </p>
@@ -354,9 +353,9 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
                   <div class="flex h-20 items-end gap-1" data-test="calendar-bars">
                       <button v-for="(n, m) in perMonth" :key="m" type="button" @click="openMonth(m)" class="group flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1"
                               :aria-label="t('calendar.openMonth', { month: capitalize(monthName(m)), count: tn('units.workouts', n) })">
-                          <span class="font-mono text-[9px] text-slate-400 tabular-nums">{{ n || '' }}</span>
+                          <span class="font-mono text-micro text-slate-400 tabular-nums">{{ n || '' }}</span>
                           <span class="cal-bar w-full rounded-t-md" :class="n ? 'bg-accent' : 'bg-white/5'" :style="{ height: `${Math.max(4, (n / maxPerMonth) * 52)}px` }"></span>
-                          <span class="text-[9px] font-bold uppercase text-slate-400 group-hover:text-white">{{ monthName(m, 'short').slice(0, 3) }}</span>
+                          <span class="text-micro font-bold caps text-slate-400 group-hover:text-white">{{ monthName(m, 'short').slice(0, 3) }}</span>
                       </button>
                   </div>
 
@@ -369,8 +368,8 @@ const stats = computed(() => statItems(view.value === 'month' ? mStats.value : y
                               :class="[mm.current ? 'border-accent/60 bg-accent/5' : 'border-white/5 bg-white/[0.02] hover:border-white/20', { 'opacity-60': mm.future && !mm.sessions }]"
                               :aria-label="t('calendar.openMonth', { month: capitalize(monthName(mm.month)), count: tn('units.workouts', mm.sessions) })" :data-month="mm.month">
                           <span class="flex items-baseline justify-between gap-1">
-                              <span class="truncate text-[11px] font-bold uppercase tracking-label" :class="mm.current ? 'text-accent' : 'text-slate-200'">{{ monthName(mm.month, 'short') }}</span>
-                              <span v-if="mm.sessions" class="font-mono text-[10px] text-slate-400 tabular-nums">{{ mm.sessions }}</span>
+                              <span class="truncate text-[11px] font-bold caps tracking-label" :class="mm.current ? 'text-accent' : 'text-slate-200'">{{ monthName(mm.month, 'short') }}</span>
+                              <span v-if="mm.sessions" class="font-mono text-tiny text-slate-400 tabular-nums">{{ mm.sessions }}</span>
                           </span>
                           <span class="mt-1.5 grid grid-cols-7 gap-[2px]" aria-hidden="true">
                               <i v-for="c in mm.cells" :key="c.key" class="aspect-square rounded-[2px]"

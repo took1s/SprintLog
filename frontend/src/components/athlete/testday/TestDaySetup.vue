@@ -54,7 +54,7 @@ const warnings = computed(() => {
 
           <!-- Bereitschaft -->
           <div class="mt-4 rounded-2xl border p-3" :class="warnings.length ? 'border-amber-400/30 bg-amber-400/[0.06]' : 'border-emerald-400/25 bg-emerald-400/[0.05]'" data-test="test-day-readiness">
-              <p class="text-[10px] font-bold uppercase tracking-label" :class="warnings.length ? 'text-amber-300' : 'text-emerald-300'">{{ t('testDay.readiness') }}</p>
+              <p class="text-tiny font-bold caps tracking-label" :class="warnings.length ? 'text-amber-300' : 'text-emerald-300'">{{ t('testDay.readiness') }}</p>
               <ul v-if="warnings.length" class="mt-1 space-y-1 text-xs leading-snug text-slate-200">
                   <li v-for="w in warnings" :key="w">{{ w }}</li>
               </ul>

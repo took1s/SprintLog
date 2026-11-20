@@ -102,7 +102,7 @@ async function share() {
               <div class="mb-3 flex flex-wrap items-center gap-2">
                   <span class="label-xs">{{ t('obsidian.names') }}</span>
                   <button v-for="code in SUPPORTED_LOCALES" :key="code" type="button" @click="prefs.lang = code" :aria-pressed="lang === code"
-                          class="rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold uppercase" :class="lang === code ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-white'">{{ code }}</button>
+                          class="rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold caps" :class="lang === code ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-white'">{{ code }}</button>
               </div>
               <div class="mb-4 space-y-2">
                   <label v-if="sameDay.length > 1" class="flex cursor-pointer items-center justify-between rounded-xl border border-white/5 bg-black/20 p-3 text-sm text-slate-200">

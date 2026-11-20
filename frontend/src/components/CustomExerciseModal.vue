@@ -16,7 +16,7 @@ const { saveCustomExercise } = app;
               <div class="mb-6 flex items-start justify-between">
                   <div>
                       <h3 class="text-2xl display text-white">{{ t('custom.title') }} <span class="text-accent">{{ t('custom.titleAccent') }}</span></h3>
-                      <p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-slate-400">{{ t('custom.onlyYou') }}</p>
+                      <p class="mt-1 font-mono text-tiny caps tracking-widest text-slate-400">{{ t('custom.onlyYou') }}</p>
                   </div>
                   <button type="button" @click="customModal.open = false" class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>
               </div>
@@ -38,7 +38,7 @@ const { saveCustomExercise } = app;
                   <button type="button" v-for="type in (['WeightReps', 'DistanceTime', 'Duration', 'Cardio'] as const)" :key="type"
                           @click="customModal.trackingType = type" class="flex w-full items-center justify-between rounded-xl border p-3 text-left transition-all"
                           :class="customModal.trackingType === type ? 'border-accent/60 bg-accent/10' : 'border-white/5 bg-black/20 hover:border-white/20'">
-                      <span><span class="block text-sm font-bold text-white">{{ t(`tracking.${type}`) }}</span><span class="font-mono text-[10px] text-slate-500">{{ t(`tracking.hint.${type}`) }}</span></span>
+                      <span><span class="block text-sm font-bold text-white">{{ t(`tracking.${type}`) }}</span><span class="font-mono text-tiny text-slate-500">{{ t(`tracking.hint.${type}`) }}</span></span>
                       <span v-if="customModal.trackingType === type" class="text-accent">●</span>
                   </button>
               </div>

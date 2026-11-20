@@ -165,7 +165,7 @@ function backToTests() { if (s.value) athlete.patchTestDay({ stage: 'block', blo
                   <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
               </button>
               <div class="min-w-0 flex-1">
-                  <p class="truncate text-[10px] font-bold uppercase tracking-label text-accent">{{ t('testDay.title') }}</p>
+                  <p class="truncate text-tiny font-bold caps tracking-label text-accent">{{ t('testDay.title') }}</p>
                   <ol v-if="steps.length" class="mt-1 flex gap-1" :aria-label="t('testDay.progress')">
                       <li v-for="st in steps" :key="st.id" class="td-step" :class="`is-${st.state}`" :title="st.label"><span class="sr-only">{{ st.label }}</span></li>
                   </ol>

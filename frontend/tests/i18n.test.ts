@@ -67,13 +67,13 @@ test('falls back to English for unknown locale and detects browser language', ()
 });
 
 test('switching the language changes texts and number format', () => {
-  assert.equal(t('nav.plan'), 'PLAN');
+  assert.equal(t('nav.plan'), 'Plan');
   assert.equal(formatNumber(1.5), '1.5');
   setLocale('de');
   assert.equal(locale.value, 'de');
   assert.equal(formatNumber(1.5), '1,5');
   setLocale('ru');
-  assert.equal(t('nav.plan'), 'ПЛАН');
+  assert.equal(t('nav.plan'), 'План');
   assert.equal(formatNumber(1.5), '1,5');
 });
 

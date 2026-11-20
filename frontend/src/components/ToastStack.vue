@@ -14,7 +14,7 @@ const { runAction } = ui;
           <div v-for="t in toasts" :key="t.id" class="glass-panel glass-float pointer-events-auto flex items-center gap-3 rounded-2xl border px-4 py-3 text-xs font-bold tracking-wide" :class="toastClass(t.tone)" role="status">
               <span class="min-w-0 flex-1">{{ t.message }}</span>
               <!-- Aktion (z. B. Rückgängig) -->
-              <button v-if="t.action" type="button" @click="runAction(t.id)" class="-my-2 -mr-2 flex min-h-[2.75rem] flex-shrink-0 items-center rounded-xl px-3 text-[11px] font-black uppercase text-accent tracking-label hover:bg-white/5" data-test="toast-action">
+              <button v-if="t.action" type="button" @click="runAction(t.id)" class="-my-2 -mr-2 flex min-h-[2.75rem] flex-shrink-0 items-center rounded-xl px-3 text-[11px] font-black caps text-accent tracking-label hover:bg-white/5" data-test="toast-action">
                   {{ t.action.label }}
               </button>
           </div>

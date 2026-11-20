@@ -85,6 +85,16 @@ module.exports = {
       boxShadow: {
         glow: 'var(--glow)',
       },
+      // Kleinste Grade als Tokens: Pitch Night 9/10 px wie bisher, Matchday mindestens 11 px (lesbar ohne Lupe)
+      fontSize: {
+        micro: 'var(--fs-micro)',
+        tiny: 'var(--fs-tiny)',
+      },
+      // Sperrung gehört zu Versalien - ohne Versalien (Matchday) keine Sperrung
+      letterSpacing: {
+        wider: 'var(--caps-tracking-2)',
+        widest: 'var(--caps-tracking)',
+      },
     },
   },
   plugins: [],

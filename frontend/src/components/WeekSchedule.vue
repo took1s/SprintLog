@@ -65,8 +65,8 @@ const todayLine = computed(() => {
 <template>
   <div class="mb-5" data-test="week-schedule">
       <div class="mb-2 flex items-center justify-between gap-2">
-          <span class="text-[10px] font-bold uppercase text-slate-400 tracking-label">{{ t('schedule.title') }}</span>
-          <button v-if="!editing" type="button" @click="startEdit" class="-my-2 -mr-2 flex min-h-[2.75rem] items-center rounded-lg px-3 text-[11px] font-bold uppercase text-accent tracking-label hover:bg-accent/10" data-test="schedule-edit"
+          <span class="text-tiny font-bold caps text-slate-400 tracking-label">{{ t('schedule.title') }}</span>
+          <button v-if="!editing" type="button" @click="startEdit" class="-my-2 -mr-2 flex min-h-[2.75rem] items-center rounded-lg px-3 text-[11px] font-bold caps text-accent tracking-label hover:bg-accent/10" data-test="schedule-edit"
                   :aria-label="`${hasSchedule(program) ? t('schedule.editDays') : t('schedule.set')}: ${t('schedule.title')}`">
               {{ hasSchedule(program) ? t('schedule.editDays') : t('schedule.set') }}
           </button>
@@ -77,7 +77,7 @@ const todayLine = computed(() => {
                   class="flex flex-col items-center rounded-xl border py-2 transition-colors disabled:cursor-default"
                   :class="[pill(kindOf(current, d)), d === today && !editing ? 'ring-2 ring-inset ring-white/60' : '', editing ? 'active:scale-95' : '']"
                   :aria-label="`${longLabel(d)}: ${t(`schedule.kind.${kindOf(current, d)}`)}`" :aria-current="d === today ? 'date' : undefined">
-              <span class="text-[10px] font-bold uppercase tracking-label">{{ label(d) }}</span>
+              <span class="text-tiny font-bold caps tracking-label">{{ label(d) }}</span>
               <span class="mt-1 flex h-4 items-center" aria-hidden="true">
                   <svg v-if="kindOf(current, d) === 'training'" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/></svg>
                   <svg v-else-if="kindOf(current, d) === 'match'" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5l3.2 2.3-1.2 3.7h-4l-1.2-3.7z" fill="currentColor"/></svg>

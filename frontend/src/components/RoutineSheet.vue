@@ -120,7 +120,7 @@ function save() {
                 role="dialog" aria-modal="true" aria-labelledby="routine-sheet-title" data-test="routine-sheet" @submit.prevent="save">
               <div class="flex items-start justify-between gap-3 px-6 pb-3 pt-6">
                   <div class="min-w-0">
-                      <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('routines.title') }}</p>
+                      <p class="text-tiny font-bold caps text-accent tracking-label">{{ t('routines.title') }}</p>
                       <h2 id="routine-sheet-title" class="display mt-1 truncate text-2xl text-white">{{ editor.clientId ? t('routines.sheet.editTitle') : t('routines.sheet.newTitle') }}</h2>
                   </div>
                   <button type="button" @click="routines.close()" class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')">✕</button>
@@ -219,7 +219,7 @@ function save() {
                                   <li v-for="e in matches" :key="e.id">
                                       <button type="button" class="flex min-h-[2.75rem] w-full items-center justify-between gap-2 rounded-lg px-2 text-left hover:bg-white/5" :data-link-pick="e.id" @click="link(i, e.id)">
                                           <span class="min-w-0 truncate text-sm font-bold text-white">{{ exerciseName(e) }}</span>
-                                          <span class="flex-shrink-0 font-mono text-[10px] text-slate-500">{{ muscleName(e.muscleGroup) }}</span>
+                                          <span class="flex-shrink-0 font-mono text-tiny text-slate-500">{{ muscleName(e.muscleGroup) }}</span>
                                       </button>
                                   </li>
                               </ul>

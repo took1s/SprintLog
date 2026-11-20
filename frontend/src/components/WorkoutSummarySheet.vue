@@ -69,13 +69,12 @@ const stats = computed(() => {
                   <span class="finish-burst"><i v-for="n in 12" :key="n"></i></span>
                   <svg class="h-8 w-8 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path class="finish-check" pathLength="1" stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
               </div>
-              <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('summary.kicker') }}</p>
               <h2 class="display mt-1 break-words text-2xl leading-tight text-white" data-test="summary-line">{{ summary.line }}</h2>
 
               <dl class="mt-5 grid grid-cols-4 gap-2">
                   <div v-for="s in stats" :key="s.label" class="min-w-0 rounded-xl border border-white/5 bg-black/20 px-1.5 py-3 text-center">
                       <dt class="stat-label truncate">{{ s.label }}</dt>
-                      <dd class="mt-1 truncate font-mono text-xl font-black leading-none text-white tabular-nums">{{ s.value }}<span v-if="s.unit" class="ml-0.5 text-[10px] font-bold text-slate-400">{{ s.unit }}</span></dd>
+                      <dd class="mt-1 truncate font-mono text-xl font-black leading-none text-white tabular-nums">{{ s.value }}<span v-if="s.unit" class="ml-0.5 text-tiny font-bold text-slate-400">{{ s.unit }}</span></dd>
                   </div>
               </dl>
 
@@ -93,7 +92,7 @@ const stats = computed(() => {
                   </ul>
                   <p v-if="fullyReady" class="mt-3 text-sm font-bold text-white">{{ fullyReady }}</p>
                   <p v-for="n in next" :key="n" class="mt-1 font-mono text-[11px] text-slate-400">{{ n }}</p>
-                  <p class="mt-3 text-[10px] leading-relaxed text-slate-500">{{ t('recovery.disclaimer') }}</p>
+                  <p class="mt-3 text-tiny leading-relaxed text-slate-500">{{ t('recovery.disclaimer') }}</p>
               </section>
 
               <button type="button" @click="closeSummary" class="btn-primary mt-6 w-full rounded-xl py-4 font-bold" data-test="summary-done">{{ t('summary.done') }}</button>

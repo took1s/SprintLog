@@ -10,7 +10,7 @@ const config: CapacitorConfig = {
   ios: {
     // Inhalt reicht bis unter die Statusleiste; Abstände kommen aus env(safe-area-inset-*) im CSS.
     contentInset: 'never',
-    backgroundColor: '#0e1311',
+    backgroundColor: '#0b0c0c',
     // Kein Zurück-Wischen in die leere WebView-Historie
     allowsLinkPreview: false,
     scrollEnabled: true,

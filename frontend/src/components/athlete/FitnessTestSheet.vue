@@ -43,7 +43,6 @@ function save() {
                 role="dialog" aria-modal="true" aria-labelledby="test-sheet-title" data-test="test-sheet" @submit.prevent="save">
               <div class="flex items-start justify-between gap-3 px-6 pb-2 pt-6">
                   <div>
-                      <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('tests.kicker') }}</p>
                       <h2 id="test-sheet-title" class="display mt-1 text-2xl text-white">{{ testSheet.only ? t(`tests.names.${testSheet.only}`) : t('tests.sheetTitle') }}</h2>
                   </div>
                   <button type="button" class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white" :aria-label="t('common.close')" @click="athlete.closeTests()">✕</button>

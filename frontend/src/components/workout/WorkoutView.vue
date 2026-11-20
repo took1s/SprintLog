@@ -4,6 +4,7 @@
 // - Satz nach links wischen = löschen (mit Rückgängig).
 // - "Fertig" schließt eine Übung ab: kein hängender nächster Satz mehr; automatisch, sobald das Plan-Ziel erfüllt ist.
 // - ⋯ öffnet ein Aktions-Sheet (über allen Blöcken, nichts wird verdeckt).
+import AppIcon from '@/components/AppIcon.vue';
 import { computed, defineAsyncComponent, onBeforeUnmount, ref } from 'vue';
 import { painTone } from '@/lib/routines';
 import { storeToRefs } from 'pinia';
@@ -186,7 +187,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
       <!-- Kopf: Dauer, Volumen, Abschließen -->
       <div class="glass-panel mb-4 flex items-center justify-between gap-3 rounded-2xl px-4 py-3">
           <div class="min-w-0">
-              <div class="truncate text-[10px] font-bold uppercase text-accent tracking-label">
+              <div class="truncate text-tiny font-bold caps text-accent tracking-label">
                   <template v-if="isEditing">{{ t('workout.editingKicker') }}</template>
                   <template v-else-if="session.plan?.plannedId">{{ t('planned.title') }}</template>
                   <template v-else-if="session.plan">{{ planProgram ? programName(planProgram) : session.plan.programName }}</template>
@@ -215,7 +216,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
               <svg class="h-3 w-3 flex-shrink-0 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <button v-if="ai.enabled && !isEditing" type="button" class="workout-chip workout-chip-ai ml-auto flex-shrink-0" @click="ai.openChat()" :title="t('workout.askAiHint')" data-test="workout-ai">
-              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
+              <AppIcon name="coach" class="h-4 w-4" />
               {{ t('workout.askAi') }}
           </button>
       </div>
@@ -248,8 +249,8 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                           <template v-else-if="block.previous.length">{{ t('workout.lastTime', { value: prevText(block.previous.filter((s) => !s.isWarmup).at(-1) ?? block.previous.at(-1) ?? null, block.exercise.trackingType), sets: tn('units.sets', block.previous.filter((s) => !s.isWarmup).length) }) }}</template>
                           <template v-else>{{ muscleName(block.exercise.muscleGroup) }} · {{ t('workout.firstTime') }}</template>
                       </p>
-                      <p v-if="block.target?.note" class="truncate font-mono text-[10px] text-accent">{{ noteText(block.target.note) }}</p>
-                      <p v-if="block.target?.replacedFrom" class="truncate font-mono text-[10px] text-slate-500">{{ t('workout.insteadOf', { name: exerciseName(null, block.target.replacedFrom) }) }}</p>
+                      <p v-if="block.target?.note" class="truncate font-mono text-tiny text-accent">{{ noteText(block.target.note) }}</p>
+                      <p v-if="block.target?.replacedFrom" class="truncate font-mono text-tiny text-slate-500">{{ t('workout.insteadOf', { name: exerciseName(null, block.target.replacedFrom) }) }}</p>
                       <!-- Kraft-Ziel: Vorgabe für heute -->
                       <p v-if="block.goal && !block.target" class="mt-1 flex min-w-0 items-center gap-1.5 font-mono text-[11px]" :class="block.goal.progress.achieved ? 'text-yellow-400' : 'text-accent'" data-test="block-goal">
                           <svg class="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.5"/></svg>
@@ -281,7 +282,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
               </header>
 
               <!-- Tabelle: # | vorher | Werte | ✓ -->
-              <div class="grid grid-cols-[2.75rem_minmax(0,1fr)_4.5rem_4.5rem_3rem] items-center gap-x-2 px-1 pb-1 text-[10px] font-bold uppercase text-slate-500 tracking-label" aria-hidden="true">
+              <div class="grid grid-cols-[2.75rem_minmax(0,1fr)_4.5rem_4.5rem_3rem] items-center gap-x-2 px-1 pb-1 text-tiny font-bold caps text-slate-500 tracking-label" aria-hidden="true">
                   <span>{{ t('workout.col.set') }}</span>
                   <span>{{ t('workout.col.previous') }}</span>
                   <template v-if="block.exercise.trackingType === 'DistanceTime'"><span class="text-center">{{ t('units.m') }}</span><span class="text-center">{{ t('units.s') }}</span></template>
@@ -326,7 +327,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                   <!-- Wie schwer war's? Direkt unter dem gerade geloggten Satz -->
                   <transition name="fade">
                       <div v-if="rpePrompt?.index === set.index" class="my-1 flex items-center gap-1 rounded-xl bg-white/[0.04] py-1 pl-2 pr-1" role="group" :aria-label="settings.useRir ? t('workout.rirAsk') : t('workout.rpeAsk')" data-test="rpe-strip">
-                          <span class="mr-1 flex-shrink-0 text-[10px] font-bold uppercase text-slate-400 tracking-label">{{ settings.useRir ? t('set.rir') : t('set.rpe') }}</span>
+                          <span class="mr-1 flex-shrink-0 text-tiny font-bold caps text-slate-400 tracking-label">{{ settings.useRir ? t('set.rir') : t('set.rpe') }}</span>
                           <div class="grid min-w-0 flex-1 grid-cols-7 gap-0.5">
                               <button v-for="r in QUICK_RPE" :key="r" type="button" @click="setSetRpe(set.index, r)" :data-rpe="r"
                                       class="h-10 min-w-0 rounded-lg font-mono text-[13px] font-bold text-slate-200 transition-colors hover:bg-orange-400/15 hover:text-orange-300 active:scale-95">
@@ -357,7 +358,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                       <template v-else-if="block.exercise.trackingType === 'Duration'">
                           <!-- Timer starten: zählt die geplante Zeit herunter und loggt den Satz -->
                           <button type="button" @click="startHold(block.exercise.id)" data-test="start-hold"
-                                  class="btn-secondary flex h-11 w-full items-center justify-center gap-1.5 rounded-lg text-[11px] font-black uppercase tracking-label"
+                                  class="btn-secondary flex h-11 w-full items-center justify-center gap-1.5 rounded-lg text-[11px] font-black caps tracking-label"
                                   :aria-label="t('hold.start', { name: exerciseName(block.exercise) })">
                               <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>
                               {{ t('hold.go') }}
@@ -384,11 +385,11 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                       </button>
                   </div>
                   <button v-if="isCardio(block.exercise)" type="button" @click="openSetModal(block.exercise)" data-test="cardio-more"
-                          class="mt-1 flex min-h-[2.75rem] w-full items-center gap-2 rounded-lg px-2 text-left text-[11px] font-bold uppercase text-accent tracking-label hover:bg-accent/5">
+                          class="mt-1 flex min-h-[2.75rem] w-full items-center gap-2 rounded-lg px-2 text-left text-[11px] font-bold caps text-accent tracking-label hover:bg-accent/5">
                       <span aria-hidden="true">+</span> {{ t('workout.cardioMore') }}
                   </button>
                   <div v-if="block.workingDone || block.target?.sets" class="mt-1 flex min-h-[2.75rem] items-center justify-between gap-2 px-1">
-                      <span class="font-mono text-[10px]" :class="block.target?.sets && block.workingDone >= block.target.sets ? 'text-emerald-400' : 'text-slate-500'">
+                      <span class="font-mono text-tiny" :class="block.target?.sets && block.workingDone >= block.target.sets ? 'text-emerald-400' : 'text-slate-500'">
                           <template v-if="block.target?.sets">{{ t('workout.planProgress', { done: Math.min(block.workingDone, block.target.sets), total: block.target.sets }) }}</template>
                       </span>
                       <!-- Schmerz 0-10 direkt an der Übung: ein Tipp öffnet die Skala -->
@@ -397,7 +398,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                           {{ block.note?.pain != null ? t('exnote.painValue', { n: block.note.pain }) : t('exnote.painAdd') }}
                       </button>
                       <button v-if="block.workingDone" type="button" @click="completeBlock(block.exercise.id)" data-test="complete-block"
-                              class="flex min-h-[2.75rem] items-center gap-1.5 rounded-lg px-3 text-[11px] font-bold uppercase text-slate-400 tracking-label hover:bg-white/5 hover:text-emerald-400">
+                              class="flex min-h-[2.75rem] items-center gap-1.5 rounded-lg px-3 text-[11px] font-bold caps text-slate-400 tracking-label hover:bg-white/5 hover:text-emerald-400">
                           <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                           {{ t('workout.complete') }}
                       </button>
@@ -412,7 +413,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
                   </button>
                   <span v-else class="min-w-0 truncate font-mono text-[11px] text-emerald-400">{{ t('workout.completed') }} · {{ tn('units.sets', block.workingDone) }}<template v-if="block.note?.pain != null"> · <span :class="painTone(block.note.pain) === 'ok' ? '' : painTone(block.note.pain) === 'warn' ? 'text-amber-300' : 'text-red-300'">{{ t('exnote.painValue', { n: block.note.pain }) }}</span></template></span>
                   <button type="button" @click="reopenBlock(block.exercise.id)" data-test="reopen-block"
-                          class="flex min-h-[2.75rem] flex-shrink-0 items-center rounded-lg px-3 text-[11px] font-bold uppercase text-accent tracking-label hover:bg-accent/10">
+                          class="flex min-h-[2.75rem] flex-shrink-0 items-center rounded-lg px-3 text-[11px] font-bold caps text-accent tracking-label hover:bg-accent/10">
                       + {{ t('workout.addSet') }}
                   </button>
               </div>
@@ -428,7 +429,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
       <div class="mt-4 flex justify-center">
           <!-- Verwerfen nur per Gedrückthalten - kein versehentlicher Verlust einer ganzen Einheit -->
           <HoldButton :label="isEditing ? t('workout.discardChanges') : t('workout.discard')" @confirm="abortSession({ confirmed: true })" @fallback="abortSession()"
-                      class="min-h-[2.75rem] rounded-xl px-4 py-2 text-[11px] font-bold uppercase text-slate-500 hover:text-red-400 tracking-label" data-test="discard-session" />
+                      class="min-h-[2.75rem] rounded-xl px-4 py-2 text-[11px] font-bold caps text-slate-500 hover:text-red-400 tracking-label" data-test="discard-session" />
       </div>
 
       <!-- Aktions-Sheet einer Übung: liegt über allem (Teleport), damit kein anderer Block es verdeckt -->
@@ -437,7 +438,7 @@ const effortLabel = (r: number) => (settings.value.useRir ? String(rpeToRir(r)).
               <div v-if="sheetBlock" class="fixed inset-0 z-50 flex items-end justify-center bg-ink/70 sm:items-center" @click.self="sheetFor = null" data-test="block-sheet">
                   <div v-sheet-drag="() => (sheetFor = null)" class="glass-panel modal-panel w-full max-w-md overflow-hidden rounded-t-3xl pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="exerciseName(sheetBlock.exercise)">
                       <div class="px-6 pb-2 pt-6">
-                          <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ muscleName(sheetBlock.exercise.muscleGroup) }} · {{ tn('units.sets', sheetBlock.sets.length) }}</p>
+                          <p class="text-tiny font-bold caps text-accent tracking-label">{{ muscleName(sheetBlock.exercise.muscleGroup) }} · {{ tn('units.sets', sheetBlock.sets.length) }}</p>
                           <h2 class="display truncate text-xl text-white">{{ exerciseName(sheetBlock.exercise) }}</h2>
                       </div>
                       <nav class="px-3 pb-2" role="menu">

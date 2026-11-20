@@ -49,7 +49,7 @@ import BrandMark from '@/components/BrandMark.vue';
       </div>
       <div class="flex items-center gap-1">
         <button v-for="code in SUPPORTED_LOCALES" :key="code" type="button" @click="setLocale(code)" :lang="code" :aria-pressed="locale === code"
-                class="h-9 min-w-[2.5rem] rounded-lg px-2 font-mono text-xs font-bold uppercase transition-colors"
+                class="h-9 min-w-[2.5rem] rounded-lg px-2 font-mono text-xs font-bold caps transition-colors"
                 :class="locale === code ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-white'">{{ code }}</button>
         <button type="button" @click="toggleScheme" class="ml-1 flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-white/5 hover:text-white"
                 :aria-label="activeScheme === 'dark' ? t('appearance.schemes.light') : t('appearance.schemes.dark')" :data-scheme-toggle="appearance.scheme">
@@ -68,8 +68,7 @@ import BrandMark from '@/components/BrandMark.vue';
         </svg>
         <transition name="swap" mode="out-in">
           <div :key="authMode" class="relative">
-            <p class="text-[11px] font-bold uppercase text-accent tracking-label">{{ t(`auth.subtitle.${authMode}`) }}</p>
-            <h1 class="display mt-2 text-4xl text-white sm:text-5xl">{{ t(`auth.hero.${authMode}.title`) }}</h1>
+            <h1 class="display text-4xl text-white sm:text-5xl">{{ t(`auth.hero.${authMode}.title`) }}</h1>
             <p class="mt-3 max-w-md text-base leading-relaxed text-slate-300">{{ t(`auth.hero.${authMode}.text`) }}</p>
           </div>
         </transition>
@@ -111,7 +110,7 @@ import BrandMark from '@/components/BrandMark.vue';
         <div v-if="authMode === 'recover'" class="mb-4">
           <label class="mb-1.5 block text-sm font-bold text-slate-200" for="auth-code">{{ t('auth.recoveryCode') }}</label>
           <input id="auth-code" v-model="authForm.code" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" placeholder="XXXXX-XXXXX"
-                 class="field h-12 w-full rounded-xl px-4 font-mono uppercase tracking-widest" :class="{ 'border-red-500': fieldError('code') }">
+                 class="field h-12 w-full rounded-xl px-4 font-mono caps tracking-widest" :class="{ 'border-red-500': fieldError('code') }">
           <p class="mt-1 min-h-[1rem] text-xs text-red-400">{{ fieldError('code') }}</p>
         </div>
 

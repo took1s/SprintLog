@@ -157,7 +157,7 @@ watch(() => reminders.focus, async (f) => {
               <span v-if="celebrate" class="finish-burst"><i v-for="n in 12" :key="n"></i></span>
           </span>
           <div class="min-w-0 flex-1">
-              <h3 id="routines-today-title" class="text-[10px] font-bold uppercase tracking-label" :class="allDone ? 'text-emerald-300' : 'text-accent'">{{ t('routines.todayTitle') }}</h3>
+              <h3 id="routines-today-title" class="routine-today-title" :class="{ 'is-done': allDone }">{{ t('routines.todayTitle') }}</h3>
               <p class="font-mono text-[11px] text-slate-400" aria-live="polite">{{ allDone ? t('routines.allDone') : t('routines.doneCount', { done: doneCount, total: forToday.length }) }}</p>
           </div>
       </div>
@@ -220,7 +220,7 @@ watch(() => reminders.focus, async (f) => {
                           <p class="text-xs font-bold text-white">{{ t('routines.pain.question') }}</p>
                           <PainScale class="mt-2" :model-value="painToday(r)" @pick="(n) => pickPain(r, n)" />
                           <div class="mt-1 flex items-center justify-between gap-2">
-                              <p class="text-[10px] text-slate-500">{{ t('routines.pain.scale') }}</p>
+                              <p class="text-tiny text-slate-500">{{ t('routines.pain.scale') }}</p>
                               <button type="button" class="-mr-2 min-h-[2.25rem] flex-shrink-0 px-2 text-[11px] font-bold text-slate-400 hover:text-white" data-test="pain-skip" @click="skipPain(r)">{{ t('routines.pain.skip') }}</button>
                           </div>
                       </div>

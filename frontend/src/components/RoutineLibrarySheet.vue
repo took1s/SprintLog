@@ -40,7 +40,6 @@ function use(tpl: LibraryTemplate) {
                    role="dialog" aria-modal="true" aria-labelledby="library-title" data-test="routine-library">
               <div class="flex items-start justify-between gap-3 px-6 pb-2 pt-6">
                   <div class="min-w-0">
-                      <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('routineLibrary.kicker') }}</p>
                       <h2 id="library-title" class="display mt-1 text-2xl leading-tight text-white">{{ t('routineLibrary.title') }}</h2>
                       <p class="mt-1 text-xs leading-snug text-slate-400">{{ t('routineLibrary.intro') }}</p>
                   </div>

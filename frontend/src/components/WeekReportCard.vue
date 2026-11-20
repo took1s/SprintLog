@@ -69,7 +69,7 @@ watch(() => reminders.focus, (f) => {
   <section v-if="visible && report" ref="root" class="report-card mt-5 rounded-2xl border p-4" data-test="week-report" aria-labelledby="week-report-title">
       <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-              <p class="text-[10px] font-bold uppercase tracking-label text-amber-300">{{ range }}</p>
+              <p class="text-tiny font-bold caps tracking-label text-amber-300">{{ range }}</p>
               <h3 id="week-report-title" class="display mt-0.5 text-xl leading-tight text-white">{{ isLast ? t('report.titleLast') : t('report.title') }}</h3>
           </div>
           <button type="button" class="-mr-2 -mt-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-slate-400 hover:text-white" :aria-label="t('report.hide')" data-test="week-report-hide" @click="hide">✕</button>
@@ -101,7 +101,7 @@ watch(() => reminders.focus, (f) => {
               <span v-for="(d, i) in report.days" :key="d.day" class="report-bar" :class="{ 'is-active': d.sessions > 0 && !d.match, 'is-match': d.match }"
                     :style="{ height: barHeight(d), animationDelay: `${120 + i * 45}ms` }"></span>
           </div>
-          <div class="mt-1 grid grid-cols-7 gap-1.5 text-center text-[9px] font-bold uppercase text-slate-500" aria-hidden="true">
+          <div class="mt-1 grid grid-cols-7 gap-1.5 text-center text-micro font-bold caps text-slate-500" aria-hidden="true">
               <span v-for="d in report.days" :key="d.day">{{ weekday(d.day) }}</span>
           </div>
       </div>

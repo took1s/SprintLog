@@ -100,7 +100,6 @@ async function saveEdit(m: CoachMemory) {
                role="dialog" aria-modal="true" aria-labelledby="memory-title" data-test="coach-memory">
               <header class="flex items-start justify-between gap-3 px-6 pb-3 pt-6">
                   <div class="min-w-0">
-                      <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('ai.kicker') }}</p>
                       <h2 id="memory-title" class="display mt-1 break-words text-2xl text-white">{{ t('ai.memory.title') }}</h2>
                       <p class="mt-1 text-xs leading-relaxed text-slate-400">{{ t('ai.memory.intro') }}</p>
                   </div>
@@ -127,7 +126,7 @@ async function saveEdit(m: CoachMemory) {
                   <p v-if="!memory.length && !memoryLoading" class="mt-5 text-sm leading-relaxed text-slate-300" data-test="memory-empty">{{ t('ai.memory.empty') }}</p>
 
                   <section v-for="g in groups" :key="g.category" class="mt-5" :data-category="g.category">
-                      <h3 class="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-label" :class="tone[g.category]">
+                      <h3 class="mb-2 flex items-center gap-2 text-[11px] font-bold caps tracking-label" :class="tone[g.category]">
                           <MemoryIcon :category="g.category" class="h-4 w-4" />
                           {{ t(`ai.memory.categories.${g.category}`) }}
                           <span class="font-mono text-slate-400">{{ g.items.length }}</span>
@@ -152,8 +151,8 @@ async function saveEdit(m: CoachMemory) {
                               <div v-else class="flex items-start gap-1">
                                   <div class="min-w-0 flex-1 py-1">
                                       <p class="break-words text-sm leading-snug text-slate-100">{{ m.content }}</p>
-                                      <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px] text-slate-400">
-                                          <span v-if="m.importance === 3" class="rounded-full border border-red-400/50 px-1.5 py-px font-sans font-bold uppercase text-red-300 tracking-label">{{ t('ai.memory.critical') }}</span>
+                                      <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-tiny text-slate-400">
+                                          <span v-if="m.importance === 3" class="rounded-full border border-red-400/50 px-1.5 py-px font-sans font-bold caps text-red-300 tracking-label">{{ t('ai.memory.critical') }}</span>
                                           <span>{{ t(`ai.memory.by.${m.source}`) }} · {{ day(m.updatedAt) }}</span>
                                           <span v-if="m.expiresAt" class="text-orange-300">{{ t('ai.memory.until', { date: day(m.expiresAt) }) }}</span>
                                       </p>
@@ -175,7 +174,7 @@ async function saveEdit(m: CoachMemory) {
               <footer class="border-t border-white/5 px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
                   <p class="mb-2 text-[11px] leading-snug text-slate-400">{{ t('ai.memory.privacy') }}</p>
                   <HoldButton v-if="memory.length" :label="t('ai.memory.clear')" @confirm="ai.clearMemory({ confirmed: true })" @fallback="ai.clearMemory()"
-                              class="min-h-[2.75rem] w-full rounded-xl border border-white/10 px-4 text-[11px] font-bold uppercase text-slate-400 tracking-label hover:text-red-300" data-test="memory-clear" />
+                              class="min-h-[2.75rem] w-full rounded-xl border border-white/10 px-4 text-[11px] font-bold caps text-slate-400 tracking-label hover:text-red-300" data-test="memory-clear" />
               </footer>
           </div>
       </div>

@@ -88,7 +88,7 @@ function edit() {
                    role="dialog" aria-modal="true" aria-labelledby="routine-detail-title" data-test="routine-detail">
               <div class="flex items-start justify-between gap-3 px-6 pb-3 pt-6">
                   <div class="min-w-0">
-                      <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('routines.title') }}<template v-if="r.source === 'coach'"> · {{ t('routines.byCoach') }}</template></p>
+                      <p class="text-tiny font-bold caps text-accent tracking-label">{{ t('routines.title') }}<template v-if="r.source === 'coach'"> · {{ t('routines.byCoach') }}</template></p>
                       <h2 id="routine-detail-title" class="display mt-1 break-words text-2xl leading-tight text-white">{{ r.title }}</h2>
                       <RoutineMeta :routine="r" class="mt-1" />
                   </div>
@@ -152,9 +152,9 @@ function edit() {
                   <!-- Verlauf -->
                   <div class="mt-5 flex items-baseline justify-between gap-2">
                       <p class="label-xs">{{ t('routines.history') }}</p>
-                      <p class="text-[10px] text-slate-500">{{ t('routines.historyHint') }}</p>
+                      <p class="text-tiny text-slate-500">{{ t('routines.historyHint') }}</p>
                   </div>
-                  <div class="mt-2 grid grid-cols-7 gap-1.5 text-center text-[10px] font-bold uppercase text-slate-500" aria-hidden="true">
+                  <div class="mt-2 grid grid-cols-7 gap-1.5 text-center text-tiny font-bold caps text-slate-500" aria-hidden="true">
                       <span v-for="(w, i) in weekdays" :key="i">{{ w }}</span>
                   </div>
                   <div class="mt-1 space-y-1.5" data-test="routine-history-grid">
@@ -166,7 +166,7 @@ function edit() {
                           </button>
                       </div>
                   </div>
-                  <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-400">
+                  <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-tiny text-slate-400">
                       <span class="flex items-center gap-1"><i class="routine-legend is-done"></i>{{ t('routines.cell.done') }}</span>
                       <span v-if="r.timesPerDay > 1" class="flex items-center gap-1"><i class="routine-legend is-partial"></i>{{ t('routines.cell.partial') }}</span>
                       <span class="flex items-center gap-1"><i class="routine-legend is-missed"></i>{{ t('routines.cell.missed') }}</span>

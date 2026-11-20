@@ -155,7 +155,7 @@ function toList() {
       <template v-if="progressRecord">
         <div class="flex items-start justify-between gap-3">
           <button type="button" class="prog-title group min-w-0 text-left" @click="toList" :aria-label="t('progress.changeExercise')">
-            <span class="label-xs text-accent">{{ t('progress.kicker') }}</span>
+            <span class="label-xs">{{ t('progress.kicker') }}</span>
             <span class="mt-1 flex items-center gap-1.5">
               <span class="display truncate text-2xl text-white" data-test="progress-name">{{ exerciseName(progressRecord.exerciseId, progressRecord.name) }}</span>
               <svg class="h-4 w-4 flex-shrink-0 text-slate-400 transition-transform group-hover:translate-y-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
@@ -228,7 +228,7 @@ function toList() {
             <div class="prog-stat-sub">{{ summary.lastStep == null ? '' : unitLabel(progressMetric.unit) }}</div>
           </div>
         </div>
-        <p v-if="progressMetric.key === 'e1rm'" class="mt-3 font-mono text-[10px] text-slate-500">{{ t('progress.e1rmInfo') }}</p>
+        <p v-if="progressMetric.key === 'e1rm'" class="mt-3 font-mono text-tiny text-slate-500">{{ t('progress.e1rmInfo') }}</p>
 
         <!-- Letzte Einheiten -->
         <div v-if="recent.length" class="mt-5">
@@ -285,7 +285,7 @@ function toList() {
             </svg>
             <span class="w-[4.5rem] flex-shrink-0 text-right">
               <span class="block truncate font-mono text-xs font-bold text-white">{{ text(tr.latest, tr.metric) }}</span>
-              <span class="block font-mono text-[10px]" :class="tr.change == null || tr.change === 0 ? 'text-slate-500' : tr.change > 0 ? 'text-emerald-400' : 'text-red-400'"
+              <span class="block font-mono text-tiny" :class="tr.change == null || tr.change === 0 ? 'text-slate-500' : tr.change > 0 ? 'text-emerald-400' : 'text-red-400'"
                     :title="t('progress.trendHint')">
                 {{ tr.change == null ? '--' : `${signed(tr.change)}%` }}
               </span>

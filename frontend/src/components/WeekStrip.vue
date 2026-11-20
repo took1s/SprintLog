@@ -43,7 +43,9 @@ const days = computed(() => Array.from({ length: 7 }, (_, i) => {
 }));
 
 const selected = ref<string | null>(null);
-const shown = computed(() => days.value.find((d) => d.day === (selected.value ?? today.value)) ?? null);
+/** Zeile unter der Leiste nur für einen anderen Tag - heute erklärt die Tageskarte darunter schon alles. */
+const shown = computed(() => (selected.value && selected.value !== today.value ? days.value.find((d) => d.day === selected.value) ?? null : null));
+function pick(day: string) { selected.value = selected.value === day ? null : day; }
 const name = (d: Date) => d.toLocaleDateString(intlLocale(), { weekday: 'short' }).replace('.', '').slice(0, 2);
 const longName = (d: Date) => d.toLocaleDateString(intlLocale(), { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -62,24 +64,21 @@ function describe(d: (typeof days.value)[number]): string {
   <div class="mt-4" data-test="week-strip">
       <div class="week-strip" role="group" :aria-label="t('week.aria')">
           <button v-for="d in days" :key="d.day" type="button" class="week-day" :class="{ 'is-today': d.isToday, 'is-past': d.past, 'is-selected': (selected ?? today) === d.day }"
-                  :aria-pressed="(selected ?? today) === d.day" :aria-label="`${longName(d.date)}: ${describe(d)}`" :data-day="d.day" @click="selected = d.day">
+                  :aria-pressed="(selected ?? today) === d.day" :aria-label="`${longName(d.date)}: ${describe(d)}`" :data-day="d.day" @click="pick(d.day)">
               <span class="week-day-name" aria-hidden="true">{{ name(d.date) }}</span>
               <span class="week-day-num" aria-hidden="true">{{ d.date.getDate() }}</span>
-              <span v-if="d.md && d.md !== 'MD'" class="week-md" aria-hidden="true">{{ d.md.replace('MD', '') }}</span>
+              <!-- Mikrozyklus bis zum Spiel: MD-2, MD-1, Spiel, MD+1 - so liest ein Fußballer seine Woche -->
+              <span class="week-md" :class="{ 'is-match': d.md === 'MD' }" aria-hidden="true">{{ d.md === 'MD' ? t('week.matchShort') : d.md ?? '' }}</span>
               <span class="week-dots" aria-hidden="true">
                   <i v-if="d.sessions || d.match" class="week-dot" :class="d.match ? 'is-match' : 'is-done'"></i>
-                  <i v-else-if="d.kind === 'match'" class="week-dot is-match"></i>
-                  <i v-else-if="d.kind === 'training'" class="week-dot is-training"></i>
+                  <i v-else-if="d.kind === 'training' || d.extra" class="week-dot is-training"></i>
                   <i v-if="d.team" class="week-dot is-team"></i>
-                  <i v-if="d.extra" class="week-dot is-extra"></i>
-                  <i v-if="d.routinesDue && !d.past && !d.isToday" class="week-dot is-routines-part"></i>
-                  <i v-else-if="d.routinesDue" class="week-dot" :class="d.routinesDone >= d.routinesDue ? 'is-routines' : 'is-routines-part'"></i>
               </span>
           </button>
       </div>
       <transition name="swap" mode="out-in">
-          <p v-if="shown" :key="shown.day" class="mt-2 truncate text-[11px] text-slate-400" aria-live="polite" data-test="week-detail">
-              <span class="font-bold text-slate-300">{{ shown.isToday ? t('week.today') : longName(shown.date) }}</span> · {{ describe(shown) }}
+          <p v-if="shown" :key="shown.day" class="mt-2 text-[13px] leading-snug text-slate-400" aria-live="polite" data-test="week-detail">
+              <span class="font-semibold text-slate-200">{{ longName(shown.date) }}</span> · {{ describe(shown) }}
           </p>
       </transition>
   </div>

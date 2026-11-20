@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // "Plan für mich": vier Fragen, live die drei passendsten Vorlagen - Start übernimmt Programm UND Wochenplan.
+import AppIcon from '@/components/AppIcon.vue';
 import { computed, nextTick, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t, tn, intlLocale } from '@/i18n';
@@ -56,7 +57,6 @@ watch(() => !!aiPlan.value.result, (has, had) => {
           <div v-sheet-drag:handle="close" class="glass-panel modal-panel flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="t('builder.title')" data-test="plan-builder">
               <div class="flex items-start justify-between gap-3 px-6 pb-3 pt-6">
                   <div class="min-w-0">
-                      <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('builder.kicker') }}</p>
                       <h2 class="display mt-1 text-2xl text-white">{{ t('builder.title') }}</h2>
                       <p class="mt-1 text-xs leading-relaxed text-slate-400">{{ t('builder.intro') }}</p>
                   </div>
@@ -85,10 +85,10 @@ watch(() => !!aiPlan.value.result, (has, had) => {
                       <!-- 7 Tage in einer Reihe, "kein Spiel" als eigene Zeile: 8 Spalten wären < 44 px breit und "KEIN SPIEL" passt nicht hinein -->
                       <div class="grid grid-cols-7 gap-1.5" role="radiogroup" :aria-label="t('builder.matchDay')">
                           <button v-for="d in WEEKDAYS" :key="d" type="button" role="radio" :aria-checked="a.matchDay === d" @click="a.matchDay = d" :aria-label="dayLong(d)"
-                                  class="min-h-[2.75rem] rounded-lg border text-[11px] font-bold uppercase tracking-label transition-colors"
+                                  class="min-h-[2.75rem] rounded-lg border text-[11px] font-bold caps tracking-label transition-colors"
                                   :class="a.matchDay === d ? 'border-yellow-400 bg-yellow-400/15 text-yellow-300' : 'border-white/10 bg-white/5 text-slate-400'" :data-match="d">{{ dayLabel(d) }}</button>
                           <button type="button" role="radio" :aria-checked="a.matchDay === null" @click="a.matchDay = null"
-                                  class="col-span-7 min-h-[2.75rem] rounded-lg border text-[11px] font-bold uppercase tracking-label transition-colors"
+                                  class="col-span-7 min-h-[2.75rem] rounded-lg border text-[11px] font-bold caps tracking-label transition-colors"
                                   :class="a.matchDay === null ? 'border-white/60 bg-white/10 text-white' : 'border-white/10 bg-white/5 text-slate-400'">{{ t('builder.noMatch') }}</button>
                       </div>
                   </fieldset>
@@ -103,7 +103,7 @@ watch(() => !!aiPlan.value.result, (has, had) => {
 
                   <section v-if="ai.enabled" class="mb-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4" aria-labelledby="ai-plan-title" data-test="ai-plan">
                       <h3 id="ai-plan-title" class="flex items-center gap-2 font-bold text-white">
-                          <svg class="h-4 w-4 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3z"/></svg>
+                          <AppIcon name="coach" class="h-4 w-4 text-accent" />
                           {{ t('ai.plan.title') }}
                       </h3>
                       <template v-if="!aiPlan.result">
@@ -125,7 +125,7 @@ watch(() => !!aiPlan.value.result, (has, had) => {
                           <p v-if="aiPlan.result.summary" class="mt-2 text-sm leading-relaxed text-slate-200">{{ aiPlan.result.summary }}</p>
                           <ol class="mt-3 space-y-2">
                               <li v-for="(d, i) in aiPlan.result.program.days" :key="i" class="rounded-xl border border-white/5 bg-black/20 p-3">
-                                  <p class="text-xs font-bold uppercase text-slate-300 tracking-label">{{ d.name }}</p>
+                                  <p class="text-xs font-bold caps text-slate-300 tracking-label">{{ d.name }}</p>
                                   <ul class="mt-1.5 space-y-0.5">
                                       <li v-for="x in d.exercises" :key="x.exerciseId" class="text-sm text-slate-200">{{ prescription(x) }}</li>
                                   </ul>

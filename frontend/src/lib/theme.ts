@@ -4,10 +4,10 @@
 // Gespeichert geräteweit (nicht pro Konto) - der Login-Bildschirm soll schon richtig aussehen.
 
 import { ref, watch } from 'vue';
-import { readJson, writeJson } from './storage';
+import { Keys, readJson, writeJson } from './storage';
 import { syncStatusBar } from './native';
 
-export const THEMES = ['pitch', 'clean', 'midnight', 'mono', 'striker', 'halloween'] as const;
+export const THEMES = ['matchday', 'pitch', 'clean', 'midnight', 'mono', 'striker', 'halloween'] as const;
 export type ThemeName = (typeof THEMES)[number];
 export const SCHEMES = ['auto', 'light', 'dark'] as const;
 export type SchemePreference = (typeof SCHEMES)[number];
@@ -15,10 +15,15 @@ export type SchemePreference = (typeof SCHEMES)[number];
 export interface Appearance { theme: ThemeName; scheme: SchemePreference }
 
 export const APPEARANCE_KEY = 'sprintlog:appearance';
-export const DEFAULT_APPEARANCE: Appearance = Object.freeze({ theme: 'pitch', scheme: 'auto' });
+export const DEFAULT_APPEARANCE: Appearance = Object.freeze({ theme: 'matchday', scheme: 'auto' });
+/** Version der gespeicherten Auswahl: 2 = Matchday ist Standard (vorher Pitch Night). */
+export const APPEARANCE_VERSION = 2;
+/** Vorheriges Standard-Theme - in den Einstellungen und über die Hinweis-Meldung zurückholbar. */
+export const PREVIOUS_DEFAULT_THEME: ThemeName = 'pitch';
 
 /** Vorschaufarben für die Auswahl in den Einstellungen (gleich wie in themes.css: Hintergrund, Karte, Akzent). */
 export const THEME_SWATCHES: Record<ThemeName, Record<'light' | 'dark', [string, string, string]>> = {
+  matchday: { dark: ['#0b0c0c', '#181919', '#c8f248'], light: ['#f2f2ee', '#ffffff', '#c8f248'] },
   pitch: { dark: ['#0e1311', '#161d1a', '#c6ff3d'], light: ['#f1f4ed', '#ffffff', '#c6ff3d'] },
   clean: { dark: ['#11110f', '#1c1b18', '#ff6a33'], light: ['#f6f5f2', '#ffffff', '#e84810'] },
   midnight: { dark: ['#090b14', '#131727', '#7c8cff'], light: ['#f3f4fb', '#ffffff', '#4f46e5'] },
@@ -56,7 +61,29 @@ export function resolveScheme(preference: SchemePreference, systemDark = media?.
   return preference === 'auto' ? (systemDark ? 'dark' : 'light') : preference;
 }
 
-export const appearance = ref<Appearance>(sanitizeAppearance(readJson<Partial<Appearance>>(APPEARANCE_KEY)));
+type StoredAppearance = Partial<Appearance> & { v?: number };
+
+/**
+ * Einmalige Umstellung auf das neue Standard-Theme: Wer Pitch Night hatte (gespeichert aus der Zeit, als es Standard war)
+ * oder nie etwas gewählt hat, bekommt Matchday. Wer bewusst ein anderes Theme gewählt hat, behält es.
+ * `migrated` meldet, dass umgestellt wurde (die App bietet dann einmal "Zurück zum alten Look" an).
+ */
+export function migrateAppearance(stored: StoredAppearance | null): { value: Appearance; migrated: boolean } {
+  const value = sanitizeAppearance(stored);
+  if ((stored?.v ?? 1) >= APPEARANCE_VERSION) return { value, migrated: false };
+  const wasDefault = !stored?.theme || stored.theme === PREVIOUS_DEFAULT_THEME;
+  return wasDefault ? { value: { ...value, theme: DEFAULT_APPEARANCE.theme }, migrated: true } : { value, migrated: false };
+}
+
+const stored = readJson<StoredAppearance>(APPEARANCE_KEY);
+const initial = migrateAppearance(stored);
+export const appearance = ref<Appearance>(initial.value);
+/**
+ * Auf diesem Gerät gerade umgestellt und schon einmal angemeldet gewesen (also kein neuer Nutzer):
+ * Die App zeigt einmal eine Meldung mit "Alter Look" (App.vue).
+ */
+export const themeMigrated = ref(initial.migrated && readJson(Keys.user) != null);
+if ((stored?.v ?? 1) < APPEARANCE_VERSION) writeJson(APPEARANCE_KEY, { ...initial.value, v: APPEARANCE_VERSION });
 /** Aufgelöstes Schema (für Komponenten, z. B. Diagrammfarben neu zeichnen). */
 export const activeScheme = ref<'light' | 'dark'>(resolveScheme(appearance.value.scheme));
 
@@ -80,7 +107,7 @@ export function initAppearance(): void {
   if (started) return;
   started = true;
   media?.addEventListener?.('change', () => { if (appearance.value.scheme === 'auto') applyAppearance(); });
-  watch(appearance, (value) => { writeJson(APPEARANCE_KEY, value); applyAppearance(value); }, { deep: true });
+  watch(appearance, (value) => { writeJson(APPEARANCE_KEY, { ...value, v: APPEARANCE_VERSION }); applyAppearance(value); }, { deep: true });
 }
 
 export function setTheme(theme: ThemeName): void { appearance.value = { ...appearance.value, theme }; }

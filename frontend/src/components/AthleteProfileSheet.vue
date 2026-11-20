@@ -59,7 +59,6 @@ function save() {
           <form v-sheet-drag:handle="close" ref="panel" tabindex="-1" class="glass-panel modal-panel flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl outline-none sm:rounded-3xl" role="dialog" aria-modal="true" aria-labelledby="profile-title" data-test="athlete-profile" @submit.prevent="save">
               <div class="flex items-start justify-between gap-3 px-6 pb-3 pt-6">
                   <div class="min-w-0">
-                      <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('ai.profile.kicker') }}</p>
                       <h2 id="profile-title" class="display mt-1 break-words text-2xl text-white">{{ t('ai.profile.title') }}</h2>
                       <p class="mt-1 text-xs leading-relaxed text-slate-400">{{ t('ai.profile.intro') }}</p>
                   </div>

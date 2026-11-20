@@ -63,7 +63,7 @@ const DELOADS = [null, 3, 4, 5, 6, 8] as const;
               <div v-for="(day, d) in programEditor.draft.days" :key="d" class="mb-4 rounded-2xl border border-white/10 bg-black/20 p-4">
                   <div class="mb-3 flex items-center gap-2">
                       <input v-model="day.name" maxlength="40" class="cyber-input flex-1 rounded-lg p-2 text-sm font-bold" :aria-label="t('editor.dayName', { n: d + 1 })">
-                      <button type="button" v-if="programEditor.draft.days.length > 1" @click="removeDay(d)" class="danger-btn rounded-lg px-3 py-2 text-[9px] font-bold uppercase tracking-widest">{{ t('editor.removeDay') }}</button>
+                      <button type="button" v-if="programEditor.draft.days.length > 1" @click="removeDay(d)" class="danger-btn rounded-lg px-3 py-2 text-micro font-bold caps tracking-widest">{{ t('editor.removeDay') }}</button>
                   </div>
                   <div v-for="(row, i) in day.exercises" :key="i" class="mb-2 rounded-xl border border-white/5 bg-black/30 p-3">
                       <div class="mb-2 flex items-center gap-2">
@@ -77,7 +77,7 @@ const DELOADS = [null, 3, 4, 5, 6, 8] as const;
                           <button type="button" @click="moveExerciseRow(day, i, 1)" class="h-8 w-7 rounded text-slate-500 hover:text-white" :aria-label="t('editor.moveDown')">↓</button>
                           <button type="button" @click="removeExerciseRow(day, i)" class="h-8 w-7 rounded text-red-400/70 hover:text-red-400" :aria-label="t('editor.removeExercise')">✕</button>
                       </div>
-                      <div class="grid grid-cols-4 gap-2 font-mono text-[10px] text-slate-500">
+                      <div class="grid grid-cols-4 gap-2 font-mono text-tiny text-slate-500">
                           <label>{{ t('editor.sets') }}<input v-model.number="row.sets" type="number" min="1" max="30" class="cyber-input mt-1 w-full rounded p-1.5 text-xs"></label>
                           <template v-if="rowType(row) === 'WeightReps'">
                               <label>{{ t('editor.repsMin') }}<input v-model.number="row.repsMin" type="number" min="1" max="100" class="cyber-input mt-1 w-full rounded p-1.5 text-xs"></label>
@@ -95,14 +95,14 @@ const DELOADS = [null, 3, 4, 5, 6, 8] as const;
                       <!-- Steigerung nach Wochen -->
                       <div class="mt-2">
                           <div class="flex items-center justify-between">
-                              <button type="button" @click="toggleSteps(d, i)" class="font-mono text-[10px] text-slate-400 hover:text-accent">
+                              <button type="button" @click="toggleSteps(d, i)" class="font-mono text-tiny text-slate-400 hover:text-accent">
                                   {{ openSteps.has(stepKey(d, i)) ? '▾' : '▸' }} {{ t('editor.weekSteps') }}<template v-if="row.weekSteps?.length"> ({{ row.weekSteps.length }})</template>
                               </button>
-                              <button type="button" @click="addStep(row, d, i)" class="font-mono text-[10px] font-bold text-accent/80 hover:text-accent">{{ t('editor.addStep') }}</button>
+                              <button type="button" @click="addStep(row, d, i)" class="font-mono text-tiny font-bold text-accent/80 hover:text-accent">{{ t('editor.addStep') }}</button>
                           </div>
                           <div v-if="openSteps.has(stepKey(d, i)) && row.weekSteps?.length" class="mt-2 space-y-2">
-                              <p class="font-mono text-[9px] text-slate-500">{{ t('editor.stepsHint') }}</p>
-                              <div v-for="(st, n) in row.weekSteps" :key="n" class="grid grid-cols-6 items-end gap-2 rounded-lg border border-white/5 bg-black/30 p-2 font-mono text-[10px] text-slate-500">
+                              <p class="font-mono text-micro text-slate-500">{{ t('editor.stepsHint') }}</p>
+                              <div v-for="(st, n) in row.weekSteps" :key="n" class="grid grid-cols-6 items-end gap-2 rounded-lg border border-white/5 bg-black/30 p-2 font-mono text-tiny text-slate-500">
                                   <label>{{ t('editor.fromWeek') }}<input v-model.number="st.fromWeek" type="number" min="1" :max="maxWeek()" class="cyber-input mt-1 w-full rounded p-1.5 text-xs"></label>
                                   <label>{{ t('editor.sets') }}<input v-model.number="st.sets" type="number" min="1" max="30" class="cyber-input mt-1 w-full rounded p-1.5 text-xs"></label>
                                   <template v-if="rowType(row) === 'WeightReps'">
@@ -118,13 +118,13 @@ const DELOADS = [null, 3, 4, 5, 6, 8] as const;
                           </div>
                       </div>
                   </div>
-                  <button type="button" @click="addExerciseRow(day)" class="mt-1 w-full rounded-lg border border-dashed border-white/15 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:border-accent/50 hover:text-accent">{{ t('editor.addExercise') }}</button>
+                  <button type="button" @click="addExerciseRow(day)" class="mt-1 w-full rounded-lg border border-dashed border-white/15 py-2 text-tiny font-bold caps tracking-widest text-slate-500 hover:border-accent/50 hover:text-accent">{{ t('editor.addExercise') }}</button>
               </div>
-              <button type="button" v-if="programEditor.draft.days.length < 7" @click="addDay" class="mb-5 w-full rounded-xl border border-dashed border-white/15 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:border-accent/50 hover:text-accent">{{ t('editor.addDay') }}</button>
+              <button type="button" v-if="programEditor.draft.days.length < 7" @click="addDay" class="mb-5 w-full rounded-xl border border-dashed border-white/15 py-3 text-tiny font-bold caps tracking-widest text-slate-400 hover:border-accent/50 hover:text-accent">{{ t('editor.addDay') }}</button>
 
               <p v-if="programEditor.error" class="mb-3 font-mono text-xs text-red-400" role="alert">{{ programEditor.error }}</p>
               <div class="flex gap-3">
-                  <button type="button" v-if="programEditor.draft.id" @click="deleteProgram(programs.find(p => p.id === programEditor.draft.id))" class="danger-btn rounded-xl px-4 py-3 text-[10px] font-bold uppercase tracking-widest">{{ t('common.delete') }}</button>
+                  <button type="button" v-if="programEditor.draft.id" @click="deleteProgram(programs.find(p => p.id === programEditor.draft.id))" class="danger-btn rounded-xl px-4 py-3 text-tiny font-bold caps tracking-widest">{{ t('common.delete') }}</button>
                   <button type="submit" :disabled="programEditor.busy" class="cyber-btn flex-1 rounded-xl py-3 font-bold">{{ programEditor.busy ? t('common.saving') : t('editor.saveProgram') }}</button>
               </div>
           </form>

@@ -21,7 +21,6 @@ const names = (p: PlannedWorkout) => p.exercises.map((x) => exerciseName(app.exe
   <section class="glass-panel rounded-3xl p-5" data-test="planned-panel">
       <div class="mb-4 flex items-center justify-between gap-3">
           <div>
-              <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('planned.kicker') }}</p>
               <h2 class="display text-2xl text-white">{{ t('planned.title') }}</h2>
           </div>
           <button type="button" @click="planned.openNew()" class="btn-secondary flex-shrink-0 rounded-xl px-4 py-2.5 text-xs" data-test="planned-new">+ {{ t('planned.add') }}</button>
@@ -44,7 +43,7 @@ const names = (p: PlannedWorkout) => p.exercises.map((x) => exerciseName(app.exe
                       <span class="block truncate font-mono text-[11px] text-slate-400"><span class="sr-only">{{ date(p.date) }} · </span>{{ categoryName(p.category) }} · {{ tn('planned.exercises', p.exercises.length) }}</span>
                       <span class="block truncate text-xs text-slate-300">{{ names(p) }}</span>
                       <span v-if="planned.conflictOf(p)" class="mt-1 block text-[11px] font-bold text-yellow-300">{{ t('planned.conflictNow') }}</span>
-                      <span v-if="p.pending" class="block font-mono text-[10px] text-slate-500">{{ t('routines.pendingSync') }}</span>
+                      <span v-if="p.pending" class="block font-mono text-tiny text-slate-500">{{ t('routines.pendingSync') }}</span>
                   </span>
               </button>
           </li>

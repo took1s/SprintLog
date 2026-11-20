@@ -37,7 +37,7 @@ function createCustom() {
           <div v-sheet-drag="() => (picker.open = false)" class="modal-panel glass-panel flex h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl sm:h-[80vh] sm:rounded-3xl" role="dialog" aria-modal="true" :aria-label="t('picker.title')">
               <div class="flex items-center justify-between gap-3 px-5 pb-3 pt-5">
                   <div v-if="replacing" class="min-w-0">
-                      <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('picker.replaceKicker') }}</p>
+                      <p class="text-tiny font-bold caps text-accent tracking-label">{{ t('picker.replaceKicker') }}</p>
                       <h2 class="display truncate text-2xl text-white">{{ exerciseName(replacing) }}</h2>
                   </div>
                   <h2 v-else class="display text-2xl text-white">{{ t('picker.title') }}</h2>
@@ -70,7 +70,7 @@ function createCustom() {
               <ul class="mt-2 flex-1 overflow-y-auto px-3 pb-4" role="listbox" :aria-multiselectable="!replacing" :aria-label="t('picker.title')">
                   <!-- Ersetzen: passende Alternativen zuerst -->
                   <template v-if="replacing && replaceSuggestions.length && !picker.query.trim()">
-                      <li class="px-2 pb-1 pt-2 text-[10px] font-bold uppercase text-slate-400 tracking-label" role="presentation">{{ t('picker.suggestions') }}</li>
+                      <li class="px-2 pb-1 pt-2 text-tiny font-bold caps text-slate-400 tracking-label" role="presentation">{{ t('picker.suggestions') }}</li>
                       <li v-for="alt in replaceSuggestions" :key="'s' + alt.exercise.id" class="flex items-center gap-1">
                           <button type="button" role="option" :aria-selected="false" @click="togglePicked(alt.exercise.id)" :data-replace="alt.exercise.id"
                                   class="flex min-w-0 flex-1 items-center gap-3 rounded-xl bg-accent/5 px-3 py-3 text-left ring-1 ring-inset ring-accent/20 transition-colors hover:bg-accent/10">
@@ -85,7 +85,7 @@ function createCustom() {
                               <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 11v5"/><circle cx="12" cy="7.75" r="0.6" fill="currentColor"/></svg>
                           </button>
                       </li>
-                      <li class="px-2 pb-1 pt-4 text-[10px] font-bold uppercase text-slate-400 tracking-label" role="presentation">{{ t('picker.allExercises') }}</li>
+                      <li class="px-2 pb-1 pt-4 text-tiny font-bold caps text-slate-400 tracking-label" role="presentation">{{ t('picker.allExercises') }}</li>
                   </template>
                   <li v-for="{ e, inWorkout } in pickerResults" :key="e.id" class="flex items-center gap-1">
                       <button type="button" role="option" :aria-selected="picker.selected.includes(e.id)" :disabled="inWorkout" @click="togglePicked(e.id)"

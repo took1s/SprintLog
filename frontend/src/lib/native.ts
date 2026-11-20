@@ -93,6 +93,15 @@ export function tap(): void {
   }
 }
 
+/** Neuer Rekord: spürbar anders als ein normaler Satz (Erfolgs-Muster statt kurzem Tipp). */
+export function recordHaptic(): void {
+  if (isNative()) {
+    void import('@capacitor/haptics').then(({ Haptics, NotificationType }) => Haptics.notification({ type: NotificationType.Success })).catch(() => {});
+  } else if (navigator.vibrate) {
+    navigator.vibrate([15, 60, 30]);
+  }
+}
+
 /** Starkes Feedback am Ende der Pause. */
 export function alarmHaptic(): void {
   if (!isNative()) return;

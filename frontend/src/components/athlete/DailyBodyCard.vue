@@ -87,7 +87,6 @@ function addCustom() {
   <section class="glass-panel rounded-3xl p-5" data-test="body-card">
       <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-              <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('body.kicker') }}</p>
               <h2 class="display text-2xl text-white">{{ t('body.title') }}</h2>
           </div>
       </div>
@@ -136,7 +135,7 @@ function addCustom() {
                   </svg>
                   <span class="absolute inset-0 flex flex-col items-center justify-center">
                       <span class="font-mono text-xl font-black leading-none text-white" data-test="protein-today">{{ grams }}</span>
-                      <span class="font-mono text-[10px] text-slate-400">/ {{ target?.goal ?? '–' }} g</span>
+                      <span class="font-mono text-tiny text-slate-400">/ {{ target?.goal ?? '–' }} {{ t('units.g') }}</span>
                   </span>
               </div>
               <div class="min-w-0 flex-1">
@@ -151,16 +150,16 @@ function addCustom() {
               </div>
           </div>
           <div class="mt-3 grid grid-cols-2 gap-1.5 min-[400px]:grid-cols-4">
-              <button v-for="f in FOODS" :key="f.id" type="button" class="food-btn" :data-protein="f.id" :aria-label="`${t(`body.foods.${f.id}`)}: +${f.grams} g`" @click="add(f.grams)">
+              <button v-for="f in FOODS" :key="f.id" type="button" class="food-btn" :data-protein="f.id" :aria-label="`${t(`body.foods.${f.id}`)}: +${f.grams} ${t('units.g')}`" @click="add(f.grams)">
                   <span class="block text-[11px] font-bold leading-tight text-white">{{ t(`body.foods.${f.id}`) }}</span>
-                  <span class="block font-mono text-[11px] text-accent">+{{ f.grams }} g</span>
+                  <span class="block font-mono text-[11px] text-accent">+{{ f.grams }} {{ t('units.g') }}</span>
               </button>
           </div>
           <form class="mt-2 flex items-center gap-2" @submit.prevent="addCustom">
               <DecimalInput v-model="custom" integer class="field h-11 min-w-0 flex-1 rounded-xl px-3 font-mono" :placeholder="t('body.customPlaceholder')" :aria-label="t('body.customLabel')" data-test="protein-custom" />
               <button type="submit" class="btn-secondary h-11 flex-shrink-0 rounded-xl px-4 text-sm" :disabled="!custom" data-test="protein-add">+ {{ t('body.add') }}</button>
           </form>
-          <p v-if="target" class="mt-2 text-[10px] leading-snug text-slate-500">{{ t('body.proteinTarget', { min: target.min, max: target.max }) }}</p>
+          <p v-if="target" class="mt-2 text-tiny leading-snug text-slate-500">{{ t('body.proteinTarget', { min: target.min, max: target.max }) }}</p>
       </div>
   </section>
 </template>

@@ -196,7 +196,6 @@ const close = () => {
           <div v-sheet-drag="close" ref="panel" tabindex="-1" class="glass-panel modal-panel flex h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl outline-none sm:h-[85dvh] sm:rounded-3xl" role="dialog" aria-modal="true" aria-labelledby="ai-title" data-test="ai-chat">
               <header class="flex items-start justify-between gap-3 border-b border-white/5 px-6 pb-3 pt-6">
                   <div class="min-w-0">
-                      <p class="text-[10px] font-bold uppercase text-accent tracking-label">{{ t('ai.kicker') }}</p>
                       <h2 id="ai-title" class="display mt-1 break-words text-2xl text-white">{{ t('ai.title') }}</h2>
                       <p v-if="status?.enabled" class="mt-0.5 font-mono text-[11px]" :class="ai.left('deep') < 1 ? 'text-orange-300' : 'text-slate-400'" data-test="ai-remaining">{{ remaining }}</p>
                   </div>
@@ -205,7 +204,7 @@ const close = () => {
                       <button type="button" @click="ai.openMemory()" class="relative flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white"
                               :aria-label="memory.length ? t('ai.memory.openCount', { n: memory.length }) : t('ai.memory.open')" data-test="ai-memory">
                           <MemoryIcon category="brain" class="h-5 w-5" />
-                          <span v-if="memory.length" class="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-accent px-1 font-mono text-[10px] font-bold text-on-accent" aria-hidden="true">{{ memory.length }}</span>
+                          <span v-if="memory.length" class="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-accent px-1 font-mono text-tiny font-bold text-on-accent" aria-hidden="true">{{ memory.length }}</span>
                       </button>
                       <!-- Gedrückt halten löscht (Ring füllt sich); Tastatur/Screenreader bekommen die Rückfrage -->
                       <HoldButton v-if="messages.length" variant="icon" :label="t('ai.clear.button')" @confirm="clearChat(true)" @fallback="clearChat()"
@@ -222,7 +221,7 @@ const close = () => {
                   <div class="mt-auto space-y-3">
                       <!-- Im Training: Hinweis, dass der Coach die Einheit sieht, und passende Schnellfragen -->
                       <div v-if="live" class="rounded-2xl border border-accent/40 bg-accent/5 px-3.5 py-3" data-test="ai-live">
-                          <p class="flex items-center gap-2 text-[10px] font-bold uppercase text-accent tracking-label">
+                          <p class="flex items-center gap-2 text-tiny font-bold caps text-accent tracking-label">
                               <span class="live-dot" aria-hidden="true"></span>{{ t('ai.live.kicker') }}
                           </p>
                           <p class="mt-1 text-xs leading-relaxed text-slate-300">{{ t('ai.live.hint') }}</p>
@@ -262,7 +261,7 @@ const close = () => {
                                       <span class="break-words" :class="{ 'text-slate-400 line-through': c.undone || c.action === 'forgotten' }">{{ c.content }}</span>
                                   </button>
                                   <button v-if="c.action === 'saved' && !c.undone" type="button" @click="ai.undoMemory(i, c)" data-test="memory-undo"
-                                          class="min-h-[2.75rem] flex-shrink-0 rounded-lg px-3 text-[11px] font-bold uppercase text-slate-300 tracking-label hover:bg-white/5 hover:text-white">{{ t('ai.memory.undo') }}</button>
+                                          class="min-h-[2.75rem] flex-shrink-0 rounded-lg px-3 text-[11px] font-bold caps text-slate-300 tracking-label hover:bg-white/5 hover:text-white">{{ t('ai.memory.undo') }}</button>
                               </li>
                           </ul>
                           <!-- Neue Übungen des Coachs: antippen zeigt Ausführung, "Rückgängig" löscht sie wieder -->
@@ -274,7 +273,7 @@ const close = () => {
                                       <span class="break-words" :class="{ 'text-slate-400 line-through': x.undone }">{{ x.name }}</span>
                                   </button>
                                   <button v-if="!x.undone" type="button" @click="ai.undoExercise(i, x)" data-test="exercise-undo"
-                                          class="min-h-[2.75rem] flex-shrink-0 rounded-lg px-3 text-[11px] font-bold uppercase text-slate-300 tracking-label hover:bg-white/5 hover:text-white">{{ t('ai.memory.undo') }}</button>
+                                          class="min-h-[2.75rem] flex-shrink-0 rounded-lg px-3 text-[11px] font-bold caps text-slate-300 tracking-label hover:bg-white/5 hover:text-white">{{ t('ai.memory.undo') }}</button>
                               </li>
                           </ul>
                           <!-- Vorschläge in voller Breite unter der Antwort: in der Blase wären Tagesliste und Knopf zu gedrängt -->
@@ -292,7 +291,7 @@ const close = () => {
                               </span>
                               <span class="min-w-0">
                                   <span class="ai-thinking-text block" data-test="ai-stage">{{ thinkingStage }}</span>
-                                  <span class="mt-0.5 block font-mono text-[10px] text-slate-500">{{ t('ai.thinkingTime', { s: thinkingFor }) }}</span>
+                                  <span class="mt-0.5 block font-mono text-tiny text-slate-500">{{ t('ai.thinkingTime', { s: thinkingFor }) }}</span>
                               </span>
                           </div>
                       </div>
@@ -313,7 +312,6 @@ const close = () => {
                       <button v-for="m in (['quick', 'deep'] as const)" :key="m" type="button" role="radio" :aria-checked="mode === m" @click="mode = m" :title="t(`ai.mode.${m}Hint`)"
                               class="flex min-h-[2.75rem] items-center justify-center gap-1.5 rounded-lg border text-xs font-bold transition-colors"
                               :class="mode === m ? 'border-white/60 bg-white/10 text-white' : 'border-transparent text-slate-400 hover:text-white'" :data-test="`ai-mode-${m}`">
-                          <svg v-if="m === 'deep'" class="h-3.5 w-3.5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3z"/></svg>
                           {{ t(`ai.mode.${m}`) }}
                       </button>
                   </div>

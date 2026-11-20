@@ -5,6 +5,7 @@ import { t } from '@/i18n';
 import type { DataTab } from '@/stores/app';
 import { useScrub } from '@/lib/scrub';
 import { tap } from '@/lib/native';
+import { ICONS as SHARED_ICONS } from '@/lib/icons';
 
 const props = defineProps<{ tabs: readonly DataTab[]; modelValue: DataTab }>();
 const emit = defineEmits<{ 'update:modelValue': [DataTab] }>();
@@ -54,7 +55,7 @@ defineExpose({ revealTop });
 const ICONS: Record<DataTab, string[]> = {
   overview: ['M4 13h6v7H4z', 'M14 4h6v16h-6z', 'M4 4h6v5H4z'],
   athlete: ['M13 2L4 14h7l-1 8 9-12h-7l1-8z'],
-  ai: ['M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z', 'M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z'],
+  ai: [...SHARED_ICONS.coach], // Trillerpfeife - der Coach, nicht "KI-Funken"
   history: ['M3 12a9 9 0 1 0 3-6.7', 'M3 4v5h5', 'M12 7v5l3 2'],
   progress: ['M3 17l6-6 4 4 8-8', 'M15 7h6v6'],
   records: ['M8 21h8', 'M12 17v4', 'M7 4h10v5a5 5 0 0 1-10 0z', 'M17 6h3v1a3 3 0 0 1-3 3', 'M7 6H4v1a3 3 0 0 0 3 3'],

@@ -142,7 +142,7 @@ const apply = () => { if (!locked.value) emit('apply'); };
 
 <template>
   <article class="ai-card rounded-2xl border border-accent/50 bg-accent/5 p-4" :aria-labelledby="titleId" :data-action="action.type">
-      <h3 :id="titleId" class="text-[10px] font-bold uppercase text-accent tracking-label">{{ title }}</h3>
+      <h3 :id="titleId" class="text-tiny font-bold caps text-accent tracking-label">{{ title }}</h3>
 
       <template v-if="action.type === 'program'">
           <p class="mt-1 break-words text-lg font-bold leading-tight text-white">{{ action.program.name }}</p>
@@ -156,7 +156,7 @@ const apply = () => { if (!locked.value) emit('apply'); };
               </summary>
               <ol class="mb-1 space-y-2">
                   <li v-for="(d, i) in action.program.days" :key="i" class="rounded-xl border border-white/5 bg-black/20 p-3">
-                      <p class="break-words text-xs font-bold uppercase text-slate-300 tracking-label">{{ d.name }}</p>
+                      <p class="break-words text-xs font-bold caps text-slate-300 tracking-label">{{ d.name }}</p>
                       <ul class="mt-1.5 space-y-0.5"><li v-for="(x, j) in d.exercises" :key="j" class="break-words text-sm text-slate-200">{{ prescription(x) }}</li></ul>
                   </li>
               </ol>
@@ -176,10 +176,10 @@ const apply = () => { if (!locked.value) emit('apply'); };
               <ol class="mb-1 space-y-2" data-test="ai-diff">
                   <li v-for="(d, i) in diff" :key="i" class="rounded-xl border border-white/5 bg-black/20 p-3" :data-diff="d.status">
                       <p class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span class="break-words text-xs font-bold uppercase tracking-label" :class="d.status === 'removed' ? 'text-slate-400 line-through' : 'text-slate-200'">{{ d.name }}</span>
-                          <span v-if="d.status !== 'same'" class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-label"
+                          <span class="break-words text-xs font-bold caps tracking-label" :class="d.status === 'removed' ? 'text-slate-400 line-through' : 'text-slate-200'">{{ d.name }}</span>
+                          <span v-if="d.status !== 'same'" class="rounded-full px-2 py-0.5 text-tiny font-bold caps tracking-label"
                                 :class="{ new: 'border border-emerald-400/60 text-emerald-300', changed: 'border border-orange-400/60 text-orange-300', removed: 'border border-red-500/60 text-red-300', same: '' }[d.status]">{{ t(`ai.actions.diff.${d.status}`) }}</span>
-                          <span v-else class="text-[10px] uppercase text-slate-400 tracking-label">{{ t('ai.actions.diff.same') }}</span>
+                          <span v-else class="text-tiny caps text-slate-400 tracking-label">{{ t('ai.actions.diff.same') }}</span>
                       </p>
                       <p v-if="d.renamedFrom" class="mt-1 text-[11px] text-slate-400">{{ t('ai.actions.diff.renamed', { name: d.renamedFrom }) }}</p>
                       <ul v-if="d.status !== 'same'" class="mt-1.5 space-y-1 text-sm">
@@ -199,7 +199,7 @@ const apply = () => { if (!locked.value) emit('apply'); };
           <ol class="mt-2 space-y-1.5" data-test="ai-workout-ops">
               <li v-for="(o, i) in action.operations" :key="i" class="rounded-xl border border-white/5 bg-black/20 px-3 py-2.5" :data-op="o.op">
                   <p class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-label" :class="OP_TONE[o.op]">{{ t(`ai.actions.ops.${o.op}`) }}</span>
+                      <span class="rounded-full border px-2 py-0.5 text-tiny font-bold caps tracking-label" :class="OP_TONE[o.op]">{{ t(`ai.actions.ops.${o.op}`) }}</span>
                       <span class="min-w-0 break-words text-sm font-bold" :class="o.op === 'remove' ? 'text-slate-400 line-through' : o.op === 'replace' ? 'text-slate-400' : 'text-white'">{{ opName(o.exerciseId, o.name) }}</span>
                       <template v-if="o.op === 'replace'"><span class="text-slate-400" aria-hidden="true">→</span><span class="min-w-0 break-words text-sm font-bold text-white">{{ opName(o.withExerciseId, o.withName) }}</span></template>
                   </p>
@@ -247,7 +247,7 @@ const apply = () => { if (!locked.value) emit('apply'); };
           <ul class="mt-2 grid grid-cols-7 gap-1">
               <li v-for="d in WEEKDAYS" :key="d" class="flex flex-col items-center rounded-lg border py-1.5" :class="pill(kind(d))">
                   <span class="sr-only">{{ dayLong(d) }}: {{ t(`schedule.kind.${kind(d)}`) }}<template v-if="team(d)">, {{ t('schedule.kind.team') }}</template></span>
-                  <span class="text-[10px] font-bold uppercase tracking-label" aria-hidden="true">{{ dayShort(d) }}</span>
+                  <span class="text-tiny font-bold caps tracking-label" aria-hidden="true">{{ dayShort(d) }}</span>
                   <!-- Symbol statt nur Farbe (Spieltag/Training auch ohne Farbsehen erkennbar) -->
                   <span class="mt-0.5 flex h-3.5 items-center" aria-hidden="true">
                       <svg v-if="kind(d) === 'training'" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/></svg>

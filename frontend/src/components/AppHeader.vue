@@ -1,70 +1,84 @@
 <script setup lang="ts">
-import { computed, useTemplateRef } from 'vue';
-import { t } from '@/i18n';
+// Kopf mit großem Titel des Bereichs (wie iOS) und eine schwebende Tab-Leiste unten, wo der Daumen ist.
+// Die Leiste lässt sich wie bisher halten und durchziehen (lib/scrub.ts); beim Tippen in ein Feld blendet sie sich aus,
+// damit sie nicht über der Tastatur klebt.
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue';
 import { storeToRefs } from 'pinia';
+import { t } from '@/i18n';
 import { useAppStore } from '@/stores/app';
-
-const app = useAppStore();
-const { online, pendingCount, syncState, syncing, tab } = storeToRefs(app);
-const { openSettings, syncNow } = app;
-import BrandMark from '@/components/BrandMark.vue';
-import { appearance } from '@/lib/theme';
+import { useAiStore } from '@/stores/ai';
 import { tap } from '@/lib/native';
 import { useScrub } from '@/lib/scrub';
+import AppIcon from '@/components/AppIcon.vue';
 
-// Reihenfolge = Richtung der Übergänge (App.vue) und Position des gleitenden Markers
+const app = useAppStore();
+const ai = useAiStore();
+onMounted(() => { if (!ai.status) void ai.loadStatus(); });
+const { online, pendingCount, syncState, syncing, tab } = storeToRefs(app);
+const { openSettings, syncNow } = app;
+
+// Reihenfolge = Position des gleitenden Markers
 const TABS = [
-  { key: 'Gym', label: 'nav.gym' }, { key: 'Football', label: 'nav.field' }, { key: 'Plan', label: 'nav.plan' }, { key: 'Data', label: 'nav.data' },
+  { key: 'Gym', label: 'nav.gym', icon: 'gym' }, { key: 'Football', label: 'nav.field', icon: 'field' },
+  { key: 'Plan', label: 'nav.plan', icon: 'plan' }, { key: 'Data', label: 'nav.data', icon: 'data' },
 ] as const;
 const index = computed(() => Math.max(0, TABS.findIndex((x) => x.key === tab.value)));
+const title = computed(() => t(TABS[index.value]!.label));
 function select(key: (typeof TABS)[number]['key']) {
-  if (tab.value === key) return;
+  if (tab.value === key) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; } // erneut antippen = nach oben (wie iOS)
   tap();
   tab.value = key;
 }
 
-// Halten oder seitlich ziehen: Marker folgt dem Finger, Loslassen wählt (gewechselt wird erst dann - kein Neuaufbau je Abschnitt)
+// Halten oder seitlich ziehen: Marker folgt dem Finger, Loslassen wählt
 const bar = useTemplateRef<HTMLElement>('bar');
 const scrub = useScrub(bar, { count: () => TABS.length, current: () => index.value, select: (i) => { tab.value = TABS[i]!.key; } });
 const shown = computed(() => (scrub.dragging.value ? scrub.hover.value : index.value));
 const markerStyle = computed(() => ({
   transform: scrub.dragging.value ? `translate3d(${scrub.offset.value}px, 0, 0)` : `translate3d(${index.value * 100}%, 0, 0)`,
 }));
+
+// Tastatur offen (Suche im Katalog o. Ä.): Leiste ausblenden
+const typing = ref(false);
+const isField = (el: EventTarget | null) => el instanceof HTMLElement && (el.matches('input:not([type=checkbox]):not([type=radio]):not([type=range]), textarea, select') || el.isContentEditable);
+const onFocusIn = (e: FocusEvent) => { typing.value = isField(e.target); };
+const onFocusOut = (e: FocusEvent) => { if (!isField(e.relatedTarget)) typing.value = false; };
+onMounted(() => { document.addEventListener('focusin', onFocusIn); document.addEventListener('focusout', onFocusOut); });
+onBeforeUnmount(() => { document.removeEventListener('focusin', onFocusIn); document.removeEventListener('focusout', onFocusOut); });
 </script>
 
 <template>
-  <header class="mb-6 flex items-center justify-between gap-3">
-      <h1 class="flex min-w-0 items-center gap-2">
-          <BrandMark :variant="appearance.theme === 'halloween' ? 'halloween' : 'default'" class="h-8 w-8" />
-          <span class="display truncate text-xl text-white">SprintLog</span>
-      </h1>
+  <header class="app-header">
+      <h1 class="app-title display" data-test="app-title">{{ title }}</h1>
       <div class="flex flex-shrink-0 items-center gap-2">
-          <!-- Offene Einheiten: Antippen sendet sofort (statt nur zu informieren). -->
+          <!-- Synchron: ein ruhiger Punkt. Offen/offline/Fehler: Text - Antippen sendet sofort. -->
           <component :is="pendingCount ? 'button' : 'span'" :type="pendingCount ? 'button' : undefined"
                 @click="pendingCount && !syncing ? syncNow() : undefined"
-                class="flex min-h-[2.75rem] items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-label"
-                :class="{
-                  'border-red-500/40 bg-red-500/10 text-red-400': syncState.tone === 'red',
-                  'border-orange-400/40 bg-orange-400/10 text-orange-300': syncState.tone === 'orange',
-                  'border-accent/40 bg-accent/10 text-accent': syncState.tone === 'blue',
-                  'border-emerald-400/30 bg-emerald-400/10 text-emerald-400': syncState.tone === 'green'
-                }" :title="pendingCount ? t('sync.tapToSync') : online ? t('sync.connected') : t('sync.disconnected')"
+                class="sync-pill" :class="`is-${syncState.tone}`" data-test="sync-pill"
+                :title="pendingCount ? t('sync.tapToSync') : online ? t('sync.connected') : t('sync.disconnected')"
                 :aria-label="pendingCount ? `${syncState.label} - ${t('sync.tapToSync')}` : undefined">
               <span class="h-1.5 w-1.5 rounded-full bg-current" :class="{ 'animate-pulse': syncing || !online }"></span>
-              <!-- Alles synchron: nur der Punkt (Platz für die Marke); Text bei offen/offline/Fehler -->
-              <span :class="syncState.tone === 'green' ? 'sr-only sm:not-sr-only' : ''">{{ syncState.label }}</span>
+              <span :class="syncState.tone === 'green' ? 'sr-only' : ''">{{ syncState.label }}</span>
           </component>
-          <button @click="openSettings" class="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 transition-colors hover:text-white" :aria-label="t('nav.settings')">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-      </button>
+          <!-- Coach: Trillerpfeife + Name - immer erreichbar, auf jedem Bereich -->
+          <button v-if="ai.enabled" type="button" class="coach-pill" :aria-label="t('ai.open')" data-test="coach-ask" @click="ai.openChat()">
+              <AppIcon name="coach" class="h-5 w-5" />
+              <span>{{ t('nav.coach') }}</span>
+          </button>
+          <button type="button" class="header-btn" :aria-label="t('nav.settings')" @click="openSettings">
+              <AppIcon name="settings" class="h-[22px] w-[22px]" />
+          </button>
       </div>
   </header>
 
-  <nav class="mb-8 flex justify-center">
-      <div ref="bar" class="tab-container scrub-bar relative w-full max-w-md" :class="{ 'is-scrubbing': scrub.dragging.value }" role="tablist" data-test="main-tabs">
-          <!-- Gleitender Marker statt springender Hintergrund: zeigt, woher man kommt; beim Ziehen klebt er am Finger -->
+  <nav class="tabbar-wrap" :class="{ 'is-hidden': typing }" :aria-label="t('nav.main')">
+      <div ref="bar" class="tabbar glass-float scrub-bar" :class="{ 'is-scrubbing': scrub.dragging.value }" role="tablist" data-test="main-tabs">
           <span class="tab-indicator" :style="markerStyle" aria-hidden="true"></span>
-          <button v-for="(x, i) in TABS" :key="x.key" role="tab" :aria-selected="tab === x.key" @click="select(x.key)" class="tab-btn relative" :class="{ 'tab-active': shown === i }">{{ t(x.label) }}</button>
+          <button v-for="(x, i) in TABS" :key="x.key" type="button" role="tab" :aria-selected="tab === x.key" @click="select(x.key)"
+                  class="tab-btn" :class="{ 'tab-active': shown === i }">
+              <AppIcon :name="x.icon" class="tab-icon" />
+              <span class="tab-label">{{ t(x.label) }}</span>
+          </button>
       </div>
   </nav>
 </template>

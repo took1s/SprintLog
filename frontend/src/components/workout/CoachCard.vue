@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Coach-Empfehlung für heute: was (trainieren / locker / Pause / Spiel / Reha) und warum.
 // Die Gründe sind kurz und nachprüfbar - der Coach rät, er entscheidet nicht.
+import AppIcon from '@/components/AppIcon.vue';
 import { computed, onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t } from '@/i18n';
@@ -44,7 +45,7 @@ const reasons = computed(() => coach.value.reasons.map(reasonText));
   <section class="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4" :data-coach="coach.kind" data-test="coach-card" aria-labelledby="coach-card-title">
       <div class="flex items-center gap-2">
           <span class="h-2 w-2 flex-shrink-0 rounded-full" :class="tone[coach.kind].dot" aria-hidden="true"></span>
-          <span class="text-[10px] font-bold uppercase text-slate-400 tracking-label">{{ t('coach.title') }}</span>
+          <span class="text-tiny font-bold caps text-slate-400 tracking-label">{{ t('coach.title') }}</span>
       </div>
       <h3 id="coach-card-title" class="display mt-1.5 break-words text-xl leading-tight" :class="tone[coach.kind].text">{{ t(`coach.kinds.${coach.kind}.title`) }}</h3>
       <p class="mt-1 text-sm leading-snug text-slate-200">{{ t(`coach.kinds.${coach.kind}.text`) }}</p>
@@ -53,7 +54,7 @@ const reasons = computed(() => coach.value.reasons.map(reasonText));
       </ul>
       <!-- Ruhiger Knopf: ohne Plan ist "План для меня" die Aktion der Karte, darunter folgt der große Start-Knopf -->
       <button v-if="ai.enabled" type="button" @click="ai.openChat()" class="btn-ghost mt-3 flex min-h-[2.75rem] w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold" data-test="coach-ask">
-          <svg class="h-4 w-4 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3zM19 15l.9 2.1 2.1.9-2.1.9L19 21l-.9-2.1-2.1-.9 2.1-.9L19 15z"/></svg>
+          <AppIcon name="coach" class="h-4 w-4 text-accent" />
           {{ t('ai.open') }}
       </button>
       <template v-if="!activeProgram">

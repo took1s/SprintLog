@@ -19,7 +19,7 @@ const { openProgress } = app;
                   <span class="truncate font-bold text-white">{{ exerciseName(r.exerciseId, r.name) }}</span>
                   <span v-if="r.gym" class="ex-tag flex-shrink-0" data-test="record-gym">{{ r.gym }}</span>
               </div>
-              <div class="mt-1 flex flex-wrap gap-x-3 font-mono text-[10px] text-slate-500">
+              <div class="mt-1 flex flex-wrap gap-x-3 font-mono text-tiny text-slate-500">
                   <span>{{ tn('units.sessions', r.sessions) }}</span>
                   <span v-if="r.maxE1RM && !r.isAssisted">{{ t('records.e1rm', { value: formatNumber(r.maxE1RM.value) }) }}</span>
                   <span v-if="r.isAssisted">{{ t('workout.assisted') }}</span>
@@ -31,7 +31,7 @@ const { openProgress } = app;
           </div>
           <div class="ml-3 text-right">
               <div class="font-mono text-sm font-black text-yellow-400">{{ recordHeadline(r) }}</div>
-              <div class="font-mono text-[10px] text-slate-500">{{ formatDate((r.minAssist || r.maxWeight || r.topSpeed || r.longest || r.maxDistance || {}).date || r.lastDate, { day: '2-digit', month: 'short', year: '2-digit' }) }}</div>
+              <div class="font-mono text-tiny text-slate-500">{{ formatDate((r.minAssist || r.maxWeight || r.topSpeed || r.longest || r.maxDistance || {}).date || r.lastDate, { day: '2-digit', month: 'short', year: '2-digit' }) }}</div>
           </div>
       </button>
   </div>
