@@ -17,6 +17,9 @@ public class WorkoutExerciseNote
     /// <summary>Freitext, max. 200 Zeichen.</summary>
     public string? Note { get; set; }
 
+    /// <summary>Schmerz bei dieser Übung, 0-10 (null = nicht angegeben).</summary>
+    public int? Pain { get; set; }
+
     /// <summary>Übung bewusst nicht (vollständig) gemacht.</summary>
     public bool Skipped { get; set; }
 

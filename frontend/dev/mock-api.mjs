@@ -141,7 +141,7 @@ const exerciseDto = (e) => ({ id: e.id, name: e.name, category: e.category, musc
   description: e.description ?? null, byCoach: !!e.byCoach });
 const CARDIO_KEYS = ['level', 'power', 'heartRate', 'cadence', 'calories'];
 const NOTE_REASONS = ['pain', 'equipment', 'time', 'fatigue', 'other'];
-const cleanNotes = (notes) => (notes ?? []).map((n) => ({ exerciseId: n.exerciseId, note: n.note?.trim() || null, skipped: !!n.skipped, reason: n.reason ?? null }));
+const cleanNotes = (notes) => (notes ?? []).map((n) => ({ exerciseId: n.exerciseId, note: n.note?.trim() || null, skipped: !!n.skipped, reason: n.reason ?? null, pain: n.pain ?? null }));
 
 function workoutResponse(w) {
   return {
@@ -196,7 +196,8 @@ function validateWorkout(user, body) {
   if (body.gym != null && String(body.gym).length > 40) errors.gym = ['Gym must not exceed 40 characters.'];
   (body.exerciseNotes ?? []).forEach((n, i) => {
     if (n.reason != null && !NOTE_REASONS.includes(n.reason)) errors[`exerciseNotes[${i}]`] = ['Unknown reason.'];
-    if (!n.skipped && n.reason == null && !n.note?.trim()) errors[`exerciseNotes[${i}]`] = ['Empty exercise note.'];
+    if (n.pain != null && !(Number.isInteger(n.pain) && n.pain >= 0 && n.pain <= 10)) errors[`exerciseNotes[${i}]`] = ['Pain must be between 0 and 10.'];
+    if (!n.skipped && n.reason == null && n.pain == null && !n.note?.trim()) errors[`exerciseNotes[${i}]`] = ['Empty exercise note.'];
   });
   const ids = visible(user.id).map((e) => e.id);
   const unknown = [...(body.sets ?? []), ...(body.exerciseNotes ?? [])].map((s) => s.exerciseId).filter((id) => !ids.includes(id));
@@ -568,6 +569,16 @@ async function handleApi(req, res, url) {
         actions.push({ type: 'session', replacesId: null, session: { date: iso(n), title: 'Speed & agility', category: 'Football', status: 'planned', notes: 'Fresh legs, full recovery between sprints.', reason: 'Extra speed work on a free day.',
           exercises: [{ exerciseId: 12, exerciseName: 'Sprints', sets: 6, distance: 30 }, { exerciseId: 50, exerciseName: 'Nordic Hamstring Curl', sets: 2, repsMin: 5, repsMax: 5 }] } });
       }
+      // Ersatz für den heutigen Plan-Tag wie propose_session mit replacesPlanDay: "replace"/"замен"/"ersetz"
+      if (/replace|замен|ersetz/.test(lower)) {
+        const active = db.programs.find((p) => p.userId === user.id && p.isActive);
+        const d = new Date();
+        const todayIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (active && (active.trainingDays & dayBit(todayIso))) {
+          actions.push({ type: 'session', replacesId: null, session: { date: todayIso, title: 'Lighter legs', category: 'Gym', status: 'planned', replacesPlan: true, planDayName: active.days?.[0]?.name ?? null,
+            notes: null, reason: 'Hamstring tight - same slot, less load.', exercises: [{ exerciseId: 50, exerciseName: 'Nordic Hamstring Curl', sets: 2, repsMin: 4, repsMax: 4 }] } });
+        }
+      }
       if (lower.includes('week') || lower.includes('недел') || lower.includes('woche')) {
         actions.push({ type: 'schedule', trainingDays: 1 | 4 | 16, matchDays: 64, reason: 'Rest before and after the match.' });
       }
@@ -673,16 +684,18 @@ async function handleApi(req, res, url) {
     if (Object.keys(errors).length) return problem(res, 400, 'One or more validation errors occurred.', errors);
     const old = db.planned.find((p) => p.userId === user.id && p.clientId === m[1]);
     const status = body.status ?? old?.status ?? 'planned';
-    if (status === 'planned' && (!old || old.date !== body.date)) {
+    const replacesPlan = body.replacesPlan ?? old?.replacesPlan ?? false;
+    if (status === 'planned' && (!old || old.date !== body.date || (replacesPlan && !old.replacesPlan))) {
       const active = db.programs.find((p) => p.userId === user.id && p.isActive);
       const b = dayBit(body.date);
-      // Wie der Server: nur der Spieltag blockiert, Trainingstag = Doppeltag
+      // Wie der Server: nur der Spieltag blockiert, Trainingstag = Doppeltag oder Ersatz
       if (active && (active.matchDays & b)) return json(res, 409, { title: 'plan_conflict', code: 'plan_conflict', kind: 'match' });
+      if (replacesPlan && !(active && (active.trainingDays & b))) return problem(res, 400, 'Validation failed', { replacesPlan: ['Only a training day of the active plan can be replaced.'] });
     }
     const now = new Date().toISOString();
     const planned = {
       userId: user.id, clientId: m[1], date: body.date, title: body.title.trim(), category: body.category, notes: body.notes?.trim() || null,
-      source: old?.source ?? body.source ?? 'user', status, workoutClientId: status === 'done' ? body.workoutClientId ?? old?.workoutClientId ?? null : null,
+      source: old?.source ?? body.source ?? 'user', status, replacesPlan, workoutClientId: status === 'done' ? body.workoutClientId ?? old?.workoutClientId ?? null : null,
       exercises: body.exercises.map((x) => ({ exerciseId: x.exerciseId, sets: x.sets, repsMin: x.repsMin ?? null, repsMax: x.repsMax ?? null, weight: x.weight ?? null, distance: x.distance ?? null, time: x.time ?? null, targetRpe: x.targetRpe ?? null, note: x.note ?? null })),
       createdAt: old?.createdAt ?? now, updatedAt: now,
     };

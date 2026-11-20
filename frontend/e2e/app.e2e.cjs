@@ -938,6 +938,79 @@ test('app icon: Halloween icon for the home screen and tab, remembered per devic
   await context.close();
 });
 
+test('today follows the weekday, coach replaces the plan day (no double day), pain per exercise in the workout', async () => {
+  const { page, errors, context } = await newPage();
+  const token = await register(page, `today_${Date.now()}`);
+  const now = new Date();
+  const wd = (now.getDay() + 6) % 7;
+  const prevWd = (wd + 5) % 7; // zwei Tage vorher: zweiter Trainingstag
+  const short = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const program = await api('POST', '/api/programs', token, {
+    name: 'Weekly', goal: 'Strength', weeks: 6,
+    days: [
+      { name: `Day early (${short[prevWd]})`, exercises: [{ exerciseId: 1, sets: 3, repsMin: 5, repsMax: 5 }] },
+      { name: `Day today (${short[wd]})`, exercises: [{ exerciseId: 1, sets: 2, repsMin: 8, repsMax: 8 }] },
+    ],
+  });
+  await api('PUT', `/api/programs/${program.id}/schedule`, token, { trainingDays: (1 << wd) | (1 << prevWd), matchDays: 0 });
+  await page.reload();
+  await page.waitForSelector('[data-test=start-panel]');
+
+  // Heute laut Wochentag (nicht stur der erste Tag der Reihe)
+  await page.waitForSelector('[data-test=start-plan] >> text=Day today');
+  assert.equal((await page.textContent('[data-test=plan-kicker]')).trim(), 'Today in your plan');
+
+  // Coach ersetzt den heutigen Plan-Tag: Karte sagt "ersetzt", kein Doppeltag; nach dem Übernehmen Bestätigung + Kalender
+  await page.click('[data-test=coach-ask]');
+  await page.fill('[data-test=ai-input]', 'Please replace today with something lighter');
+  await page.click('[data-test=ai-send]');
+  const card = page.locator('[data-action=session]');
+  await card.waitFor();
+  await card.locator('[data-test=ai-session-kind] >> text=replaces').waitFor();
+  await card.locator('[data-test=ai-action-apply]').click();
+  await card.locator('[data-test=ai-action-apply] >> text=In your calendar').waitFor();
+  await page.waitForSelector('text=replaces the plan day (');
+  const saved = await waitFor(async () => (await api('GET', '/api/planned', token)).find((p) => p.replacesPlan));
+  assert.equal(saved.title, 'Lighter legs');
+  await card.locator('[data-test=ai-session-open]').click();
+  await page.waitForSelector('[data-test=calendar-replaced]');
+  await page.waitForSelector('[data-test=calendar-plan-day] >> text=Day today');
+
+  // Start: die Ersatz-Einheit ist der Haupt-Knopf; "Plan-Tag wiederherstellen" macht es rückgängig
+  await page.click('nav >> text=GYM');
+  await page.waitForSelector('[data-test=start-replacement] >> text=Lighter legs');
+  assert.equal(await page.locator('[data-test=start-plan]').count(), 0);
+  await page.click('[data-test=replacement-undo]');
+  await page.waitForSelector('[data-test=start-plan] >> text=Day today');
+
+  // Schmerz an der Übung: Chip -> Skala -> gespeichert, im Verlauf sichtbar
+  await page.click('[data-test=start-plan]');
+  await page.waitForSelector('[data-test=finish-workout]');
+  const block = page.locator('[data-block="1"]');
+  await block.locator('[data-test=block-pain]').click();
+  await page.click('[data-test=note-sheet] [data-pain="4"]');
+  await page.waitForSelector('[data-test=exnote-pain-hint] >> text=Careful');
+  await page.click('[data-test=exnote-save]');
+  await page.waitForSelector('[data-test=note-sheet]', { state: 'detached' });
+  await block.locator('[data-test=block-pain] >> text=pain 4/10').waitFor();
+  await block.locator('[data-test=ghost-weight]').fill('60');
+  await block.locator('[data-test=ghost-reps]').fill('8');
+  await block.locator('[data-test=log-ghost]').click();
+  await page.click('button[aria-label="Stop timer"]');
+  await page.click('[data-test=finish-workout]');
+  await saveWorkout(page);
+  const w = await waitFor(async () => (await api('GET', '/api/workouts/history', token))[0]);
+  assert.equal(w.exerciseNotes[0].pain, 4);
+
+  // Erledigt -> der Plan zeigt den nächsten Trainingstag mit Datum
+  await page.click('nav >> text=GYM');
+  await page.waitForSelector('[data-test=start-plan] >> text=Day early');
+  assert.match((await page.textContent('[data-test=plan-kicker]')).trim(), /in your plan$/);
+
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
 test('AI coach: chat with context and history, errors with retry, plan from the AI saved with week plan', async () => {
   const { page, errors, context } = await newPage();
   const token = await register(page, `ai_${Date.now()}`);
@@ -1646,7 +1719,7 @@ test('Training feedback: gym per workout, assisted machine, side plank per side,
     if (!saved) await new Promise((r) => setTimeout(r, 250));
   }
   assert.ok(saved, 'workout with notes synced');
-  assert.deepEqual(saved.exerciseNotes, [{ exerciseId: 44, note: 'machine busy', skipped: true, reason: 'equipment' }]);
+  assert.deepEqual(saved.exerciseNotes, [{ exerciseId: 44, note: 'machine busy', skipped: true, reason: 'equipment', pain: null }]);
   const bikeSet = saved.sets.find((s) => s.exerciseId === 84);
   assert.equal(bikeSet.time, 1500);
   assert.equal(bikeSet.distance, 10500);
@@ -1900,7 +1973,7 @@ test('extra sessions: never on a match day, double day allowed, start from the s
   await page.click('[data-test=ai-send]');
   await page.waitForSelector('[data-action=session] >> text=Speed & agility');
   await page.click('[data-action=session] [data-test=ai-action-apply]');
-  await page.waitForSelector('[data-action=session] >> text=Saved');
+  await page.waitForSelector('[data-action=session] >> text=In your calendar');
   const all = await waitFor(async () => { const list = await api('GET', '/api/planned', token); return list.length === 2 ? list : null; });
   const coach = all.find((x) => x.source === 'coach');
   const [program] = await api('GET', '/api/programs', token);
@@ -1987,6 +2060,8 @@ test('rehab pain, round times, routine library and reminders: logged, synced and
   await page.click('button[aria-label=Settings]');
   await page.click('[data-test=reminders-enable]');
   await page.waitForFunction(() => /\b([1-9]\d*) reminders? planned/.test(document.querySelector('[data-test=reminders-count]')?.textContent ?? ''));
+  // Täglicher Check-in mit eigener Uhrzeit
+  await page.waitForSelector('text=Wellness check-in');
   assert.deepEqual(errors, []);
 });
 

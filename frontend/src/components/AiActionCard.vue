@@ -7,11 +7,12 @@ import { intlLocale, t, tn } from '@/i18n';
 import { categoryName, exerciseName, goalName } from '@/i18n/content';
 import { formatDate, formatNumber } from '@/lib/format';
 import { WEEKDAYS, bit } from '@/lib/schedule';
+import { planConflict } from '@/lib/planned';
 import { EVERY_DAY, daysBetween, parseDay } from '@/lib/routines';
 import { prescriptionText, type PlannedExercise } from '@/lib/planned';
 import { programDiff, type DayDiff, type DiffItem } from '@/lib/programDiff';
 import { useAppStore } from '@/stores/app';
-import type { AiAction } from '@/stores/ai';
+import { useAiStore, type AiAction } from '@/stores/ai';
 import type { WorkoutOp } from '@/lib/liveWorkout';
 import RoutineStepRow from './RoutineStepRow.vue';
 import TeamIcon from './TeamIcon.vue';
@@ -76,6 +77,20 @@ const routinePeriod = computed(() => {
 // Geplante Einheit: Tag, Plan-Konflikt (falls der Wochenplan in derselben Antwort nicht verschoben wird)
 const sessionDate = computed(() => (props.action.type === 'session'
   ? parseDay(props.action.session.date).toLocaleDateString(intlLocale(), { weekday: 'long', day: 'numeric', month: 'long' }) : ''));
+const sessionShort = computed(() => (props.action.type === 'session'
+  ? parseDay(props.action.session.date).toLocaleDateString(intlLocale(), { weekday: 'short', day: 'numeric', month: 'short' }) : ''));
+/** Ersatz für den Plan-Tag oder zusätzlich an einem Trainingstag (Doppeltag); sonst nichts anzeigen. */
+const sessionKind = computed(() => {
+  const a = props.action;
+  if (a.type !== 'session' || a.session.status === 'skipped') return null;
+  if (a.session.replacesPlan) return 'replace';
+  return planConflict(useAppStore().activeProgram, a.session.date) === 'training' ? 'double' : null;
+});
+function openInCalendar() {
+  if (props.action.type !== 'session') return;
+  useAiStore().open = false;
+  useAppStore().openCalendarDay(props.action.session.date);
+}
 const sessionLine = (x: { exerciseId: number; exerciseName?: string } & PlannedExercise) => {
   const ex = useAppStore().exerciseFor(x.exerciseId);
   return { name: exerciseName(ex ?? x.exerciseId, x.exerciseName), text: prescriptionText(x, ex?.trackingType) };
@@ -197,6 +212,11 @@ const apply = () => { if (!locked.value) emit('apply'); };
       <template v-else-if="action.type === 'session'">
           <p class="mt-1 break-words text-lg font-bold leading-tight text-white">{{ action.session.title }}</p>
           <p class="mt-1 font-mono text-[11px] text-slate-400">{{ sessionDate }} · {{ categoryName(action.session.category) }}</p>
+          <!-- Was der Termin für den Plan bedeutet: Ersatz (kein Doppeltag) oder zusätzlich am Trainingstag -->
+          <p v-if="sessionKind" class="mt-1.5 inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold leading-tight" data-test="ai-session-kind"
+             :class="sessionKind === 'replace' ? 'bg-accent/15 text-accent' : 'bg-amber-400/10 text-amber-300'">
+              {{ sessionKind === 'replace' ? (action.session.planDayName ? t('ai.actions.replacesDay', { day: action.session.planDayName }) : t('planned.replacedBadge')) : t('ai.actions.doubleDay') }}
+          </p>
           <ol v-if="action.session.status !== 'skipped'" class="mt-2 space-y-1.5" data-test="ai-session-exercises">
               <RoutineStepRow v-for="(x, i) in action.session.exercises" :key="i" :index="i" boxed :name="sessionLine(x).name" :dose="sessionLine(x).text" :exercise-id="x.exerciseId" @info="openInfo" />
           </ol>
@@ -244,8 +264,11 @@ const apply = () => { if (!locked.value) emit('apply'); };
               class="mt-3 flex min-h-[2.75rem] w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold leading-tight"
               :class="applied ? 'cursor-default border border-emerald-400/40 bg-emerald-400/10 text-emerald-300' : ['btn-primary', busy ? 'cursor-wait' : '']" data-test="ai-action-apply">
           <span v-if="busy" class="h-4 w-4 flex-shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none" aria-hidden="true"></span>
-          <template v-if="applied"><span aria-hidden="true">✓</span> {{ t('ai.actions.saved') }}</template>
+          <template v-if="applied"><span aria-hidden="true">✓</span> {{ action.type === 'session' && action.session.status !== 'skipped' ? t('ai.actions.inCalendar', { date: sessionShort }) : t('ai.actions.saved') }}</template>
           <template v-else>{{ button }}</template>
       </button>
+      <!-- Nach dem Übernehmen: direkt sehen, wo es gelandet ist -->
+      <button v-if="applied && action.type === 'session' && action.session.status !== 'skipped'" type="button" class="routine-link mt-2" data-test="ai-session-open"
+              @click="openInCalendar">{{ t('ai.actions.showInCalendar') }} ›</button>
   </article>
 </template>

@@ -1,7 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import type { TrainingProgram } from '../src/types';
-import { currentWeek, programStatus, suggestTarget, prescriptionText, setsDone, loadStatus, draftToPayload, toDraft, cycleWeek, isDeloadWeek, effectivePrescription, bestRecentE1RM, newDraftStep } from '../src/lib/program';
+import { currentWeek, dayForWeekday, weekdayHints, programStatus, suggestTarget, prescriptionText, setsDone, loadStatus, draftToPayload, toDraft, cycleWeek, isDeloadWeek, effectivePrescription, bestRecentE1RM, newDraftStep } from '../src/lib/program';
 
 const program = {
   id: 1, weeks: 8, startedAt: '2026-10-01T08:00:00Z',
@@ -25,6 +25,49 @@ test('programStatus rotates to the day after the last completed one', () => {
   assert.equal(status.sessions, 2, 'only workouts of this program count');
   assert.equal(status.lastByDay.get(10), '2026-10-02T10:00:00Z');
   assert.equal(programStatus(program, [w('2026-10-06T10:00:00Z', 12)]).next.id, 10, 'wraps around');
+});
+
+test('weekday hints in day names (ru/de/en, only in parentheses)', () => {
+  assert.deepEqual(weekdayHints('2: Бедро B + верх (пт, MD-2)'), [4]);
+  assert.deepEqual(weekdayHints('Lower (Fri)'), [4]);
+  assert.deepEqual(weekdayHints('Unterkörper (Mo/Do)').sort(), [0, 3]);
+  assert.deepEqual(weekdayHints('Sprint Do it'), [], 'outside parentheses nothing counts');
+});
+
+// Mi + Fr Training, So Spiel: Tag 1 = Mi (MD-4), Tag 2 = Fr (MD-2)
+const weekly = {
+  id: 2, weeks: 6, startedAt: '2026-11-01T08:00:00Z', trainingDays: (1 << 2) | (1 << 4), matchDays: 1 << 6,
+  days: [{ id: 20, position: 0, name: '1: MD-4 сила ног + верх (ср)' }, { id: 21, position: 1, name: '2: Бедро B + верх (пт, MD-2)' }],
+} as unknown as TrainingProgram;
+const fri = new Date(2026, 10, 20, 14, 0); // Freitag
+const thu = new Date(2026, 10, 19, 9, 0);
+
+test('plan day follows the weekday, not the rotation (skipped Wednesday -> Friday shows Friday day)', () => {
+  // Zuletzt erledigt: Tag 2 letzte Woche -> Rotation sagt Tag 1, heute ist aber Freitag
+  const st = programStatus(weekly, [w(new Date(2026, 10, 13, 18).toISOString(), 21)], fri);
+  assert.equal(st.next.id, 21);
+  assert.equal(st.nextBy, 'weekday');
+  assert.equal(st.todayDay.id, 21);
+  assert.equal(st.nextDate.getDate(), 20);
+  // Donnerstag (frei): nächster Trainingstag Freitag -> Tag 2
+  assert.equal(programStatus(weekly, [], thu).next.id, 21);
+  // Heute schon erledigt -> nächster Trainingstag (Mittwoch) -> Tag 1
+  const done = programStatus(weekly, [w(new Date(2026, 10, 20, 10).toISOString(), 21)], fri);
+  assert.equal(done.doneToday, true);
+  assert.equal(done.next.id, 20);
+  assert.equal(done.nextDate.getDate(), 25);
+});
+
+test('without name hints: k-th training weekday = k-th day; different counts fall back to rotation', () => {
+  const plain = { ...weekly, days: [{ id: 30, position: 0, name: 'A' }, { id: 31, position: 1, name: 'B' }] } as unknown as TrainingProgram;
+  assert.equal(dayForWeekday(plain, 2).id, 30);
+  assert.equal(dayForWeekday(plain, 4).id, 31);
+  assert.equal(dayForWeekday(plain, 6), null, 'match day');
+  const threeDays = { ...plain, trainingDays: 1 | 4 | 16 } as unknown as TrainingProgram; // Mo, Mi, Fr bei 2 Tagen
+  assert.equal(dayForWeekday(threeDays, 4), null);
+  const st = programStatus(threeDays, [w(new Date(2026, 10, 18, 10).toISOString(), 30)], fri);
+  assert.equal(st.nextBy, 'rotation');
+  assert.equal(st.next.id, 31);
 });
 
 test('double progression: increase weight only when all sets hit the top of the range', () => {

@@ -27,6 +27,7 @@ export const useRemindersStore = defineStore('reminders', () => {
     routineTime: isTime(stored.routineTime) ? stored.routineTime : DEFAULT_REMINDER_PREFS.routineTime,
     todayTime: isTime(stored.todayTime) ? stored.todayTime : DEFAULT_REMINDER_PREFS.todayTime,
     reportTime: isTime(stored.reportTime) ? stored.reportTime : DEFAULT_REMINDER_PREFS.reportTime,
+    checkInTime: isTime(stored.checkInTime) ? stored.checkInTime : DEFAULT_REMINDER_PREFS.checkInTime,
   });
   const permission = ref<ReminderPermission>('prompt');
   const scheduled = ref<Reminder[]>([]);
@@ -84,6 +85,7 @@ export const useRemindersStore = defineStore('reminders', () => {
     },
     match: () => ({ title: t('reminders.notif.matchTitle'), body: t('reminders.notif.matchBody') }),
     report: () => ({ title: t('reminders.notif.reportTitle'), body: t('reminders.notif.reportBody') }),
+    checkIn: () => ({ title: t('reminders.notif.checkInTitle'), body: t('reminders.notif.checkInBody') }),
   };
 
   // ---------- Planen ----------
@@ -96,7 +98,7 @@ export const useRemindersStore = defineStore('reminders', () => {
     const app = useAppStore();
     return planReminders({
       now: new Date(), prefs: prefs.value, routines: useRoutinesStore().routines, planned: usePlannedStore().items,
-      schedule: app.activeProgram ?? null, texts,
+      schedule: app.activeProgram ?? null, texts, checkedInToday: !!app.todayWellness,
     });
   }
 
@@ -161,7 +163,7 @@ export const useRemindersStore = defineStore('reminders', () => {
       const app = useAppStore();
       const routines = useRoutinesStore();
       const planned = usePlannedStore();
-      watch(() => [routines.routines, planned.items, app.activeProgram?.trainingDays, app.activeProgram?.matchDays, app.programInfo?.next?.name, locale.value, app.clockDate.toDateString()],
+      watch(() => [routines.routines, planned.items, app.activeProgram?.trainingDays, app.activeProgram?.matchDays, app.programInfo?.next?.name, locale.value, app.clockDate.toDateString(), !!app.todayWellness],
         () => reschedule(), { deep: false });
       watch(prefs, (p) => { writeJson(PREFS_KEY, p); reschedule(300); }, { deep: true });
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reschedule(); });

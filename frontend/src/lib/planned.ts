@@ -30,6 +30,8 @@ export interface PlannedWorkout {
   status: PlannedStatus;
   workoutClientId: string | null;
   exercises: PlannedExercise[];
+  /** Ersetzt an diesem Datum den Tag des Trainingsplans (statt Doppeltag). Nur an Trainingstagen. */
+  replacesPlan?: boolean;
   createdAt: string;
   updatedAt: string;
   pending?: 'put' | 'delete';
@@ -48,6 +50,10 @@ export function planConflict(schedule: Partial<Schedule> | null | undefined, day
 }
 
 const visible = <T extends PlannedWorkout>(list: readonly T[]) => list.filter((p) => p.pending !== 'delete');
+
+/** Ersatz für den Plan-Tag an diesem Datum (offen oder erledigt; ausgelassen = Plan-Tag gilt wieder). */
+export const replacementOn = <T extends PlannedWorkout>(list: readonly T[], day: string): T | null =>
+  visible(list).find((p) => p.date === day && p.replacesPlan && p.status !== 'skipped') ?? null;
 
 /** Offen und heute fällig. */
 export const plannedToday = <T extends PlannedWorkout>(list: readonly T[], today: string): T[] =>

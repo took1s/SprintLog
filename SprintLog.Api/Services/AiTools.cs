@@ -188,10 +188,12 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
         """));
 
     public static readonly AiTool ProposeSessionTool = new(ProposeSession,
-        "Schedule a single extra session on a date next to the plan (e.g. a speed session on a free Saturday, a recovery or rehab session, a make-up session). " +
-        "The athlete sees a card and adds it with one tap; on that day the app offers to start it with your targets. " +
-        "RULES: never on a match day. Prefer free days from <calendar>; a plan training day is allowed (double day) when the athlete wants it or it fits better - " +
-        "then keep it short and complementary and say it is a double day. " +
+        "Schedule a single session on a date (e.g. a speed session on a free Saturday, a recovery or rehab session, a make-up session) - " +
+        "or, with replacesPlanDay=true on a plan training day, a one-off REPLACEMENT of that day's plan workout (changed exercises, lighter version, swap because of pain). " +
+        "The athlete sees a card and adds it with one tap; on that day the app offers to start it with your targets (a replacement is shown instead of the plan day). " +
+        "RULES: never on a match day. Prefer free days from <calendar>. On a plan training day: replacesPlanDay=true when it is the same slot changed for that date " +
+        "(NOT a double day - the plan itself stays unchanged); without it, it is an extra session next to the plan day (double day) - only when the athlete wants two sessions. " +
+        "To show the plan day itself there is nothing to do: the app already shows it on its weekday. " +
         "Avoid hard sessions the day before a match. To move, change or cancel an existing session send its id as replacesId (status 'skipped' cancels it).",
         Schema("""
         {"type":"object","required":["date","title","category","exercises","reason"],"properties":{
@@ -202,6 +204,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
           "reason":{"type":"string","description":"Why this session, max 200 characters"},
           "status":{"type":"string","enum":["planned","skipped"],"description":"skipped = cancel an existing session"},
           "replacesId":{"type":"string","description":"id of an existing planned session (see <calendar>)"},
+          "replacesPlanDay":{"type":"boolean","description":"true = replaces the plan workout of that training day for this date only (no double day)"},
           "exercises":{"type":"array","minItems":1,"maxItems":12,"items":{"type":"object","required":["exerciseId","sets"],"properties":{
             "exerciseId":{"type":"integer"},"sets":{"type":"integer"},"repsMin":{"type":"integer"},"repsMax":{"type":"integer"},
             "weight":{"type":"number","description":"kg"},"distance":{"type":"number","description":"meters"},"time":{"type":"number","description":"seconds"},
@@ -455,7 +458,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
     public async Task<string> CalendarPromptAsync(int userId, CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(Now);
-        var active = await db.Programs.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive, ct);
+        var active = await db.Programs.AsNoTracking().Include(p => p.Days).FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive, ct);
         var planned = await db.PlannedWorkouts.AsNoTracking().Where(p => p.UserId == userId && p.Date >= today.AddDays(-14) && p.Date <= today.AddDays(21))
             .OrderBy(p => p.Date).ToListAsync(ct);
         var routines = await db.Routines.AsNoTracking().Where(r => r.UserId == userId && r.StartDate <= today.AddDays(21) && (r.EndDate == null || r.EndDate >= today))
@@ -469,11 +472,14 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
         for (var d = today; d <= today.AddDays(20); d = d.AddDays(1))
         {
             var parts = new List<string>();
-            if (PlannedWorkoutRules.ConflictOn(d, active) is { } kind) parts.Add(kind == "match" ? "MATCH" : "plan training");
+            var replacement = planned.FirstOrDefault(p => p.Date == d && p.ReplacesPlan && p.Status != "skipped");
+            if (PlannedWorkoutRules.ConflictOn(d, active) is { } kind)
+                parts.Add(kind == "match" ? "MATCH"
+                    : $"plan training{(PlanWeekdays.DayFor(active, d) is { } pd ? $" day '{pd.Name}' (dayId {pd.Id})" : "")}{(replacement is null ? "" : $" - REPLACED this date by session id {replacement.ClientId}")}");
             if (active is not null && (active.TeamDays & DayBit(d)) != 0) parts.Add("TEAM training (club)");
             if (MatchDay.Label(d, active?.MatchDays ?? 0) is { } md && md != "MD") parts.Add($"{md} ({MatchDay.Focus(md)})");
             foreach (var p in planned.Where(p => p.Date == d && p.Status != "skipped"))
-                parts.Add($"session id {p.ClientId} '{p.Title}' ({p.Category}, {p.Status}, by {p.Source}): {string.Join(", ", p.Exercises.Select(x => $"#{x.ExerciseId} {x.Sets}x"))}");
+                parts.Add($"session id {p.ClientId} '{p.Title}' ({p.Category}, {p.Status}, by {p.Source}{(p.ReplacesPlan ? ", replaces plan day" : "")}): {string.Join(", ", p.Exercises.Select(x => $"#{x.ExerciseId} {x.Sets}x"))}");
             var due = routines.Where(r => r.StartDate <= d && (r.EndDate == null || r.EndDate >= d) && (r.Days & DayBit(d)) != 0).Select(r => r.Title).ToList();
             if (due.Count > 0) parts.Add("routines: " + string.Join(", ", due));
             sb.Append(d.ToString("yyyy-MM-dd ddd", CultureInfo.InvariantCulture)).Append(": ").Append(parts.Count == 0 ? "free" : string.Join(" | ", parts)).Append('\n');
@@ -503,7 +509,7 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
 
         // Nie am Spieltag. Trainingstag = Doppeltag (erlaubt, der Coach soll ihn bewusst dosieren).
         // Ein Wochenplan-Vorschlag in derselben Antwort zählt schon (der Nutzer wendet ihn zuerst an).
-        var active = await db.Programs.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive, ct);
+        var active = await db.Programs.AsNoTracking().Include(p => p.Days).FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive, ct);
         var proposed = actions.LastOrDefault(a => (string?)a["type"] == "schedule");
         var training = proposed is not null ? (int)proposed["trainingDays"]! : active?.TrainingDays ?? 0;
         var match = proposed is not null ? (int)proposed["matchDays"]! : active?.MatchDays ?? 0;
@@ -513,7 +519,11 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
             {
                 error = $"{date:yyyy-MM-dd} is a match day of the plan ({DaysText(match)}). No extra session on a match day: pick another day from <calendar>.",
             };
-        var doubleDay = conflict == "training";
+        var replacesPlanDay = input.TryGetProperty("replacesPlanDay", out var rp) && rp.ValueKind == JsonValueKind.True && status == "planned";
+        if (replacesPlanDay && conflict != "training")
+            return new { error = $"{date:yyyy-MM-dd} is not a plan training day - replacesPlanDay only works on training days. Leave it out for an extra session." };
+        var doubleDay = conflict == "training" && !replacesPlanDay;
+        var planDay = replacesPlanDay ? PlanWeekdays.DayFor(active, date) : null;
 
         if (!input.TryGetProperty("exercises", out var exEl) || exEl.ValueKind != JsonValueKind.Array) return new { error = "exercises are required." };
         var ids = exEl.EnumerateArray().Select(x => Int(x, "exerciseId")).Where(x => x is not null).Select(x => x!.Value).Distinct().ToList();
@@ -545,6 +555,8 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
             ["session"] = new JsonObject
             {
                 ["date"] = date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), ["title"] = title, ["category"] = category, ["status"] = status,
+                ["replacesPlan"] = replacesPlanDay,
+                ["planDayName"] = planDay?.Name,
                 ["notes"] = Clip(Str(input, "notes"), 200) is { Length: > 0 } n ? n : null,
                 ["reason"] = Clip(Str(input, "reason"), 200) is { Length: > 0 } why ? why : null,
                 ["exercises"] = list,
@@ -553,7 +565,10 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
         return new
         {
             shown = true,
+            card = "A card is now shown under your answer. Only now may you refer to it.",
             note = status == "skipped" ? "The athlete confirms the cancellation."
+                : replacesPlanDay ? $"Replacement: on {date:yyyy-MM-dd} the app shows this session instead of the plan day{(planDay is null ? "" : $" '{planDay.Name}'")}. " +
+                                    "Not a double day and the plan itself stays as it is. Say what changed compared to the plan day and why."
                 : doubleDay ? "Double day: this date is also a plan training day. That is allowed - say it is a double day, keep the extra session short and complementary " +
                               "(different quality than the plan day, e.g. speed or prevention next to strength), say which to do first, and count both in the week's load."
                 : "The athlete adds it with one tap. Mention the day and the focus in one sentence.",
@@ -681,7 +696,10 @@ public sealed class AiTools(AppDbContext db, TimeProvider time, CoachMemoryServi
 
     /// <summary>Notiz/Auslassung einer Übung für die KI ("skipped (pain): Schulter zwickt").</summary>
     internal static string? NoteText(WorkoutExerciseNote? n) =>
-        n is null ? null : $"{(n.Skipped ? $"skipped{(n.Reason is null ? "" : $" ({n.Reason})")}" : n.Reason ?? "note")}{(n.Note is null ? "" : $": {n.Note}")}";
+        n is null ? null
+        : n.Skipped || n.Reason is not null || n.Note is not null
+            ? $"{(n.Skipped ? $"skipped{(n.Reason is null ? "" : $" ({n.Reason})")}" : n.Reason ?? "note")}{(n.Note is null ? "" : $": {n.Note}")}{(n.Pain is { } p ? $", pain {p}/10" : "")}"
+            : n.Pain is { } pain ? $"pain {pain}/10" : null;
 
     private IQueryable<Workout> Workouts(int userId, DateTime since) =>
         db.Workouts.AsNoTracking().Where(w => w.UserId == userId && w.Date >= since).Include(w => w.Sets).ThenInclude(s => s.Exercise).Include(w => w.ExerciseNotes);

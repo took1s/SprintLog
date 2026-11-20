@@ -71,7 +71,7 @@ const sessionsPerWeek = (key: string | null | undefined, days: number) => templa
               <!-- Nächster Tag -->
               <div v-if="programInfo.next" class="mb-4 rounded-2xl border border-accent/40 bg-accent/5 p-4">
                   <div class="mb-1 flex items-center justify-between">
-                      <span class="text-[10px] font-bold uppercase tracking-widest text-accent">{{ t('plan.nextUp') }}</span>
+                      <span class="text-[10px] font-bold uppercase tracking-widest text-accent">{{ app.nextPlanKicker }}</span>
                       <span class="font-mono text-[10px] text-slate-500">{{ dayLabel(programInfo.next) }}</span>
                   </div>
                   <h3 class="mb-3 text-xl display text-white">{{ dayName(activeProgram, programInfo.next) }}</h3>

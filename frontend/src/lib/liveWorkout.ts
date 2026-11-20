@@ -80,6 +80,7 @@ export function liveSessionText(s: LiveSession, exercise: (id: number) => Exerci
       sets: sets.map((x) => liveSetText(x, ex)),
       ...(note?.note ? { note: note.note } : {}),
       ...(note?.skipped ? { skipped: note.reason ?? true } : {}),
+      ...(note?.pain != null ? { pain: `${note.pain}/10` } : {}),
     };
   });
   const payload = { gym: s.gym ?? null, planDay: s.planDayName ?? null, minutesSinceStart: minutes, exercises };

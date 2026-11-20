@@ -282,7 +282,8 @@ public static class WorkoutEndpoints
             ExerciseId = n.ExerciseId,
             Note = string.IsNullOrWhiteSpace(n.Note) ? null : n.Note.Trim(),
             Skipped = n.Skipped,
-            Reason = n.Reason
+            Reason = n.Reason,
+            Pain = n.Pain
         }).ToList();
 
     private static string? NormalizeNotes(string? notes) =>
@@ -354,7 +355,7 @@ public static class WorkoutEndpoints
             w.WorkoutType == CreateWorkoutRequest.MatchType ? new MatchDetails(w.Goals, w.Assists, w.Opponent, w.Position, w.TeamGoals, w.OpponentGoals, w.WentWell, w.ToImprove) : null,
             w.Quality,
             w.Gym,
-            w.ExerciseNotes.OrderBy(n => n.Id).Select(n => new ExerciseNoteDto(n.ExerciseId, n.Note, n.Skipped, n.Reason)).ToList(),
+            w.ExerciseNotes.OrderBy(n => n.Id).Select(n => new ExerciseNoteDto(n.ExerciseId, n.Note, n.Skipped, n.Reason, n.Pain)).ToList(),
             w.DistanceM == null && w.AvgHr == null && w.MaxHr == null && w.MaxSpeedKmh == null && w.Sprints == null
                 ? null : new WorkoutHealth(w.DistanceM, w.AvgHr, w.MaxHr, w.MaxSpeedKmh, w.Sprints),
             w.WorkoutType == CreateWorkoutRequest.TeamType ? new TeamDetails(w.TeamFocus, w.Participation) : null));

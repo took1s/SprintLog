@@ -14,7 +14,8 @@ const app = useAppStore();
 const planned = usePlannedStore();
 const { forToday, next, recent, today } = storeToRefs(planned);
 
-const soon = computed(() => (forToday.value.length ? null : next.value.find((p) => daysBetween(today.value, p.date) <= 7) ?? null));
+// Ersatz für den heutigen Plan-Tag steht schon oben als Haupt-Knopf - nicht nochmal als "Дальше"
+const soon = computed(() => (forToday.value.length ? null : next.value.find((p) => daysBetween(today.value, p.date) <= 7 && !(p.replacesPlan && p.date === today.value)) ?? null));
 const missed = computed(() => recent.value.find((p) => p.status === 'planned' && p.date === addDays(today.value, -1)) ?? null);
 const date = (day: string) => parseDay(day).toLocaleDateString(intlLocale(), { weekday: 'long', day: 'numeric', month: 'short' });
 

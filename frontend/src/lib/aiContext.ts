@@ -30,6 +30,21 @@ export interface AiContextInput {
   workouts: readonly Workout[];
   exerciseName: (set: WorkoutSet) => string;
   goals: { exercise: string; target: string; percent: number; achieved: boolean }[];
+  /** Was die App heute zeigt und was schon passiert ist - damit der Coach nicht raten muss. */
+  today?: {
+    /** Plan-Tag, der heute laut Wochenplan dran ist (null = kein Trainingstag / keine Zuordnung). */
+    planDay: string | null;
+    /** Heute schon eine Einheit aus dem Plan geloggt. */
+    planDone: boolean;
+    /** Ersatz-Einheit für den heutigen Plan-Tag (Titel, Status). */
+    replacement: { title: string; status: string } | null;
+    /** Weitere geplante Einheiten heute. */
+    extra: string[];
+    /** Hauptknopf auf dem Startbildschirm. */
+    shownAsNext: string | null;
+    /** Läuft gerade eine Einheit (Titel/Plan-Tag, Sätze)? Details stehen dann im Live-Block. */
+    inProgress: { title: string; sets: number } | null;
+  };
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -80,7 +95,8 @@ function workoutLine(w: Workout, name: AiContextInput['exerciseName']): string {
   // Notizen und Auslassungen pro Übung: warum etwas fehlt oder anders lief
   const exNotes = (w.exerciseNotes ?? []).map((n) => {
     const who = name({ exerciseId: n.exerciseId } as WorkoutSet);
-    return `${who}: ${n.skipped ? `skipped${n.reason ? ` (${n.reason})` : ''}` : n.reason ?? 'note'}${n.note ? ` "${n.note.slice(0, 80)}"` : ''}`;
+    const head = n.skipped ? `skipped${n.reason ? ` (${n.reason})` : ''}` : n.reason ?? (n.note ? 'note' : '');
+    return `${who}: ${[head, n.note ? `"${n.note.slice(0, 80)}"` : '', n.pain != null ? `pain ${n.pain}/10` : ''].filter(Boolean).join(' ')}`;
   });
   return `- ${head.join(', ')}${body ? `: ${body}` : ''}${exNotes.length ? ` | exercise notes: ${exNotes.join('; ')}` : ''}${w.notes ? ` | note: ${w.notes.slice(0, 120)}` : ''}`;
 }
@@ -99,6 +115,18 @@ export function buildAiContext(c: AiContextInput): string {
     out.push(`Active program: "${p.name}" (goal ${p.goal}), week ${p.week} of ${p.weeks}${p.nextDay ? `, next day: "${p.nextDay}"` : ''}.`);
     for (const d of p.days) out.push(`  ${d.name}: ${d.exercises.join(', ')}`);
   } else out.push('Active program: none.');
+
+  if (c.today) {
+    const td = c.today;
+    const parts: string[] = [];
+    parts.push(td.planDay
+      ? `plan day for today (by weekday): "${td.planDay}" - ${td.replacement ? `REPLACED today by session "${td.replacement.title}" (${td.replacement.status})` : td.planDone ? 'already done today' : 'not done yet'}`
+      : 'no plan day today');
+    if (td.extra.length) parts.push(`extra sessions today: ${td.extra.join('; ')}`);
+    parts.push(td.inProgress ? `workout IN PROGRESS now: "${td.inProgress.title}", ${td.inProgress.sets} sets logged` : 'no workout in progress');
+    if (td.shownAsNext) parts.push(`start screen shows: "${td.shownAsNext}"`);
+    out.push(`Today in the app: ${parts.join('; ')}.`);
+  }
 
   out.push(`App coach today (rule-based): ${c.coach.kind}${c.coach.reasons.length ? ` - ${c.coach.reasons.join('; ')}` : ''}.`);
 

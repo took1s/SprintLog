@@ -51,14 +51,20 @@ public static class PlannedWorkoutEndpoints
         var created = planned is null;
         var status = input.Status ?? planned?.Status ?? "planned";
 
-        // Neuer oder verschobener offener Termin: nie auf einen Spieltag. Trainingstag = erlaubter Doppeltag.
-        if (status == "planned" && (created || planned!.Date != input.Date))
+        // Ersatz für den Plan-Tag: nur ohne Angabe übernehmen (ältere Clients schicken das Feld nicht)
+        var replacesPlan = input.ReplacesPlan ?? planned?.ReplacesPlan ?? false;
+
+        // Neuer oder verschobener offener Termin: nie auf einen Spieltag. Trainingstag = erlaubter Doppeltag oder Ersatz.
+        if (status == "planned" && (created || planned!.Date != input.Date || (replacesPlan && !planned.ReplacesPlan)))
         {
             var active = await db.Programs.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive, ct);
-            if (PlannedWorkoutRules.ConflictOn(input.Date, active) is { } kind && PlannedWorkoutRules.Blocks(kind))
+            var kind = PlannedWorkoutRules.ConflictOn(input.Date, active);
+            if (kind is not null && PlannedWorkoutRules.Blocks(kind))
                 return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "plan_conflict",
                     detail: kind == "match" ? "This day is a match day in your plan." : "This day is a training day in your plan.",
                     extensions: new Dictionary<string, object?> { ["code"] = "plan_conflict", ["kind"] = kind });
+            if (replacesPlan && kind != "training")
+                return new ValidationErrors().Add("replacesPlan", "Only a training day of the active plan can be replaced.").ToResult();
         }
         if (created && await db.PlannedWorkouts.CountAsync(p => p.UserId == userId && p.Date >= today && p.Status == "planned", ct) >= MaxUpcoming)
             return new ValidationErrors().Add("planned", $"At most {MaxUpcoming} upcoming sessions are allowed.").ToResult();
@@ -69,6 +75,7 @@ public static class PlannedWorkoutEndpoints
         planned.Category = input.Category!;
         planned.Notes = string.IsNullOrWhiteSpace(input.Notes) ? null : input.Notes.Trim();
         planned.Status = status;
+        planned.ReplacesPlan = replacesPlan;
         planned.WorkoutClientId = status == "done" ? input.WorkoutClientId ?? planned.WorkoutClientId : null;
         planned.Exercises = input.Exercises!.Select(x => new PlannedExercise
         {

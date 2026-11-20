@@ -8,6 +8,7 @@ import { intlLocale, t, tn } from '@/i18n';
 import { dayName, exerciseName, programName } from '@/i18n/content';
 import { useAppStore, MATCH } from '@/stores/app';
 import { useAiStore } from '@/stores/ai';
+import { usePlannedStore } from '@/stores/planned';
 import { formatRelative } from '@/lib/format';
 import { mdInfo } from '@/lib/matchDay';
 import { localDay } from '@/lib/wellness';
@@ -15,7 +16,7 @@ import type { Reason, TodayKind } from '@/lib/coach';
 
 const app = useAppStore();
 const ai = useAiStore();
-const { activeProgram, allWorkouts, clockDate, coach, exercisesById, programInfo, startLine, tab } = storeToRefs(app);
+const { activeProgram, allWorkouts, clockDate, coach, exercisesById, nextPlanKicker, programInfo, startLine, tab } = storeToRefs(app);
 const { openPlanBuilder, repeatWorkout, startProgramDay, startWorkout } = app;
 onMounted(() => { if (!ai.status) void ai.loadStatus(); });
 
@@ -50,7 +51,11 @@ const lastSummary = computed(() => {
   const names = [...new Set((w.sets ?? []).map((s) => exerciseName(s.exerciseId ?? null, s.exerciseName ?? s.name)))];
   return names.slice(0, 2).join(', ') + (names.length > 2 ? ` +${names.length - 2}` : '');
 });
-const next = computed(() => (activeProgram.value && programInfo.value?.next ? programInfo.value.next : null));
+const planned = usePlannedStore();
+/** Heute ersetzt eine Einheit (meist vom Coach) den Plan-Tag: sie ist der Haupt-Knopf, der Plan-Tag rückt weiter. */
+const replacement = computed(() => (planned.replacementToday?.status === 'planned' ? planned.replacementToday : null));
+const replacedDay = computed(() => (replacement.value && activeProgram.value ? programInfo.value?.todayDay ?? null : null));
+const next = computed(() => (!replacement.value && activeProgram.value && programInfo.value?.next ? programInfo.value.next : null));
 const mdAdjust = computed(() => (md.value && md.value.label !== 'MD' && md.value.volume < 1 ? Math.round((1 - md.value.volume) * 100) : 0));
 </script>
 
@@ -83,9 +88,24 @@ const mdAdjust = computed(() => (md.value && md.value.label !== 'MD' && md.value
       </transition>
 
       <!-- Главное действие -->
-      <button v-if="next" type="button" class="today-cta mt-4" data-test="start-plan" @click="startProgramDay(next)">
+      <template v-if="replacement">
+          <button type="button" class="today-cta mt-4" data-test="start-replacement" @click="planned.start(replacement.clientId)">
+              <span class="min-w-0 flex-1 text-left">
+                  <span class="block text-[10px] font-bold uppercase tracking-label opacity-80">{{ t('planned.replaceKicker') }}<template v-if="replacement.source === 'coach'"> · {{ t('planned.byCoach') }}</template></span>
+                  <span class="block truncate text-lg font-black leading-tight">{{ replacement.title }}</span>
+                  <span class="block truncate text-[11px] font-semibold opacity-80">
+                      {{ tn('units.exercises', replacement.exercises.length) }}<template v-if="replacedDay"> · {{ t('planned.insteadOf', { day: dayName(activeProgram, replacedDay) }) }}</template>
+                  </span>
+              </span>
+              <svg class="h-6 w-6 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 001.5.86l10.5-6.5a1 1 0 000-1.72L9.5 4.64A1 1 0 008 5.5z"/></svg>
+          </button>
+          <button type="button" class="mt-1 inline-flex min-h-[2.25rem] items-center text-[11px] font-bold text-slate-400 hover:text-white" data-test="replacement-undo" @click="planned.restorePlanDay(replacement.clientId)">
+              ↺ {{ t('planned.backToPlan') }}
+          </button>
+      </template>
+      <button v-else-if="next" type="button" class="today-cta mt-4" data-test="start-plan" @click="startProgramDay(next)">
           <span class="min-w-0 flex-1 text-left">
-              <span class="block text-[10px] font-bold uppercase tracking-label opacity-80">{{ t('start.nextPlanDay') }}</span>
+              <span class="block text-[10px] font-bold uppercase tracking-label opacity-80" data-test="plan-kicker">{{ nextPlanKicker }}</span>
               <span class="block truncate text-lg font-black leading-tight">{{ dayName(activeProgram, next) }}</span>
               <span class="block truncate text-[11px] font-semibold opacity-80">
                   {{ activeProgram ? programName(activeProgram) : '' }} · {{ tn('units.exercises', next.exercises.length) }}<template v-if="mdAdjust"> · {{ t('md.lighter', { label: md!.label, pct: mdAdjust }) }}</template>
@@ -101,8 +121,8 @@ const mdAdjust = computed(() => (md.value && md.value.label !== 'MD' && md.value
       </button>
 
       <!-- Вторичные действия -->
-      <div class="mt-2 grid gap-2" :class="next && lastWorkout ? 'grid-cols-2' : 'grid-cols-1'">
-          <button v-if="next" type="button" class="today-secondary" data-test="start-empty" @click="startWorkout">
+      <div class="mt-2 grid gap-2" :class="(next || replacement) && lastWorkout ? 'grid-cols-2' : 'grid-cols-1'">
+          <button v-if="next || replacement" type="button" class="today-secondary" data-test="start-empty" @click="startWorkout">
               <span class="text-base leading-none">+</span> {{ t('start.emptyShort') }}
           </button>
           <button v-if="lastWorkout" type="button" class="today-secondary min-w-0" data-test="start-repeat" :title="lastSummary" @click="repeatWorkout(lastWorkout)">
