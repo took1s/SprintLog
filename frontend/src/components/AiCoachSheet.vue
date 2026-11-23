@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // Chat mit dem KI-Coach. Antworten sind reiner Text (kein HTML/Markdown-Rendering - sicher und CSP-konform).
+import AppIcon from '@/components/AppIcon.vue';
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { t, tn } from '@/i18n';
@@ -285,10 +286,8 @@ const close = () => {
 
                       <div v-if="busy" class="flex justify-start" data-test="ai-thinking">
                           <div class="ai-thinking">
-                              <!-- Pulsierender Funke statt drei Punkte; der Satz darunter wechselt mit der Zeit -->
-                              <span class="ai-thinking-orb" aria-hidden="true">
-                                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.2 5.3 5.3 2.2-5.3 2.2L12 17.5l-2.2-5.3L4.5 10l5.3-2.2z"/><path d="M19 15.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z" opacity=".7"/></svg>
-                              </span>
+                              <!-- Pulsierende Trillerpfeife statt drei Punkte; der Satz darunter wechselt mit der Zeit -->
+                              <span class="ai-thinking-orb" aria-hidden="true"><AppIcon name="coach" /></span>
                               <span class="min-w-0">
                                   <span class="ai-thinking-text block" data-test="ai-stage">{{ thinkingStage }}</span>
                                   <span class="mt-0.5 block font-mono text-tiny text-slate-500">{{ t('ai.thinkingTime', { s: thinkingFor }) }}</span>
