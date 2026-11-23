@@ -278,24 +278,54 @@ public static partial class AiEndpoints
         "(offering to create one is fine). Reply with the final answer only - no mention of this check.";
 
     /// <summary>
+    /// Ab dieser Laufzeit wird im nächsten Schritt die Antwort erzwungen (keine weiteren Werkzeuge): Der Nutzer wartet sonst
+    /// bei vielen Werkzeug-Runden im gründlichen Modus deutlich über eine Minute.
+    /// </summary>
+    internal static readonly TimeSpan AnswerBudget = TimeSpan.FromSeconds(55);
+
+    /// <summary>Bitte um die eigentliche Antwort, wenn das Modell nach Werkzeug-Ergebnissen leer geantwortet hat.</summary>
+    internal const string EmptyAnswerNudge =
+        "You ended your turn without writing anything. Write your final answer to the athlete now, based on the data you already have. No more tool calls.";
+
+    /// <summary>
     /// Ruft das Modell auf, führt angeforderte Werkzeuge aus und schickt die Ergebnisse zurück - bis eine Antwort ohne Werkzeug
     /// kommt, das Abschluss-Werkzeug (<paramref name="finalTool"/>) aufgerufen wurde oder die Schrittzahl erreicht ist.
-    /// Im letzten Schritt wird die Antwort erzwungen (Text bzw. Abschluss-Werkzeug), damit nie eine halbe Antwort zurückkommt.
+    /// Im letzten Schritt (oder nach <see cref="AnswerBudget"/>) wird die Antwort erzwungen, damit nie eine halbe Antwort zurückkommt.
     /// </summary>
     internal static async Task<RunResult> RunAsync(IAiClient ai, AiTools tools, int userId, string model, string system, JsonArray messages,
-        IReadOnlyList<AiTool> toolList, int maxTokens, int maxSteps, string? finalTool, ILoggerFactory logs, CancellationToken ct)
+        IReadOnlyList<AiTool> toolList, int maxTokens, int maxSteps, string? finalTool, ILoggerFactory logs, CancellationToken ct, TimeProvider? clock = null)
     {
         var log = logs.CreateLogger("SprintLog.Ai");
+        clock ??= TimeProvider.System;
+        var started = clock.GetTimestamp();
         var actions = new List<JsonObject>();
         AiResponse? last = null;
         var cardChecked = false;
+        var nudged = false;
         for (var step = 0; step < maxSteps; step++)
         {
-            var lastStep = step == maxSteps - 1;
+            var lastStep = step == maxSteps - 1 || clock.GetElapsedTime(started) > AnswerBudget;
             JsonObject? choice = lastStep
                 ? finalTool is null ? new JsonObject { ["type"] = "none" } : new JsonObject { ["type"] = "tool", ["name"] = finalTool }
                 : null;
             last = await ai.CompleteAsync(new AiRequest(model, system, messages, maxTokens, toolList, choice), ct);
+
+            // Leere Antwort (bekanntes Verhalten nach Werkzeug-Ergebnissen, stop_reason end_turn): die leere Antwort NICHT
+            // zurückschicken (die API lehnt leere Nachrichten ab, und das Modell bliebe "fertig"), sondern einmal in einer
+            // neuen Nutzer-Nachricht um die Antwort bitten - so empfiehlt es die Anthropic-Doku. Ohne Werkzeuge, damit sie sicher kommt.
+            if (finalTool is null && last.ToolUses.Count == 0 && string.IsNullOrWhiteSpace(last.RawText))
+            {
+                log.LogWarning("AI returned an empty answer (step {Step}, stop {Stop})", step + 1, last.StopReason);
+                if (nudged) break;
+                nudged = true;
+                messages.Add(new JsonObject { ["role"] = "user", ["content"] = EmptyAnswerNudge });
+                last = await ai.CompleteAsync(new AiRequest(model, system, messages, maxTokens, toolList, new JsonObject { ["type"] = "none" }), ct);
+                if (string.IsNullOrWhiteSpace(last.RawText))
+                {
+                    log.LogWarning("AI answer still empty after the nudge");
+                    break;
+                }
+            }
             messages.Add(new JsonObject { ["role"] = "assistant", ["content"] = last.Content.DeepClone() });
 
             var uses = last.ToolUses;
